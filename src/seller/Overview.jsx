@@ -195,10 +195,10 @@ export default function Overview() {
             </form>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border-b border-gray-200 pb-4">
+              {/* <div className="border-b border-gray-200 pb-4">
                 <p className="text-sm text-gray-600">Name</p>
                 <p className="text-base font-medium">{vendor.displayName || 'N/A'}</p>
-              </div>
+              </div> */}
               <div className="border-b border-gray-200 pb-4">
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="text-base font-medium">{vendor.email || 'N/A'}</p>

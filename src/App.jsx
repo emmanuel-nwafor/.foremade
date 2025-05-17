@@ -25,21 +25,22 @@ import Overview from './seller/Overview';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
+import Admin from './Admin/Admin';
 
-// Component to conditionally render Header and Footer
 const Layout = ({ children }) => {
   const location = useLocation();
   const hideHeaderFooter = [
-    '/login', 
-    '/register', 
-    '/seller/register', 
-    '/seller/login', 
+    '/login',
+    '/register',
+    '/seller/register',
+    '/seller/login',
     '/vendor/dashboard',
     '/overview',
     '/customers-orders',
     '/seller-product-upload',
     '/settings',
     '/seller/agreement',
+    '/admin', // Added admin route
   ].includes(location.pathname);
 
   return (
@@ -134,7 +135,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/seller/agreement"
             element={
@@ -143,7 +143,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/overview"
             element={
@@ -152,7 +151,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
           <Route
             path="/customers-orders"
             element={
@@ -161,13 +159,20 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/settings"
             element={
               <ProtectedRoute>
                 <SettingsPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              // <ProtectedRoute requireAdmin={true}>
+                <Admin />
+              // </ProtectedRoute>
             }
           />
 

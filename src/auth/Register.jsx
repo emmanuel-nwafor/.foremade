@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
@@ -55,6 +55,19 @@ export default function Register() {
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          const user = result.user;
+          handleSocialSignIn(user);
+        }
+      })
+      .catch((err) => {
+        setEmailError(getFriendlyErrorMessage(err));
+      });
+  }, []);
+
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -70,6 +83,48 @@ export default function Register() {
 
   const handleNavigation = () => {
     navigate('/login', { replace: true });
+  };
+
+  const handleSocialSignIn = async (user) => {
+    try {
+      const fullName = user.displayName || user.email.split('@')[0];
+      const username = generateUsername(fullName);
+      await updateProfile(user, { displayName: username });
+
+      await sendEmailVerification(user);
+      console.log('Verification email sent to:', user.email);
+
+      const userDoc = doc(db, 'users', user.uid);
+      const userSnapshot = await getDoc(userDoc);
+      let userData;
+      if (!userSnapshot.exists()) {
+        userData = {
+          email: user.email,
+          name: fullName,
+          username: username,
+          address: '',
+          createdAt: new Date().toISOString(),
+          uid: user.uid,
+          profileImage: user.photoURL || null,
+        };
+        await setDoc(userDoc, userData);
+        localStorage.setItem('userData', JSON.stringify(userData));
+      } else {
+        userData = userSnapshot.data();
+        localStorage.setItem('userData', JSON.stringify(userData));
+      }
+
+      setSuccessMessage(
+        `Welcome, ${fullName}! A verification email has been sent to ${user.email}. Please verify your email before logging in.`
+      );
+      setTimeout(() => {
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
+        handleNavigation();
+      }, 7000);
+    } catch (err) {
+      setEmailError(getFriendlyErrorMessage(err));
+    }
   };
 
   const handleRegister = async (e) => {
@@ -157,46 +212,8 @@ export default function Register() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await setPersistence(auth, browserSessionPersistence);
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const fullName = user.displayName || user.email.split('@')[0];
-      const username = generateUsername(fullName);
-      await updateProfile(user, { displayName: username });
-
-      await sendEmailVerification(user);
-      console.log('Verification email sent to:', user.email);
-
-      const userDoc = doc(db, 'users', user.uid);
-      const userSnapshot = await getDoc(userDoc);
-      let userData;
-      if (!userSnapshot.exists()) {
-        userData = {
-          email: user.email,
-          name: fullName,
-          username: username,
-          address: '',
-          createdAt: new Date().toISOString(),
-          uid: user.uid,
-          profileImage: user.photoURL || null,
-        };
-        await setDoc(userDoc, userData);
-        localStorage.setItem('userData', JSON.stringify(userData));
-      } else {
-        userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
-      }
-
-      setSuccessMessage(
-        `Welcome, ${fullName}! A verification email has been sent to ${user.email}. Please verify your email before logging in.`
-      );
-      setTimeout(() => {
-        setLoadingGoogle(false);
-        handleNavigation();
-      }, 7000);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
-      console.error('Google Sign-In error:', err);
       setLoadingGoogle(false);
       setEmailError(getFriendlyErrorMessage(err));
     }
@@ -212,46 +229,8 @@ export default function Register() {
     const provider = new FacebookAuthProvider();
     provider.setCustomParameters({ display: 'popup' });
     try {
-      await setPersistence(auth, browserSessionPersistence);
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const fullName = user.displayName || user.email.split('@')[0];
-      const username = generateUsername(fullName);
-      await updateProfile(user, { displayName: username });
-
-      await sendEmailVerification(user);
-      console.log('Verification email sent to:', user.email);
-
-      const userDoc = doc(db, 'users', user.uid);
-      const userSnapshot = await getDoc(userDoc);
-      let userData;
-      if (!userSnapshot.exists()) {
-        userData = {
-          email: user.email,
-          name: fullName,
-          username: username,
-          address: '',
-          createdAt: new Date().toISOString(),
-          uid: user.uid,
-          profileImage: user.photoURL || null,
-        };
-        await setDoc(userDoc, userData);
-        localStorage.setItem('userData', JSON.stringify(userData));
-      } else {
-        userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
-      }
-
-      setSuccessMessage(
-        `Welcome, ${fullName}! A verification email has been sent to ${user.email}. Please verify your email before logging in.`
-      );
-      setTimeout(() => {
-        setLoadingFacebook(false);
-        handleNavigation();
-      }, 7000);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
-      console.error('Facebook Sign-In error:', err);
       setLoadingFacebook(false);
       setEmailError(getFriendlyErrorMessage(err));
     }
@@ -354,7 +333,7 @@ export default function Register() {
                   password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
-                Password (6+ Characters, Letters & Numbers)
+                Password (6+ Alphanumeric)
               </label>
               <span
                 className="absolute right-3 top-3 text-gray-500 cursor-pointer"

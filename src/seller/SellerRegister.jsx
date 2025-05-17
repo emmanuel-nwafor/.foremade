@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { vendorAuth, vendorDb } from '../firebase';
-import { createUserWithEmailAndPassword, onAuthStateChanged, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { vendorAuth, db } from '../firebase';
+import { createUserWithEmailAndPassword, onAuthStateChanged, updateProfile, sendEmailVerification, signInWithRedirect, getRedirectResult, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import countryCodes from '../components/common/countryCodes';
 import countries from '../components/common/countries';
@@ -25,8 +25,18 @@ export default function SellerRegister() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Clear localStorage on page load to reset signupSuccess on refresh
     localStorage.removeItem('vendorSignupSuccess');
+
+    getRedirectResult(vendorAuth)
+      .then((result) => {
+        if (result) {
+          const user = result.user;
+          handleSocialSignup(user);
+        }
+      })
+      .catch((error) => {
+        setSubmitError('Social signup failed: ' + error.message);
+      });
 
     const unsubscribe = onAuthStateChanged(vendorAuth, (currentUser) => {
       if (currentUser) {
@@ -37,7 +47,6 @@ export default function SellerRegister() {
       }
     });
 
-    // Set timeout to reset signupSuccess after 3 minutes (180000 ms)
     const timer = setTimeout(() => {
       setSignupSuccess(false);
       localStorage.removeItem('vendorSignupSuccess');
@@ -134,6 +143,52 @@ export default function SellerRegister() {
     );
   };
 
+  const handleSocialSignup = async (user) => {
+    try {
+      const vendorData = {
+        name: user.displayName || user.email.split('@')[0],
+        country: formData.country || 'Unknown',
+        phone: formData.phone || 'Unknown',
+        createdAt: new Date().toISOString(),
+        userType: 'vendor',
+      };
+      await setDoc(doc(db, 'vendors', user.uid), vendorData);
+      await updateProfile(user, { displayName: vendorData.name }); // Use name instead of JSON
+      await sendEmailVerification(user);
+
+      setSubmitError(
+        `Welcome, ${vendorData.name.split(' ')[0]}! A verification email has been sent to ${
+          user.email
+        }. Please verify your email to activate your vendor account.`
+      );
+      localStorage.setItem('vendorSignupSuccess', 'true');
+      setSignupSuccess(true);
+      setTimeout(() => navigate('/seller/login'), 5000);
+    } catch (error) {
+      setSubmitError('Social signup failed: ' + error.message);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await signInWithRedirect(vendorAuth, provider);
+    } catch (error) {
+      setSubmitError('Google signup failed: ' + error.message);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    const provider = new FacebookAuthProvider();
+    provider.setCustomParameters({ display: 'popup' });
+    try {
+      await signInWithRedirect(vendorAuth, provider);
+    } catch (error) {
+      setSubmitError('Facebook signup failed: ' + error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
@@ -157,8 +212,8 @@ export default function SellerRegister() {
         createdAt: new Date().toISOString(),
         userType: 'vendor',
       };
-      await setDoc(doc(vendorDb, 'vendors', currentUser.uid), vendorData);
-      await updateProfile(currentUser, { displayName: JSON.stringify(vendorData) });
+      await setDoc(doc(db, 'vendors', currentUser.uid), vendorData);
+      await updateProfile(currentUser, { displayName: formData.name }); // Use name instead of JSON
       await sendEmailVerification(currentUser);
 
       setSubmitError(
@@ -419,6 +474,25 @@ export default function SellerRegister() {
             >
               Proceed To Next
             </button>
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 mb-4">Or continue with</p>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={handleGoogleSignIn}
+                  className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
+                  Google
+                </button>
+                <button
+                  onClick={handleFacebookSignIn}
+                  className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                >
+                  <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
+                  Facebook
+                </button>
+              </div>
+            </div>
             <p className="text-gray-600 mt-5 text-sm">
               Please review our{' '}
               <Link to="/seller/agreement" className="text-blue-600 hover:underline">

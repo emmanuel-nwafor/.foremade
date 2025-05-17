@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { signOut } from 'firebase/auth';
+// import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
 import logo from '/src/assets/logo.png';
 
 const Header = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,17 +176,6 @@ const Header = () => {
 
   const handleBlur = () => {
     setTimeout(() => setShowDropdown(false), 200);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success('Logged out');
-      navigate('/');
-    } catch (err) {
-      console.error('Logout error:', err);
-      toast.error('Logout failed');
-    }
   };
 
   const favoritesCount = favorites.length;
@@ -389,10 +378,10 @@ const Header = () => {
 
         <div className="sm:hidden flex items-center gap-3">
           <Link to="/profile">
-            <i className="bx bx-user text-white text-2xl"></i>
+            <i className="bx bx-user text-black text-2xl"></i>
           </Link>
           <Link to="/favorites" className="relative">
-            <i className="bx bx-heart text-white text-2xl"></i>
+            <i className="bx bx-heart text-black text-2xl"></i>
             {favoritesCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {favoritesCount}
@@ -400,7 +389,7 @@ const Header = () => {
             )}
           </Link>
           <Link to="/cart" className="relative">
-            <i className="bx bx-cart-alt text-white text-2xl"></i>
+            <i className="bx bx-cart-alt text-black text-2xl"></i>
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {cartCount}
@@ -411,7 +400,7 @@ const Header = () => {
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="text-gray-600 focus:outline-none"
           >
-            <i className="bx bx-menu text-2xl text-white"></i>
+            <i className="bx bx-menu text-2xl text-black"></i>
           </button>
         </div>
       </div>
@@ -428,7 +417,7 @@ const Header = () => {
               onFocus={handleFocus}
               onBlur={handleBlur}
             />
-            <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-lg"></i>
+            <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-black-600 text-lg"></i>
           </div>
           <button className="bg-blue-600 text-white p-1 rounded-r-md">
             <i className="bx bx-search text-xl"></i>
@@ -508,10 +497,10 @@ const Header = () => {
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-2 mt-1 z-10 w-48 rounded-md shadow-lg">
                 <Link
-                  to="/baby-products"
+                  to="/travel-lifestyle"
                   className="block px-4 py-1 text-xs hover:bg-gray-100"
                 >
-                  Baby Products
+                  Travel & Lifestyle
                 </Link>
                 <Link
                   to="/computers-accessories"
@@ -662,7 +651,7 @@ const Header = () => {
           {user && (
             <>
               <Link
-                to="/my-products"
+                to="/"
                 className="flex items-center space-x-2 hover:text-blue-600"
                 onClick={() => setIsSidebarOpen(false)}
               >
@@ -677,13 +666,6 @@ const Header = () => {
                 <i className="bx bx-upload text-lg"></i>
                 <span>Upload Product</span>
               </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 hover:text-blue-600 text-left"
-              >
-                <i className="bx bx-log-out text-lg"></i>
-                <span>Logout</span>
-              </button>
             </>
           )}
         </nav>

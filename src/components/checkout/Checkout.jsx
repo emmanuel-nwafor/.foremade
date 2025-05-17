@@ -9,7 +9,6 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
-
 import cards from '/src/assets/card.png';
 
 // Custom toast style for success
@@ -37,7 +36,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
 
     setLoading(true);
     try {
-      const usdAmount = Math.round(totalPrice * 100); // Total in USD cents
+      const gbpAmount = Math.round(totalPrice * 100); // Total in GBP pence
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       let attempts = 3;
       let lastError = null;
@@ -47,8 +46,8 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
           const { data } = await axios.post(
             `${backendUrl}/create-payment-intent`,
             {
-              amount: usdAmount,
-              currency: 'usd',
+              amount: gbpAmount,
+              currency: 'gbp', // Changed to GBP
               metadata: {
                 userId: auth.currentUser?.uid || 'anonymous',
                 orderId: `order-${Date.now()}`,
@@ -68,7 +67,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
                   line1: formData.address,
                   city: formData.city,
                   postal_code: formData.postalCode,
-                  country: 'US',
+                  country: 'GB', // Changed to GB
                 },
               },
             },
@@ -135,7 +134,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
               : 'bg-blue-900 hover:bg-blue-800'
           }`}
         >
-          {loading ? 'Processing...' : `Pay $${totalPrice.toFixed(2)}`}
+          {loading ? 'Processing...' : `Pay £${totalPrice.toFixed(2)}`}
         </button>
         <button
           type="button"
@@ -164,6 +163,7 @@ const Checkout = () => {
     country: 'Nigeria',
     phone: '',
   });
+  const [imageLoading, setImageLoading] = useState({});
 
   useEffect(() => {
     const loadCartAndUserData = async () => {
@@ -171,24 +171,29 @@ const Checkout = () => {
         setLoading(true);
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
-        console.log('Loaded cart items:', cartItems);
+        console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
 
         // Process cart items to include imageUrls and currentImage
         const processedCart = cartItems.map((item) => {
           const productData = item.product || {};
-          let imageUrls = Array.isArray(productData.imageUrls)
-            ? productData.imageUrls.filter(
-                (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-              )
-            : productData.imageUrl &&
-              typeof productData.imageUrl === 'string' &&
-              productData.imageUrl.startsWith('https://res.cloudinary.com/')
-            ? [productData.imageUrl]
-            : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
-          if (imageUrls.length === 0) {
-            imageUrls = ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+          let imageUrls = [];
+          if (Array.isArray(productData.imageUrls)) {
+            imageUrls = productData.imageUrls.filter(
+              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+            );
+          } else if (
+            productData.imageUrl &&
+            typeof productData.imageUrl === 'string' &&
+            productData.imageUrl.startsWith('https://res.cloudinary.com/')
+          ) {
+            imageUrls = [productData.imageUrl];
           }
-          console.log('Cart item imageUrls:', imageUrls, 'Product:', productData.name);
+          // Fallback to a known working Cloudinary image
+          if (imageUrls.length === 0) {
+            imageUrls = ['https://res.cloudinary.com/demo/image/upload/v1/sample'];
+            console.warn('No valid imageUrls for product:', productData.name, 'Using fallback');
+          }
+          console.log('Processed imageUrls for', productData.name, ':', imageUrls);
           return {
             ...item,
             product: {
@@ -201,6 +206,12 @@ const Checkout = () => {
         });
 
         setCart(processedCart);
+        setImageLoading(
+          processedCart.reduce((acc, item) => ({
+            ...acc,
+            [item.productId]: true,
+          }), {})
+        );
 
         if (user) {
           const userDocRef = doc(db, 'users', user.uid);
@@ -220,7 +231,10 @@ const Checkout = () => {
           }
         }
       } catch (err) {
-        console.error('Error loading cart or user data:', err);
+        console.error('Error loading cart or user data:', {
+          message: err.message,
+          stack: err.stack,
+        });
         setCart([]);
         toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
       } finally {
@@ -232,20 +246,26 @@ const Checkout = () => {
       try {
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
+        console.log('Updated cart items:', JSON.stringify(cartItems, null, 2));
         const processedCart = cartItems.map((item) => {
           const productData = item.product || {};
-          let imageUrls = Array.isArray(productData.imageUrls)
-            ? productData.imageUrls.filter(
-                (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-              )
-            : productData.imageUrl &&
-              typeof productData.imageUrl === 'string' &&
-              productData.imageUrl.startsWith('https://res.cloudinary.com/')
-            ? [productData.imageUrl]
-            : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
-          if (imageUrls.length === 0) {
-            imageUrls = ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+          let imageUrls = [];
+          if (Array.isArray(productData.imageUrls)) {
+            imageUrls = productData.imageUrls.filter(
+              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+            );
+          } else if (
+            productData.imageUrl &&
+            typeof productData.imageUrl === 'string' &&
+            productData.imageUrl.startsWith('https://res.cloudinary.com/')
+          ) {
+            imageUrls = [productData.imageUrl];
           }
+          if (imageUrls.length === 0) {
+            imageUrls = ['https://res.cloudinary.com/demo/image/upload/v1/sample'];
+            console.warn('No valid imageUrls for product:', productData.name, 'Using fallback');
+          }
+          console.log('Updated imageUrls for', productData.name, ':', imageUrls);
           return {
             ...item,
             product: {
@@ -257,8 +277,17 @@ const Checkout = () => {
           };
         });
         setCart(processedCart);
+        setImageLoading(
+          processedCart.reduce((acc, item) => ({
+            ...acc,
+            [item.productId]: true,
+          }), {})
+        );
       } catch (err) {
-        console.error('Error updating cart:', err);
+        console.error('Error updating cart:', {
+          message: err.message,
+          stack: err.stack,
+        });
         toast.error('Failed to update cart.', { position: 'top-right', autoClose: 3000 });
       }
     };
@@ -276,6 +305,17 @@ const Checkout = () => {
     };
   }, []);
 
+  // Calculate progressive shipping discount for Nigeria (Lagos Express Delivery)
+  const calculateShippingNgn = (itemCount) => {
+    if (itemCount === 0) return 0;
+    const baseShipping = 25000; // ₦25,000 for first item (Lagos Express, 3kg–25kg)
+    let shippingCharges = [baseShipping];
+    for (let i = 1; i < itemCount; i++) {
+      shippingCharges.push(shippingCharges[i - 1] * 0.7); // 30% discount on previous
+    }
+    return shippingCharges.reduce((sum, charge) => sum + charge, 0);
+  };
+
   // Calculate totals (base in NGN)
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalNgn = cart.reduce(
@@ -284,15 +324,15 @@ const Checkout = () => {
   );
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
-  const shippingNgn = subtotalNgn > 0 ? 500 : 0;
+  const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500; // Flat ₦500 for UK
   const totalNgn = subtotalNgn + taxNgn + shippingNgn;
 
-  // Convert to USD for Stripe (United Kingdom)
-  const conversionRate = 0.0005; // 1 NGN = 0.0005 USD
-  const subtotalUsd = subtotalNgn * conversionRate;
-  const taxUsd = taxNgn * conversionRate;
-  const shippingUsd = shippingNgn * conversionRate;
-  const totalUsd = totalNgn * conversionRate;
+  // Convert to GBP for Stripe (United Kingdom)
+  const conversionRateGbp = 0.00048; // 1 NGN = 0.00048 GBP
+  const subtotalGbp = subtotalNgn * conversionRateGbp;
+  const taxGbp = taxNgn * conversionRateGbp;
+  const shippingGbp = shippingNgn * conversionRateGbp; // ₦500 = £0.24
+  const totalGbp = totalNgn * conversionRateGbp;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -322,8 +362,8 @@ const Checkout = () => {
         to: order.shippingDetails.email,
         orderId: order.paymentId,
         items: order.items,
-        total: order.paymentGateway === 'Stripe' ? order.total * conversionRate : order.total,
-        currency: order.paymentGateway === 'Stripe' ? 'USD' : 'NGN',
+        total: order.paymentGateway === 'Stripe' ? order.total : order.total,
+        currency: order.paymentGateway === 'Stripe' ? 'GBP' : 'NGN',
         shippingDetails: order.shippingDetails,
         paymentGateway: order.paymentGateway,
         date: order.date,
@@ -363,15 +403,22 @@ const Checkout = () => {
         const userId = auth.currentUser?.uid || 'anonymous';
         const orderId = `order-${Date.now()}`;
         const paymentGateway = formData.country === 'Nigeria' ? 'Paystack' : 'Stripe';
+        const vendorId = cart[0]?.product?.sellerId;
+        if (!vendorId) {
+          console.warn('No vendorId found in cart:', cart);
+          throw new Error('Vendor ID missing. Please check product data.');
+        }
+        console.log('Creating order with vendorId:', vendorId);
         const order = {
           userId,
+          vendorId,
           items: cart.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.product?.price || 0,
             name: item.product?.name || 'Unknown',
           })),
-          total: paymentGateway === 'Stripe' ? totalUsd : totalNgn,
+          total: paymentGateway === 'Stripe' ? totalGbp : totalNgn,
           date: new Date().toISOString(),
           shippingDetails: formData,
           status: 'completed',
@@ -381,6 +428,7 @@ const Checkout = () => {
 
         try {
           await setDoc(doc(db, 'orders', orderId), order);
+          console.log('Order saved:', orderId);
         } catch (orderError) {
           console.error('Firestore order write error:', {
             code: orderError.code,
@@ -462,8 +510,8 @@ const Checkout = () => {
             }
           );
           navigate('/order-confirmation', { state: { order } });
-        } catch (clearCartError) {
-          console.error('Error clearing cart:', clearCartError);
+        } catch (е) {
+          console.error('Error clearing cart:', е);
           toast.warn('Order placed, but failed to clear cart.', { position: 'top-right', autoClose: 3000 });
         }
       } catch (err) {
@@ -475,7 +523,7 @@ const Checkout = () => {
         toast.error(err.message || 'Failed to place order.', { position: 'top-right', autoClose: 3000 });
       }
     },
-    [cart, formData, totalNgn, totalUsd, navigate]
+    [cart, formData, totalNgn, totalGbp, navigate]
   );
 
   const handleCancel = () => {
@@ -497,6 +545,11 @@ const Checkout = () => {
     console.log('Checkout item image updated:', url, 'Direction:', index > currentIndex ? 'right' : 'left');
   };
 
+  const handleImageLoad = (productId) => {
+    setImageLoading((prev) => ({ ...prev, [productId]: false }));
+    console.log('Image loaded for productId:', productId);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -508,13 +561,13 @@ const Checkout = () => {
 
   // Determine currency and amounts based on country
   const isStripe = formData.country === 'United Kingdom';
-  const currency = isStripe ? 'USD' : 'NGN';
-  const subtotal = isStripe ? subtotalUsd : subtotalNgn;
-  const tax = isStripe ? taxUsd : taxNgn;
-  const shipping = isStripe ? shippingUsd : shippingNgn;
-  const total = isStripe ? totalUsd : totalNgn;
+  const currency = isStripe ? 'GBP' : 'NGN';
+  const subtotal = isStripe ? subtotalGbp : subtotalNgn;
+  const tax = isStripe ? taxGbp : taxNgn;
+  const shipping = isStripe ? shippingGbp : shippingNgn;
+  const total = isStripe ? totalGbp : totalNgn;
 
-  console.log('Currency:', currency);
+  console.log('Currency:', currency, 'Total:', total);
 
   return (
     <div className="container mx-auto px-4 py-8 text-gray-800">
@@ -665,29 +718,29 @@ const Checkout = () => {
               {cart.map((item) => (
                 <div key={item.productId} className="flex items-start gap-4 mb-4 border-b pb-4">
                   <div className="w-24 h-24 relative overflow-hidden">
+                    {imageLoading[item.productId] && (
+                      <div className="absolute w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
+                        <Spinner />
+                      </div>
+                    )}
                     <img
                       src={item.currentImage}
                       alt={item.product?.name || 'Unknown'}
                       className={`absolute w-full h-full object-cover rounded-lg ${
                         item.slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'
-                      }`}
+                      } ${imageLoading[item.productId] ? 'opacity-0' : 'opacity-100'}`}
+                      onLoad={() => handleImageLoad(item.productId)}
                       onError={(e) => {
                         console.error('Checkout item image load error:', {
                           productId: item.productId,
                           imageUrl: e.target.src,
                           name: item.product?.name,
+                          error: e.message || 'Unknown error',
                         });
+                        setImageLoading((prev) => ({ ...prev, [item.productId]: false }));
                         e.target.style.display = 'none';
                         e.target.parentElement.innerHTML +=
                           '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Image N/A</span></div>';
-                      }}
-                      onLoad={(e) => {
-                        console.log('Checkout item image loaded successfully:', {
-                          productId: item.productId,
-                          imageUrl: item.currentImage,
-                          name: item.product?.name,
-                        });
-                        e.target.style.opacity = '1';
                       }}
                     />
                   </div>
@@ -697,7 +750,7 @@ const Checkout = () => {
                     </h3>
                     <p className="text-sm text-gray-600">
                       {isStripe
-                        ? `$${(item.product?.price * item.quantity * conversionRate || 0).toLocaleString('en-US', {
+                        ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
                             minimumFractionDigits: 2,
                           })}`
                         : `₦${(item.product?.price * item.quantity || 0).toLocaleString('en-NG', {
@@ -728,6 +781,7 @@ const Checkout = () => {
                                 productId: item.productId,
                                 imageUrl: e.target.src,
                                 name: item.product?.name,
+                                error: e.message || 'Unknown error',
                               });
                               e.target.style.display = 'none';
                               e.target.parentElement.innerHTML +=
@@ -765,7 +819,7 @@ const Checkout = () => {
                     </span>
                     <span>
                       {isStripe
-                        ? `$${(item.product?.price * item.quantity * conversionRate || 0).toLocaleString('en-US', {
+                        ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
                             minimumFractionDigits: 2,
                           })}`
                         : `₦${(item.product?.price * item.quantity || 0).toLocaleString('en-NG', {
@@ -778,7 +832,7 @@ const Checkout = () => {
                   <span>Subtotal</span>
                   <span>
                     {isStripe
-                      ? `$${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                      ? `£${subtotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
                 </div>
@@ -786,7 +840,7 @@ const Checkout = () => {
                   <span>Tax (7.5%)</span>
                   <span>
                     {isStripe
-                      ? `$${tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                      ? `£${tax.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${tax.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
                 </div>
@@ -794,7 +848,7 @@ const Checkout = () => {
                   <span>Shipping</span>
                   <span>
                     {isStripe
-                      ? `$${shipping.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                      ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
                 </div>
@@ -802,7 +856,7 @@ const Checkout = () => {
                   <span>Grand Total</span>
                   <span>
                     {isStripe
-                      ? `$${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                      ? `£${total.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
                 </div>
@@ -839,7 +893,7 @@ const Checkout = () => {
                   {formData.country === 'United Kingdom' ? (
                     <Elements stripe={stripePromise}>
                       <StripeCheckoutForm
-                        totalPrice={totalUsd}
+                        totalPrice={totalGbp}
                         formData={formData}
                         onSuccess={handlePaymentSuccess}
                         onCancel={handleCancel}

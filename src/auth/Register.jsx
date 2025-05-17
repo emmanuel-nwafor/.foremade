@@ -61,8 +61,11 @@ export default function Register() {
   };
 
   const validatePassword = (password) => {
-    const alphanumericRegex = /^[a-zA-Z0-9]+$/;
-    return alphanumericRegex.test(password);
+    const hasLength = password.length >= 6;
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(password);
+    return hasLength && hasLetter && hasNumber && isAlphanumeric;
   };
 
   const handleNavigation = () => {
@@ -86,12 +89,11 @@ export default function Register() {
       setEmailError('Please enter a valid email address.');
       hasError = true;
     }
-    if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters long.');
+    if (!password) {
+      setPasswordError('Password is required.');
       hasError = true;
-    }
-    if (!validatePassword(password)) {
-      setPasswordError('Password must contain only letters and numbers.');
+    } else if (!validatePassword(password)) {
+      setPasswordError('Weak password. Must be at least 6 characters and include both letters and numbers.');
       hasError = true;
     }
 
@@ -352,7 +354,7 @@ export default function Register() {
                   password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
-                Password (6+ Characters, Alphanumeric Only)
+                Password (6+ Characters, Letters & Numbers)
               </label>
               <span
                 className="absolute right-3 top-3 text-gray-500 cursor-pointer"

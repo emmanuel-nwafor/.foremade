@@ -24,6 +24,7 @@ import OrderConfirmation from './components/checkout/OrderConfirmation';
 import Overview from './seller/Overview';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
+import SellerAgreement from './seller/SellerAgreement';
 
 // Component to conditionally render Header and Footer
 const Layout = ({ children }) => {
@@ -38,6 +39,7 @@ const Layout = ({ children }) => {
     '/customers-orders',
     '/seller-product-upload',
     '/settings',
+    '/seller/agreement',
   ].includes(location.pathname);
 
   return (
@@ -129,6 +131,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <SellerProductUpload />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/agreement"
+            element={
+              <ProtectedRoute>
+                <SellerAgreement />
               </ProtectedRoute>
             }
           />

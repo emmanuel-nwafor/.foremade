@@ -35,7 +35,6 @@ try {
   const vendorApp = initializeApp({
     apiKey: "AIzaSyBCJ66zthIZWbotDrugJCd63KbokscgV7g",
     authDomain: "foremade-database.firebaseapp.com",
-    databaseURL: "https://foremade-database-default-rtdb.firebaseio.com",
     projectId: "foremade-database",
     storageBucket: "foremade-database.firebasestorage.app",
     messagingSenderId: "519808269327",

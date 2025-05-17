@@ -29,3 +29,4 @@ build/
 .idea/
 *.sublime-workspace
 *.sublime-project
+.vercel

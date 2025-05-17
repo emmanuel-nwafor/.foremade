@@ -30,6 +30,8 @@ export default function SellerLogin() {
     if (!formData.password) newErrors.password = 'Password is required.';
     else if (formData.password.length < 6)
       newErrors.password = 'Password must be at least 6 characters.';
+    else if (!/^[a-zA-Z0-9]+$/.test(formData.password))
+      newErrors.password = 'Weak password. Use only letters and numbers.';
     return newErrors;
   };
 
@@ -142,7 +144,7 @@ export default function SellerLogin() {
                   formData.password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
-                Password <span className="text-red-500">*</span>
+                Password (Alphanumeric Only) <span className="text-red-500">*</span>
               </label>
               <span
                 className="absolute right-3 top-3 text-gray-500 cursor-pointer"

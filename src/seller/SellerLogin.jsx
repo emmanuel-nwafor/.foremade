@@ -14,7 +14,7 @@ export default function SellerLogin() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const navigate = useNavigate('/overview');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,7 +31,7 @@ export default function SellerLogin() {
     else if (formData.password.length < 6)
       newErrors.password = 'Password must be at least 6 characters.';
     else if (!/^[a-zA-Z0-9]+$/.test(formData.password))
-      newErrors.password = 'Weak password. Use only letters and numbers.';
+      newErrors.password = 'Weak password. Use letters and numbers.';
     return newErrors;
   };
 
@@ -48,6 +48,7 @@ export default function SellerLogin() {
     }
 
     try {
+      console.log('Attempting login for:', formData.email);
       const userCredential = await signInWithEmailAndPassword(
         vendorAuth,
         formData.email,
@@ -63,13 +64,19 @@ export default function SellerLogin() {
         setErrors({
           email: `Your email is not verified. A verification email has been sent to ${formData.email}. Please verify and try again.`,
         });
+        console.warn('Email not verified for:', formData.email);
         setLoading(false);
         return;
       }
 
+      console.log('Login successful:', { uid: user.uid, email: user.email });
       toast.success('Logged in successfully as a vendor!');
       navigate('/overview');
     } catch (error) {
+      console.error('Login error:', {
+        code: error.code,
+        message: error.message,
+      });
       if (error.code === 'auth/invalid-email' || error.code === 'auth/user-not-found') {
         setErrors({ email: 'Invalid email. Please check and try again.' });
       } else if (error.code === 'auth/wrong-password') {

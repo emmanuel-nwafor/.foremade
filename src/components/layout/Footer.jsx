@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ngFlag from '/src/assets/nglogo.png';
+import ukFlag from '/src/assets/uklogo.png';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -144,6 +146,17 @@ const Footer = () => {
             {/* Other Column */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Other</h3>
+              <div className="relative group m-4">
+                <button className="hover:text-blue-600 flex items-center">
+                  <img src={ngFlag} alt="ng-flag" className="h-5" />
+                  <i className="bx bx-chevron-down ml-1"></i>
+                </button>
+                <div className="absolute hidden group-hover:block bg-[#112c42] py-3 z-10 w-48 rounded-md shadow-xl">
+                  <span className="block px-4 py-1 text-xs hover:text-black hover:bg-gray-100">
+                    <img src={ukFlag} alt="uk-flag" className="h-5" />
+                  </span>
+                </div>
+              </div>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link to="/about" className="hover:text-blue-400">About Company</Link>

@@ -5,9 +5,7 @@ import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
-import logo from '/src/assets/logi.png';
-import ngFlag from '/src/assets/nglogo.png';
-import ukFlag from '/src/assets/uklogo.png';
+import logo from '/src/assets/logo.png';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -311,7 +309,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="mx-auto px-4 bg-[#112c47] text-white py-2 flex justify-between items-center sm:border-gray-200">
+      <div className="mx-auto px-4 text-black py-2 flex justify-between items-center sm:border-gray-200">
         <div className="flex items-center">
           <img
             src={logo}
@@ -320,25 +318,13 @@ const Header = () => {
           />
         </div>
 
-        <div className="relative group m-4">
-          <button className="hover:text-blue-600 flex items-center">
-            <img src={ngFlag} alt="ng-flag" className="h-5" />
-            <i className="bx bx-chevron-down ml-1"></i>
-          </button>
-          <div className="absolute hidden group-hover:block bg-[#112c42] py-3 z-10 w-48 rounded-md shadow-xl">
-            <span className="block px-4 py-1 text-xs hover:text-black hover:bg-gray-100">
-              <img src={ukFlag} alt="uk-flag" className="h-5" />
-            </span>
-          </div>
-        </div>
-
         <div className="hidden sm:flex items-center w-full mx-4 relative">
           <div className="flex items-center rounded-full w-full">
-            <div className="relative flex-1">
+            <div className="relative flex-1 border-2 rounded-l-full border-l-2">
               <input
                 type="text"
                 placeholder="Search Foremade"
-                className="w-full bg-white py-2 pl-10 pr-3 text-md focus:outline-none placeholder-black text-black border-none rounded-l-full"
+                className="w-full border-2 border-black bg-white py-2 pl-10 pr-3 text-md focus:outline-none placeholder-black text-black border-none rounded-l-full"
                 value={searchQuery}
                 onChange={handleSearch}
                 onFocus={handleFocus}

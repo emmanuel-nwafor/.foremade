@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SellerSidebar from './SellerSidebar';
-import { vendorAuth, vendorDb } from '../firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { vendorAuth, db } from '../firebase';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 
@@ -9,37 +9,53 @@ export default function UsersOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [vendorId, setVendorId] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
 
-  // Fetch vendor auth and user orders for vendor's products
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       vendorAuth,
       async (user) => {
         if (user) {
-          setVendorId(user.uid);
+          console.log('Vendor authenticated:', { uid: user.uid, email: user.email });
           try {
             const ordersQuery = query(
-              collection(vendorDb, 'orders'),
-              where('vendorId', '==', user.uid),
+              collection(db, 'orders'),
               orderBy('date', 'desc')
             );
+            console.log('Executing orders query for all user orders');
             const querySnapshot = await getDocs(ordersQuery);
             const ordersData = querySnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             }));
+            console.log('Fetched orders:', JSON.stringify(ordersData, null, 2));
             setOrders(ordersData);
           } catch (err) {
-            setError('Failed to fetch user orders: ' + err.message);
+            console.error('Firestore query error:', {
+              code: err.code,
+              message: err.message,
+              stack: err.stack,
+            });
+            setError(
+              `Failed to fetch user orders: ${err.message}. ${
+                err.message.includes('index')
+                  ? 'Please create the required index in Firestore (foremade-backend).'
+                  : ''
+              }`
+            );
           }
         } else {
+          console.warn('No vendor authenticated');
           setError('Please log in to view user orders.');
         }
         setLoading(false);
       },
       (err) => {
+        console.error('Auth state error:', {
+          code: err.code,
+          message: err.message,
+          stack: err.stack,
+        });
         setError('Authentication error: ' + err.message);
         setLoading(false);
       }
@@ -48,12 +64,10 @@ export default function UsersOrdersPage() {
     return () => unsubscribe();
   }, []);
 
-  // Toggle expanded order details
   const toggleOrderDetails = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
   };
 
-  // Format Firestore timestamp to readable date
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
     const date = new Date(timestamp);
@@ -64,10 +78,9 @@ export default function UsersOrdersPage() {
     });
   };
 
-  // Format currency (NGN or USD based on paymentGateway)
   const formatCurrency = (amount, paymentGateway) => {
-    const currency = paymentGateway === 'Stripe' ? 'USD' : 'NGN';
-    return new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'en-NG', {
+    const currency = paymentGateway === 'Stripe' ? 'GBP' : 'NGN';
+    return new Intl.NumberFormat(currency === 'GBP' ? 'en-GB' : 'en-NG', {
       style: 'currency',
       currency,
     }).format(amount || 0);
@@ -121,7 +134,7 @@ export default function UsersOrdersPage() {
 
           {orders.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-600 text-lg">You have no orders.</p>
+              <p className="text-gray-600 text-lg">No orders found.</p>
               <p className="mt-2">
                 <Link to="/seller/products" className="text-blue-600 hover:underline">
                   Upload products to start receiving orders
@@ -145,7 +158,7 @@ export default function UsersOrdersPage() {
                   {orders.map((order) => (
                     <React.Fragment key={order.id}>
                       <tr className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="p-3 text-sm">{order.orderId || 'N/A'}</td>
+                        <td className="p-3 text-sm">{order.orderId || order.id}</td>
                         <td className="p-3 text-sm">{order.shippingDetails?.name || 'N/A'}</td>
                         <td className="p-3 text-sm">{formatDate(order.date)}</td>
                         <td className="p-3 text-sm">{formatCurrency(order.total, order.paymentGateway)}</td>

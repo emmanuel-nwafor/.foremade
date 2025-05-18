@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { auth, vendorAuth, db } from '/src/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import SellerSidebar from '/src/seller/SellerSidebar';
 
 export default function Admin() {
   const [data, setData] = useState({ users: [], admins: [], vendors: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [newUser, setNewUser] = useState({ email: '' });
-  const [newAdmin, setNewAdmin] = useState({ email: '' });
-  const [newVendor, setNewVendor] = useState({ email: '' });
+  const [newUser, setNewUser] = useState({ email: '', name: '' });
+  const [newAdmin, setNewAdmin] = useState({ email: '', name: '' });
+  const [newVendor, setNewVendor] = useState({ email: '', name: '' });
   const [editingUser, setEditingUser] = useState(null);
   const [editingAdmin, setEditingAdmin] = useState(null);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -40,15 +40,30 @@ export default function Admin() {
 
   const handleCreate = async (collectionName, newEntry) => {
     try {
-      const docId = Date.now().toString();
-      await setDoc(doc(db, collectionName, docId), newEntry);
+      const password = Math.random().toString(36).slice(-8); // Generate random password
+      let authInstance = auth;
+      if (collectionName === 'vendors') authInstance = vendorAuth;
+
+      // Create authentication account without email verification
+      const userCredential = await createUserWithEmailAndPassword(authInstance, newEntry.email, password);
+      const user = userCredential.user;
+
+      const docId = user.uid;
+      const entryData = {
+        email: newEntry.email,
+        name: newEntry.name || newEntry.email.split('@')[0],
+        createdAt: new Date().toISOString(),
+        userType: collectionName.slice(0, -1),
+      };
+      await setDoc(doc(db, collectionName, docId), entryData);
+
       setData((prev) => ({
         ...prev,
-        [collectionName]: [...prev[collectionName], { id: docId, ...newEntry }],
+        [collectionName]: [...prev[collectionName], { id: docId, ...entryData }],
       }));
-      if (collectionName === 'users') setNewUser({ email: '' });
-      if (collectionName === 'admins') setNewAdmin({ email: '' });
-      if (collectionName === 'vendors') setNewVendor({ email: '' });
+      if (collectionName === 'users') setNewUser({ email: '', name: '' });
+      if (collectionName === 'admins') setNewAdmin({ email: '', name: '' });
+      if (collectionName === 'vendors') setNewVendor({ email: '', name: '' });
     } catch (err) {
       setError(`Failed to create ${collectionName.slice(0, -1)}: ` + err.message);
     }
@@ -64,8 +79,6 @@ export default function Admin() {
           item.id === docId ? { ...item, ...updatedEntry } : item
         ),
       }));
-      // Note: Updating email in Authentication requires Admin SDK on the backend
-      console.log(`Would update ${collectionName} email in Authentication: ${docId} to ${updatedEntry.email}`);
       if (collectionName === 'users') setEditingUser(null);
       if (collectionName === 'admins') setEditingAdmin(null);
       if (collectionName === 'vendors') setEditingVendor(null);
@@ -82,8 +95,6 @@ export default function Admin() {
         ...prev,
         [collectionName]: prev[collectionName].filter((item) => item.id !== docId),
       }));
-      // Note: Deleting user from Authentication requires Admin SDK on the backend
-      console.log(`Would delete ${collectionName} from Authentication: ${docId}`);
     } catch (err) {
       console.error(`Error deleting ${collectionName} document ${docId}:`, err);
       setError(`Failed to delete ${collectionName.slice(0, -1)}: ` + err.message);
@@ -132,8 +143,15 @@ export default function Admin() {
               <input
                 type="email"
                 value={newUser.email}
-                onChange={(e) => setNewUser({ email: e.target.value })}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 placeholder="Enter user email"
+                className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+              />
+              <input
+                type="text"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                placeholder="Enter user name"
                 className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
               />
               <button
@@ -152,6 +170,7 @@ export default function Admin() {
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-800">
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">User ID</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Name</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Email</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Actions</th>
                 </tr>
@@ -160,6 +179,7 @@ export default function Admin() {
                 {data.users.map((user) => (
                   <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.id}</td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.name || user.email.split('@')[0]}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
                       {editingUser?.id === user.id ? (
                         <input
@@ -169,7 +189,7 @@ export default function Admin() {
                           className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
                         />
                       ) : (
-                        user.email || 'N/A'
+                        user.email
                       )}
                     </td>
                     <td className="p-3 text-xs sm:text-sm">
@@ -218,8 +238,15 @@ export default function Admin() {
               <input
                 type="email"
                 value={newAdmin.email}
-                onChange={(e) => setNewAdmin({ email: e.target.value })}
+                onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
                 placeholder="Enter admin email"
+                className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+              />
+              <input
+                type="text"
+                value={newAdmin.name}
+                onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                placeholder="Enter admin name"
                 className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
               />
               <button
@@ -238,6 +265,7 @@ export default function Admin() {
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-800">
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Admin ID</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Name</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Email</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Actions</th>
                 </tr>
@@ -246,6 +274,7 @@ export default function Admin() {
                 {data.admins.map((admin) => (
                   <tr key={admin.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{admin.id}</td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{admin.name || admin.email.split('@')[0]}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
                       {editingAdmin?.id === admin.id ? (
                         <input
@@ -255,7 +284,7 @@ export default function Admin() {
                           className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
                         />
                       ) : (
-                        admin.email || 'N/A'
+                        admin.email
                       )}
                     </td>
                     <td className="p-3 text-xs sm:text-sm">
@@ -304,8 +333,15 @@ export default function Admin() {
               <input
                 type="email"
                 value={newVendor.email}
-                onChange={(e) => setNewVendor({ email: e.target.value })}
+                onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
                 placeholder="Enter vendor email"
+                className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+              />
+              <input
+                type="text"
+                value={newVendor.name}
+                onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+                placeholder="Enter vendor name"
                 className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
               />
               <button
@@ -324,6 +360,7 @@ export default function Admin() {
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-800">
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Vendor ID</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Name</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Email</th>
                   <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Actions</th>
                 </tr>
@@ -332,6 +369,7 @@ export default function Admin() {
                 {data.vendors.map((vendor) => (
                   <tr key={vendor.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{vendor.id}</td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{vendor.name || vendor.email.split('@')[0]}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
                       {editingVendor?.id === vendor.id ? (
                         <input
@@ -341,7 +379,7 @@ export default function Admin() {
                           className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
                         />
                       ) : (
-                        vendor.email || 'N/A'
+                        vendor.email
                       )}
                     </td>
                     <td className="p-3 text-xs sm:text-sm">

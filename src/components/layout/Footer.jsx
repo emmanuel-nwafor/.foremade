@@ -1,19 +1,8 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ngFlag from '/src/assets/nglogo.png';
 import ukFlag from '/src/assets/uklogo.png';
 
 const Footer = () => {
-  const [email, setEmail] = useState('');
-
-  const handleNewsletterSubmit = (e) => {
-    e.preventDefault();
-    if (email) {
-      console.log('Newsletter subscription submitted:', email);
-      setEmail(''); // Clear the input after submission
-    }
-  };
-
   return (
     <footer className="bg-white mt-16">
       {/* Top Section: Benefits */}
@@ -69,6 +58,18 @@ const Footer = () => {
                 </a>
               </div>
 
+              <div className="relative group m-4">
+                <button className="hover:text-blue-600 flex items-center">
+                  <img src={ukFlag} alt="ng-flag" className="h-5" />
+                  <i className="bx bx-chevron-down ml-1"></i>
+                </button>
+                <div className="absolute hidden group-hover:block bg-gray-300 z-10 w-48 rounded-md shadow-xl">
+                  <span className="block px-4 py-1 text-xs hover:text-black">
+                    <img src={ngFlag} alt="uk-flag" className="h-5" />
+                  </span>
+                </div>
+              </div>
+
               {/* Hotline */}
               <div className="flex items-center space-x-2">
                 <i className="bx bx-phone text-xl"></i>
@@ -76,33 +77,8 @@ const Footer = () => {
               </div>
 
               {/* Contact Info */}
-              <p>Nigeria</p>
+              <p>United Kingdom</p>
               <p>info@foremade.com</p>
-
-              {/* Newsletter */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold flex items-center space-x-2">
-                  <span>Newsletter</span>
-                  <i className="bx bx-chevron-up text-blue-500 rotate-45"></i>
-                </h3>
-                <p className="text-sm">Subscribe our newsletter to get latest updates</p>
-                <form onSubmit={handleNewsletterSubmit} className="flex space-x-2">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2 rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                  >
-                    Submit
-                  </button>
-                </form>
-              </div>
             </div>
 
             {/* Accounts Column */}
@@ -146,17 +122,6 @@ const Footer = () => {
             {/* Other Column */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Other</h3>
-              <div className="relative group m-4">
-                <button className="hover:text-blue-600 flex items-center">
-                  <img src={ngFlag} alt="ng-flag" className="h-5" />
-                  <i className="bx bx-chevron-down ml-1"></i>
-                </button>
-                <div className="absolute hidden group-hover:block bg-[#112c42] py-3 z-10 w-48 rounded-md shadow-xl">
-                  <span className="block px-4 py-1 text-xs hover:text-black hover:bg-gray-100">
-                    <img src={ukFlag} alt="uk-flag" className="h-5" />
-                  </span>
-                </div>
-              </div>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link to="/about" className="hover:text-blue-400">About Company</Link>

@@ -46,7 +46,7 @@ const Footer = () => {
               </div>
 
               {/* Social Media Icons */}
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 items-center">
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-xl hover:text-blue-400">
                   <i className="bx bxl-twitter"></i>
                 </a>
@@ -56,17 +56,17 @@ const Footer = () => {
                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-xl hover:text-blue-600">
                   <i className="bx bxl-facebook"></i>
                 </a>
-              </div>
 
-              <div className="relative group m-4">
-                <button className="hover:text-blue-600 flex items-center">
-                  <img src={ukFlag} alt="ng-flag" className="h-5" />
-                  <i className="bx bx-chevron-down ml-1"></i>
-                </button>
-                <div className="absolute hidden group-hover:block bg-gray-300 z-10 w-48 rounded-md shadow-xl">
-                  <span className="block px-4 py-1 text-xs hover:text-black">
-                    <img src={ngFlag} alt="uk-flag" className="h-5" />
-                  </span>
+                <div className="relative group m-4">
+                  <button className="hover:text-blue-600 flex items-center">
+                    <img src={ukFlag} alt="ng-flag" className="h-5" />
+                    <i className="bx bx-chevron-down ml-1"></i>
+                  </button>
+                  <div className="absolute hidden group-hover:block bg-gray-300 z-10 w-48 rounded-md shadow-xl">
+                    <span className="block px-4 py-1 text-xs hover:text-black">
+                      <img src={ngFlag} alt="uk-flag" className="h-5" />
+                    </span>
+                  </div>
                 </div>
               </div>
 

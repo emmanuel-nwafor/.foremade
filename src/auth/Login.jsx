@@ -106,7 +106,7 @@ export default function Login() {
       if (userSnapshot.exists()) {
         const userData = userSnapshot.data();
         localStorage.setItem('userData', JSON.stringify(userData));
-        setSuccessMessage(`Welcome back, ${userData.name.split(' ')[0]}!`);
+        setSuccessMessage(`Welcome, ${userData.name.split(' ')[0]}!`);
         setTimeout(() => {
           setLoadingEmail(false);
           navigate('/profile'); // Adjust redirect path as needed

@@ -26,6 +26,7 @@ import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
 import Admin from './Admin/Admin';
+import SellerForgotPassword from './seller/SellerForgetPassword';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -40,6 +41,7 @@ const Layout = ({ children }) => {
     '/seller-product-upload',
     '/settings',
     '/seller/agreement',
+    '/seller/forgot-password',
     '/admin', // Added admin route
   ].includes(location.pathname);
 
@@ -170,7 +172,14 @@ function App() {
           <Route
             path="/admin"
             element={
-                <Admin />
+              <Admin />
+            }
+          />
+          
+          <Route
+            path="/seller/forgot-password"
+            element={
+              <SellerForgotPassword />
             }
           />
 

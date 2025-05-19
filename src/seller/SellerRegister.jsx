@@ -9,7 +9,8 @@ import logo from '../assets/logi.png';
 
 export default function SellerRegister() {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     country: '',
     email: '',
     phone: '',
@@ -100,7 +101,8 @@ export default function SellerRegister() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Please enter your full name.';
+    if (!formData.firstName.trim() || !formData.lastName.trim())
+      newErrors.name = 'Please enter your first and last name.';
     if (!formData.country) newErrors.country = 'Please select a country.';
     if (!formData.email.trim()) newErrors.email = 'Please enter your email.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
@@ -120,7 +122,8 @@ export default function SellerRegister() {
 
   const isFormValid = () => {
     return (
-      formData.name.trim() &&
+      formData.firstName.trim() &&
+      formData.lastName.trim() &&
       formData.country &&
       formData.email.trim() &&
       formData.phone.includes('-') &&
@@ -149,17 +152,17 @@ export default function SellerRegister() {
       const currentUser = userCredential.user;
 
       const vendorData = {
-        name: formData.name,
+        name: `${formData.firstName} ${formData.lastName}`,
         country: formData.country,
         phone: formData.phone,
         createdAt: new Date().toISOString(),
         userType: 'vendor',
       };
       await setDoc(doc(db, 'vendors', currentUser.uid), vendorData);
-      await updateProfile(currentUser, { displayName: formData.name });
+      await updateProfile(currentUser, { displayName: `${formData.firstName} ${formData.lastName}` });
 
       setSubmitError(
-        `Welcome, ${formData.name.split(' ')[0]}! Your vendor account is ready. You can now log in.`
+        `Welcome, ${formData.firstName}! Your vendor account is ready. You can now log in.`
       );
       localStorage.setItem('vendorSignupSuccess', 'true');
       setSignupSuccess(true);
@@ -254,8 +257,8 @@ export default function SellerRegister() {
               <div className="relative flex-1">
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
                   className={`w-full p-3 border rounded-lg transition-all duration-300 ${
                     errors.name ? 'border-red-500' : submitError ? 'border-green-500' : 'border-gray-300'
@@ -264,15 +267,41 @@ export default function SellerRegister() {
                   required
                 />
                 <label
-                  htmlFor="name"
+                  htmlFor="firstName"
                   className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                    formData.name ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                    formData.firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                   }`}
                 >
-                  Full Name <span className="text-red-500">*</span>
+                  First Name <span className="text-red-500">*</span>
                 </label>
                 {errors.name && <p className="text-red-600 text-[10px] mt-1">{errors.name}</p>}
               </div>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                    errors.name ? 'border-red-500' : submitError ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  autoComplete="off"
+                  required
+                />
+                <label
+                  htmlFor="lastName"
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                    formData.lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  }`}
+                >
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                {errors.name && errors.name.includes('last name') && (
+                  <p className="text-red-600 text-[10px] mt-1">{errors.name}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-4">
               <div className="relative flex-1">
                 <input
                   type="email"
@@ -295,6 +324,35 @@ export default function SellerRegister() {
                 </label>
                 {errors.email && <p className="text-red-600 text-[10px] mt-1">{errors.email}</p>}
               </div>
+              <div className="relative flex-1">
+                <div className="flex items-center border border-gray-300 rounded-lg">
+                  <select
+                    value={
+                      isPhoneCodeManual
+                        ? formData.phone.split('-')[0] || ''
+                        : getCountryCode(formData.country)
+                    }
+                    onChange={handlePhoneCodeChange}
+                    className="px-2 py-3 text-xs sm:text-sm bg-gray-100 text-gray-700 border-r border-gray-300 focus:outline-none w-24" // Reduced width to w-24 (6rem)
+                  >
+                    {countryCodes.map((country) => (
+                      <option key={`${country.code}-${country.country}`} value={country.code}>
+                        {country.code} ({country.country})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={
+                      formData.phone.includes('-') ? formData.phone.split('-')[1] || '' : formData.phone
+                    }
+                    onChange={handlePhoneNumberChange}
+                    placeholder="Enter phone number"
+                    className="w-full p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {errors.phone && <p className="text-red-600 text-[10px] mt-1">{errors.phone}</p>}
+              </div>
             </div>
             <div className="relative">
               <label className="block text-gray-700 text-xs sm:text-sm font-medium">
@@ -314,38 +372,6 @@ export default function SellerRegister() {
                 ))}
               </select>
               {errors.country && <p className="text-red-600 text-[10px] mt-1">{errors.country}</p>}
-            </div>
-            <div className="relative">
-              <label className="block text-gray-700 text-xs sm:text-sm font-medium">
-                Phone <span className="text-red-500">*</span>
-              </label>
-              <div className="mt-1 flex items-center border border-gray-300 rounded-lg">
-                <select
-                  value={
-                    isPhoneCodeManual
-                      ? formData.phone.split('-')[0] || ''
-                      : getCountryCode(formData.country)
-                  }
-                  onChange={handlePhoneCodeChange}
-                  className="px-2 py-3 text-xs sm:text-sm bg-gray-100 text-gray-700 border-r border-gray-300 focus:outline-none"
-                >
-                  {countryCodes.map((country) => (
-                    <option key={`${country.code}-${country.country}`} value={country.code}>
-                      {country.code} ({country.country})
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="tel"
-                  value={
-                    formData.phone.includes('-') ? formData.phone.split('-')[1] || '' : formData.phone
-                  }
-                  onChange={handlePhoneNumberChange}
-                  placeholder="Enter phone number"
-                  className="w-full p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              {errors.phone && <p className="text-red-600 text-[10px] mt-1">{errors.phone}</p>}
             </div>
             <div className="relative">
               <input

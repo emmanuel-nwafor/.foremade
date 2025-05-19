@@ -8,6 +8,7 @@ export default function SellerLogin() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -62,23 +63,47 @@ export default function SellerLogin() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Email"
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                  error ? 'border-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500'
+                }`}
                 autoComplete="off"
                 required
               />
+              <label
+                htmlFor="email"
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                  formData.email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                }`}
+              >
+                Email <span className="text-red-500">*</span>
+              </label>
             </div>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Password"
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                  error ? 'border-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500'
+                }`}
                 autoComplete="off"
                 required
               />
+              <label
+                htmlFor="password"
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                  formData.password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                }`}
+              >
+                Password <span className="text-red-500">*</span>
+              </label>
+              <span
+                className="absolute right-3 top-3 text-gray-500 cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
+              </span>
             </div>
             <button
               type="submit"

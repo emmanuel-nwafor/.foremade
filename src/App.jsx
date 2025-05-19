@@ -21,13 +21,13 @@ import Address from './profile/Address';
 import Setting from './profile/Setting';
 import SellerLogin from './seller/SellerLogin';
 import OrderConfirmation from './components/checkout/OrderConfirmation';
-import Overview from './seller/Overview';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
-import Admin from './Admin/Admin';
+// import Admin from './admin/Admin';
 import SellerForgotPassword from './seller/SellerForgetPassword';
 import Dashboard from './seller/Dashboard';
+import Admin from './Admin/Admin';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -38,7 +38,7 @@ const Layout = ({ children }) => {
     '/seller/login',
     '/vendor/dashboard',
     '/overview',
-    '/customers-orders',
+    '/vendor/orders',
     '/seller-product-upload',
     '/settings',
     '/seller/agreement',
@@ -131,7 +131,7 @@ function App() {
 
           {/* Seller Routes (Protected) */}
           <Route
-            path="/seller-product-upload"
+            path="/vendor/product-upload"
             element={
               <ProtectedRoute>
                 <SellerProductUpload />
@@ -155,7 +155,7 @@ function App() {
             }
           />
           <Route
-            path="/customers-orders"
+            path="/vendor/orders"
             element={
               <ProtectedRoute>
                 <UsersOrdersPage />

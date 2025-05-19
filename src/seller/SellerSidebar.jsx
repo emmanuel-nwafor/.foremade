@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { vendorAuth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import logo from '../assets/logo.png';
+import logo from '../assets/logi.png';
 
 export default function SellerSidebar() {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export default function SellerSidebar() {
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg"
         onClick={toggleSidebar}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,12 +36,12 @@ export default function SellerSidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-blue-900 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
+        className={`fixed inset-y-0 left-0 w-64 bg-slate-700 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
-        <div className="p-4 border-b border-blue-700 flex justify-between items-center">
-          <img src={logo} alt="Foremade logo" className="w-28" />
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+          <img src={logo} alt="Foremade logo" className="w-40" />
           {/* Close Button (Mobile Only) */}
           <button className="md:hidden p-2" onClick={toggleSidebar}>
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,53 +55,53 @@ export default function SellerSidebar() {
             placeholder="Search menu..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 rounded-lg bg-blue-800 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="w-full p-2 rounded-lg bg-slate-700 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
         </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hidden">
-          <Link to="/overview" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+          <Link to="/vendor/dashboard" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
             <i className="bx bx-home text-lg mr-2"></i>Dashboard
           </Link>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Order Management</h3>
-            <Link to="/vendor/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-cart text-lg mr-2"></i>Orders
             </Link>
-            <Link to="/vendor/refund-requests" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/refund-requests" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-receipt text-lg mr-2"></i>Refund Requests
             </Link>
           </div>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Product Management</h3>
-            <Link to="/seller-product-upload" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/product-upload" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-box text-lg mr-2"></i>Products
             </Link>
-            <Link to="/vendor/product-reviews" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/product-reviews" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-star text-lg mr-2"></i>Product Reviews
             </Link>
           </div>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Promotion Management</h3>
-            <Link to="/vendor/coupons" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/coupons" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-gift text-lg mr-2"></i>Coupons
             </Link>
-            <Link to="/vendor/clearance-sale" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/clearance-sale" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-megaphone text-lg mr-2"></i>Clearance Sale
             </Link>
           </div>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Help & Support</h3>
-            <Link to="/vendor/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+            <Link to="/vendor/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-message text-lg mr-2"></i>Inbox
             </Link>
           </div>
         </nav>
-        <div className="p-4 border-t border-blue-700">
+        <div className="p-4 border-t border-slate-700">
           <button
             onClick={handleSignOut}
             className="w-full bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors duration-200"
           >
-            Sign Out
+            <i className="bx bx-log-out text-lg mr-2"></i>Sign Out
           </button>
         </div>
       </div>
@@ -114,15 +114,27 @@ export default function SellerSidebar() {
         ></div>
       )}
 
-      {/* Custom Styles for Hiding Scrollbar */}
+      {/* Custom Styles for Fancy Scrollbar */}
       <style>
         {`
-          .scrollbar-hidden::-webkit-scrollbar {
-            display: none;
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
           }
-          .scrollbar-hidden {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #4b5563; /* Slate gray track */
+            border-radius: 3px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #93c5fd; /* Light blue thumb */
+            border-radius: 3px;
+            transition: background 0.3s;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #60a5fa; /* Brighter blue on hover */
+          }
+          .custom-scrollbar {
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: #93c5fd #4b5563; /* Thumb and track for Firefox */
           }
         `}
       </style>

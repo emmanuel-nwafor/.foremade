@@ -8,6 +8,8 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  console.log(vendor)
+
   // Mock wallet data
   const mockWallet = {
     balance: 0.00,
@@ -64,7 +66,7 @@ export default function Wallet() {
   }
 
   return (
-    <div className="px-4 py-6 bg-gray-50 min-h-screen">
+    <div className="px-4 py-6 min-h-screen">
       <div className="mb-6">
         <h1 className="text-lg md:text-xl font-semibold text-gray-700 flex items-center">
           <svg className="w-5 h-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
@@ -76,7 +78,7 @@ export default function Wallet() {
       </div>
 
       {/* Main Balance Card */}
-      <div className="bg-white rounded-lg p-6 mb-6 shadow-md">
+      <div className="bg-gray-50 rounded-lg p-6 mb-6 shadow-none">
         <div className="flex flex-col items-center">
           <svg className="w-12 h-12 text-gray-400 mb-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6zM8 6a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm0 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm0 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
@@ -93,8 +95,8 @@ export default function Wallet() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
@@ -102,7 +104,7 @@ export default function Wallet() {
           <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.pendingWithdraw.toFixed(2)}</p>
           <p className="text-xs md:text-sm text-gray-600">Pending Withdraw</p>
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-yellow-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
@@ -110,7 +112,7 @@ export default function Wallet() {
           <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalCommissionGiven.toFixed(2)}</p>
           <p className="text-xs md:text-sm text-gray-600">Total Commission Given</p>
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-green-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
@@ -118,7 +120,7 @@ export default function Wallet() {
           <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalDeliveryChargeEarned.toFixed(2)}</p>
           <p className="text-xs md:text-sm text-gray-600">Total Delivery Charge Earned</p>
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-blue-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
@@ -126,7 +128,7 @@ export default function Wallet() {
           <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.alreadyWithdrawn.toFixed(2)}</p>
           <p className="text-xs md:text-sm text-gray-600">Already Withdrawn</p>
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-red-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
@@ -134,7 +136,7 @@ export default function Wallet() {
           <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalTaxGiven.toFixed(2)}</p>
           <p className="text-xs md:text-sm text-gray-600">Total Tax Given</p>
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+        <div className="bg-gray-50 rounded-lg p-4 shadow-none text-center">
           <svg className="w-8 h-8 mx-auto text-orange-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />

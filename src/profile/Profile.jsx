@@ -13,7 +13,7 @@ export default function Profile() {
   const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
   const mockWishlistCount = 3;
   const mockWalletBalance = 100.50;
-  const mockLoyaltyPoints = 250;
+  const mockLoyaltyPoints = 0;
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {

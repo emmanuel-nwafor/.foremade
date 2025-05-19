@@ -27,7 +27,7 @@ import SellerAgreement from './seller/SellerAgreement';
 // import Admin from './admin/Admin';
 import SellerForgotPassword from './seller/SellerForgetPassword';
 import Dashboard from './seller/Dashboard';
-import Admin from './Admin/Admin';
+import Admin from '/src/admin/Admin';
 
 const Layout = ({ children }) => {
   const location = useLocation();

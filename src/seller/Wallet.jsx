@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import SellerSidebar from './SellerSidebar';
 import { vendorAuth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Link } from 'react-router-dom';
@@ -8,16 +7,16 @@ export default function Wallet() {
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Mock wallet data
   const mockWallet = {
-    balance: 100.50,
-    transactions: [
-      { id: 1, type: 'Credit', amount: 50.00, date: '2025-05-15', description: 'Sale of Product A' },
-      { id: 2, type: 'Debit', amount: -20.00, date: '2025-05-16', description: 'Withdrawal to Bank' },
-      { id: 3, type: 'Credit', amount: 70.50, date: '2025-05-17', description: 'Sale of Product B' },
-    ],
+    balance: 0.00,
+    pendingWithdraw: 0.00,
+    totalCommissionGiven: 0.00,
+    totalDeliveryChargeEarned: 0.00,
+    alreadyWithdrawn: 0.00,
+    totalTaxGiven: 0.00,
+    collectedCash: 0.00,
   };
 
   useEffect(() => {
@@ -65,88 +64,83 @@ export default function Wallet() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <div className="flex flex-1">
-        {/* Toggle button for mobile */}
-        <button
-          className="md:hidden p-4 text-gray-600 hover:text-gray-800 focus:outline-none"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+    <div className="px-4 py-6 bg-gray-50 min-h-screen">
+      <div className="mb-6">
+        <h1 className="text-lg md:text-xl font-semibold text-gray-700 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
           </svg>
-        </button>
+          Vendor Wallet
+        </h1>
+      </div>
 
-        {/* Sidebar */}
-        <div
-          className={`${
-            sidebarOpen ? 'block' : 'hidden'
-          } md:block md:w-1/4 bg-gray-50 p-6 transition-all duration-300 ease-in-out`}
-        >
-          <SellerSidebar />
+      {/* Main Balance Card */}
+      <div className="bg-white rounded-lg p-6 mb-6 shadow-md">
+        <div className="flex flex-col items-center">
+          <svg className="w-12 h-12 text-gray-400 mb-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6zM8 6a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm0 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm0 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+          </svg>
+          <p className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">₦{mockWallet.balance.toFixed(2)}</p>
+          <p className="text-sm text-gray-600">Withdrawable Balance</p>
+          <Link
+            to="/vendor/withdraw"
+            className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200 text-sm md:text-base w-full text-center"
+          >
+            Withdraw
+          </Link>
         </div>
+      </div>
 
-        {/* Main content */}
-        <div className="w-full md:w-3/4 p-6">
-          <div className="mb-6">
-            <h1 className="text-xl font-semibold text-gray-700">Wallet Overview</h1>
-            <p className="text-sm text-gray-500">Manage your earnings and transactions.</p>
-          </div>
-
-          {/* Wallet Balance */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-400">Current Balance</p>
-                <p className="text-2xl font-semibold text-gray-800">₦{mockWallet.balance.toFixed(2)}</p>
-              </div>
-              <Link
-                to="/vendor/withdraw"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-              >
-                Withdraw Funds
-              </Link>
-            </div>
-          </div>
-
-          {/* Transaction History */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Transaction History</h3>
-            {mockWallet.transactions.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th scope="col" className="py-3 px-6">Date</th>
-                      <th scope="col" className="py-3 px-6">Type</th>
-                      <th scope="col" className="py-3 px-6">Amount</th>
-                      <th scope="col" className="py-3 px-6">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockWallet.transactions.map((transaction) => (
-                      <tr key={transaction.id} className="border-b">
-                        <td className="py-4 px-6">{transaction.date}</td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`${
-                              transaction.type === 'Credit' ? 'text-green-500' : 'text-red-500'
-                            } font-medium`}
-                          >
-                            {transaction.type}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">₦{transaction.amount.toFixed(2)}</td>
-                        <td className="py-4 px-6">{transaction.description}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500">No transactions found.</p>
-            )}
-          </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.pendingWithdraw.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Pending Withdraw</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-yellow-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalCommissionGiven.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Total Commission Given</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-green-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalDeliveryChargeEarned.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Total Delivery Charge Earned</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-blue-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.alreadyWithdrawn.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Already Withdrawn</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-red-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.totalTaxGiven.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Total Tax Given</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-md text-center">
+          <svg className="w-8 h-8 mx-auto text-orange-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM1 10a9 9 0 1118 0 9 9 0 01-18 0z" clipRule="evenodd" />
+          </svg>
+          <p className="text-xl md:text-2xl font-semibold text-gray-800">₦{mockWallet.collectedCash.toFixed(2)}</p>
+          <p className="text-xs md:text-sm text-gray-600">Collected Cash</p>
         </div>
       </div>
     </div>

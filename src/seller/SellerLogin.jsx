@@ -24,7 +24,7 @@ export default function SellerLogin() {
 
     try {
       await signInWithEmailAndPassword(vendorAuth, formData.email, formData.password);
-      navigate('/overview');
+      navigate('/vendor/dashboard');
     } catch (err) {
       console.error(err);
       setError('Invalid email or password. Please try again.');

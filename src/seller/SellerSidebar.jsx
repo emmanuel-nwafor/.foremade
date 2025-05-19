@@ -7,6 +7,7 @@ import logo from '../assets/logo.png';
 export default function SellerSidebar() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSignOut = async () => {
     try {
@@ -25,7 +26,7 @@ export default function SellerSidebar() {
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
         onClick={toggleSidebar}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,42 +36,67 @@ export default function SellerSidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-gray-100 text-gray-800 flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
+        className={`fixed inset-y-0 left-0 w-64 bg-blue-900 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
-        <div className="p-6 border-b border-gray-300 flex justify-between items-center">
-          <img src={logo} alt="Foremade logo" className="w-32" />
+        <div className="p-4 border-b border-blue-700 flex justify-between items-center">
+          <img src={logo} alt="Foremade logo" className="w-28" />
           {/* Close Button (Mobile Only) */}
           <button className="md:hidden p-2" onClick={toggleSidebar}>
-            <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <Link to="/overview" onClick={() => setIsOpen(false)}>
-            <button className="flex items-center w-full text-left p-2 rounded-lg transition-colors duration-200 text-gray-500 font-semibold hover:bg-gray-200">
-              <i className='bx bx-list-ol text-xl'></i>Overview
-            </button>
+        <div className="p-4">
+          <input
+            type="text"
+            placeholder="Search menu..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-2 rounded-lg bg-blue-800 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          />
+        </div>
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hidden">
+          <Link to="/overview" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
+            <i className="bx bx-home text-lg mr-2"></i>Dashboard
           </Link>
-          <Link to="/customers-orders" onClick={() => setIsOpen(false)}>
-            <button className="flex items-center w-full text-left text-gray-500 p-2 rounded-lg transition-colors duration-200 font-semibold hover:bg-gray-200">
-              <i className='bx bxs-notification text-xl'></i>Orders
-            </button>
-          </Link>
-          <Link to="/seller-product-upload" onClick={() => setIsOpen(false)}>
-            <button className="flex items-center w-full text-left text-gray-500 p-2 rounded-lg transition-colors duration-200 font-semibold hover:bg-gray-200">
-              <i className='bx bx-podcast text-xl'></i>Products
-            </button>
-          </Link>
-          <Link to="/settings" onClick={() => setIsOpen(false)}>
-            <button className="flex items-center w-full text-left text-gray-500 p-2 rounded-lg transition-colors duration-200 font-semibold hover:bg-gray-200">
-              <i className='bx bx-cog text-xl'></i>Settings
-            </button>
-          </Link>
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Order Management</h3>
+            <Link to="/vendor/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-cart text-lg mr-2"></i>Orders
+            </Link>
+            <Link to="/vendor/refund-requests" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-receipt text-lg mr-2"></i>Refund Requests
+            </Link>
+          </div>
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Product Management</h3>
+            <Link to="/seller-product-upload" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-box text-lg mr-2"></i>Products
+            </Link>
+            <Link to="/vendor/product-reviews" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-star text-lg mr-2"></i>Product Reviews
+            </Link>
+          </div>
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Promotion Management</h3>
+            <Link to="/vendor/coupons" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-gift text-lg mr-2"></i>Coupons
+            </Link>
+            <Link to="/vendor/clearance-sale" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-megaphone text-lg mr-2"></i>Clearance Sale
+            </Link>
+          </div>
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Help & Support</h3>
+            <Link to="/vendor/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-blue-800">
+              <i className="bx bx-message text-lg mr-2"></i>Inbox
+            </Link>
+          </div>
         </nav>
-        <div className="p-4 border-t border-gray-300">
+        <div className="p-4 border-t border-blue-700">
           <button
             onClick={handleSignOut}
             className="w-full bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors duration-200"
@@ -87,6 +113,19 @@ export default function SellerSidebar() {
           onClick={toggleSidebar}
         ></div>
       )}
+
+      {/* Custom Styles for Hiding Scrollbar */}
+      <style>
+        {`
+          .scrollbar-hidden::-webkit-scrollbar {
+            display: none;
+          }
+          .scrollbar-hidden {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+        `}
+      </style>
     </>
   );
 }

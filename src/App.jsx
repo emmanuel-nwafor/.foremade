@@ -27,6 +27,7 @@ import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
 import Admin from './Admin/Admin';
 import SellerForgotPassword from './seller/SellerForgetPassword';
+import Dashboard from './seller/Dashboard';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -146,10 +147,10 @@ function App() {
             }
           />
           <Route
-            path="/overview"
+            path="/vendor/dashboard"
             element={
               <ProtectedRoute>
-                <Overview />
+                <Dashboard />
               </ProtectedRoute>
             }
           />

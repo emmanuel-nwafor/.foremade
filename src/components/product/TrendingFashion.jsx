@@ -4,24 +4,31 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-export default function TrendingFashion() {
+export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const category = 'Foremade Fashion';
-  const categoryId = 2;
+  const category = 'Gadgets';
+  const categoryId = 3;
+  const firestoreCategories = ['tablet & phones', 'computers & accessories', 'electronics', 'smart watches', 'game & fun'];
 
   useEffect(() => {
-    const fetchTrendingFashion = async () => {
+    const fetchTrendingGadgets = async () => {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('category', '==', 'foremade fashion'));
+        const q = query(collection(db, 'products'), where('category', 'in', firestoreCategories));
         const querySnapshot = await getDocs(q);
-        const productsData = querySnapshot.docs
+        const allProducts = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data };
+        });
+        console.log('All fetched products:', allProducts);
+
+        const productsData = allProducts
           .map((doc) => {
-            const data = doc.data();
+            const data = doc;
             let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
               ? data.imageUrl
               : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
@@ -33,8 +40,8 @@ export default function TrendingFashion() {
               description: data.description || '',
               price: data.price || 0,
               stock: data.stock || 0,
-              category: data.category || 'foremade fashion',
-              categoryId: data.category?.trim().toLowerCase() === 'foremade fashion' ? categoryId : 2,
+              category: data.category || 'electronics',
+              categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? categoryId : 3,
               colors: data.colors || [],
               sizes: data.sizes || [],
               condition: data.condition || '',
@@ -66,7 +73,49 @@ export default function TrendingFashion() {
           .sort((a, b) => b.rating - a.rating);
 
         console.log(`Fetched ${category} products:`, productsData);
-        setTrendingProducts(productsData);
+        if (productsData.length === 0) {
+          console.warn('No products passed the filters. Relaxing stock filter to debug...');
+          const relaxedProductsData = allProducts
+            .map((doc) => {
+              const data = doc;
+              let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
+                ? data.imageUrl
+                : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
+                ? data.imageUrls[0]
+                : '/images/placeholder.jpg';
+              return {
+                id: doc.id,
+                name: data.name || 'Unnamed Product',
+                description: data.description || '',
+                price: data.price || 0,
+                stock: data.stock || 0,
+                category: data.category || 'electronics',
+                categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? categoryId : 3,
+                colors: data.colors || [],
+                sizes: data.sizes || [],
+                condition: data.condition || '',
+                imageUrl,
+                sellerId: data.sellerId || '',
+                rating: data.rating || Math.random() * 2 + 3,
+              };
+            })
+            .filter((product) => {
+              const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
+              if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
+                console.warn('Filtered out product with invalid imageUrl (relaxed filter):', {
+                  id: product.id,
+                  name: product.name,
+                  imageUrl: product.imageUrl,
+                });
+                return false;
+              }
+              return true;
+            });
+          console.log('Products with relaxed stock filter:', relaxedProductsData);
+          setTrendingProducts(relaxedProductsData.sort((a, b) => b.rating - a.rating));
+        } else {
+          setTrendingProducts(productsData);
+        }
       } catch (err) {
         console.error(`Error loading ${category} products:`, {
           message: err.message,
@@ -78,7 +127,7 @@ export default function TrendingFashion() {
       }
     };
 
-    fetchTrendingFashion();
+    fetchTrendingGadgets();
   }, []);
 
   return (

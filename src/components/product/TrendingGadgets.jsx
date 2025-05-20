@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
-import SkeletonLoader from '/src/components/common/SkeletonLoader';
 
 export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
@@ -25,7 +24,7 @@ export default function TrendingGadgets() {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-        console.log('All fetched products:', allProducts); // Debug log to see raw data
+        console.log('All fetched products:', allProducts);
 
         const productsData = allProducts
           .map((doc) => {
@@ -144,7 +143,17 @@ export default function TrendingGadgets() {
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
-        <SkeletonLoader type="featuredProduct" count={10} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="min-w-[200px] h-56 sm:h-60 md:h-64 lg:h-72 bg-gray-200 animate-pulse rounded-lg">
+              <div className="w-full h-40 sm:h-44 md:h-48 lg:h-52 bg-gray-300 rounded-t-lg"></div>
+              <div className="p-2 sm:p-3">
+                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : trendingProducts.length === 0 ? (
         <p className="text-gray-600 col-span-full text-center">No {category} products found.</p>
       ) : (

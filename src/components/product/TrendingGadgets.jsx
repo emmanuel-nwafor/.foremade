@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import SkeletonLoader from '/src/components/common/SkeletonLoader';
 
 export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
@@ -11,7 +12,7 @@ export default function TrendingGadgets() {
 
   const category = 'Gadgets';
   const categoryId = 3;
-  const firestoreCategories = ['tablet & phones', 'computers & accessories', 'electronics', 'smart watches'];
+  const firestoreCategories = ['tablet & phones', 'computers & accessories', 'electronics', 'smart watches', 'game & fun'];
 
   useEffect(() => {
     const fetchTrendingGadgets = async () => {
@@ -20,9 +21,15 @@ export default function TrendingGadgets() {
         setError(null);
         const q = query(collection(db, 'products'), where('category', 'in', firestoreCategories));
         const querySnapshot = await getDocs(q);
-        const productsData = querySnapshot.docs
+        const allProducts = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data };
+        });
+        console.log('All fetched products:', allProducts); // Debug log to see raw data
+
+        const productsData = allProducts
           .map((doc) => {
-            const data = doc.data();
+            const data = doc;
             let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
               ? data.imageUrl
               : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
@@ -64,11 +71,52 @@ export default function TrendingGadgets() {
             }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, 10);
+          .sort((a, b) => b.rating - a.rating);
 
         console.log(`Fetched ${category} products:`, productsData);
-        setTrendingProducts(productsData);
+        if (productsData.length === 0) {
+          console.warn('No products passed the filters. Relaxing stock filter to debug...');
+          const relaxedProductsData = allProducts
+            .map((doc) => {
+              const data = doc;
+              let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
+                ? data.imageUrl
+                : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
+                ? data.imageUrls[0]
+                : '/images/placeholder.jpg';
+              return {
+                id: doc.id,
+                name: data.name || 'Unnamed Product',
+                description: data.description || '',
+                price: data.price || 0,
+                stock: data.stock || 0,
+                category: data.category || 'electronics',
+                categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? categoryId : 3,
+                colors: data.colors || [],
+                sizes: data.sizes || [],
+                condition: data.condition || '',
+                imageUrl,
+                sellerId: data.sellerId || '',
+                rating: data.rating || Math.random() * 2 + 3,
+              };
+            })
+            .filter((product) => {
+              const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
+              if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
+                console.warn('Filtered out product with invalid imageUrl (relaxed filter):', {
+                  id: product.id,
+                  name: product.name,
+                  imageUrl: product.imageUrl,
+                });
+                return false;
+              }
+              return true;
+            });
+          console.log('Products with relaxed stock filter:', relaxedProductsData);
+          setTrendingProducts(relaxedProductsData.sort((a, b) => b.rating - a.rating));
+        } else {
+          setTrendingProducts(productsData);
+        }
       } catch (err) {
         console.error(`Error loading ${category} products:`, {
           message: err.message,
@@ -96,15 +144,11 @@ export default function TrendingGadgets() {
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
-          ))}
-        </div>
+        <SkeletonLoader type="featuredProduct" count={10} />
       ) : trendingProducts.length === 0 ? (
         <p className="text-gray-600 col-span-full text-center">No {category} products found.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {trendingProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

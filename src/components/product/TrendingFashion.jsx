@@ -63,8 +63,7 @@ export default function TrendingFashion() {
             }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, 10);
+          .sort((a, b) => b.rating - a.rating);
 
         console.log(`Fetched ${category} products:`, productsData);
         setTrendingProducts(productsData);
@@ -86,7 +85,7 @@ export default function TrendingFashion() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg sm:text-lg md:text-xl font-bold mt-4 text-gray-800 mb-4">
-          Trending in Fashion
+          Trending in {category}
         </h2>
         <Link to={`/products?category=${categoryId}`} className="text-blue-600 hover:underline text-sm">
           See All
@@ -95,15 +94,21 @@ export default function TrendingFashion() {
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
+            <div key={index} className="min-w-[200px] h-56 sm:h-60 md:h-64 lg:h-72 bg-gray-200 animate-pulse rounded-lg">
+              <div className="w-full h-40 sm:h-44 md:h-48 lg:h-52 bg-gray-300 rounded-t-lg"></div>
+              <div className="p-2 sm:p-3">
+                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            </div>
           ))}
         </div>
       ) : trendingProducts.length === 0 ? (
         <p className="text-gray-600 col-span-full text-center">No {category} products found.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {trendingProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

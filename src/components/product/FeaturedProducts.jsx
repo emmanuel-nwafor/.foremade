@@ -58,8 +58,7 @@ export default function FeaturedProducts() {
             }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, 8);
+          .sort((a, b) => b.rating - a.rating);
 
         console.log('Fetched featured products:', productsData);
         setProducts(productsData);
@@ -78,15 +77,21 @@ export default function FeaturedProducts() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 xs:gap-4 sm:gap-5 lg:gap-6">
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
-        <>
+        <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 xs:gap-4 sm:gap-5 lg:gap-6">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
+            <div key={index} className="min-w-[200px] h-56 xs:h-60 sm:h-64 md:h-72 lg:h-80 bg-gray-200 animate-pulse rounded-lg">
+              <div className="w-full h-40 xs:h-44 sm:h-48 md:h-52 lg:h-56 bg-gray-300 rounded-t-lg"></div>
+              <div className="p-2 sm:p-3">
+                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            </div>
           ))}
-        </>
+        </div>
       ) : products.length === 0 ? (
         <p className="text-gray-600 col-span-full text-center">No featured products found.</p>
       ) : (

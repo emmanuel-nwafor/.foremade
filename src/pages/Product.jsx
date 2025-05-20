@@ -732,7 +732,7 @@ const Product = () => {
         </div>
       </div>
       <div className="md:hidden lg:hidden xl:hidden mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Similar Products</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Recommended for you</h2>
         <div className="grid grid-cols-2 gap-4 overflow-auto">
           {similarProducts.length > 0 ? (
             similarProducts.map((similarProduct) => (

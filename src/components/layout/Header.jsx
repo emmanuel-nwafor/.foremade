@@ -300,11 +300,13 @@ const Header = () => {
 
       <div className="mx-auto px-4 text-black py-2 flex justify-between items-center sm:border-gray-200">
         <div className="flex items-center">
-          <img
-            src={logo}
-            className="h-14 sm:w-[400px] md:w-[400px] lg:w-[400px] xl:w-[300px]"
-            alt="Foremade"
-          />
+          <Link to="/">
+            <img
+              src={logo}
+              className="h-14 sm:w-[400px] md:w-[400px] lg:w-[400px] xl:w-[300px]"
+              alt="Foremade"
+            />
+          </Link>
         </div>
 
         <div className="hidden sm:flex items-center w-full mx-4 relative">

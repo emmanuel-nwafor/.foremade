@@ -3,13 +3,14 @@ import SellerSidebar from './SellerSidebar';
 import { vendorAuth, db } from '../firebase';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function UsersOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -24,12 +25,18 @@ export default function UsersOrdersPage() {
             );
             console.log('Executing orders query for all user orders');
             const querySnapshot = await getDocs(ordersQuery);
-            const ordersData = querySnapshot.docs.map((doc) => ({
+            const allOrders = querySnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             }));
-            console.log('Fetched orders:', JSON.stringify(ordersData, null, 2));
-            setOrders(ordersData);
+
+            // Filter orders to only include those with items sold by this vendor
+            const vendorOrders = allOrders.filter((order) =>
+              order.items?.some((item) => item.sellerId === user.uid)
+            );
+
+            console.log('Filtered orders for vendor UID:', user.uid, JSON.stringify(vendorOrders, null, 2));
+            setOrders(vendorOrders);
           } catch (err) {
             console.error('Firestore query error:', {
               code: err.code,
@@ -47,6 +54,7 @@ export default function UsersOrdersPage() {
         } else {
           console.warn('No vendor authenticated');
           setError('Please log in to view user orders.');
+          navigate('/seller/login');
         }
         setLoading(false);
       },
@@ -62,7 +70,7 @@ export default function UsersOrdersPage() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const toggleOrderDetails = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
@@ -123,7 +131,7 @@ export default function UsersOrdersPage() {
       <main className="flex-1 ml-0 md:ml-64 p-6 font-serif">
         <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">User Orders</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Your Orders</h1>
             <Link
               to="/seller/agreement"
               className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-2 rounded-lg hover:from-slate-700 hover:to-slate-800 transition-all duration-300 transform hover:scale-105"
@@ -136,7 +144,7 @@ export default function UsersOrdersPage() {
             <div className="text-center py-8">
               <p className="text-gray-600 text-lg">No orders found.</p>
               <p className="mt-2">
-                <Link to="/seller/products" className="text-blue-600 hover:underline">
+                <Link to="/vendor/products-upload" className="text-blue-600 hover:underline">
                   Upload products to start receiving orders
                 </Link>
               </p>
@@ -191,11 +199,13 @@ export default function UsersOrdersPage() {
                               <h4 className="text-sm font-semibold text-gray-700">Items</h4>
                               {order.items && order.items.length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm text-gray-600">
-                                  {order.items.map((item, index) => (
-                                    <li key={index}>
-                                      {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.paymentGateway)}
-                                    </li>
-                                  ))}
+                                  {order.items
+                                    .filter((item) => item.sellerId === vendorAuth.currentUser?.uid)
+                                    .map((item, index) => (
+                                      <li key={index}>
+                                        {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.paymentGateway)}
+                                      </li>
+                                    ))}
                                 </ul>
                               ) : (
                                 <p className="text-sm text-gray-600">No items</p>

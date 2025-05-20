@@ -2,32 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { auth, vendorAuth, db } from '/src/firebase';
 import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import SellerSidebar from '/src/seller/SellerSidebar';
+import AdminSidebar from '/src/admin/AdminSidebar'; // Updated to use AdminSidebar
 
-export default function Admin() {
-  const [data, setData] = useState({ users: [], admins: [], vendors: [] });
+function Admin() {
+  const [data, setData] = useState({ users: [], admins: [], vendors: [], products: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [newUser, setNewUser] = useState({ email: '', name: '' });
   const [newAdmin, setNewAdmin] = useState({ email: '', name: '' });
   const [newVendor, setNewVendor] = useState({ email: '', name: '' });
-  const [editingUser, setEditingUser] = useState(null);
-  const [editingAdmin, setEditingAdmin] = useState(null);
-  const [editingVendor, setEditingVendor] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersSnap, adminsSnap, vendorsSnap] = await Promise.all([
+        const [usersSnap, adminsSnap, vendorsSnap, productsSnap] = await Promise.all([
           getDocs(collection(db, 'users')),
           getDocs(collection(db, 'admins')),
           getDocs(collection(db, 'vendors')),
+          getDocs(collection(db, 'products')),
         ]);
 
         setData({
           users: usersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
           admins: adminsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
           vendors: vendorsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+          products: productsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
         });
       } catch (err) {
         setError('Failed to fetch data: ' + err.message);
@@ -40,11 +39,10 @@ export default function Admin() {
 
   const handleCreate = async (collectionName, newEntry) => {
     try {
-      const password = Math.random().toString(36).slice(-8); // Generate random password
+      const password = Math.random().toString(36).slice(-8);
       let authInstance = auth;
       if (collectionName === 'vendors') authInstance = vendorAuth;
 
-      // Create authentication account without email verification
       const userCredential = await createUserWithEmailAndPassword(authInstance, newEntry.email, password);
       const user = userCredential.user;
 
@@ -79,14 +77,13 @@ export default function Admin() {
           item.id === docId ? { ...item, ...updatedEntry } : item
         ),
       }));
-      if (collectionName === 'users') setEditingUser(null);
-      if (collectionName === 'admins') setEditingAdmin(null);
-      if (collectionName === 'vendors') setEditingVendor(null);
     } catch (err) {
       console.error(`Error updating ${collectionName} document ${docId}:`, err);
       setError(`Failed to update ${collectionName.slice(0, -1)}: ` + err.message);
     }
   };
+
+  console.log(handleUpdate)
 
   const handleDelete = async (collectionName, docId) => {
     try {
@@ -101,10 +98,26 @@ export default function Admin() {
     }
   };
 
+  const handleProductStatus = async (productId, newStatus) => {
+    try {
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { status: newStatus });
+      setData((prev) => ({
+        ...prev,
+        products: prev.products.map((item) =>
+          item.id === productId ? { ...item, status: newStatus } : item
+        ),
+      }));
+    } catch (err) {
+      console.error('Error updating product status:', err);
+      setError('Failed to update product status: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen bg-white dark:bg-gray-900">
-        <SellerSidebar />
+        <AdminSidebar />
         <main className="flex-1 ml-0 md:ml-64 p-6">
           <div className="container mx-auto px-4 py-8 text-center">
             <p className="text-gray-600 dark:text-gray-400">Loading...</p>
@@ -117,7 +130,7 @@ export default function Admin() {
   if (error) {
     return (
       <div className="flex min-h-screen bg-white dark:bg-gray-900">
-        <SellerSidebar />
+        <AdminSidebar />
         <main className="flex-1 ml-0 md:ml-64 p-6">
           <div className="container mx-auto px-4 py-8">
             <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded-lg dark:bg-red-900 dark:border-red-700">
@@ -131,7 +144,7 @@ export default function Admin() {
 
   return (
     <div className="flex min-h-screen bg-white dark:bg-gray-900">
-      <SellerSidebar />
+      <AdminSidebar />
       <main className="flex-1 ml-0 md:ml-64 p-6">
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6">Admin Dashboard</h1>
@@ -180,50 +193,14 @@ export default function Admin() {
                   <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.id}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.name || user.email.split('@')[0]}</td>
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                      {editingUser?.id === user.id ? (
-                        <input
-                          type="email"
-                          value={editingUser.email}
-                          onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                          className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        user.email
-                      )}
-                    </td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.email}</td>
                     <td className="p-3 text-xs sm:text-sm">
-                      {editingUser?.id === user.id ? (
-                        <>
-                          <button
-                            onClick={() => handleUpdate('users', user.id, { email: editingUser.email })}
-                            className="text-green-600 hover:underline mr-2 dark:text-green-400"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingUser(null)}
-                            className="text-gray-600 hover:underline dark:text-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingUser(user)}
-                            className="text-blue-600 hover:underline mr-2 dark:text-blue-400"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete('users', user.id)}
-                            className="text-red-600 hover:underline dark:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleDelete('users', user.id)}
+                        className="text-red-600 hover:underline dark:text-red-400"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -275,50 +252,14 @@ export default function Admin() {
                   <tr key={admin.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{admin.id}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{admin.name || admin.email.split('@')[0]}</td>
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                      {editingAdmin?.id === admin.id ? (
-                        <input
-                          type="email"
-                          value={editingAdmin.email}
-                          onChange={(e) => setEditingAdmin({ ...editingAdmin, email: e.target.value })}
-                          className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        admin.email
-                      )}
-                    </td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{admin.email}</td>
                     <td className="p-3 text-xs sm:text-sm">
-                      {editingAdmin?.id === admin.id ? (
-                        <>
-                          <button
-                            onClick={() => handleUpdate('admins', admin.id, { email: editingAdmin.email })}
-                            className="text-green-600 hover:underline mr-2 dark:text-green-400"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingAdmin(null)}
-                            className="text-gray-600 hover:underline dark:text-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingAdmin(admin)}
-                            className="text-blue-600 hover:underline mr-2 dark:text-blue-400"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete('admins', admin.id)}
-                            className="text-red-600 hover:underline dark:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleDelete('admins', admin.id)}
+                        className="text-red-600 hover:underline dark:text-red-400"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -370,50 +311,70 @@ export default function Admin() {
                   <tr key={vendor.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{vendor.id}</td>
                     <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{vendor.name || vendor.email.split('@')[0]}</td>
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                      {editingVendor?.id === vendor.id ? (
-                        <input
-                          type="email"
-                          value={editingVendor.email}
-                          onChange={(e) => setEditingVendor({ ...editingVendor, email: e.target.value })}
-                          className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        vendor.email
-                      )}
-                    </td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{vendor.email}</td>
                     <td className="p-3 text-xs sm:text-sm">
-                      {editingVendor?.id === vendor.id ? (
-                        <>
-                          <button
-                            onClick={() => handleUpdate('vendors', vendor.id, { email: editingVendor.email })}
-                            className="text-green-600 hover:underline mr-2 dark:text-green-400"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingVendor(null)}
-                            className="text-gray-600 hover:underline dark:text-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingVendor(vendor)}
-                            className="text-blue-600 hover:underline mr-2 dark:text-blue-400"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete('vendors', vendor.id)}
-                            className="text-red-600 hover:underline dark:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </>
+                      <button
+                        onClick={() => handleDelete('vendors', vendor.id)}
+                        className="text-red-600 hover:underline dark:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Products Table */}
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Products</h2>
+          <div className="overflow-x-auto mb-8">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-gray-800">
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Product ID</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Name</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Vendor ID</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Status</th>
+                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.products.map((product) => (
+                  <tr key={product.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{product.id}</td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{product.name || 'Unnamed Product'}</td>
+                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{product.sellerId}</td>
+                    <td className={`p-3 text-xs sm:text-sm font-medium ${
+                      product.status === 'pending' ? 'text-orange-500' : 
+                      product.status === 'approved' ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                      {product.status === 'pending' ? 'Pending' : 
+                       product.status === 'approved' ? 'Approved' : 'Not Approved'}
+                    </td>
+                    <td className="p-3 text-xs sm:text-sm flex space-x-2">
+                      {product.status !== 'approved' && (
+                        <button
+                          onClick={() => handleProductStatus(product.id, 'approved')}
+                          className="text-green-600 hover:underline dark:text-green-400"
+                        >
+                          Approve
+                        </button>
                       )}
+                      {product.status !== 'not_approved' && (
+                        <button
+                          onClick={() => handleProductStatus(product.id, 'not_approved')}
+                          className="text-red-600 hover:underline dark:text-red-400"
+                        >
+                          Reject
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete('products', product.id)}
+                        className="text-red-600 hover:underline dark:text-red-400"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -425,3 +386,5 @@ export default function Admin() {
     </div>
   );
 }
+
+export default Admin

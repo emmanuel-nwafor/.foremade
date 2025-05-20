@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import SellerSidebar from './SellerSidebar';
 
@@ -27,11 +27,12 @@ export default function SellersProducts() {
               const productsList = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                active: doc.data().active || true // Default active status to true
+                active: doc.data().active || true,
+                isHidden: doc.data().isHidden || false // Add isHidden field
               }));
               setProducts(productsList);
               setFilteredProducts(productsList);
-              console.log('Fetched products:', productsList); // Debug log
+              console.log('Fetched products:', productsList);
             } catch (err) {
               setError('Failed to fetch products: ' + err.message);
               console.error('Error fetching products:', err);
@@ -70,6 +71,42 @@ export default function SellersProducts() {
     setFilteredProducts(products);
   };
 
+  const handleToggleActive = async (productId, currentActive) => {
+    try {
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { active: !currentActive });
+      setProducts(products.map(p => p.id === productId ? { ...p, active: !currentActive } : p));
+      setFilteredProducts(filteredProducts.map(p => p.id === productId ? { ...p, active: !currentActive } : p));
+    } catch (err) {
+      console.error('Error toggling active status:', err);
+      setError('Failed to toggle active status: ' + err.message);
+    }
+  };
+
+  const handleToggleVisibility = async (productId, currentHidden) => {
+    try {
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { isHidden: !currentHidden });
+      setProducts(products.map(p => p.id === productId ? { ...p, isHidden: !currentHidden } : p));
+      setFilteredProducts(filteredProducts.map(p => p.id === productId ? { ...p, isHidden: !currentHidden } : p));
+    } catch (err) {
+      console.error('Error toggling visibility:', err);
+      setError('Failed to toggle visibility: ' + err.message);
+    }
+  };
+
+  const handleDelete = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await deleteDoc(doc(db, 'products', productId));
+      setProducts(products.filter(p => p.id !== productId));
+      setFilteredProducts(filteredProducts.filter(p => p.id !== productId));
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      setError('Failed to delete product: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -100,7 +137,7 @@ export default function SellersProducts() {
           <h1 className="text-lg sm:text-xl font-semibold text-gray-700 mb-4">Product List {products.length > 0 && `(${products.length})`}</h1>
           <div className="border-b pb-4 mb-4">
             <h2 className="text-sm font-medium text-gray-600 mb-2">Filter Products</h2>
-            <div className="flex flex-wrap gap-3 sm:gap-4 items-end">
+            <div className="flex flex-wrap gap-2 sm:gap-4 items-end">
               <select
                 value={brandFilter}
                 onChange={(e) => setBrandFilter(e.target.value)}
@@ -139,19 +176,19 @@ export default function SellersProducts() {
               </select>
               <button
                 onClick={handleReset}
-                className="px-3 sm:px-4 py-1 sm:py-2 bg-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm hover:bg-gray-300 w-full sm:w-auto"
+                className="px-2 sm:px-4 py-1 sm:py-2 bg-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm hover:bg-gray-300 w-full sm:w-auto"
               >
                 Reset
               </button>
               <button
                 onClick={handleFilter}
-                className="px-3 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto"
+                className="px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto"
               >
                 Show data
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 sm:gap-4 items-center mb-4">
+          <div className="flex flex-wrap gap-2 sm:gap-4 items-center mb-4">
             <div className="relative w-full sm:w-auto">
               <input
                 type="text"
@@ -160,18 +197,18 @@ export default function SellersProducts() {
                 placeholder="Search by Product Name"
                 className="p-1 sm:p-2 border rounded-l-lg text-xs sm:text-sm pl-8 w-full"
               />
-              <span className="absolute left-2 top-1 sm:top-2 text-gray-400"><i className="bx bx-search text-sm"></i></span>
+              <span className="absolute left-2 top-1 sm:top-2 text-gray-400"><i className="bx bx-search text-base sm:text-lg"></i></span>
             </div>
-            <button className="px-3 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto">
+            <button className="px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto">
               Search
             </button>
-            <button className="px-3 sm:px-4 py-1 sm:py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm hover:bg-green-700 w-full sm:w-auto">
+            <button className="px-2 sm:px-4 py-1 sm:py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm hover:bg-green-700 w-full sm:w-auto">
               Export
             </button>
-            <button className="px-3 sm:px-4 py-1 sm:py-2 bg-yellow-500 text-white rounded-lg text-xs sm:text-sm hover:bg-yellow-600 w-full sm:w-auto">
+            <button className="px-2 sm:px-4 py-1 sm:py-2 bg-yellow-500 text-white rounded-lg text-xs sm:text-sm hover:bg-yellow-600 w-full sm:w-auto">
               Limited Stocks
             </button>
-            <Link to="/vendor/upload-products" className="px-3 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto">
+            <Link to="/vendor/upload-products" className="px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 w-full sm:w-auto">
               + Add new product
             </Link>
           </div>
@@ -179,33 +216,35 @@ export default function SellersProducts() {
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">SL</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Product Name</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Product Type</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Unit Price</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Verify Status</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Active Status</th>
-                  <th className="p-2 text-xs sm:text-sm font-semibold text-gray-700">Action</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700">SL</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700">Product Name</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700 hidden sm:table-cell">Product Type</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700 hidden sm:table-cell">Unit Price</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700">Verify Status</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700">Active Status</th>
+                  <th className="p-1 sm:p-2 text-xs sm:text-sm font-semibold text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProducts.map((product, index) => (
                   <tr key={product.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2 text-xs sm:text-sm text-gray-800">{index + 1}</td>
-                    <td className="p-2 text-xs sm:text-sm text-gray-800 truncate max-w-[150px]">{product.name || 'Unnamed Product'}</td>
-                    <td className="p-2 text-xs sm:text-sm text-gray-800">Physical</td>
-                    <td className="p-2 text-xs sm:text-sm text-gray-800">₦{product.price || 0}</td>
-                    <td className={`p-2 text-xs sm:text-sm font-medium ${
-                      product.status === 'pending' ? 'text-orange-500' : 'text-green-500'
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm text-gray-800">{index + 1}</td>
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm text-gray-800 truncate max-w-[100px] sm:max-w-[150px]">{product.name || 'Unnamed Product'}</td>
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm text-gray-800 hidden sm:table-cell">Physical</td>
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm text-gray-800 hidden sm:table-cell">₦{product.price || 0}</td>
+                    <td className={`p-1 sm:p-2 text-xs sm:text-sm font-medium ${
+                      product.status === 'pending' ? 'text-orange-500' : 
+                      product.status === 'approved' ? 'text-green-500' : 'text-red-500'
                     }`}>
-                      {product.status === 'pending' ? 'Pending' : 'Approved'}
+                      {product.status === 'pending' ? 'Pending' : 
+                       product.status === 'approved' ? 'Approved' : 'Not Approved'}
                     </td>
-                    <td className="p-2 text-xs sm:text-sm">
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm">
                       <label className="flex items-center cursor-pointer">
                         <input
                           type="checkbox"
                           checked={product.active || false}
-                          onChange={() => {}}
+                          onChange={() => handleToggleActive(product.id, product.active)}
                           className="hidden"
                         />
                         <div className={`w-8 sm:w-10 h-4 sm:h-5 rounded-full transition-colors ${
@@ -217,10 +256,16 @@ export default function SellersProducts() {
                         </div>
                       </label>
                     </td>
-                    <td className="p-2 text-xs sm:text-sm flex space-x-1 sm:space-x-2">
-                      <button className="text-blue-600 hover:underline"><i className="bx bx-edit text-sm"></i></button>
-                      <button className="text-green-600 hover:underline"><i className="bx bx-show text-sm"></i></button>
-                      <button className="text-red-600 hover:underline"><i className="bx bx-trash text-sm"></i></button>
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm flex space-x-1 sm:space-x-2">
+                      <Link to={`/vendor/edit-product/${product.id}`} className="text-blue-600 hover:underline">
+                        <i className="bx bx-edit text-base sm:text-lg"></i>
+                      </Link>
+                      <button onClick={() => handleToggleVisibility(product.id, product.isHidden)} className="text-green-600 hover:underline">
+                        <i className={`bx ${product.isHidden ? 'bx-show' : 'bx-hide'} text-base sm:text-lg`}></i>
+                      </button>
+                      <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:underline">
+                        <i className="bx bx-trash text-base sm:text-lg"></i>
+                      </button>
                     </td>
                   </tr>
                 ))}

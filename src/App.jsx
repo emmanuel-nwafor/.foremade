@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -26,9 +26,13 @@ import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
 import SellerForgotPassword from './seller/SellerForgetPassword';
 import Dashboard from './seller/Dashboard';
-import Admin from '/src/admin/Admin';
 import SellersProducts from './seller/SellersProducts';
 import SellerProductGallery from './seller/SellerProductGallery';
+import Admin from '/src/admin/Admin';
+import AdminDashboard from '/src/admin/AdminDashboard';
+import AdminUsers from '/src/admin/AdminUsers';
+import AdminAdmins from '/src/admin/AdminAdmins';
+import AdminVendors from '/src/admin/AdminVendors';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -46,7 +50,12 @@ const Layout = ({ children }) => {
     '/seller/forgot-password',
     '/vendor/products-gallery',
     '/vendor/products-upload',
-    '/admin', // Added admin route
+    '/admin',
+    '/admin/dashboard',
+    '/admin/users',
+    '/admin/admins',
+    '/admin/vendors',
+    '/admin/products',
   ].includes(location.pathname);
 
   return (
@@ -65,20 +74,22 @@ function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          {/* Authentication Routes (No Header/Footer) */}
+          {/* === Authentication Routes (No Header/Footer) === */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/add-phone" element={<AddPhone />} />
           <Route path="/seller/login" element={<SellerLogin />} />
+          <Route path="/seller/register" element={<SellerRegister />} />
+          <Route path="/seller/forgot-password" element={<SellerForgotPassword />} />
+          <Route path="/seller/agreement" element={<SellerAgreement />} />
 
-          {/* Public Routes */}
+          {/* === Public Routes === */}
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
           <Route path="/product/:id" element={<Product />} />
-          <Route path="/bestSelling" element={<BestSelling />} />
-          <Route path="/seller/register" element={<SellerRegister />} />
+          <Route path="/best-selling" element={<BestSelling />} />
 
-          {/* Protected Routes (User) */}
+          {/* === Protected User Routes === */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route
@@ -97,8 +108,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Profile Routes (Protected) */}
           <Route
             path="/profile"
             element={
@@ -132,7 +141,15 @@ function App() {
             }
           />
 
-          {/* Seller Routes (Protected) */}
+          {/* === Seller Routes (Protected) === */}
+          <Route
+            path="/vendor/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/vendor/products"
             element={
@@ -158,22 +175,6 @@ function App() {
             }
           />
           <Route
-            path="/seller/agreement"
-            element={
-              <ProtectedRoute>
-                <SellerAgreement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/vendor/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/vendor/orders"
             element={
               <ProtectedRoute>
@@ -189,21 +190,51 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* === Admin Routes (Protected) === */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route
-            path="/admin"
+            path="/admin/dashboard"
             element={
-              <Admin />
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
             }
           />
-          
           <Route
-            path="/seller/forgot-password"
+            path="/admin/users"
             element={
-              <SellerForgotPassword />
+              <ProtectedRoute>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/admins"
+            element={
+              <ProtectedRoute>
+                <AdminAdmins />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vendors"
+            element={
+              <ProtectedRoute>
+                <AdminVendors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
             }
           />
 
-          {/* Fallback Route */}
+          {/* === Fallback Route === */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

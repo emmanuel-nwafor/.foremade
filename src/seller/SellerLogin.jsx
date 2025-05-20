@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { vendorAuth } from '../firebase';
+import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import logo from '../assets/logi.png';
 
@@ -23,7 +23,7 @@ export default function SellerLogin() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(vendorAuth, formData.email, formData.password);
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
       navigate('/vendor/dashboard');
     } catch (err) {
       console.error(err);
@@ -49,8 +49,8 @@ export default function SellerLogin() {
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Vendor Login</h2>
           <p className="text-gray-600 mb-6">
-            Don’t have a vendor account?{' '}
-            <Link to="/seller/register" className="text-blue-600 hover:underline">
+            Don’t have an account?{' '}
+            <Link to="/register" className="text-blue-600 hover:underline">
               Sign Up
             </Link>
           </p>
@@ -113,7 +113,7 @@ export default function SellerLogin() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
             <p className="text-gray-600 text-center mt-4">
-              <Link to="/seller/forgot-password" className="text-blue-600 hover:underline">
+              <Link to="/forgot-password" className="text-blue-600 hover:underline">
                 Forgot Password?
               </Link>
             </p>

@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-// import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
 import logo from '/src/assets/logo.png';
 
 const Header = () => {
-  // const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,7 +25,6 @@ const Header = () => {
     'All Categories',
     'Tablet & Phones',
     'Health & Beauty',
-    'Foremade Fashion',
     'Electronics',
     'Baby Products',
     'Computers & Accessories',
@@ -56,6 +53,7 @@ const Header = () => {
         } else {
           setUserData(null);
           setNotificationCount(0);
+          localStorage.removeItem('userData'); // Clear user data on logout
         }
       } catch (err) {
         console.error('Error in auth state:', err);
@@ -186,11 +184,13 @@ const Header = () => {
     <header className="bg-white">
       <div className="hidden sm:block border-b border-gray-200 text-gray-600 py-2">
         <div className="container mx-auto px-4 flex flex-col justify-between sm:flex-row sm:justify-between sm:items-center">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
             {user ? (
-              <Link to="/profile" className="cursor-pointer hover:text-blue-600">
-                Hello, {getDisplayName()}
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link to="/profile" className="cursor-pointer hover:text-blue-600">
+                  Hello, {getDisplayName()}
+                </Link>
+              </div>
             ) : (
               <p className="cursor-pointer">
                 Hi!{' '}
@@ -220,19 +220,19 @@ const Header = () => {
                 More <i className="bx bx-chevron-down ml-1"></i>
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-2 mt-1 z-10 w-48 rounded-md shadow-lg">
-                <Link to="/brands" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/brands" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Brand Outlet
                 </Link>
-                <Link to="/gift-cards" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/gift-cards" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Gift Cards
                 </Link>
-                <Link to="/help" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/help" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Help & Contact
                 </Link>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs mt-2 sm:mt-0">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm mt-2 sm:mt-0">
             <Link to="/ship-to" className="hover:text-blue-600">
               Ship to
             </Link>
@@ -241,28 +241,28 @@ const Header = () => {
                 My Foremade <i className="bx bx-chevron-down ml-1"></i>
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-3 z-10 w-48 rounded-md shadow-lg">
-                <Link to="/profile" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/profile" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Profile
                 </Link>
-                <Link to="/orders" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/orders" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Orders
                 </Link>
-                <Link to="/favorites" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                <Link to="/favorites" className="block px-4 py-1 text-sm hover:bg-gray-100">
                   Favorites ({favoritesCount})
                 </Link>
                 {user && (
                   <>
-                    <Link to="/my-products" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                    <Link to="/my-products" className="block px-4 py-1 text-sm hover:bg-gray-100">
                       My Products
                     </Link>
-                    <Link to="/upload-product" className="block px-4 py-1 text-xs hover:bg-gray-100">
+                    <Link to="/upload-product" className="block px-4 py-1 text-sm hover:bg-gray-100">
                       Upload Product
                     </Link>
                   </>
                 )}
               </div>
             </div>
-            <Link to="/seller/register" className="hover:text-blue-600">
+            <Link to="/seller/login" className="hover:text-blue-600">
               Sell
             </Link>
             <Link to="/watchlist" className="hover:text-blue-600">
@@ -315,7 +315,7 @@ const Header = () => {
               <input
                 type="text"
                 placeholder="Search Foremade"
-                className="w-full border-2 border-black bg-white py-2 pl-10 pr-3 text-md focus:outline-none placeholder-black text-black border-none rounded-l-full"
+                className="w-full border-2 border-black bg-white py-2 pl-10 pr-3 text-lg focus:outline-none placeholder-black text-black border-none rounded-l-full"
                 value={searchQuery}
                 onChange={handleSearch}
                 onFocus={handleFocus}
@@ -327,7 +327,7 @@ const Header = () => {
               <select
                 value={searchCategory}
                 onChange={handleCategoryChange}
-                className="bg-gray-100 py-2 pl-3 w-40 text-md text-black focus:outline-none appearance-none rounded-r-full border-r border-gray-300"
+                className="bg-gray-100 py-2 pl-3 w-40 text-lg text-black focus:outline-none appearance-none rounded-r-full border-r border-gray-300"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -335,16 +335,16 @@ const Header = () => {
                   </option>
                 ))}
               </select>
-              <i className="bx bx-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm"></i>
+              <i className="bx bx-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-lg"></i>
             </div>
           </div>
-          <button className="m-3 bg-blue-600 py-2 px-4 rounded-full text-white text-md">
+          <button className="m-3 bg-blue-600 py-2 px-4 rounded-full text-white text-lg">
             Search
           </button>
           {showDropdown && (
             <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto">
               {loading ? (
-                <div className="p-2 text-sm text-gray-600">Loading...</div>
+                <div className="p-2 text-base text-gray-600">Loading...</div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((product) => (
                   <Link
@@ -368,11 +368,11 @@ const Header = () => {
                         e.target.src = 'https://via.placeholder.com/40?text=Image+Not+Found';
                       }}
                     />
-                    <span className="text-sm text-gray-800">{product.name}</span>
+                    <span className="text-base text-gray-800">{product.name}</span>
                   </Link>
                 ))
               ) : (
-                <div className="p-2 text-sm text-gray-600">No results found</div>
+                <div className="p-2 text-base text-gray-600">No results found</div>
               )}
             </div>
           )}
@@ -385,7 +385,7 @@ const Header = () => {
           <Link to="/favorites" className="relative">
             <i className="bx bx-heart text-black text-2xl"></i>
             {favoritesCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
                 {favoritesCount}
               </span>
             )}
@@ -393,7 +393,7 @@ const Header = () => {
           <Link to="/cart" className="relative">
             <i className="bx bx-cart-alt text-black text-2xl"></i>
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
                 {cartCount}
               </span>
             )}
@@ -413,7 +413,7 @@ const Header = () => {
             <input
               type="text"
               placeholder="Search Foremade"
-              className="w-full border border-gray-300 rounded-l-md p-2 pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full border border-gray-300 rounded-l-md p-2 pl-8 text-base focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={searchQuery}
               onChange={handleSearch}
               onFocus={handleFocus}
@@ -427,7 +427,7 @@ const Header = () => {
           {showDropdown && (
             <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto">
               {loading ? (
-                <div className="p-2 text-sm text-gray-600">Loading...</div>
+                <div className="p-2 text-base text-gray-600">Loading...</div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((product) => (
                   <Link
@@ -451,11 +451,11 @@ const Header = () => {
                         e.target.src = 'https://via.placeholder.com/40?text=Image+Not+Found';
                       }}
                     />
-                    <span className="text-sm text-gray-800">{product.name}</span>
+                    <span className="text-base text-gray-800">{product.name}</span>
                   </Link>
                 ))
               ) : (
-                <div className="p-2 text-sm text-gray-600">No results found</div>
+                <div className="p-2 text-base text-gray-600">No results found</div>
               )}
             </div>
           )}
@@ -464,18 +464,19 @@ const Header = () => {
           {!user && (
             <Link
               to="/login"
-              className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap"
+              className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
+              onClick={() => setIsSidebarOpen(false)}
             >
-              <i className="bx bx-log-in mr-2"></i>Sign in
+              <i className="bx bx-log-in mr-2 text-lg"></i>Sign in
             </Link>
           )}
           {categories.slice(1).map((category) => (
             <Link
               key={category}
               to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
-              className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap"
+              className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
             >
-              <i className="bx bx-category mr-2"></i>{category}
+              <i className="bx bx-category mr-2 text-lg"></i>{category}
             </Link>
           ))}
         </div>
@@ -483,7 +484,7 @@ const Header = () => {
 
       <div className="hidden sm:block border-t border-gray-200 py-2">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-xs text-gray-600">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-sm text-gray-600">
             {categories.slice(1).map((category) => (
               <Link
                 key={category}
@@ -500,19 +501,19 @@ const Header = () => {
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-2 mt-1 z-10 w-48 rounded-md shadow-lg">
                 <Link
                   to="/travel-lifestyle"
-                  className="block px-4 py-1 text-xs hover:bg-gray-100"
+                  className="block px-4 py-1 text-sm hover:bg-gray-100"
                 >
                   Travel & Lifestyle
                 </Link>
                 <Link
                   to="/computers-accessories"
-                  className="block px-4 py-1 text-xs hover:bg-gray-100"
+                  className="block px-4 py-1 text-sm hover:bg-gray-100"
                 >
                   Computers & Accessories
                 </Link>
                 <Link
                   to="/game-fun"
-                  className="block px-4 py-1 text-xs hover:bg-gray-100"
+                  className="block px-4 py-1 text-sm hover:bg-gray-100"
                 >
                   Game & Fun
                 </Link>
@@ -528,7 +529,7 @@ const Header = () => {
         } transition-transform duration-300 sm:hidden z-50 shadow-lg`}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="text-base font-bold text-gray-800">Menu</h2>
+          <h2 className="text-lg font-bold text-gray-800">Menu</h2>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="text-gray-600 focus:outline-none"
@@ -536,19 +537,21 @@ const Header = () => {
             <i className="bx bx-x text-2xl"></i>
           </button>
         </div>
-        <nav className="flex flex-col p-4 space-y-2 text-sm text-gray-600">
+        <nav className="flex flex-col p-4 space-y-2 text-base text-gray-600">
           <div className="flex items-center space-x-2 mb-4">
             <Link to="/profile" onClick={() => setIsSidebarOpen(false)}>
               <i className="bx bx-user-circle text-2xl text-gray-600"></i>
             </Link>
             {user ? (
-              <Link
-                to="/profile"
-                className="cursor-pointer hover:text-blue-600"
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                Hello, {getDisplayName()}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/profile"
+                  className="cursor-pointer hover:text-blue-600"
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  Hello, {getDisplayName()}
+                </Link>
+              </div>
             ) : (
               <p className="cursor-pointer">
                 Hi!{' '}
@@ -611,7 +614,7 @@ const Header = () => {
             <span>Delivery Options</span>
           </Link>
           <Link
-            to="/seller/register"
+            to="/seller/login"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
           >
@@ -653,7 +656,7 @@ const Header = () => {
           {user && (
             <>
               <Link
-                to="/"
+                to="/my-products"
                 className="flex items-center space-x-2 hover:text-blue-600"
                 onClick={() => setIsSidebarOpen(false)}
               >
@@ -681,7 +684,7 @@ const Header = () => {
           } hover:text-blue-600`}
         >
           <i className="bx bx-home-alt text-2xl"></i>
-          <span className="text-xs">Home</span>
+          <span className="text-sm">Home</span>
         </Link>
         <Link
           to="/profile"
@@ -690,7 +693,7 @@ const Header = () => {
           } hover:text-blue-600`}
         >
           <i className="bx bx-user text-2xl"></i>
-          <span className="text-xs">Profile</span>
+          <span className="text-sm">Profile</span>
         </Link>
         <Link
           to="/search"
@@ -699,7 +702,7 @@ const Header = () => {
           } hover:text-blue-600`}
         >
           <i className="bx bx-search text-2xl"></i>
-          <span className="text-xs">Search</span>
+          <span className="text-sm">Search</span>
         </Link>
         <Link
           to="/notifications"
@@ -709,20 +712,20 @@ const Header = () => {
         >
           <i className="bx bx-bell text-2xl"></i>
           {notificationCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute top-0 right-0 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
               {notificationCount}
             </span>
           )}
-          <span className="text-xs">Notifications</span>
+          <span className="text-sm">Notifications</span>
         </Link>
         <Link
-          to="/seller/register"
+          to="/seller/login"
           className={`flex flex-col items-center ${
-            location.pathname === '/seller/register' ? 'text-blue-600' : 'text-gray-600'
+            location.pathname === '/seller/login' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-blue-600`}
         >
           <i className="bx bx-camera text-2xl"></i>
-          <span className="text-xs">Selling</span>
+          <span className="text-sm">Selling</span>
         </Link>
       </nav>
     </header>

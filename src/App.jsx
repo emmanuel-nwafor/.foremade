@@ -14,40 +14,34 @@ import Cart from './pages/Cart';
 import Favorites from './pages/Favorites';
 import Profile from './profile/Profile';
 import Checkout from './components/checkout/Checkout';
-import SellerRegister from './seller/SellerRegister';
-import SellerProductUpload from './seller/SellerProductUpload';
 import Orders from './profile/Orders';
 import Address from './profile/Address';
 import Setting from './profile/Setting';
-import SellerLogin from './seller/SellerLogin';
 import OrderConfirmation from './components/checkout/OrderConfirmation';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
-import SellerAgreement from './seller/SellerAgreement';
-import SellerForgotPassword from './seller/SellerForgetPassword';
 import Dashboard from './seller/Dashboard';
 import SellersProducts from './seller/SellersProducts';
+import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminAdmins from '/src/admin/AdminAdmins';
 import AdminVendors from '/src/admin/AdminVendors';
+import SellersGuide from './seller/SellersGuide';
 
 const Layout = ({ children }) => {
   const location = useLocation();
   const hideHeaderFooter = [
     '/login',
     '/register',
-    '/seller/register',
     '/seller/login',
     '/vendor/dashboard',
     '/overview',
     '/vendor/orders',
     '/vendor/products',
     '/settings',
-    '/seller/agreement',
-    '/seller/forgot-password',
     '/vendor/products-gallery',
     '/vendor/products-upload',
     '/admin',
@@ -78,10 +72,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/add-phone" element={<AddPhone />} />
-          <Route path="/seller/login" element={<SellerLogin />} />
-          <Route path="/seller/register" element={<SellerRegister />} />
-          <Route path="/seller/forgot-password" element={<SellerForgotPassword />} />
-          <Route path="/seller/agreement" element={<SellerAgreement />} />
+          <Route path="/seller/login" element={<Login />} />
+          <Route path="/sellers-guide" element={<SellersGuide />} />
 
           {/* === Public Routes === */}
           <Route path="/" element={<Home />} />

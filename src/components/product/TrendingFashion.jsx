@@ -86,7 +86,7 @@ export default function TrendingFashion() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg sm:text-lg md:text-xl font-bold mt-4 text-gray-800 mb-4">
-          Trending in {category}
+          Trending in Fashion
         </h2>
         <Link to={`/products?category=${categoryId}`} className="text-blue-600 hover:underline text-sm">
           See All

@@ -37,7 +37,7 @@ const Layout = ({ children }) => {
     '/login',
     '/register',
     '/seller/login',
-    '/vendor/dashboard',
+    '/dashboard',
     '/overview',
     '/vendor/orders',
     '/vendor/products',
@@ -135,7 +135,7 @@ function App() {
 
           {/* === Seller Routes (Protected) === */}
           <Route
-            path="/vendor/dashboard"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
@@ -143,7 +143,7 @@ function App() {
             }
           />
           <Route
-            path="/vendor/products"
+            path="/products"
             element={
               <ProtectedRoute>
                 <SellersProducts />

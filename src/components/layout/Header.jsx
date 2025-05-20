@@ -262,7 +262,7 @@ const Header = () => {
                 )}
               </div>
             </div>
-            <Link to="/seller/login" className="hover:text-blue-600">
+            <Link to="/sellers-guide" className="hover:text-blue-600">
               Sell
             </Link>
             <Link to="/watchlist" className="hover:text-blue-600">
@@ -303,7 +303,7 @@ const Header = () => {
           <Link to="/">
             <img
               src={logo}
-              className="h-14 sm:w-[400px] md:w-[400px] lg:w-[400px] xl:w-[300px]"
+              className="h-12 sm:h-14 sm:w-[400px] md:w-[400px] lg:w-[400px] xl:w-[300px]"
               alt="Foremade"
             />
           </Link>
@@ -379,14 +379,11 @@ const Header = () => {
         </div>
 
         <div className="sm:hidden flex items-center gap-3">
-          <Link to="/profile">
-            <i className="bx bx-user text-black text-2xl"></i>
-          </Link>
-          <Link to="/favorites" className="relative">
+            <Link to="/cart" className="relative">
             <i className="bx bx-heart text-black text-2xl"></i>
-            {favoritesCount > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
-                {favoritesCount}
+                {0}
               </span>
             )}
           </Link>
@@ -614,7 +611,7 @@ const Header = () => {
             <span>Delivery Options</span>
           </Link>
           <Link
-            to="/seller/login"
+            to="/sellers-guide"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
           >
@@ -719,9 +716,9 @@ const Header = () => {
           <span className="text-sm">Notifications</span>
         </Link>
         <Link
-          to="/seller/login"
+          to="/sellers-guide"
           className={`flex flex-col items-center ${
-            location.pathname === '/seller/login' ? 'text-blue-600' : 'text-gray-600'
+            location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-blue-600`}
         >
           <i className="bx bx-camera text-2xl"></i>

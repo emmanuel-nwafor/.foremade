@@ -144,7 +144,7 @@ export default function UsersOrdersPage() {
             <div className="text-center py-8">
               <p className="text-gray-600 text-lg">No orders found.</p>
               <p className="mt-2">
-                <Link to="/vendor/products-upload" className="text-blue-600 hover:underline">
+                <Link to="/seller/products" className="text-blue-600 hover:underline">
                   Upload products to start receiving orders
                 </Link>
               </p>

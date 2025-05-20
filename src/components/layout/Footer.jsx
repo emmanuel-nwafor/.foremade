@@ -86,13 +86,7 @@ const Footer = () => {
               <h3 className="text-lg font-semibold mb-4">Accounts</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link to="/open-store" className="hover:text-blue-400">Open Your Store</Link>
-                </li>
-                <li>
                   <Link to="/profile" className="hover:text-blue-400">Profile</Link>
-                </li>
-                <li>
-                  <Link to="/track-order" className="hover:text-blue-400">Track Order</Link>
                 </li>
                 <li>
                   <Link to="/help-support" className="hover:text-blue-400">Help & Support</Link>
@@ -124,25 +118,10 @@ const Footer = () => {
               <h3 className="text-lg font-semibold mb-4">Other</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link to="/about" className="hover:text-blue-400">About Company</Link>
-                </li>
-                <li>
                   <Link to="/privacy-policy" className="hover:text-blue-400">Privacy Policy</Link>
                 </li>
                 <li>
                   <Link to="/terms-conditions" className="hover:text-blue-400">Terms & Conditions</Link>
-                </li>
-                <li>
-                  <Link to="/refund-policy" className="hover:text-blue-400">Refund Policy</Link>
-                </li>
-                <li>
-                  <Link to="/return-policy" className="hover:text-blue-400">Return Policy</Link>
-                </li>
-                <li>
-                  <Link to="/cancellation-policy" className="hover:text-blue-400">Cancellation Policy</Link>
-                </li>
-                <li>
-                  <Link to="/support-ticket" className="hover:text-blue-400">Support Ticket</Link>
                 </li>
               </ul>
             </div>

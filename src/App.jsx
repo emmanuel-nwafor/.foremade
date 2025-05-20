@@ -24,10 +24,11 @@ import OrderConfirmation from './components/checkout/OrderConfirmation';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
 import SellerAgreement from './seller/SellerAgreement';
-// import Admin from './admin/Admin';
 import SellerForgotPassword from './seller/SellerForgetPassword';
 import Dashboard from './seller/Dashboard';
 import Admin from '/src/admin/Admin';
+import SellersProducts from './seller/SellersProducts';
+import SellerProductGallery from './seller/SellerProductGallery';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -39,10 +40,12 @@ const Layout = ({ children }) => {
     '/vendor/dashboard',
     '/overview',
     '/vendor/orders',
-    '/seller-product-upload',
+    '/vendor/products',
     '/settings',
     '/seller/agreement',
     '/seller/forgot-password',
+    '/vendor/products-gallery',
+    '/vendor/products-upload',
     '/admin', // Added admin route
   ].includes(location.pathname);
 
@@ -131,10 +134,26 @@ function App() {
 
           {/* Seller Routes (Protected) */}
           <Route
-            path="/vendor/product-upload"
+            path="/vendor/products"
+            element={
+              <ProtectedRoute>
+                <SellersProducts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/products-upload"
             element={
               <ProtectedRoute>
                 <SellerProductUpload />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/products-gallery"
+            element={
+              <ProtectedRoute>
+                <SellerProductGallery />
               </ProtectedRoute>
             }
           />

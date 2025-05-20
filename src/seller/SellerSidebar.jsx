@@ -8,6 +8,7 @@ export default function SellerSidebar() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -20,6 +21,10 @@ export default function SellerSidebar() {
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
+  };
+
+  const toggleProductsDropdown = () => {
+    setIsProductsDropdownOpen(!isProductsDropdownOpen);
   };
 
   return (
@@ -55,7 +60,7 @@ export default function SellerSidebar() {
             placeholder="Search menu..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 rounded-lg bg-slate-700 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="w-full p-2 rounded-lg bg-slate-400 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
@@ -73,9 +78,28 @@ export default function SellerSidebar() {
           </div>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Product Management</h3>
-            <Link to="/vendor/product-upload" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-box text-lg mr-2"></i>Products
-            </Link>
+            <div>
+              <button
+                onClick={toggleProductsDropdown}
+                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700"
+              >
+                <i className="bx bx-box text-lg mr-2"></i>Products
+                <i className={`bx ${isProductsDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm`}></i>
+              </button>
+              {isProductsDropdownOpen && (
+                <div className="ml-6 space-y-1 mt-1">
+                  <Link to="/vendor/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bx-list-ul text-lg mr-2"></i>Products List
+                  </Link>
+                  <Link to="/vendor/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bx-image-alt text-lg mr-2"></i>Products Gallery
+                  </Link>
+                  <Link to="/vendor/products-upload" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bx-upload text-lg mr-2"></i>Upload Products
+                  </Link>
+                </div>
+              )}
+            </div>
             <Link to="/vendor/product-reviews" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-star text-lg mr-2"></i>Product Reviews
             </Link>

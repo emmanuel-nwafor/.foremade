@@ -58,7 +58,7 @@ export default function Login() {
         setTimeout(() => {
           setLoadingGoogle(false);
           setLoadingFacebook(false);
-          navigate('/dashboard'); // Adjust redirect path as needed
+          navigate('/profile'); // Adjust redirect path as needed
         }, 2000);
       } else {
         setEmailError('No account found. Please sign up.');
@@ -109,7 +109,7 @@ export default function Login() {
         setSuccessMessage(`Welcome, ${userData.name.split(' ')[0]}!`);
         setTimeout(() => {
           setLoadingEmail(false);
-          navigate('/dashboard'); // Adjust redirect path as needed
+          navigate('/profile'); // Adjust redirect path as needed
         }, 2000);
       } else {
         setEmailError('No account found. Please sign up.');

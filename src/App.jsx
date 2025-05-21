@@ -52,13 +52,21 @@ const Layout = ({ children }) => {
     '/admin/products',
   ].includes(location.pathname);
 
+  // Show footer only on profile-related routes
+  const showFooter = [
+    '/profile',
+    '/orders',
+    '/address',
+    '/setting',
+  ].includes(location.pathname);
+
   return (
     <>
       {!hideHeaderFooter && <Header />}
       <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
         {children}
       </main>
-      {!hideHeaderFooter && <Footer />}
+      {!hideHeaderFooter && showFooter && <Footer />}
     </>
   );
 };

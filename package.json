@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "fore-made-webapp",
   "private": true,
   "version": "0.0.0",
@@ -36,9 +35,5 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "vite": "^6.3.1"
-=======
-  "dependencies": {
-    "axios": "^1.8.4"
->>>>>>> 00c46689ea679a10b20265d39942f1e95bde37c5
   }
 }

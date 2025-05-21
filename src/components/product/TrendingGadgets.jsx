@@ -11,7 +11,13 @@ export default function TrendingGadgets() {
 
   const category = 'Gadgets';
   const categoryId = 3;
-  const firestoreCategories = ['tablet & phones', 'computers & accessories', 'electronics', 'smart watches', 'game & fun'];
+  const firestoreCategories = [
+    'tablet & phones', 
+    'computers & accessories', 
+    'electronics', 
+    'smart watches', 
+    'game & fun'
+  ];
 
   useEffect(() => {
     const fetchTrendingGadgets = async () => {
@@ -143,7 +149,7 @@ export default function TrendingGadgets() {
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 items-center justify-center">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="min-w-[200px] h-56 sm:h-60 md:h-64 lg:h-72 bg-gray-200 animate-pulse rounded-lg">
               <div className="w-full h-40 sm:h-44 md:h-48 lg:h-52 bg-gray-300 rounded-t-lg"></div>

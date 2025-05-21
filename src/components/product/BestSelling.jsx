@@ -19,6 +19,9 @@ export default function BestSelling() {
     'drinks & categories',
     'home & kitchen',
     'smart watches',
+    'health & beauty',
+    'game & fun"',
+
   ];
 
   useEffect(() => {

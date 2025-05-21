@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import axios from 'axios';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import SellerSidebar from './SellerSidebar';
 
 export default function SellerProductUpload() {
@@ -33,6 +32,8 @@ export default function SellerProductUpload() {
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
+
+  const { alerts, addAlert, removeAlert } = useAlerts();
 
   const categories = [
     'Tablet & Phones',
@@ -79,10 +80,10 @@ export default function SellerProductUpload() {
           setFormData((prev) => ({ ...prev, sellerName }));
         } catch (err) {
           console.error('Error parsing displayName:', err);
-          toast.error('Failed to load seller profile');
+          addAlert('Failed to load seller profile', 'error');
         }
       } else {
-        toast.error('Please log in to add products.');
+        addAlert('Please log in to add products.', 'error');
         navigate('/login');
       }
     });
@@ -102,7 +103,7 @@ export default function SellerProductUpload() {
     );
 
     if (validFiles.length + imageFiles.length > MAX_IMAGES) {
-      toast.error(`You can upload a maximum of ${MAX_IMAGES} images.`);
+      addAlert(`You can upload a maximum of ${MAX_IMAGES} images.`, 'error');
       return;
     }
 
@@ -177,7 +178,7 @@ export default function SellerProductUpload() {
     if (e.key === 'Enter' && customColor.trim()) {
       const trimmedColor = customColor.trim();
       if (trimmedColor.length > 20) {
-        toast.error('Color name must be 20 characters or less.');
+        addAlert('Color name must be 20 characters or less.', 'error');
         return;
       }
       setFormData((prev) => {
@@ -234,36 +235,29 @@ export default function SellerProductUpload() {
     return newErrors;
   };
 
-  const uploadImage = async (file, retries = 3, delay = 2000) => {
+  const uploadImage = async (file) => {
     const uploadData = new FormData();
     uploadData.append('image', file);
 
-    for (let attempt = retries; attempt > 0; attempt--) {
-      try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-        const response = await axios.post(`${backendUrl}/upload`, uploadData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 10000,
-        });
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const response = await axios.post(`${backendUrl}/upload`, uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 10000,
+      });
 
-        if (response.status !== 200 || !response.data.imageUrl) {
-          throw new Error('Failed to upload image to Cloudinary.');
-        }
-
-        return response.data.imageUrl;
-      } catch (error) {
-        console.error('Image upload error:', error);
-        if (attempt === 1 || error.code !== 'ERR_NETWORK') {
-          throw new Error(
-            error.code === 'ERR_NETWORK'
-              ? 'Cannot connect to server. Ensure backend is running on port 5000.'
-              : error.response?.data?.error || error.message || 'Failed to upload image.'
-          );
-        }
-        toast.warn(`Retrying image upload (${attempt - 1} attempts left)...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        delay *= 2;
+      if (response.status !== 200 || !response.data.imageUrl) {
+        throw new Error('Failed to upload image to Cloudinary.');
       }
+
+      return response.data.imageUrl;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw new Error(
+        error.code === 'ERR_NETWORK'
+          ? 'Sorry, cannot connect to server. Try again later.'
+          : error.response?.data?.error || 'Failed to upload image.'
+      );
     }
   };
 
@@ -273,7 +267,7 @@ export default function SellerProductUpload() {
     setLoading(true);
 
     if (!user) {
-      toast.error('You must be logged in to add products.');
+      addAlert('You must be logged in to add products.', 'error');
       setLoading(false);
       navigate('/login');
       return;
@@ -283,7 +277,7 @@ export default function SellerProductUpload() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setLoading(false);
-      toast.error('Please fix the form errors.');
+      addAlert('Please fix the form errors.', 'error');
       return;
     }
 
@@ -316,7 +310,7 @@ export default function SellerProductUpload() {
       const docRef = await addDoc(collection(db, 'products'), productData);
       console.log('Product saved to Firestore:', { id: docRef.id, ...productData });
 
-      toast.success('Product uploaded successfully!');
+      addAlert('Product uploaded successfully!', 'success');
       setFormData({
         sellerName: formData.sellerName,
         name: '',
@@ -343,7 +337,7 @@ export default function SellerProductUpload() {
         stack: error.stack,
         code: error.code,
       });
-      toast.error(error.message || 'Failed to upload product.');
+      addAlert(error.message || 'Failed to upload product.', 'error');
     } finally {
       setLoading(false);
     }
@@ -353,7 +347,7 @@ export default function SellerProductUpload() {
     <div className="min-h-screen flex bg-gray-50">
       <SellerSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-start">
-        <div className="w-full max-w-3xl bg-white p-6 md:p-8 rounded-lg">
+        <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-lg">
           <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
             Add a New Product
           </h2>
@@ -773,7 +767,7 @@ export default function SellerProductUpload() {
             </div>
           </form>
         </div>
-        <ToastContainer position="top-right" autoClose={5000} />
+        <CustomAlert alerts={alerts} removeAlert={removeAlert} />
       </div>
     </div>
   );

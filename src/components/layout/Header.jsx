@@ -418,7 +418,7 @@ const Header = () => {
             />
             <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-black-600 text-lg"></i>
           </div>
-          <button className="bg-blue-600 text-white p-1 rounded-r-md">
+          <button className="bg-blue-600 text-amber-400 p-1 rounded-r-md">
             <i className="bx bx-search text-xl"></i>
           </button>
           {showDropdown && (
@@ -464,7 +464,7 @@ const Header = () => {
               className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
               onClick={() => setIsSidebarOpen(false)}
             >
-              <i className="bx bx-log-in mr-2 text-lg"></i>Sign in
+              <i className="bx bx-log-in mr-2 text-lg text-gray-600"></i>Sign in
             </Link>
           )}
           {categories.slice(1).map((category) => (

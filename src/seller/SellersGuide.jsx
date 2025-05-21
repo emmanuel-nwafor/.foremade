@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 
 function SellersGuide() {
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800">
+    <div className="min-h-screen text-gray-800">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
+      <section className="bg-gradient-to-r from-gray-800 to-slate-700 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Start Selling on Foremade
@@ -14,8 +14,8 @@ function SellersGuide() {
             Reach millions of customers and grow your business today!
           </p>
           <Link
-            to="/seller/login"
-            className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg hover:bg-gray-200 transition duration-300"
+            to="/dashboard"
+            className="bg-amber-400 text-white font-semibold py-3 px-6 rounded-lg hover:bg-amber-600 transition duration-300"
           >
             Get Started Now
           </Link>
@@ -29,22 +29,22 @@ function SellersGuide() {
             How to Sign Up and Start Selling
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg text-center">
-              <i className="bx bx-user-plus text-4xl text-blue-600 mb-4"></i>
+            <div className="bg-gray-50 p-6 rounded-lg text-center">
+              <i className="bx bx-user-plus text-4xl text-gray-500 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 1: Create an Account</h3>
               <p className="text-gray-600">
                 Sign up with your email and password. It takes less than a minute to get started.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-lg text-center">
-              <i className="bx bx-store text-4xl text-blue-600 mb-4"></i>
+            <div className="bg-gray-50 p-6 rounded-lg text-center">
+              <i className="bx bx-store text-4xl text-gray-500 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 2: Choose Your Seller Type</h3>
               <p className="text-gray-600">
                 Decide if you want to sell as a Merchant or a Casual Seller based on your needs.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-lg text-center">
-              <i className="bx bx-upload text-4xl text-blue-600 mb-4"></i>
+            <div className="bg-gray-50 p-6 rounded-lg text-center">
+              <i className="bx bx-upload text-4xl text-gray-500 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 3: List Your Products</h3>
               <p className="text-gray-600">
                 Add your products, set your prices, and start selling to a global audience.
@@ -73,8 +73,8 @@ function SellersGuide() {
                 <li>Priority customer support</li>
               </ul>
               <Link
-                to="/seller/login"
-                className="text-blue-600 font-semibold hover:underline"
+                to="/dashboard"
+                className="text-gray-600 font-semibold hover:underline"
               >
                 Start as a Merchant Seller
               </Link>
@@ -91,8 +91,8 @@ function SellersGuide() {
                 <li>Basic customer support</li>
               </ul>
               <Link
-                to="/seller/login"
-                className="text-blue-600 font-semibold hover:underline"
+                to="/dashboard"
+                className="text-gray-700 font-semibold hover:underline"
               >
                 Start as a Casual Seller
               </Link>
@@ -109,21 +109,21 @@ function SellersGuide() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <i className="bx bx-globe text-4xl text-blue-600 mb-4"></i>
+              <i className="bx bx-globe text-4xl text-gray-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Global Reach</h3>
               <p className="text-gray-600">
                 Connect with millions of customers worldwide and grow your sales.
               </p>
             </div>
             <div className="text-center">
-              <i className="bx bx-shield text-4xl text-blue-600 mb-4"></i>
+              <i className="bx bx-shield text-4xl text-gray-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Secure Payments</h3>
               <p className="text-gray-600">
                 Receive payments securely with our trusted payment gateways.
               </p>
             </div>
             <div className="text-center">
-              <i className="bx bx-support text-4xl text-blue-600 mb-4"></i>
+              <i className="bx bx-support text-4xl text-gray-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">24/7 Support</h3>
               <p className="text-gray-600">
                 Our support team is here to help you every step of the way.
@@ -134,7 +134,7 @@ function SellersGuide() {
       </section>
 
       {/* Call to Action Section */}
-      <section className="bg-blue-600 text-white py-16">
+      <section className="bg-gray-800 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Start Selling?
@@ -143,8 +143,8 @@ function SellersGuide() {
             Join thousands of sellers and turn your products into profits today!
           </p>
           <Link
-            to="/seller/login"
-            className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg hover:bg-gray-200 transition duration-300"
+            to="/dashboard"
+            className="bg-amber-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-amber-600 transition duration-300"
           >
             Start Selling Now
           </Link>

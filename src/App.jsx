@@ -238,6 +238,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
+      <div className="m-32"></div>
     </BrowserRouter>
   );
 }

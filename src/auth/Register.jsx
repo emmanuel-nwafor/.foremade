@@ -402,7 +402,7 @@ export default function Register() {
                   password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
-                Password (6+ chars, letters, numbers, special char)
+                Password
               </label>
               <span
                 className="absolute right-3 top-3 text-gray-500 cursor-pointer"

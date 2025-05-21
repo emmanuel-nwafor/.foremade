@@ -10,7 +10,7 @@ const getFriendlyErrorMessage = (error) => {
     case 'auth/wrong-password':
       return 'Incorrect password. Please try again.';
     case 'auth/user-not-found':
-      return 'No account found with this email. Please sign up.';
+      return 'No account found with this email or mobile number. Please sign up.';
     case 'auth/invalid-email':
       return 'Please enter a valid email address.';
     case 'auth/user-disabled':
@@ -24,9 +24,12 @@ const getFriendlyErrorMessage = (error) => {
 
 export default function Login() {
   const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [useMobileLogin, setUseMobileLogin] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [mobileError, setMobileError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -47,6 +50,11 @@ export default function Login() {
       });
   }, []);
 
+  const validateMobile = (mobile) => {
+    const mobileRegex = /^\+?[0-9]{10,15}$/;
+    return mobileRegex.test(mobile);
+  };
+
   const handleSocialLogin = async (user) => {
     try {
       const userDoc = doc(db, 'users', user.uid);
@@ -58,7 +66,7 @@ export default function Login() {
         setTimeout(() => {
           setLoadingGoogle(false);
           setLoadingFacebook(false);
-          navigate('/profile'); // Adjust redirect path as needed
+          navigate('/profile');
         }, 2000);
       } else {
         setEmailError('No account found. Please sign up.');
@@ -71,13 +79,22 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setEmailError('');
+    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingEmail(true);
 
     let hasError = false;
-    if (!email) {
+    if (!useMobileLogin && !email) {
       setEmailError('Email is required.');
+      hasError = true;
+    }
+    if (useMobileLogin && !mobile) {
+      setMobileError('Mobile number is required.');
+      hasError = true;
+    }
+    if (useMobileLogin && !validateMobile(mobile)) {
+      setMobileError('Please enter a valid mobile number (10-15 digits, optional + prefix).');
       hasError = true;
     }
     if (!password) {
@@ -92,7 +109,8 @@ export default function Login() {
 
     try {
       await setPersistence(auth, browserSessionPersistence);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loginEmail = useMobileLogin ? `${mobile}@formade.com` : email; // Preserve mobile format as entered
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
       const user = userCredential.user;
 
       if (!user.emailVerified) {
@@ -109,7 +127,7 @@ export default function Login() {
         setSuccessMessage(`Welcome, ${userData.name.split(' ')[0]}!`);
         setTimeout(() => {
           setLoadingEmail(false);
-          navigate('/profile'); // Adjust redirect path as needed
+          navigate('/profile');
         }, 2000);
       } else {
         setEmailError('No account found. Please sign up.');
@@ -118,7 +136,7 @@ export default function Login() {
     } catch (err) {
       setLoadingEmail(false);
       const errorMessage = getFriendlyErrorMessage(err);
-      if (errorMessage.includes('email')) {
+      if (errorMessage.includes('email') || errorMessage.includes('account')) {
         setEmailError(errorMessage);
       } else {
         setPasswordError(errorMessage);
@@ -128,6 +146,7 @@ export default function Login() {
 
   const handleGoogleSignIn = async () => {
     setEmailError('');
+    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingGoogle(true);
@@ -144,6 +163,7 @@ export default function Login() {
 
   const handleFacebookSignIn = async () => {
     setEmailError('');
+    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingFacebook(true);
@@ -179,29 +199,69 @@ export default function Login() {
             </Link>
           </p>
 
+          <div className="flex justify-center mb-4">
+            <button
+              onClick={() => setUseMobileLogin(false)}
+              className={`px-4 py-2 rounded-l-lg ${!useMobileLogin ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              Use Email
+            </button>
+            <button
+              onClick={() => setUseMobileLogin(true)}
+              className={`px-4 py-2 rounded-r-lg ${useMobileLogin ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              Use Mobile
+            </button>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                  emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                }`}
-                autoComplete="email"
-                required
-              />
-              <label
-                htmlFor="email"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                }`}
-              >
-                Email
-              </label>
-              {emailError && <p className="text-red-600 text-[10px] mt-1">{emailError}</p>}
-            </div>
+            {!useMobileLogin ? (
+              <div className="relative">
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                    emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  autoComplete="email"
+                  required
+                />
+                <label
+                  htmlFor="email"
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                    email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  }`}
+                >
+                  Email
+                </label>
+                {emailError && <p className="text-red-600 text-[10px] mt-1">{emailError}</p>}
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  id="mobile"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                    mobileError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  autoComplete="off"
+                  required
+                />
+                <label
+                  htmlFor="mobile"
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                    mobile ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  }`}
+                >
+                  Mobile Number (e.g., +1234567890)
+                </label>
+                {mobileError && <p className="text-red-600 text-[10px] mt-1">{mobileError}</p>}
+              </div>
+            )}
 
             <div className="relative">
               <input

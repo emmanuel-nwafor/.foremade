@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
@@ -8,15 +8,34 @@ export default function BestSelling() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const firestoreCategories = [
+    'tablet & phones',
+    'health & beauty',
+    'foremade fashion',
+    'electronics',
+    'baby products',
+    'computers & accessories',
+    'game & fun',
+    'drinks & categories',
+    'home & kitchen',
+    'smart watches',
+  ];
+
   useEffect(() => {
     const fetchBestSellingProducts = async () => {
       try {
         setLoading(true);
         setError(null);
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const productsData = querySnapshot.docs
+        const q = query(collection(db, 'products'), where('category', 'in', firestoreCategories));
+        const querySnapshot = await getDocs(q);
+        const allProducts = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data };
+        });
+
+        const productsData = allProducts
           .map((doc) => {
-            const data = doc.data();
+            const data = doc;
             let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
               ? data.imageUrl
               : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
@@ -29,7 +48,7 @@ export default function BestSelling() {
               price: data.price || 0,
               stock: data.stock || 0,
               category: data.category || 'Uncategorized',
-              categoryId: data.category === 'Electronics' ? 1 : data.category === 'Clothing' ? 2 : 6,
+              categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? 0 : 6,
               colors: data.colors || [],
               sizes: data.sizes || [],
               condition: data.condition || '',
@@ -58,10 +77,8 @@ export default function BestSelling() {
             }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating)
-          // .slice(0, 8);
+          .sort((a, b) => b.rating - a.rating);
 
-        console.log('Fetched best-selling products:', productsData);
         setProducts(productsData);
       } catch (err) {
         console.error('Error loading best-selling products:', {
@@ -78,7 +95,7 @@ export default function BestSelling() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (

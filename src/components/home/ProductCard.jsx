@@ -24,12 +24,12 @@ const ProductCard = ({ product }) => {
   return (
     <div className="relative">
       <Link to={`/product/${product.id}`} className="flex-col">
-        <div className="rounded-lg max-md:p-4 p-5 grid justify-center">
+        <div className="rounded-lg max-md:p-3 p-2 grid justify-center">
           <div className="relative">
             <img
               src={imageSrc}
               alt={product.name || 'Product'}
-              className="h-40 w-[240px] border object-cover bg-center rounded-lg mb-2"
+              className="h-40 w-[240px] border object-cover bg-center rounded-sm mb-2"
               onError={(e) => {
                 if (e.target.src !== '/images/placeholder.jpg') {
                   console.warn('Image load error, falling back to placeholder:', {

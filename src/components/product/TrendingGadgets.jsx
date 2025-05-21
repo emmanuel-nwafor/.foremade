@@ -157,7 +157,7 @@ export default function TrendingGadgets() {
       ) : trendingProducts.length === 0 ? (
         <p className="text-gray-600 col-span-full text-center">No {category} products found.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {trendingProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

@@ -7,7 +7,7 @@ function SellersGuide() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Start Selling on Foremade
           </h1>
           <p className="text-lg md:text-xl mb-8">
@@ -29,21 +29,21 @@ function SellersGuide() {
             How to Sign Up and Start Selling
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg text-center">
               <i className="bx bx-user-plus text-4xl text-blue-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 1: Create an Account</h3>
               <p className="text-gray-600">
                 Sign up with your email and password. It takes less than a minute to get started.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg text-center">
               <i className="bx bx-store text-4xl text-blue-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 2: Choose Your Seller Type</h3>
               <p className="text-gray-600">
                 Decide if you want to sell as a Merchant or a Casual Seller based on your needs.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg text-center">
               <i className="bx bx-upload text-4xl text-blue-600 mb-4"></i>
               <h3 className="text-xl font-semibold mb-2">Step 3: List Your Products</h3>
               <p className="text-gray-600">
@@ -61,7 +61,7 @@ function SellersGuide() {
             Choose Your Selling Style
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
+            <div className="bg-gray-50 p-8 rounded-lg">
               <h3 className="text-2xl font-semibold mb-4">Merchant Seller</h3>
               <p className="text-gray-600 mb-4">
                 Perfect for businesses or individuals looking to sell large volumes of products. As a Merchant Seller, you’ll have access to advanced tools, bulk listing options, and priority support.
@@ -79,7 +79,7 @@ function SellersGuide() {
                 Start as a Merchant Seller
               </Link>
             </div>
-            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
+            <div className="bg-gray-50 p-8 rounded-lg">
               <h3 className="text-2xl font-semibold mb-4">Casual Seller</h3>
               <p className="text-gray-600 mb-4">
                 Ideal for individuals looking to sell a few items occasionally. As a Casual Seller, you can quickly list items without any commitment or advanced tools.

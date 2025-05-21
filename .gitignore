@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+backend/.env
+>>>>>>> 00c46689ea679a10b20265d39942f1e95bde37c5
 # Ignore all .env files anywhere
 *.env
 **/*.env

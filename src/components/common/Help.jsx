@@ -51,18 +51,18 @@ const Help = () => {
       {/* Popup (Shown when isOpen is true) */}
       {isOpen && (
         <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-          <div className="flex flex-col">
+          <div className="flex flex-col items-center justify-center">
             {/* Help Option */}
             <button
               onClick={handleHelpClick}
-              className="px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg focus:outline-none"
+              className="p-2 text-left text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg focus:outline-none"
             >
               Help
             </button>
             {/* Report Option */}
             <button
               onClick={handleReportClick}
-              className="px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 rounded-b-lg focus:outline-none"
+              className="p-2 text-left text-sm text-gray-700 hover:bg-gray-100 rounded-b-lg focus:outline-none"
             >
               Report
             </button>

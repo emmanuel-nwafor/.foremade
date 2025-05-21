@@ -6,6 +6,7 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
+// import SellerSidebar from './SellerSidebar';
 
 const Product = () => {
   const { id } = useParams();
@@ -22,7 +23,8 @@ const Product = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [mainImage, setMainImage] = useState('');
-  const [slideDirection, setSlideDirection] = useState('right'); // Track slide direction
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState('right');
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -86,7 +88,6 @@ const Product = () => {
           throw new Error('Product not found');
         }
         const data = productSnap.data();
-        // Normalize image URLs for Cloudinary
         let imageUrls = Array.isArray(data.imageUrls)
           ? data.imageUrls.filter(
               (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
@@ -134,6 +135,7 @@ const Product = () => {
         console.log('Fetched product:', productData);
         setProduct(productData);
         setMainImage(productData.imageUrls[0]);
+        setCurrentImageIndex(0);
         console.log('Main image set:', productData.imageUrls[0]);
 
         const updateRecentSearches = () => {
@@ -252,6 +254,23 @@ const Product = () => {
     fetchRecentSearches();
   }, [id, navigate]);
 
+  // Automatic image sliding
+  useEffect(() => {
+    if (!product || product.imageUrls.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % product.imageUrls.length;
+        setSlideDirection('right');
+        setMainImage(product.imageUrls[nextIndex]);
+        console.log('Auto-slid to image:', product.imageUrls[nextIndex], 'Index:', nextIndex);
+        return nextIndex;
+      });
+    }, 5000); // Slide every 5 seconds
+
+    return () => clearInterval(interval); // Clean up on unmount
+  }, [product]);
+
   const handleAddToCart = async () => {
     if (!product) return;
     try {
@@ -366,10 +385,10 @@ const Product = () => {
 
   const handleImageClick = (url, index) => {
     if (url && typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')) {
-      const currentIndex = product.imageUrls.indexOf(mainImage);
-      setSlideDirection(index > currentIndex ? 'right' : 'left');
+      setSlideDirection(index > currentImageIndex ? 'right' : 'left');
       setMainImage(url);
-      console.log('Main image updated:', url, 'Direction:', index > currentIndex ? 'right' : 'left');
+      setCurrentImageIndex(index);
+      console.log('Main image updated:', url, 'Direction:', index > currentImageIndex ? 'right' : 'left');
     }
   };
 
@@ -416,10 +435,16 @@ const Product = () => {
             to { transform: translateX(0); opacity: 1; }
           }
           .slide-in-right {
-            animation: slideInRight 0.3s ease-in-out forwards;
+            animation: slideInRight 0.5s ease-in-out forwards;
           }
           .slide-in-left {
-            animation: slideInLeft 0.3s ease-in-out forwards;
+            animation: slideInLeft 0.5s ease-in-out forwards;
+          }
+          .main-image-container img {
+            transition: transform 0.3s ease-in-out;
+          }
+          .main-image-container:hover img {
+            transform: scale(1.5);
           }
         `}
       </style>
@@ -427,7 +452,7 @@ const Product = () => {
         <div className="w-full md:w-3/4">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="md:w-1/2">
-              <div className="relative w-full h-96 overflow-hidden">
+              <div className="relative w-full h-96 overflow-hidden main-image-container">
                 <img
                   src={mainImage}
                   alt={product.name}
@@ -488,7 +513,10 @@ const Product = () => {
               )}
             </div>
             <div className="md:w-1/2">
-              <h1 className="text-3xl font-bold text-gray-800 mb-3">{product.name}</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+              <p className="text-sm text-gray-600 mb-2">
+                Seller: <span className="font-medium">{product.seller.name}</span>
+              </p>
               <p className="text-sm text-gray-600 mb-2">
                 Category: <span className="font-medium">{product.category}</span>
               </p>

@@ -359,72 +359,72 @@ export default function SellerProductUpload() {
           </h2>
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Image upload */}
-
             <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
-                  </label>
-                  <div
-                    ref={dropZoneRef}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    className={`mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[400px] transition-colors ${
-                      errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'
-                    } ${loading ? 'opacity-50' : ''}`}
-                  >
-                    {imagePreviews.length === 0 ? (
-                      <div className="text-center">
-                        <i className='bx bx-cloud-upload text-9xl text-gray-600'></i>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Drag and drop up to {MAX_IMAGES} images or{' '}
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current.click()}
-                            className="text-blue-600 hover:underline"
-                            disabled={loading}
-                          >
-                            browse
-                          </button>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          (JPEG, PNG, GIF, max 5MB each)
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
-                        {imagePreviews.map((preview, index) => (
-                          <div key={index} className="relative">
-                            <img
-                              src={preview}
-                              alt={`Preview ${index + 1}`}
-                              className="w-full h-full object-cover rounded-md border border-gray-200"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage(index)}
-                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                              disabled={loading}
-                            >
-                              <i className="bx bx-x text-sm"></i>
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleFileInputChange}
-                      className="hidden"
-                      disabled={loading}
-                    />
+              <label className="block text-sm font-medium text-gray-700">
+                Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
+              </label>
+              <div
+                ref={dropZoneRef}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[400px] transition-colors ${
+                  errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'
+                } ${loading ? 'opacity-50' : ''}`}
+              >
+                {imagePreviews.length === 0 ? (
+                  <div className="text-center">
+                    <i className='bx bx-cloud-upload text-9xl text-gray-600'></i>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Drag and drop up to {MAX_IMAGES} images (desktop) or{' '}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className="text-blue-600 hover:underline"
+                        disabled={loading}
+                      >
+                        select images
+                      </button>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      (JPEG, PNG, GIF, max 5MB each, multiple images allowed)
+                    </p>
                   </div>
-                  {errors.images && (
-                    <p className="text-red-600 text-xs mt-1">{errors.images}</p>
-                  )}
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                          disabled={loading}
+                        >
+                          <i className="bx bx-x text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                  disabled={loading}
+                  multiple
+                />
+              </div>
+              {errors.images && (
+                <p className="text-red-600 text-xs mt-1">{errors.images}</p>
+              )}
+            </div>
 
             {/* Product Details Section */}
             <div>
@@ -756,7 +756,6 @@ export default function SellerProductUpload() {
                     <p className="text-red-600 text-xs mt-1">{errors.productUrl}</p>
                   )}
                 </div>
-   
               </div>
             </div>
 

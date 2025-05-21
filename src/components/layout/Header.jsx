@@ -53,7 +53,7 @@ const Header = () => {
         } else {
           setUserData(null);
           setNotificationCount(0);
-          localStorage.removeItem('userData'); // Clear user data on logout
+          localStorage.removeItem('userData');
         }
       } catch (err) {
         console.error('Error in auth state:', err);
@@ -379,7 +379,7 @@ const Header = () => {
         </div>
 
         <div className="sm:hidden flex items-center gap-3">
-            <Link to="/cart" className="relative">
+          <Link to="/cart" className="relative">
             <i className="bx bx-heart text-black text-2xl"></i>
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
@@ -464,7 +464,7 @@ const Header = () => {
               className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
               onClick={() => setIsSidebarOpen(false)}
             >
-              <i className="bx bx-log-in mr-2 text-lg text-gray-600"></i>Sign in
+              <i className="bx bx-log-in mr-2 text-lg text-gray-500"></i>Sign in
             </Link>
           )}
           {categories.slice(1).map((category) => (
@@ -473,7 +473,7 @@ const Header = () => {
               to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
               className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
             >
-              <i className="bx bx-category mr-2 text-lg"></i>{category}
+              <i className="bx bx-category mr-2 text-lg text-gray-500"></i>{category}
             </Link>
           ))}
         </div>
@@ -684,15 +684,6 @@ const Header = () => {
           <span className="text-sm">Home</span>
         </Link>
         <Link
-          to="/profile"
-          className={`flex flex-col items-center ${
-            location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
-        >
-          <i className="bx bx-user text-2xl"></i>
-          <span className="text-sm">Profile</span>
-        </Link>
-        <Link
           to="/search"
           className={`flex flex-col items-center ${
             location.pathname === '/search' ? 'text-blue-600' : 'text-gray-600'
@@ -702,6 +693,15 @@ const Header = () => {
           <span className="text-sm">Search</span>
         </Link>
         <Link
+          to="/sellers-guide"
+          className={`flex flex-col items-center ${
+            location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
+          } hover:text-blue-600`}
+        >
+          <i className="bx bxs-plus-circle text-2xl"></i>
+          <span className="text-sm">Sell</span>
+        </Link>
+        <Link
           to="/notifications"
           className={`flex flex-col items-center relative ${
             location.pathname === '/notifications' ? 'text-blue-600' : 'text-gray-600'
@@ -709,20 +709,20 @@ const Header = () => {
         >
           <i className="bx bx-bell text-2xl"></i>
           {notificationCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
+            <span className="absolute top-0 right-2 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
               {notificationCount}
             </span>
           )}
-          <span className="text-sm">Notifications</span>
+          <span className="text-sm">Inbox</span>
         </Link>
         <Link
-          to="/sellers-guide"
+          to="/profile"
           className={`flex flex-col items-center ${
-            location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
+            location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-blue-600`}
         >
-          <i className="bx bx-camera text-2xl"></i>
-          <span className="text-sm">Selling</span>
+          <i className="bx bx-user text-2xl"></i>
+          <span className="text-sm">Profile</span>
         </Link>
       </nav>
     </header>

@@ -120,7 +120,7 @@ const Watchlist = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-100 text-gray-800">
+    <div className="container mx-auto px-4 py-8 text-gray-800">
       <div className="flex flex-col md:flex-row gap-6">
         <Sidebar userData={userData} orderCount={orderCount} wishlistCount={wishlistCount} />
         <div className="md:w-3/4">

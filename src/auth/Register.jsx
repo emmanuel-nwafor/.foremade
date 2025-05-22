@@ -26,36 +26,30 @@ const getFriendlyErrorMessage = (error) => {
   }
 };
 
-const generateUsername = (fullName) => {
-  const nameParts = fullName.trim().split(' ').filter(part => part);
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts[1] || '';
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part && part.trim());
+  const firstPart = nameParts[0] ? nameParts[0].slice(0, 4).toLowerCase() : 'user';
+  const secondPart = nameParts[1] ? nameParts[1].slice(0, 3).toLowerCase() : '';
   const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  let usernameBase;
-  if (firstName) {
-    usernameBase = (firstName.slice(0, 4) + lastName.slice(0, 3)).toLowerCase();
-  } else {
-    usernameBase = 'user';
-  }
-  const username = (usernameBase + randomNum).replace(/[^a-z0-9]/g, '');
-  return username;
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
 };
 
 export default function Register() {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [useMobileSignup, setUseMobileSignup] = useState(false);
-  const [nameError, setNameError] = useState('');
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [mobileError, setMobileError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
+  const [signupAttempts, setSignupAttempts] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,17 +62,14 @@ export default function Register() {
       })
       .catch((err) => {
         setEmailError(getFriendlyErrorMessage(err));
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
       });
   }, []);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
-
-  const validateMobile = (mobile) => {
-    const mobileRegex = /^\+?[0-9]{10,15}$/;
-    return mobileRegex.test(mobile);
   };
 
   const validatePassword = (password) => {
@@ -100,15 +91,20 @@ export default function Register() {
   const handleNavigation = () => {
     navigate('/login', { replace: true });
   };
+  {handleNavigation}
 
   const handleSocialSignIn = async (user) => {
     try {
       const fullName = user.displayName || user.email.split('@')[0];
-      const username = generateUsername(fullName);
+      const [firstNameFromSocial, ...rest] = fullName.split(' ');
+      const lastNameFromSocial = rest.join(' ');
+      const username = generateUsername(firstNameFromSocial, lastNameFromSocial);
       await updateProfile(user, { displayName: username });
 
-      await sendEmailVerification(user);
-      console.log('Verification email sent to:', user.email);
+      if (!user.emailVerified) {
+        await sendEmailVerification(user);
+        console.log('Verification email sent to:', user.email);
+      }
 
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
@@ -116,8 +112,7 @@ export default function Register() {
       if (!userSnapshot.exists()) {
         userData = {
           email: user.email,
-          mobile: '',
-          name: fullName,
+          name: `${firstNameFromSocial} ${lastNameFromSocial}`,
           username: username,
           address: '',
           createdAt: new Date().toISOString(),
@@ -131,39 +126,46 @@ export default function Register() {
         localStorage.setItem('userData', JSON.stringify(userData));
       }
 
-      setSuccessMessage(
-        `Welcome, ${fullName}! A verification email has been sent to ${user.email}. Please verify your email before logging in.`
-      );
+      const firstName = firstNameFromSocial || userData.name.split(' ')[0];
+      setSuccessMessage(`Welcome, ${firstName}! ${!user.emailVerified ? 'A verification email has been sent. Please verify before logging in.' : 'You are now signed up!'}`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        handleNavigation();
-      }, 7000);
+        navigate('/profile');
+      }, 3000);
     } catch (err) {
       setEmailError(getFriendlyErrorMessage(err));
+      setLoadingGoogle(false);
+      setLoadingFacebook(false);
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setNameError('');
+    setFirstNameError('');
+    setLastNameError('');
     setEmailError('');
-    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingEmail(true);
 
+    if (signupAttempts >= 9) {
+      setEmailError('Too many signup attempts. Try again later.');
+      setLoadingEmail(false);
+      return;
+    }
+
     let hasError = false;
-    if (!name.trim()) {
-      setNameError('Full name is required.');
+    if (!firstName.trim()) {
+      setFirstNameError('First name is required.');
       hasError = true;
     }
-    if (!useMobileSignup && !validateEmail(email)) {
+    if (!lastName.trim()) {
+      setLastNameError('Last name is required.');
+      hasError = true;
+    }
+    if (!validateEmail(email)) {
       setEmailError('Please enter a valid email address.');
-      hasError = true;
-    }
-    if (useMobileSignup && !validateMobile(mobile)) {
-      setMobileError('Please enter a valid mobile number (10-15 digits, optional + prefix).');
       hasError = true;
     }
     if (!password) {
@@ -179,25 +181,24 @@ export default function Register() {
 
     if (hasError) {
       setLoadingEmail(false);
+      setSignupAttempts(prev => prev + 1);
       return;
     }
 
     try {
       await setPersistence(auth, browserSessionPersistence);
-      const userEmail = useMobileSignup ? `${mobile.replace(/[^0-9]/g, '')}@formade.com` : email;
-      const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const username = generateUsername(name);
+      const username = generateUsername(firstName, lastName);
       await updateProfile(user, { displayName: username });
 
       await sendEmailVerification(user);
       console.log('Verification email sent to:', user.email);
 
       const userData = {
-        email: userEmail,
-        mobile: useMobileSignup ? mobile : '',
-        name: name,
+        email: user.email,
+        name: `${firstName} ${lastName}`,
         username: username,
         address: '',
         createdAt: new Date().toISOString(),
@@ -207,13 +208,11 @@ export default function Register() {
       await setDoc(doc(db, 'users', user.uid), userData);
       localStorage.setItem('userData', JSON.stringify(userData));
 
-      const firstName = name.split(' ')[0];
-      setSuccessMessage(
-        `Welcome, ${firstName}! Registration successful! A verification email has been sent to ${userEmail}. Please verify your email before logging in.`
-      );
+      setSuccessMessage(`Welcome, ${firstName}! Registration successful! A verification email has been sent to ${email}. Please verify your email before logging in.`);
+      setSignupAttempts(0); // Reset attempts on success
       setTimeout(() => {
         setLoadingEmail(false);
-        handleNavigation();
+        navigate('/login');
       }, 7000);
     } catch (err) {
       console.error('Registration error:', err);
@@ -224,15 +223,17 @@ export default function Register() {
       } else if (errorMessage.includes('password')) {
         setPasswordError(errorMessage);
       } else {
-        setNameError(errorMessage);
+        setFirstNameError(errorMessage);
+        setLastNameError(errorMessage);
       }
+      setSignupAttempts(prev => prev + 1);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    setNameError('');
+    setFirstNameError('');
+    setLastNameError('');
     setEmailError('');
-    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingGoogle(true);
@@ -248,9 +249,9 @@ export default function Register() {
   };
 
   const handleFacebookSignIn = async () => {
-    setNameError('');
+    setFirstNameError('');
+    setLastNameError('');
     setEmailError('');
-    setMobileError('');
     setPasswordError('');
     setSuccessMessage('');
     setLoadingFacebook(true);
@@ -268,7 +269,6 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="w-full h-screen flex">
-        {/* Left Div */}
         <div className="hidden md:block md:w-1/2 h-full bg-cover bg-center" style={{ backgroundImage: "url('https://i.pinimg.com/736x/f2/8c/a4/f28ca4118a46e68b6871946e65ab5665.jpg')" }}>
           <div className="w-full h-full bg-black bg-opacity-40 flex flex-col justify-center items-center text-white p-8">
             <h1 className="text-3xl font-bold mb-4 flex-col items-center">
@@ -278,7 +278,6 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Right Div with Form */}
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Sign Up</h2>
           <p className="text-gray-600 mb-6">
@@ -288,101 +287,85 @@ export default function Register() {
             </Link>
           </p>
 
-          <div className="flex justify-center mb-4">
-            <button
-              onClick={() => setUseMobileSignup(false)}
-              className={`px-4 py-2 rounded-l-lg ${!useMobileSignup ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-            >
-              Use Email
-            </button>
-            <button
-              onClick={() => setUseMobileSignup(true)}
-              className={`px-4 py-2 rounded-r-lg ${useMobileSignup ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-            >
-              Use Mobile
-            </button>
-          </div>
-
           <form onSubmit={handleRegister} className="space-y-4">
+            <div className="flex space-x-4 mb-4">
+              <div className="relative w-1/2">
+                <input
+                  type="text"
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                    firstNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  autoComplete="given-name"
+                  required
+                />
+                <label
+                  htmlFor="firstName"
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                    firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  }`}
+                >
+                  First Name
+                </label>
+                {firstNameError && <p className="text-red-600 text-[10px] mt-1">{firstNameError}</p>}
+              </div>
+              <div className="relative w-1/2">
+                <input
+                  type="text"
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                    lastNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                  autoComplete="family-name"
+                  required
+                />
+                <label
+                  htmlFor="lastName"
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                    lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  }`}
+                >
+                  Last Name
+                </label>
+                {lastNameError && <p className="text-red-600 text-[10px] mt-1">{lastNameError}</p>}
+              </div>
+            </div>
+
             <div className="relative">
               <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                  nameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                  emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
                 }`}
-                autoComplete="off"
+                autoComplete="email"
                 required
               />
               <label
-                htmlFor="name"
+                htmlFor="email"
                 className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  name ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                  email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
-                Full Name
+                Email
               </label>
-              {nameError && <p className="text-red-600 text-[10px] mt-1">{nameError}</p>}
+              {emailError && (
+                <p className="text-red-600 text-[10px] mt-1">
+                  {emailError}{' '}
+                  {emailError.includes('already in use') && (
+                    <Link to="/login" className="text-blue-600 hover:underline">
+                      Click here to login
+                    </Link>
+                  )}
+                </p>
+              )}
             </div>
-
-            {!useMobileSignup ? (
-              <div className="relative">
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                    emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                  }`}
-                  autoComplete="off"
-                  required
-                />
-                <label
-                  htmlFor="email"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                    email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                  }`}
-                >
-                  Email
-                </label>
-                {emailError && (
-                  <p className="text-red-600 text-[10px] mt-1">
-                    {emailError}{' '}
-                    {emailError.includes('already in use') && (
-                      <Link to="/login" className="text-blue-600 hover:underline">
-                        Click here to login
-                      </Link>
-                    )}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="relative">
-                <input
-                  type="text"
-                  id="mobile"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                    mobileError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                  }`}
-                  autoComplete="off"
-                  required
-                />
-                <label
-                  htmlFor="mobile"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                    mobile ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                  }`}
-                >
-                  Mobile Number (e.g., +1234567890)
-                </label>
-                {mobileError && <p className="text-red-600 text-[10px] mt-1">{mobileError}</p>}
-              </div>
-            )}
 
             <div className="relative">
               <input

@@ -3,7 +3,6 @@ import { auth, db } from '../firebase';
 import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs, getDoc, deleteDoc, doc } from 'firebase/firestore';
 import Sidebar from '../profile/Sidebar';
-import Spinner from '../components/common/SkeletonLoader';
 import ProductCard from '../components/home/ProductCard';
 
 export default function Favorites() {
@@ -78,7 +77,7 @@ export default function Favorites() {
               colors: data.colors || [],
               sizes: data.category?.trim().toLowerCase() === 'foremade fashion' ? data.sizes || [] : [],
               condition: data.condition || '',
-              imageUrl: data.imageUrl,
+              imageUrls: data.imageUrls || [], // Updated to use imageUrls array
               seller: data.seller || { name: 'Unknown Seller' },
               rating: data.rating || Math.random() * 2 + 3,
             };
@@ -132,7 +131,6 @@ export default function Favorites() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <Spinner type="productDetail" count={1} />
         <p className="text-gray-600">Loading...</p>
       </div>
     );
@@ -162,11 +160,11 @@ export default function Favorites() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-100 text-gray-800">
+    <div className="container mx-auto px-4 py-8 text-gray-800">
       <div className="flex flex-col md:flex-row gap-6">
         <Sidebar userData={userData} orderCount={mockOrderCount} wishlistCount={favorites.length} />
         <div className="md:w-3/4">
-          <div className="rounded-lg p-6 bg-white">
+          <div className="rounded-lg p-6  bg-gray-100">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Wish List</h3>
             </div>
@@ -178,10 +176,10 @@ export default function Favorites() {
                 <p className="text-gray-400">No items in your wish list!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {favoriteProducts.map((product) => (
                   <div key={product.id} className="relative">
-                    <ProductCard product={product} />
+                    <ProductCard product={{ ...product, imageUrl: product.imageUrls[0] || '' }} />
                     <button
                       onClick={() => {
                         const favorite = favorites.find((fav) => fav.productId === product.id);

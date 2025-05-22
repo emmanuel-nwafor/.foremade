@@ -36,20 +36,22 @@ const Layout = ({ children }) => {
   const hideHeaderFooter = [
     '/login',
     '/register',
-    '/seller/login',
     '/dashboard',
     '/overview',
     '/vendor/orders',
     '/vendor/products',
     '/settings',
-    '/vendor/products-gallery',
-    '/vendor/products-upload',
+    '/products-gallery',
+    '/products-upload',
     '/admin',
     '/admin/dashboard',
     '/admin/users',
     '/admin/admins',
     '/admin/vendors',
     '/admin/products',
+    '/sellers/orders',
+    '/sellers/products',
+    '/seller/login',
   ].includes(location.pathname);
 
   // Show footer only on profile-related routes
@@ -151,7 +153,7 @@ function App() {
             }
           />
           <Route
-            path="/products"
+            path="/sellers/products"
             element={
               <ProtectedRoute>
                 <SellersProducts />
@@ -159,7 +161,7 @@ function App() {
             }
           />
           <Route
-            path="/vendor/products-upload"
+            path="/products-upload"
             element={
               <ProtectedRoute>
                 <SellerProductUpload />
@@ -167,7 +169,7 @@ function App() {
             }
           />
           <Route
-            path="/vendor/products-gallery"
+            path="/products-gallery"
             element={
               <ProtectedRoute>
                 <SellerProductGallery />
@@ -175,7 +177,7 @@ function App() {
             }
           />
           <Route
-            path="/vendor/orders"
+            path="/sellers/orders"
             element={
               <ProtectedRoute>
                 <UsersOrdersPage />
@@ -238,7 +240,6 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
-      <div className="m-32"></div>
     </BrowserRouter>
   );
 }

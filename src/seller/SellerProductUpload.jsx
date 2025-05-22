@@ -381,7 +381,7 @@ export default function SellerProductUpload() {
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (JPEG, PNG, GIF, max 5MB each, multiple images allowed)
+                      (JPEG, JPG, PNG, WEBP, GIF, max 5MB each, multiple images allowed)
                     </p>
                   </div>
                 ) : (
@@ -408,7 +408,7 @@ export default function SellerProductUpload() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   onChange={handleFileInputChange}
                   className="hidden"
                   disabled={loading}

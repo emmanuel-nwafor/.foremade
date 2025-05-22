@@ -13,7 +13,7 @@ export default function SellerSidebar() {
   const handleSignOut = async () => {
     try {
       await signOut(vendorAuth);
-      navigate('/seller/login');
+      navigate('/login');
     } catch (error) {
       console.error('Sign out failed:', error);
     }
@@ -41,7 +41,7 @@ export default function SellerSidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-slate-700 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
+        className={`fixed inset-y-0 left-0 w-64 bg-gray-800 text-black flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
@@ -64,16 +64,13 @@ export default function SellerSidebar() {
           />
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <Link to="/vendor/dashboard" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
+          <Link to="/dashboard" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-slate-700">
             <i className="bx bx-home text-lg mr-2"></i>Dashboard
           </Link>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Order Management</h3>
-            <Link to="/vendor/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
+            <Link to="/sellers/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-cart text-lg mr-2"></i>Orders
-            </Link>
-            <Link to="/vendor/refund-requests" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-receipt text-lg mr-2"></i>Refund Requests
             </Link>
           </div>
           <div>
@@ -88,34 +85,22 @@ export default function SellerSidebar() {
               </button>
               {isProductsDropdownOpen && (
                 <div className="ml-6 space-y-1 mt-1">
-                  <Link to="/vendor/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                  <Link to="/sellers/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
                     <i className="bx bx-list-ul text-lg mr-2"></i>Products List
                   </Link>
-                  <Link to="/vendor/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                  <Link to="/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
                     <i className="bx bx-image-alt text-lg mr-2"></i>Products Gallery
                   </Link>
-                  <Link to="/vendor/products-upload" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                  <Link to="/products-upload" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
                     <i className="bx bx-upload text-lg mr-2"></i>Upload Products
                   </Link>
                 </div>
               )}
             </div>
-            <Link to="/vendor/product-reviews" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-star text-lg mr-2"></i>Product Reviews
-            </Link>
-          </div>
-          <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Promotion Management</h3>
-            <Link to="/vendor/coupons" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-gift text-lg mr-2"></i>Coupons
-            </Link>
-            <Link to="/vendor/clearance-sale" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-megaphone text-lg mr-2"></i>Clearance Sale
-            </Link>
           </div>
           <div>
             <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Help & Support</h3>
-            <Link to="/vendor/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
+            <Link to="/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
               <i className="bx bx-message text-lg mr-2"></i>Inbox
             </Link>
           </div>

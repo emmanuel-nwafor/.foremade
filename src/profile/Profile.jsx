@@ -12,7 +12,6 @@ export default function Profile() {
   const [userData, setUserData] = useState(null);
   const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
   const mockWishlistCount = 3;
-  const mockWalletBalance = 100.50;
   const mockLoyaltyPoints = 0;
 
   useEffect(() => {
@@ -138,7 +137,7 @@ export default function Profile() {
       <div className="flex flex-col md:flex-row gap-6">
         <Sidebar />
         <div className="md:w-3/4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <Link to="/orders" className="rounded-lg p-4 text-center bg-gray-50 hover:bg-gray-100 transition">
               <p className="text-gray-400">Orders</p>
               <p className="text-lg font-semibold text-gray-800">9</p>
@@ -146,10 +145,6 @@ export default function Profile() {
             <div className="rounded-lg p-4 text-center bg-gray-50">
               <p className="text-gray-400">Wish List</p>
               <p className="text-lg font-semibold text-gray-800">{mockWishlistCount}</p>
-            </div>
-            <div className="rounded-lg p-4 text-center bg-gray-50">
-              <p className="text-gray-400">Wallet</p>
-              <p className="text-lg font-semibold text-gray-800">₦{mockWalletBalance.toFixed(2)}</p>
             </div>
             <div className="rounded-lg p-4 text-center bg-gray-50">
               <p className="text-gray-400">Loyalty Points</p>

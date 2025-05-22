@@ -77,9 +77,9 @@ const ProductCard = ({ product }) => {
       <div className="absolute top-2 right-2 max-md:top-1 max-md:right-1">
         <AddToCartButton productId={product.id} />
       </div>
-      <div className="absolute bottom-2 right-2 max-md:bottom-1 max-md:right-1">
+      {/* <div className="absolute bottom-2 right-2 max-md:bottom-1 max-md:right-1">
         <Help />
-      </div>
+      </div> */}
     </div>
   );
 };

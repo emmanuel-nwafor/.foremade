@@ -163,9 +163,9 @@ export default function TrendingGadgets() {
               <div className="bg-gray-200 rounded-full p-1 h-8 w-8 sm:hidden"></div>
             </div>
           </div>
-          <div className="sm:grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 sm:gap-4 flex overflow-x-auto scrollbar-hide">
+          <div className="flex overflow-x-auto scrollbar-hide">
             {[...Array(4)].map((_, index) => (
-              <div key={index} className="flex-shrink-0 w-60 sm:w-auto mr-4 sm:mr-0">
+              <div key={index} className="flex-shrink-0 w-60 mr-4">
                 <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
               </div>
             ))}
@@ -188,13 +188,13 @@ export default function TrendingGadgets() {
             </Link>
             <button
               onClick={scrollLeft}
-              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 sm:hidden"
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
             >
               <i className="bx bx-chevron-left text-xl text-gray-600"></i>
             </button>
             <button
               onClick={scrollRight}
-              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 sm:hidden"
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
             >
               <i className="bx bx-chevron-right text-xl text-gray-600"></i>
             </button>
@@ -202,7 +202,7 @@ export default function TrendingGadgets() {
         </div>
         <div
           ref={scrollRef}
-          className="sm:grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 sm:gap-4 flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
         >
           {trendingProducts.length === 0 ? (
             <p className="text-gray-600 p-4">No {category} products found.</p>
@@ -210,12 +210,13 @@ export default function TrendingGadgets() {
             trendingProducts.map((product) => (
               <div
                 key={product.id}
-                className="flex-shrink-0 w-60 sm:w-auto mr-4 sm:mr-0 snap-start"
+                className="flex-shrink-0 w-60 mr-4 snap-start"
               >
                 <ProductCard product={product} />
               </div>
             ))
           )}
+          {console.log(error)}
         </div>
       </div>
     </section>

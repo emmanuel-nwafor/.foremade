@@ -30,7 +30,7 @@ export default function TrendingGadgets() {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-        console.log('All fetched products:', allProducts);
+        console.log('All fetched products (Gadgets):', allProducts);
 
         const productsData = allProducts
           .map((doc) => {
@@ -58,7 +58,7 @@ export default function TrendingGadgets() {
           })
           .filter((product) => {
             if (product.stock < 10) {
-              console.warn('Filtered out product with low stock:', {
+              console.warn('Filtered out product with low stock (Gadgets):', {
                 id: product.id,
                 name: product.name,
                 stock: product.stock,
@@ -67,7 +67,7 @@ export default function TrendingGadgets() {
             }
             const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
             if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-              console.warn('Filtered out product with invalid imageUrl:', {
+              console.warn('Filtered out product with invalid imageUrl (Gadgets):', {
                 id: product.id,
                 name: product.name,
                 imageUrl: product.imageUrl,
@@ -80,7 +80,7 @@ export default function TrendingGadgets() {
 
         console.log(`Fetched ${category} products:`, productsData);
         if (productsData.length === 0) {
-          console.warn('No products passed the filters. Relaxing stock filter to debug...');
+          console.warn('No products passed the filters (Gadgets). Relaxing stock filter to debug...');
           const relaxedProductsData = allProducts
             .map((doc) => {
               const data = doc;
@@ -108,7 +108,7 @@ export default function TrendingGadgets() {
             .filter((product) => {
               const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
               if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-                console.warn('Filtered out product with invalid imageUrl (relaxed filter):', {
+                console.warn('Filtered out product with invalid imageUrl (relaxed filter, Gadgets):', {
                   id: product.id,
                   name: product.name,
                   imageUrl: product.imageUrl,
@@ -117,7 +117,7 @@ export default function TrendingGadgets() {
               }
               return true;
             });
-          console.log('Products with relaxed stock filter:', relaxedProductsData);
+          console.log('Products with relaxed stock filter (Gadgets):', relaxedProductsData);
           setTrendingProducts(relaxedProductsData.sort((a, b) => b.rating - a.rating));
         } else {
           setTrendingProducts(productsData);
@@ -139,7 +139,7 @@ export default function TrendingGadgets() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg sm:text-lg md:text-xl font-bold mt-4 text-gray-800 mb-4">
+        <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800">
           Trending in {category}
         </h2>
         <Link to={`/products?category=${categoryId}`} className="text-blue-600 hover:underline text-sm">
@@ -147,15 +147,13 @@ export default function TrendingGadgets() {
         </Link>
       </div>
       {error ? (
-        <p className="text-red-600 col-span-full text-center">{error}</p>
+        <p className="text-red-600">{error}</p>
       ) : loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 items-center justify-center">
+        <div className="flex flex-row overflow-x-auto custom-scrollbar scroll-smooth gap-3 px-2">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-56 sm:h-60 md:h-64 lg:h-72 bg-gray-200 animate-pulse rounded-lg">
-              <div className="w-full h-40 sm:h-44 md:h-48 lg:h-52 bg-gray-300 rounded-t-lg">
-                {/* First skeleton loader */}
-              </div>
-              <div className="p-2 sm:p-3">
+            <div key={index} className="min-w-[240px] h-72 bg-gray-200 animate-pulse rounded-lg">
+              <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
+              <div className="p-2">
                 <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
                 <div className="h-3 bg-gray-300 rounded w-1/2"></div>
               </div>
@@ -163,14 +161,53 @@ export default function TrendingGadgets() {
           ))}
         </div>
       ) : trendingProducts.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No {category} products found.</p>
+        <p className="text-gray-600">No {category} products found.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+        <div className="flex flex-row overflow-x-auto custom-scrollbar scroll-smooth gap-3 px-2">
           {trendingProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <div key={product.id} className="min-w-[240px] hover:scale-105 transition-transform duration-200">
+              <ProductCard product={product} />
+            </div>
           ))}
         </div>
       )}
+      <style>
+        {`
+          /* Hide scrollbar on mobile */
+          @media (max-width: 767px) {
+            .custom-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+            .custom-scrollbar {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+          }
+
+          /* Custom scrollbar on desktop */
+          @media (min-width: 768px) {
+            .custom-scrollbar::-webkit-scrollbar {
+              height: 6px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: #e5e7eb;
+              border-radius: 3px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: #60a5fa;
+              border-radius: 3px;
+              transition: background 0.3s;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #2563eb;
+            }
+            .custom-scrollbar {
+              scrollbar-width: thin;
+              scrollbar-color: #60a5fa #e5e7eb;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }

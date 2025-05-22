@@ -22,14 +22,14 @@ const ProductCard = ({ product }) => {
       : '/images/placeholder.jpg';
 
   return (
-    <div className="relative">
-      <Link to={`/product/${product.id}`} className="flex-col">
-        <div className="rounded-lg max-md:p-3 p-2 grid justify-center">
+    <div className="relative w-full max-w-[240px]">
+      <Link to={`/product/${product.id}`} className="flex flex-col w-full">
+        <div className="rounded-lg p-2 max-md:p-3 grid">
           <div className="relative">
             <img
               src={imageSrc}
               alt={product.name || 'Product'}
-              className="h-40 w-[240px] border object-cover bg-center rounded-sm mb-2"
+              className="h-[250px] w-[250px] border rounded-md mb-2"
               onError={(e) => {
                 if (e.target.src !== '/images/placeholder.jpg') {
                   console.warn('Image load error, falling back to placeholder:', {
@@ -57,7 +57,7 @@ const ProductCard = ({ product }) => {
               maximumFractionDigits: 2,
             })}
           </p>
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center mt-1">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
                 <i
@@ -74,10 +74,10 @@ const ProductCard = ({ product }) => {
           </span>
         </div>
       </Link>
-      <div className="absolute top-6 right-2 max-md:top-5 max-md:right-2">
+      <div className="absolute top-2 right-2 max-md:top-1 max-md:right-1">
         <AddToCartButton productId={product.id} />
       </div>
-      <div className="absolute bottom-10 right-7 max-md:bottom-9 max-md:right-6">
+      <div className="absolute bottom-2 right-2 max-md:bottom-1 max-md:right-1">
         <Help />
       </div>
     </div>

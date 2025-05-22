@@ -8,7 +8,7 @@ export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const containerRef = useRef(null);
+  const scrollRef = useRef(null);
 
   const category = 'Gadgets';
   const categoryId = 3;
@@ -138,94 +138,86 @@ export default function TrendingGadgets() {
   }, []);
 
   const scrollLeft = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollLeft -= 240;
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
     }
   };
 
   const scrollRight = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollLeft += 240;
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
     }
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8 relative">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800">
-          Trending in {category}
-        </h2>
-        <Link to={`/products?category=${categoryId}`} className="text-blue-600 hover:underline text-sm">
-          See All
-        </Link>
-      </div>
-      {error ? (
-        <p className="text-red-600">{error}</p>
-      ) : loading ? (
-        <div className="flex flex-row overflow-x-hidden gap-3 px-2">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="min-w-[240px] h-72 bg-gray-200 animate-pulse rounded-lg">
-              <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
-              <div className="p-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-              </div>
+  if (loading) {
+    return (
+      <section className="py-8 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800">
+              Trending in {category}
+            </h2>
+            <div className="flex items-center gap-3">
+              <div className="h-5 bg-gray-200 rounded w-16"></div>
+              <div className="bg-gray-200 rounded-full p-1 h-8 w-8 sm:hidden"></div>
+              <div className="bg-gray-200 rounded-full p-1 h-8 w-8 sm:hidden"></div>
             </div>
-          ))}
-        </div>
-      ) : trendingProducts.length === 0 ? (
-        <p className="text-gray-600">No {category} products found.</p>
-      ) : (
-        <div>
-          <button
-            onClick={scrollLeft}
-            className="max-md:hidden absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center z-10 transition-all duration-200 active:bg-blue-400 active:scale-110"
-          >
-            ‹
-          </button>
-          <div className="flex flex-row overflow-x-hidden gap-3 px-2" ref={containerRef}>
-            {trendingProducts.map((product) => (
-              <div key={product.id} className="min-w-[240px]">
-                <ProductCard product={product} />
+          </div>
+          <div className="sm:grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 sm:gap-4 flex overflow-x-auto scrollbar-hide">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="flex-shrink-0 w-60 sm:w-auto mr-4 sm:mr-0">
+                <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
               </div>
             ))}
           </div>
-          <button
-            onClick={scrollRight}
-            className="max-md:hidden absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center z-10 transition-all duration-200 active:bg-blue-400 active:scale-110"
-          >
-            ›
-          </button>
         </div>
-      )}
-      <style>
-        {`
-          /* Hide scrollbar completely on all devices */
-          .overflow-x-hidden::-webkit-scrollbar {
-            display: none;
-          }
-          .overflow-x-hidden {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
+      </section>
+    );
+  }
 
-          /* Button styling */
-          button {
-            cursor: pointer;
-          }
-          button:disabled {
-            background: #e5e7eb;
-            cursor: not-allowed;
-          }
-
-          /* Hide buttons on desktop */
-          @media (min-width: 768px) {
-            button {
-              display: none;
-            }
-          }
-        `}
-      </style>
-    </div>
+  return (
+    <section className="py-8 bg-white">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg md:text-xl font-bold text-gray-800">
+            Trending in {category}
+          </h2>
+          <div className="flex items-center gap-3">
+            <Link to={`/products?category=${categoryId}`} className="text-blue-600 text-sm hover:text-blue-400">
+              See All
+            </Link>
+            <button
+              onClick={scrollLeft}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 sm:hidden"
+            >
+              <i className="bx bx-chevron-left text-xl text-gray-600"></i>
+            </button>
+            <button
+              onClick={scrollRight}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 sm:hidden"
+            >
+              <i className="bx bx-chevron-right text-xl text-gray-600"></i>
+            </button>
+          </div>
+        </div>
+        <div
+          ref={scrollRef}
+          className="sm:grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 sm:gap-4 flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        >
+          {trendingProducts.length === 0 ? (
+            <p className="text-gray-600 p-4">No {category} products found.</p>
+          ) : (
+            trendingProducts.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-60 sm:w-auto mr-4 sm:mr-0 snap-start"
+              >
+                <ProductCard product={product} />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

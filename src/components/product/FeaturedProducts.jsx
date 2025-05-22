@@ -110,7 +110,7 @@ export default function FeaturedProducts() {
       ) : (
         products.map((product) => (
           
-          <div className="min-w-[240px]">
+          <div className="">
             <ProductCard key={product.id} product={product} />
           </div>
           

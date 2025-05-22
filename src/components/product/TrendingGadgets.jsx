@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
@@ -8,6 +8,7 @@ export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const containerRef = useRef(null);
 
   const category = 'Gadgets';
   const categoryId = 3;
@@ -136,8 +137,20 @@ export default function TrendingGadgets() {
     fetchTrendingGadgets();
   }, []);
 
+  const scrollLeft = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft -= 240;
+    }
+  };
+
+  const scrollRight = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft += 240;
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 relative">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800">
           Trending in {category}
@@ -149,7 +162,7 @@ export default function TrendingGadgets() {
       {error ? (
         <p className="text-red-600">{error}</p>
       ) : loading ? (
-        <div className="flex flex-row overflow-x-auto custom-scrollbar scroll-smooth gap-3 px-2">
+        <div className="flex flex-row overflow-x-hidden gap-3 px-2">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="min-w-[240px] h-72 bg-gray-200 animate-pulse rounded-lg">
               <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
@@ -163,47 +176,52 @@ export default function TrendingGadgets() {
       ) : trendingProducts.length === 0 ? (
         <p className="text-gray-600">No {category} products found.</p>
       ) : (
-        <div className="flex flex-row overflow-x-auto custom-scrollbar scroll-smooth gap-3 px-2">
-          {trendingProducts.map((product) => (
-            <div key={product.id} className="min-w-[240px] hover:scale-105 transition-transform duration-200">
-              <ProductCard product={product} />
-            </div>
-          ))}
+        <div>
+          <button
+            onClick={scrollLeft}
+            className="max-md:hidden absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center z-10 transition-all duration-200 active:bg-blue-400 active:scale-110"
+          >
+            ‹
+          </button>
+          <div className="flex flex-row overflow-x-hidden gap-3 px-2" ref={containerRef}>
+            {trendingProducts.map((product) => (
+              <div key={product.id} className="min-w-[240px]">
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={scrollRight}
+            className="max-md:hidden absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center z-10 transition-all duration-200 active:bg-blue-400 active:scale-110"
+          >
+            ›
+          </button>
         </div>
       )}
       <style>
         {`
-          /* Hide scrollbar on mobile */
-          @media (max-width: 767px) {
-            .custom-scrollbar::-webkit-scrollbar {
-              display: none;
-            }
-            .custom-scrollbar {
-              -ms-overflow-style: none;
-              scrollbar-width: none;
-            }
+          /* Hide scrollbar completely on all devices */
+          .overflow-x-hidden::-webkit-scrollbar {
+            display: none;
+          }
+          .overflow-x-hidden {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
           }
 
-          /* Custom scrollbar on desktop */
+          /* Button styling */
+          button {
+            cursor: pointer;
+          }
+          button:disabled {
+            background: #e5e7eb;
+            cursor: not-allowed;
+          }
+
+          /* Hide buttons on desktop */
           @media (min-width: 768px) {
-            .custom-scrollbar::-webkit-scrollbar {
-              height: 6px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: #e5e7eb;
-              border-radius: 3px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #60a5fa;
-              border-radius: 3px;
-              transition: background 0.3s;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #2563eb;
-            }
-            .custom-scrollbar {
-              scrollbar-width: thin;
-              scrollbar-color: #60a5fa #e5e7eb;
+            button {
+              display: none;
             }
           }
         `}

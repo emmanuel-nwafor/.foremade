@@ -109,7 +109,11 @@ export default function FeaturedProducts() {
         <p className="text-gray-600 col-span-full text-center">No featured products found.</p>
       ) : (
         products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          
+          <div className="min-w-[240px]">
+            <ProductCard key={product.id} product={product} />
+          </div>
+          
         ))
       )}
     </div>

@@ -29,7 +29,7 @@ const ProductCard = ({ product }) => {
             <img
               src={imageSrc}
               alt={product.name || 'Product'}
-              className="h-[250px] w-[250px] border rounded-md mb-2"
+              className="h-[250px] w-[250px] border rounded-sm object-cover mb-1"
               onError={(e) => {
                 if (e.target.src !== '/images/placeholder.jpg') {
                   console.warn('Image load error, falling back to placeholder:', {

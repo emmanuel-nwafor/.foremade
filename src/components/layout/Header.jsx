@@ -677,8 +677,8 @@ const Header = () => {
         <Link
           to="/"
           className={`flex flex-col items-center ${
-            location.pathname === '/' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
+            location.pathname === '/' ? 'text-gray-600' : 'text-gray-600'
+          } hover:text-amber-500`} // Changed hover to amber-500
         >
           <i className="bx bx-home-alt text-2xl"></i>
           <span className="text-sm">Home</span>
@@ -687,7 +687,7 @@ const Header = () => {
           to="/search"
           className={`flex flex-col items-center ${
             location.pathname === '/search' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
+          } hover:text-amber-500`} // Changed hover to amber-500
         >
           <i className="bx bx-search text-2xl"></i>
           <span className="text-sm">Search</span>
@@ -696,7 +696,7 @@ const Header = () => {
           to="/sellers-guide"
           className={`flex flex-col items-center ${
             location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
+          } hover:text-amber-500`} // Changed hover to amber-500
         >
           <i className="bx bxs-plus-circle text-2xl"></i>
           <span className="text-sm">Sell</span>
@@ -705,7 +705,7 @@ const Header = () => {
           to="/notifications"
           className={`flex flex-col items-center relative ${
             location.pathname === '/notifications' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
+          } hover:text-amber-500`} // Changed hover to amber-500
         >
           <i className="bx bx-bell text-2xl"></i>
           {notificationCount > 0 && (
@@ -719,10 +719,10 @@ const Header = () => {
           to="/profile"
           className={`flex flex-col items-center ${
             location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-blue-600`}
+          } hover:text-amber-500`} // Changed hover to amber-500
         >
           <i className="bx bx-user text-2xl"></i>
-          <span className="text-sm">Profile</span>
+          <span className="text-sm">Me</span> {/* Changed Profile to Me */}
         </Link>
       </nav>
     </header>

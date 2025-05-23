@@ -8,17 +8,13 @@ export default function FeaturedProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const firestoreCategories = [
-    'tablet & phones',
-    'health & beauty',
+  const categories = [
     'foremade fashion',
-    'electronics',
-    'baby products',
-    'computers & accessories',
-    'game & fun',
-    'drinks & categories',
-    'home & kitchen',
     'smart watches',
+    'drinks & categories',
+    'health & beauty',
+    'game & fun',
+    'computers & accessories'
   ];
 
   useEffect(() => {
@@ -26,12 +22,13 @@ export default function FeaturedProducts() {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('category', 'in', firestoreCategories));
+        const q = query(collection(db, 'products'), where('category', 'in', categories));
         const querySnapshot = await getDocs(q);
         const allProducts = querySnapshot.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
+        console.log('All fetched products (Featured):', allProducts.map(p => ({ id: p.id, category: p.category })));
 
         const productsData = allProducts
           .map((doc) => {
@@ -48,7 +45,7 @@ export default function FeaturedProducts() {
               price: data.price || 0,
               stock: data.stock || 0,
               category: data.category || 'Uncategorized',
-              categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? 0 : 6,
+              categoryId: 0,
               colors: data.colors || [],
               sizes: data.sizes || [],
               condition: data.condition || '',
@@ -77,9 +74,10 @@ export default function FeaturedProducts() {
             }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating)
+          .sort(() => Math.random() - 0.5)
           .slice(0, 8);
 
+        console.log('Processed featured products:', productsData.map(p => ({ id: p.id, category: p.category })));
         setProducts(productsData);
       } catch (err) {
         console.error('Error loading featured products:', {
@@ -106,14 +104,12 @@ export default function FeaturedProducts() {
           ))}
         </>
       ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No featured products found.</p>
+        <p className="text-gray-600 col-span-full text-center">No featured products found. Check your database for products in these categories: foremade fashion, smart watches, drinks & categories, health & beauty, game & fun, computers & accessories.</p>
       ) : (
         products.map((product) => (
-          
           <div className="">
             <ProductCard key={product.id} product={product} />
           </div>
-          
         ))
       )}
     </div>

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import Help from '../common/Help';
 
@@ -95,6 +95,59 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     }
   };
 
+  const handleAddToCart = async () => {
+    const userId = 'currentUserId'; // Replace with actual user ID from auth
+    if (!userId || !product.id) {
+      toast.error('Please sign in to add to cart.');
+      return;
+    }
+
+    try {
+      const cartRef = doc(db, 'cart', userId);
+      const cartSnap = await getDoc(cartRef);
+
+      if (cartSnap.exists()) {
+        const cartData = cartSnap.data();
+        const cartItems = cartData.items || [];
+
+        // Check if product is already in cart
+        const existingItem = cartItems.find(item => item.productId === product.id);
+        if (existingItem) {
+          toast.info('Product already in cart!');
+          return;
+        }
+
+        // Add new product to cart
+        await updateDoc(cartRef, {
+          items: arrayUnion({
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            quantity: 1,
+          }),
+        });
+      } else {
+        // Create new cart document if it doesn't exist
+        await setDoc(cartRef, {
+          userId,
+          items: [{
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            quantity: 1,
+          }],
+        });
+      }
+
+      toast.success('Added to cart!');
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      toast.error('Failed to add to cart. Try again!');
+    }
+  };
+
   // Styles for pro seller
   const cardStyles = sellerType === 'pro'
     ? 'relative w-full max-w-[260px] border-2 border-yellow-500 rounded-lg p-2 max-md:p-3 shadow-md'
@@ -149,9 +202,7 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
             className="absolute bottom-2 left-2 bg-white rounded-full p-1 border border-gray-300 flex items-center"
           >
             <i
-              className={`bx bx-heart text-lg ${
-                isFavorited ? 'text-red-500' : 'text-gray-500'
-              }`}
+              className={`bx ${isFavorited ? 'bxs-heart text-red-500' : 'bx-heart text-gray-500'} text-lg`}
             ></i>
           </button>
         </div>
@@ -172,7 +223,7 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                toast.success('Added to cart!'); // Replace with actual cart logic
+                handleAddToCart();
               }}
             >
               <i className="bx bx-plus text-lg"></i>
@@ -195,11 +246,11 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
             </div>
             {/* Fav count */}
             <div>
-             {favoriteCount > 0 && (
-              <span className="text-slate-600 text-xs rounded-full px-2 py-1 mt-1">
-                {favoriteCount}
-              </span>
-            )}
+              {favoriteCount > 0 && (
+                <span className="text-slate-600 text-xs rounded-full px-2 py-1 mt-1">
+                  {favoriteCount}
+                </span>
+              )}
             </div>
           </div>
           {badgeContent}

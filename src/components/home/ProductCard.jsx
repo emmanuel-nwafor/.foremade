@@ -1,8 +1,42 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { db } from '/src/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 import Help from '../common/Help';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const ProductCard = ({ product }) => {
+  // Define all hooks at the top, before any early returns
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      const userId = 'currentUserId'; // Replace with actual user ID from auth
+      if (!userId || !product?.id) {
+        setIsFavorited(false); // Set default state instead of returning early
+        setFavoriteCount(product?.favoriteCount || 0);
+        return;
+      }
+
+      try {
+        const productRef = doc(db, 'products', product.id);
+        const docSnap = await getDoc(productRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsFavorited(data.favoritedBy?.includes(userId) || false);
+          setFavoriteCount(data.favoriteCount || 0);
+        }
+      } catch (err) {
+        console.error('Error checking favorite status:', err);
+        toast.error('Failed to load favorite status.');
+      }
+    };
+    checkFavoriteStatus();
+  }, [product?.id]); // Use optional chaining to handle undefined product
+
+  // Early return after all hooks are called
   if (!product || typeof product !== 'object') {
     console.error('Invalid product prop:', product);
     return null;
@@ -21,10 +55,51 @@ const ProductCard = ({ product }) => {
       ? product.imageUrl
       : '/images/placeholder.jpg';
 
+  const handleFavorite = async () => {
+    const userId = 'currentUserId'; // Replace with actual user ID from auth
+    if (!userId || !product.id) {
+      toast.error('Please sign in to favorite a product.');
+      return;
+    }
+
+    try {
+      const productRef = doc(db, 'products', product.id);
+      const docSnap = await getDoc(productRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const currentFavoritedBy = data.favoritedBy || [];
+        const currentCount = data.favoriteCount || 0;
+
+        const 
+
+        if (isFavorited) {
+          await updateDoc(productRef, {
+            favoritedBy: arrayRemove(userId),
+            favoriteCount: currentCount - 1,
+          });
+          setIsFavorited(false);
+          setFavoriteCount(currentCount - 1);
+          toast.success('Removed from favorites!');
+        } else {
+          await updateDoc(productRef, {
+            favoritedBy: arrayUnion(userId),
+            favoriteCount: currentCount + 1,
+          });
+          setIsFavorited(true);
+          setFavoriteCount(currentCount + 1);
+          toast.success('Added to favorites!');
+        }
+      }
+    } catch (err) {
+      console.error('Error updating favorite:', err);
+      toast.error('Failed to update favorite. Try again!');
+    }
+  };
+
   return (
     <div className="relative w-full max-w-[240px]">
       <Link to={`/product/${product.id}`} className="flex flex-col w-full">
-        <div className="rounded-lg p-2 max-md:p-3 grid">
+        <div className="rounded-lg p-2 max-md:p-3 grid relative">
           <div className="relative">
             <img
               src={imageSrc}
@@ -49,6 +124,21 @@ const ProductCard = ({ product }) => {
                 });
               }}
             />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleFavorite();
+              }}
+              className="absolute bottom-2 left-2 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 focus:outline-none"
+            >
+              <i
+                className={`bx text-xl ${
+                  isFavorited ? 'bx-heart text-red-500' : 'bx-heart text-gray-500'
+                }`}
+              ></i>
+              <span className="ml-1 text-xs font-semibold">{favoriteCount}</span>
+            </button>
           </div>
           <h3 className="text-sm font-semibold text-gray-800">{truncateName(product.name)}</h3>
           <p className="text-gray-600">

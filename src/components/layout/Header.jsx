@@ -661,7 +661,7 @@ const Header = () => {
                 <span>My Products</span>
               </Link>
               <Link
-                to="/upload-product"
+                to="/product-upload"
                 className="flex items-center space-x-2 hover:text-blue-600"
                 onClick={() => setIsSidebarOpen(false)}
               >

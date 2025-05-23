@@ -144,7 +144,7 @@ const Products = () => {
   }
 
   return (
-    <div className="container rounded-lg mx-auto p-3">
+    <div className="contain rounded-lg mx-auto p-3">
       <h2 className="text-2xl font-bold mb-4 m-4">All Products</h2>
       <div className="flex flex-col md:flex-row gap-2">
         <div className="w-full rounded-lg border md:w-1/4">

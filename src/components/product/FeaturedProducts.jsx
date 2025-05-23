@@ -104,7 +104,7 @@ export default function FeaturedProducts() {
           ))}
         </>
       ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No featured products found. Check your database for products in these categories: foremade fashion, smart watches, drinks & categories, health & beauty, game & fun, computers & accessories.</p>
+        <p className="text-gray-600 col-span-full text-center">No Product Found</p>
       ) : (
         products.map((product) => (
           <div className="">

@@ -27,18 +27,18 @@ const AddToCartButton = ({ productId }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="">
       <button
         onClick={handleAddToCart}
         disabled={loading}
-        className={`p-1 rounded-full transition-all duration-200 ${
+        className={`pl-1 pr-1 rounded-full transition-all duration-200 ${
           loading
             ? 'bg-gray-300 cursor-not-allowed'
-            : 'text-2xl bg-gray-50 shadow-xl text-black text-center hover:bg-[#ec9d38]'
+            : 'text-2xl bg-slate-500 shadow-xl text-white text-center hover:bg-[#ec9d38]'
         }`}
         aria-label="Add to cart"
       >
-        <i className={`bx bx-plus text-black ${loading ? 'opacity-50' : ''}`}></i>
+        <i className={`bx bx-plus text-white ${loading ? 'opacity-50' : ''}`}></i>
       </button>
       <CustomAlert alerts={alerts} removeAlert={(id) => setAlerts(alerts.filter((alert) => alert.id !== id))} />
     </div>

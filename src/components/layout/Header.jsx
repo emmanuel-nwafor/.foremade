@@ -182,94 +182,84 @@ const Header = () => {
 
   return (
     <header className="bg-white">
-      <div className="hidden sm:block border-b border-gray-200 text-gray-600 py-2">
+      <div className="hidden sm:block border-b border-gray-200 text-white py-2 bg-[#112D4E]">
         <div className="container mx-auto px-4 flex flex-col justify-between sm:flex-row sm:justify-between sm:items-center">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
             {user ? (
               <div className="flex items-center gap-3">
-                <Link to="/profile" className="cursor-pointer hover:text-blue-600">
+                <Link to="/profile" className="cursor-pointer hover:text-blue-300">
                   Hello, {getDisplayName()}
                 </Link>
               </div>
             ) : (
               <p className="cursor-pointer">
                 Hi!{' '}
-                <Link to="/login" className="text-blue-500 underline">
-                  Sign in
-                </Link>{' '}
-                or{' '}
-                <Link to="/register" className="text-blue-500 underline">
-                  Register
+                <Link to="/login" className="text-blue-300 underline">
+                  Sign In
                 </Link>
               </p>
             )}
-            <Link to="/deals" className="hover:text-blue-600">
-              Daily Deals
+            <Link to="/shop" className="hover:text-blue-300">
+              Shop
             </Link>
-            <Link to="/brands" className="hover:text-blue-600 hidden lg:inline">
-              Brand Outlet
+            <Link to="/sell" className="hover:text-blue-300 hidden lg:inline">
+              Sell
             </Link>
-            <Link to="/gift-cards" className="hover:text-blue-600 hidden lg:inline">
-              Gift Cards
-            </Link>
-            <Link to="/help" className="hover:text-blue-600 hidden lg:inline">
-              Help & Contact
+            <Link to="/smile" className="hover:text-blue-300 hidden lg:inline">
+              Smile
             </Link>
             <div className="relative group lg:hidden p-1">
-              <button className="hover:text-blue-600 flex items-center">
+              <button className="hover:text-blue-300 flex items-center">
                 More <i className="bx bx-chevron-down ml-1"></i>
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-2 mt-1 z-10 w-48 rounded-md shadow-lg">
-                <Link to="/brands" className="block px-4 py-1 text-sm hover:bg-gray-100">
-                  Brand Outlet
+                <Link to="/sell" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
+                  Sell
                 </Link>
-                <Link to="/gift-cards" className="block px-4 py-1 text-sm hover:bg-gray-100">
-                  Gift Cards
-                </Link>
-                <Link to="/help" className="block px-4 py-1 text-sm hover:bg-gray-100">
-                  Help & Contact
+                <Link to="/smile" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
+                  Smile
                 </Link>
               </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm mt-2 sm:mt-0">
-            <Link to="/ship-to" className="hover:text-blue-600">
+            <Link to="/ship-to" className="hover:text-blue-300">
               Ship to
             </Link>
             <div className="relative group">
-              <button className="hover:text-blue-600 flex items-center">
+              <button className="hover:text-blue-300 flex items-center">
                 My Foremade <i className="bx bx-chevron-down ml-1"></i>
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-3 z-10 w-48 rounded-md shadow-lg">
-                <Link to="/profile" className="block px-4 py-1 text-sm hover:bg-gray-100">
+                <Link to="/profile" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
                   Profile
                 </Link>
-                <Link to="/orders" className="block px-4 py-1 text-sm hover:bg-gray-100">
+                <Link to="/orders" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
                   Orders
                 </Link>
-                <Link to="/favorites" className="block px-4 py-1 text-sm hover:bg-gray-100">
+                <Link to="/favorites" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
                   Favorites ({favoritesCount})
                 </Link>
                 {user && (
                   <>
-                    <Link to="/my-products" className="block px-4 py-1 text-sm hover:bg-gray-100">
+                    <Link to="/my-products" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
                       My Products
                     </Link>
-                    <Link to="/upload-product" className="block px-4 py-1 text-sm hover:bg-gray-100">
+                    <Link to="/upload-product" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
                       Upload Product
                     </Link>
                   </>
                 )}
               </div>
             </div>
-            <Link to="/sellers-guide" className="hover:text-blue-600">
+            <Link to="/sellers-guide" className="hover:text-blue-300">
               Sell
             </Link>
-            <Link to="/watchlist" className="hover:text-blue-600">
+            <Link to="/watchlist" className="hover:text-blue-300">
               Watchlist
             </Link>
             <Link to="/notifications" className="relative">
-              <i className="bx bx-bell text-xl text-gray-600"></i>
+              <i className="bx bx-bell text-xl text-white"></i>
               {notificationCount > 0 && (
                 <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[12px] rounded-full h-4 w-4 flex items-center justify-center">
                   {notificationCount}
@@ -278,7 +268,7 @@ const Header = () => {
             </Link>
             <div className="hidden sm:flex items-center gap-3">
               <Link to="/favorites" className="flex items-center relative">
-                <i className="bx bx-heart text-slate-500 text-xl"></i>
+                <i className="bx bx-heart text-white text-xl"></i>
                 {favoritesCount > 0 && (
                   <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[12px] rounded-full h-4 w-4 flex items-center justify-center">
                     {favoritesCount}
@@ -464,7 +454,7 @@ const Header = () => {
               className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
               onClick={() => setIsSidebarOpen(false)}
             >
-              <i className="bx bx-log-in mr-2 text-lg text-gray-500"></i>Sign in
+              <i className="bx bx-log-in mr-2 text-lg text-gray-500"></i>Sign In
             </Link>
           )}
           {categories.slice(1).map((category) => (
@@ -535,7 +525,7 @@ const Header = () => {
           </button>
         </div>
         <nav className="flex flex-col p-4 space-y-2 text-base text-gray-600">
-          <div className="flex items-center space-x-2 mb-4">
+          <div className="flex items-center space-x-2">
             <Link to="/profile" onClick={() => setIsSidebarOpen(false)}>
               <i className="bx bx-user-circle text-2xl text-gray-600"></i>
             </Link>
@@ -557,50 +547,34 @@ const Header = () => {
                   className="text-blue-600 underline"
                   onClick={() => setIsSidebarOpen(false)}
                 >
-                  Sign in
-                </Link>
-                <span className="mx-1">|</span>
-                <Link
-                  to="/register"
-                  className="text-blue-600 underline"
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  Register
+                  Sign In
                 </Link>
               </p>
             )}
           </div>
           <Link
-            to="/deals"
+            to="/products"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
           >
             <i className="bx bx-bolt-circle text-lg"></i>
-            <span>Hot Deals</span>
+            <span>Shop</span>
           </Link>
           <Link
-            to="/brands"
+            to="/sell"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
           >
             <i className="bx bx-store text-lg"></i>
-            <span>Premium Brands</span>
+            <span>Sell</span>
           </Link>
           <Link
-            to="/gift-cards"
+            to="/smile"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
           >
             <i className="bx bx-gift text-lg"></i>
-            <span>Gift Vouchers</span>
-          </Link>
-          <Link
-            to="/help"
-            className="flex items-center space-x-2 hover:text-blue-600"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <i className="bx bx-help-circle text-lg"></i>
-            <span>Support Center</span>
+            <span>Smile</span>
           </Link>
           <Link
             to="/ship-to"
@@ -609,14 +583,6 @@ const Header = () => {
           >
             <i className="bx bx-globe text-lg"></i>
             <span>Delivery Options</span>
-          </Link>
-          <Link
-            to="/sellers-guide"
-            className="flex items-center space-x-2 hover:text-blue-600"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <i className="bx bx-camera text-lg"></i>
-            <span>Start Selling</span>
           </Link>
           <Link
             to="/favorites"
@@ -635,14 +601,6 @@ const Header = () => {
             <span>Profile</span>
           </Link>
           <Link
-            to="/watchlist"
-            className="flex items-center space-x-2 hover:text-blue-600"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <i className="bx bx-bookmark text-lg"></i>
-            <span>Watchlist</span>
-          </Link>
-          <Link
             to="/orders"
             className="flex items-center space-x-2 hover:text-blue-600"
             onClick={() => setIsSidebarOpen(false)}
@@ -650,26 +608,6 @@ const Header = () => {
             <i className="bx bx-package text-lg"></i>
             <span>Orders</span>
           </Link>
-          {user && (
-            <>
-              <Link
-                to="/my-products"
-                className="flex items-center space-x-2 hover:text-blue-600"
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                <i className="bx bx-store-alt text-lg"></i>
-                <span>My Products</span>
-              </Link>
-              <Link
-                to="/product-product"
-                className="flex items-center space-x-2 hover:text-blue-600"
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                <i className="bx bx-upload text-lg"></i>
-                <span>Upload Product</span>
-              </Link>
-            </>
-          )}
         </nav>
       </div>
 
@@ -678,7 +616,7 @@ const Header = () => {
           to="/"
           className={`flex flex-col items-center ${
             location.pathname === '/' ? 'text-gray-600' : 'text-gray-600'
-          } hover:text-amber-500`} // Changed hover to amber-500
+          } hover:text-amber-500`}
         >
           <i className="bx bx-home-alt text-2xl"></i>
           <span className="text-sm">Home</span>
@@ -687,7 +625,7 @@ const Header = () => {
           to="/search"
           className={`flex flex-col items-center ${
             location.pathname === '/search' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`} // Changed hover to amber-500
+          } hover:text-amber-500`}
         >
           <i className="bx bx-search text-2xl"></i>
           <span className="text-sm">Search</span>
@@ -696,7 +634,7 @@ const Header = () => {
           to="/sellers-guide"
           className={`flex flex-col items-center ${
             location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`} // Changed hover to amber-500
+          } hover:text-amber-500`}
         >
           <i className="bx bxs-plus-circle text-2xl"></i>
           <span className="text-sm">Sell</span>
@@ -705,7 +643,7 @@ const Header = () => {
           to="/notifications"
           className={`flex flex-col items-center relative ${
             location.pathname === '/notifications' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`} // Changed hover to amber-500
+          } hover:text-amber-500`}
         >
           <i className="bx bx-bell text-2xl"></i>
           {notificationCount > 0 && (
@@ -719,10 +657,10 @@ const Header = () => {
           to="/profile"
           className={`flex flex-col items-center ${
             location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`} // Changed hover to amber-500
+          } hover:text-amber-500`}
         >
           <i className="bx bx-user text-2xl"></i>
-          <span className="text-sm">Me</span> {/* Changed Profile to Me */}
+          <span className="text-sm">You</span>
         </Link>
       </nav>
     </header>

@@ -164,7 +164,7 @@ export default function TrendingGadgets() {
             </div>
           </div>
           <div className="flex overflow-x-auto scrollbar-hide">
-            {[...Array(4)].map((_, index) => (
+            {[...Array(7)].map((_, index) => (
               <div key={index} className="flex-shrink-0 w-60 mr-4">
                 <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
               </div>

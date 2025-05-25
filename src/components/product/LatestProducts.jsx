@@ -136,12 +136,12 @@ export default function FeaturedProducts() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-1">
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
         <>
-          {[...Array(4)].map((_, index) => (
+          {[...Array(5)].map((_, index) => (
             <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
           ))}
         </>

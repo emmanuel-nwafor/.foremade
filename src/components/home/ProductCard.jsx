@@ -153,6 +153,14 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
             <i
               className={`bx ${isFavorited ? 'bxs-heart text-red-500' : 'bx-heart text-gray-500'} text-lg`}
             ></i>
+                        {/* Fav count */}
+            <div>
+              {favoriteCount > 0 && (
+                <span className="text-slate-600 text-sm font-bold rounded-full px-1">
+                  {favoriteCount}
+                </span>
+              )}
+            </div>
           </button>
         </div>
         <div className="flex flex-col w-full">
@@ -183,14 +191,6 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
                   ></i>
                 ))}
               </div>
-            </div>
-            {/* Fav count */}
-            <div>
-              {favoriteCount > 0 && (
-                <span className="text-slate-600 text-sm font-bold rounded-full px-2 py-1 mt-1">
-                  {favoriteCount}
-                </span>
-              )}
             </div>
           </div>
           {badgeContent}

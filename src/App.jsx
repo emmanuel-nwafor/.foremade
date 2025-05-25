@@ -30,6 +30,7 @@ import AdminUsers from '/src/admin/AdminUsers';
 import AdminAdmins from '/src/admin/AdminAdmins';
 import AdminVendors from '/src/admin/AdminVendors';
 import SellersGuide from './seller/SellersGuide';
+import HowItWorks from './seller/HowItWorks';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -83,7 +84,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/add-phone" element={<AddPhone />} />
           <Route path="/seller/login" element={<Login />} />
-          <Route path="/sellers-guide" element={<SellersGuide />} />
+          <Route path="/sellers-guide" element={<HowItWorks />} />
 
           {/* === Public Routes === */}
           <Route path="/" element={<Home />} />

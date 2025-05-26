@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react';
+// import bg from '/src/assets/images/sell.jpg'
+
+const bg_1 = '/src/assets/images/hero1.jpg'
+const bg_2 = 'src/assets/images/hero2.jpg'
+const bg_3 = 'src/assets/images/hero3.jpg'
 
 const Carousel = () => {
   const slides = [
     {
-      image: 'https://media.istockphoto.com/id/1431595751/photo/online-payment-for-fruit-through-the-card-in-the-smartphone-smartphone-and-fruit-cart-copy.jpg?s=612x612&w=0&k=20&c=V_oUiRLBZGtfGozgXDlHZpq5nu0lZmZkxZmGbZS8Oqc=',
+      image: bg_1,
       text: 'Discovered Supports Tailored For You',
       description: 'Explore solutions for shipping, returns, and more.',
       button: 'Shop Now',
     },
     {
-      image: 'https://media.istockphoto.com/id/2205223646/photo/device-touching-screen-with-shopping-cart-and.jpg?s=612x612&w=0&k=20&c=bpV-qL-_rzVhQ3-scnIuJEbWXLwdc44B74O3_TXBSDs=',
+      image: bg_2,
       text: 'Shop The Latest Deals',
       description: 'Find unique products at unbeatable prices.',
       button: 'Shop Now',
     },
     {
-      image: 'https://media.istockphoto.com/id/1329052977/photo/smartphone-with-shopping-cart-and-blank-empty-screen-on-blue-stage-background-online-shopping.jpg?s=612x612&w=0&k=20&c=bH9R_JRrIH4DzIfDcwAHACx-mqRKT9PpzK5cOPW-pkM=',
+      image: bg_3,
       text: 'Top Notch Findings.',
       description: 'Quality and refinable products.',
       button: 'Shop Now',
@@ -33,7 +38,7 @@ const Carousel = () => {
   }, [current, slides.length]);
 
   return (
-    <div className="relative h-[300px] sm:h-[300px] md:h-[450px] lg:h-[340px] xl:h-[380px] max-w-full w-full md:max-w-full md:w-full lg:max-w-[90%] xl:max-w-[93%] lg:mx-auto overflow-hidden rounded-lg">
+    <div className="relative h-[300px] sm:h-[300px] md:h-[450px] lg:h-[340px] xl:h-[380px] max-w-full w-full md:max-w-full md:w-full lg:max-w-[90%] xl:max-w-[93%] lg:mx-auto overflow-hidden">
       {slides.map((slide, index) => (
         <div
           key={index}
@@ -48,7 +53,7 @@ const Carousel = () => {
           <img
             src={slide.image}
             alt={`Slide ${index}`}
-            className="w-full h-full object-cover rounded-lg"
+            className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 flex items-center justify-start p-4 sm:p-6 md:p-8 lg:p-10 bg-black bg-opacity-30">
             <div className="text-white max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg text-left">

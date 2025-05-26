@@ -9,7 +9,6 @@ import FreeShipping from '../home/FreeShipping';
 
 const Header = () => {
   const location = useLocation();
-  // const [setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -184,7 +183,7 @@ const Header = () => {
           <Link to="/">
             <img
               src={logo}
-              className="h-6 sm:h-10 sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+              className="h-10 sm:h-16 sm:w-auto md:w-auto lg:w-auto xl:w-auto"
               alt="Foremade"
             />
           </Link>
@@ -208,12 +207,18 @@ const Header = () => {
         <div className="flex items-center space-x-2 sm:space-x-4">
           {user ? (
             <Link to="/profile" className="hover:text-gray-300 text-xs sm:text-sm">
-              Hello, {getDisplayName()}
+              Hi, {getDisplayName()}
             </Link>
           ) : (
-            <Link to="/login" className="hover:text-gray-300 text-xs sm:text-sm">
-              Sign In
-            </Link>
+            <div>
+              <Link to="/login" className="hover:text-gray-300 text-xs sm:text-sm">
+                Login 
+              </Link>
+              |
+              <Link to="/signup" className="hover:text-gray-300 text-xs sm:text-sm">
+                Sign In
+              </Link>
+            </div>
           )}
           <Link to="/notifications" className="relative">
             <i className="bx bx-bell text-lg sm:text-xl"></i>
@@ -242,7 +247,7 @@ const Header = () => {
             <input
               type="text"
               placeholder="Search here for electronics, accessories and more"
-              className="w-full p-2 pl-8 border border-gray-300 rounded-full text-black placeholder-gray-600 focus:outline-none text-xs sm:text-base"
+              className="w-full p-2 pl-8 border border-gray-300 rounded-md text-black placeholder-gray-600 focus:outline-none text-xs sm:text-base"
               value={searchQuery}
               onChange={handleSearch}
               onFocus={handleFocus}
@@ -300,7 +305,7 @@ const Header = () => {
       </div>
 
       <div className="sm:hidden px-2 py-1">
-        <div className="flex flex-wrap justify-start gap-1 mt-1 text-[10px] text-gray-700">
+        <div className="flex overflow-x-auto scrollbar-hide gap-1 mt-1 text-[10px] text-gray-700">
           {categories.map((category) => (
             <Link
               key={category}

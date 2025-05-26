@@ -8,14 +8,15 @@ import AddToCartButton from '/src/components/cart/AddToCartButton';
 const ProductCard = ({ product, sellerType = 'casual' }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [imageUrl, setImageUrl] = useState('https://placehold.co/250x250?text=Placeholder');
+  const [imageUrl, setImageUrl] = useState(null); // null for shimmer effect
+  const [imageFailed, setImageFailed] = useState(false); // Track if image load failed
 
   useEffect(() => {
     const fetchImageAndFavorites = async () => {
       if (!product?.id) {
         setIsFavorited(false);
         setFavoriteCount(0);
-        setImageUrl('https://placehold.co/250x250?text=Placeholder');
+        setImageUrl(null); // Shimmer effect
         return;
       }
 
@@ -24,6 +25,7 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
+          console.log('Firestore product data:', data); // Debug Firestore data
           // Set favorite status
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && data.favoritedBy?.includes(userId) || false);
@@ -35,16 +37,17 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
             typeof data.imageUrls[0] === 'string' &&
             data.imageUrls[0].startsWith('https://')
               ? data.imageUrls[0]
-              : 'https://placehold.co/250x250?text=Placeholder';
+              : null; // Shimmer effect if invalid
           setImageUrl(validImage);
+          setImageFailed(false);
         } else {
           console.warn('Product not found in Firestore:', product.id);
-          setImageUrl('https://placehold.co/250x250?text=Placeholder');
+          setImageUrl(null); // Shimmer effect
         }
       } catch (err) {
         console.error('Error fetching product data:', err);
         toast.error('Failed to load product data.');
-        setImageUrl('https://placehold.co/250x250?text=Placeholder');
+        setImageUrl(null); // Shimmer effect
       }
     };
     fetchImageAndFavorites();
@@ -133,34 +136,65 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
 
   return (
     <div className={cardStyles}>
+      <style>
+        {`
+          .shimmer {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            background: #f6f7f8;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            border-radius: 2px;
+          }
+          .shimmer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+              90deg,
+              rgba(255, 255, 255, 0) 0%,
+              rgba(255, 255, 255, 0.4) 50%,
+              rgba(255, 255, 255, 0) 100%
+            );
+            animation: shimmer 1.5s infinite;
+          }
+          @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+          }
+        `}
+      </style>
       <div className="grid">
         <div className="relative">
           <Link to={`/product/${product.id}`}>
-            <img
-              src={imageUrl}
-              alt={product.name || 'Product'}
-              className="h-[250px] w-[270px] border rounded-sm object-cover mb-1"
-              onError={(e) => {
-                if (e.target.src !== 'https://placehold.co/250x250?text=Placeholder') {
-                  console.warn('Image load error, falling back to placeholder:', {
+            {imageUrl && !imageFailed ? (
+              <img
+                src={imageUrl}
+                alt={product.name || 'Product'}
+                className="h-[250px] w-[250px] border rounded-sm object-cover mb-1"
+                onError={() => {
+                  console.warn('Image load error, falling back to shimmer:', {
                     productId: product.id,
                     imageUrl: imageUrl,
-                    attemptedUrl: e.target.src,
                     name: product.name,
-                    error: e.message || 'Unknown error',
                   });
-                  e.target.src = 'https://placehold.co/250x250?text=Placeholder';
-                  setImageUrl('https://placehold.co/250x250?text=Placeholder');
-                }
-              }}
-              onLoad={() => {
-                console.log('Image loaded successfully:', {
-                  productId: product.id,
-                  imageUrl: imageUrl,
-                  name: product.name,
-                });
-              }}
-            />
+                  setImageFailed(true);
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', {
+                    productId: product.id,
+                    imageUrl: imageUrl,
+                    name: product.name,
+                  });
+                }}
+              />
+            ) : (
+              <div className="shimmer mb-1" />
+            )}
           </Link>
           <button
             onClick={handleFavorite}

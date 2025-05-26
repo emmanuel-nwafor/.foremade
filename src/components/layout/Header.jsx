@@ -199,7 +199,7 @@ const Header = () => {
                 </Link>
               </p>
             )}
-            <Link to="/shop" className="hover:text-blue-300">
+            <Link to="/products" className="hover:text-blue-300">
               Shop
             </Link>
             <Link to="/sell" className="hover:text-blue-300 hidden lg:inline">
@@ -232,29 +232,17 @@ const Header = () => {
               </button>
               <div className="absolute hidden group-hover:block bg-white border border-gray-200 py-3 z-10 w-48 rounded-md shadow-lg">
                 <Link to="/profile" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
-                  Profile
-                </Link>
-                <Link to="/orders" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
-                  Orders
-                </Link>
-                <Link to="/favorites" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
-                  Favorites ({favoritesCount})
+                  You
                 </Link>
                 {user && (
                   <>
-                    <Link to="/my-products" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
-                      My Products
-                    </Link>
-                    <Link to="/upload-product" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
-                      Upload Product
+                    <Link to="/dashboard" className="block px-4 py-1 text-sm hover:bg-gray-100 text-gray-600">
+                      Products
                     </Link>
                   </>
                 )}
               </div>
             </div>
-            <Link to="/sellers-guide" className="hover:text-blue-300">
-              Sell
-            </Link>
             <Link to="/watchlist" className="hover:text-blue-300">
               Watchlist
             </Link>

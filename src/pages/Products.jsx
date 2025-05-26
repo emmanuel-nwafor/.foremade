@@ -48,8 +48,8 @@ const Products = () => {
             ) {
               imageUrl = data.imageUrls[0];
             } else {
-              imageUrl = '/images/placeholder.jpg';
-              console.warn(`Product ${doc.id} has no valid imageUrl or imageUrls, using placeholder`, {
+              imageUrl = null; // Trigger shimmer in ProductCard
+              console.warn(`Product ${doc.id} has no valid imageUrl or imageUrls`, {
                 id: doc.id,
                 name: data.name,
                 imageUrl: data.imageUrl,
@@ -76,13 +76,8 @@ const Products = () => {
             };
           })
           .filter((product) => {
-            const hasValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.length > 0;
-            if (!hasValidImage) {
-              console.error('Filtered out product with invalid imageUrl:', {
-                id: product.id,
-                name: product.name,
-                imageUrl: product.imageUrl,
-              });
+            if (!product.id) {
+              console.error('Filtered out product with invalid id:', product);
               return false;
             }
             return true;
@@ -146,11 +141,11 @@ const Products = () => {
   return (
     <div className="mb-10 rounded-lg mx-auto p-3">
       <h2 className="text-2xl font-bold mb-4 m-4">All Products</h2>
-      <div className="flex flex-col md:flex-row gap-2">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full rounded-lg border md:w-1/4">
           <ProductFilter onFilterChange={handleFilterChange} />
         </div>
-        <div className="w-full rounded-lg border md:w-3/4">
+        <div className="w-full rounded-lg border">
           <ProductList products={filteredProducts} loading={loading} />
         </div>
       </div>

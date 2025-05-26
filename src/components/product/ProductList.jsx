@@ -34,7 +34,7 @@ const ProductList = ({ products = [] }) => {
 
   return (
     <div className="container mx-auto px-2 py-2">
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {products.length === 0 ? (
           <p className="text-center col-span-full">
             <SkeletonLoader type="featuredProduct" count={8}/>

@@ -34,11 +34,11 @@ const AddToCartButton = ({ productId }) => {
         className={`rounded-full px-2 py-1 text-white focus:outline-none ml-2 transition-all duration-200 ${
           loading
             ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-blue-950 hover:bg-blue-800'
+            : 'bg-[#06213e] hover:bg-blue-950'
         }`}
         aria-label="Add to cart"
       >
-        <i className={`bx bx-plus text-lg ${loading ? 'opacity-50' : ''}`}></i>
+        <i className={`bx bx-plus text-md ${loading ? 'opacity-50' : ''}`}></i>
       </button>
       <CustomAlert alerts={alerts} removeAlert={(id) => setAlerts(alerts.filter((alert) => alert.id !== id))} />
     </div>

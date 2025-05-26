@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firest
 import { toast } from 'react-toastify';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
-const ProductCard = ({ product, sellerType = 'casual' }) => {
+const ProductCard = ({ product }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState(null); // null for shimmer effect
@@ -117,25 +117,9 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     Array.isArray(product.sizes) &&
     product.sizes.length > 0;
 
-  // Styles for pro seller
-  const cardStyles =
-    sellerType === 'pro'
-      ? 'relative w-full max-w-[260px] border-2 border-yellow-500 rounded-lg p-2 max-md:p-3 shadow-md'
-      : 'relative w-full max-w-[240px] rounded-lg p-2 max-md:p-3';
-
-  const badgeContent = sellerType === 'pro' ? (
-    <span className="inline-flex items-center mt-2 text-[14px] bg-yellow-500 text-white px-2 py-1 rounded">
-      <i className="bx bxs-star text-[12px] mr-1"></i>
-      Pro Seller
-    </span>
-  ) : (
-    <span className="inline-block mt-2 text-[14px] bg-[url('https://i.pinimg.com/736x/73/d3/1f/73d31fc942fcca8178fb9c07a970dd61.jpg')] bg-cover bg-center text-white px-2 py-1 rounded">
-      Brand Store
-    </span>
-  );
 
   return (
-    <div className={cardStyles}>
+    <div>
       <style>
         {`
           .shimmer {
@@ -230,7 +214,7 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
                   {product.sizes.map((size, index) => (
                     <span
                       key={index}
-                      className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                      className="text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded"
                     >
                       {size}
                     </span>
@@ -241,7 +225,6 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
               )}
             </div>
           </div>
-          {badgeContent}
         </div>
       </div>
     </div>

@@ -5,14 +5,20 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
   const navigate = useNavigate();
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const exceedsLimit = totalItems > 9;
 
   const subtotal = totalPrice;
   const taxRate = 0.075;
   const tax = subtotal * taxRate;
-  const shipping = subtotal > 0 ? 500 : 0;
+  const shipping = 0; // Free shipping
   const grandTotal = subtotal + tax + shipping;
 
   const handleCheckout = () => {
+    if (exceedsLimit) {
+      alert('Maximum 9 products allowed per purchase. Please contact admin for bulk orders.');
+      return;
+    }
     navigate('/checkout');
   };
 
@@ -30,7 +36,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         </div>
         <div className="flex justify-between">
           <span>Shipping</span>
-          <span>₦{shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+          <span>Free</span>
         </div>
         <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
           <span>Grand Total</span>
@@ -41,11 +47,11 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         <button
           onClick={handleCheckout}
           className={`flex-1 px-6 py-2 rounded-lg text-white transition ${
-            isCartEmpty || hasStockIssues
+            isCartEmpty || hasStockIssues || exceedsLimit
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
-          disabled={isCartEmpty || hasStockIssues}
+          disabled={isCartEmpty || hasStockIssues || exceedsLimit}
           aria-label="Proceed to checkout"
         >
           Checkout
@@ -61,6 +67,11 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
           Clear Cart
         </button>
       </div>
+      {exceedsLimit && (
+        <p className="text-red-600 text-xs mt-2">
+          Maximum 9 products allowed per purchase. Please remove items or contact admin.
+        </p>
+      )}
     </div>
   );
 };

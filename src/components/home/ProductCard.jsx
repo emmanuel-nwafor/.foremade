@@ -1,21 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { db } from '/src/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { auth, db } from '/src/firebase';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import Help from '../common/Help';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const ProductCard = ({ product, sellerType = 'casual' }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [imageUrl, setImageUrl] = useState('https://placehold.co/250x250?text=Placeholder');
 
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
-      const userId = 'currentUserId'; // Replace with actual user ID from auth
-      if (!userId || !product?.id) {
+    const fetchImageAndFavorites = async () => {
+      if (!product?.id) {
         setIsFavorited(false);
-        setFavoriteCount(product?.favoriteCount || 0);
+        setFavoriteCount(0);
+        setImageUrl('https://placehold.co/250x250?text=Placeholder');
         return;
       }
 
@@ -24,15 +24,30 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setIsFavorited(data.favoritedBy?.includes(userId) || false);
+          // Set favorite status
+          const userId = auth.currentUser?.uid;
+          setIsFavorited(userId && data.favoritedBy?.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
+          // Set image URL
+          const validImage =
+            Array.isArray(data.imageUrls) &&
+            data.imageUrls.length > 0 &&
+            typeof data.imageUrls[0] === 'string' &&
+            data.imageUrls[0].startsWith('https://')
+              ? data.imageUrls[0]
+              : 'https://placehold.co/250x250?text=Placeholder';
+          setImageUrl(validImage);
+        } else {
+          console.warn('Product not found in Firestore:', product.id);
+          setImageUrl('https://placehold.co/250x250?text=Placeholder');
         }
       } catch (err) {
-        console.error('Error checking favorite status:', err);
-        toast.error('Failed to load favorite status.');
+        console.error('Error fetching product data:', err);
+        toast.error('Failed to load product data.');
+        setImageUrl('https://placehold.co/250x250?text=Placeholder');
       }
     };
-    checkFavoriteStatus();
+    fetchImageAndFavorites();
   }, [product?.id]);
 
   if (!product || typeof product !== 'object') {
@@ -45,16 +60,10 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     return name.length > 17 ? name.slice(0, 14) + '...' : name;
   };
 
-  const imageSrc =
-    product.imageUrl &&
-    typeof product.imageUrl === 'string' &&
-    product.imageUrl.startsWith('https://') &&
-    product.imageUrl.trim() !== ''
-      ? product.imageUrl
-      : '/images/placeholder.jpg';
-
-  const handleFavorite = async () => {
-    const userId = 'currentUserId'; // Replace with actual user ID from auth
+  const handleFavorite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const userId = auth.currentUser?.uid;
     if (!userId || !product.id) {
       toast.error('Please sign in to favorite a product.');
       return;
@@ -63,32 +72,35 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     try {
       const productRef = doc(db, 'products', product.id);
       const docSnap = await getDoc(productRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const currentCount = data.favoriteCount || 0;
-        const favoritedBy = data.favoritedBy || [];
+      if (!docSnap.exists()) {
+        toast.error('Product not found.');
+        return;
+      }
 
-        if (isFavorited) {
-          await updateDoc(productRef, {
-            favoritedBy: arrayRemove(userId),
-            favoriteCount: currentCount - 1,
-          });
-          setIsFavorited(false);
-          setFavoriteCount(currentCount - 1);
-          toast.success('Removed from favorites!');
-        } else {
-          if (favoritedBy.includes(userId)) {
-            toast.info('You have already favorited this product.');
-            return;
-          }
-          await updateDoc(productRef, {
-            favoritedBy: arrayUnion(userId),
-            favoriteCount: currentCount + 1,
-          });
-          setIsFavorited(true);
-          setFavoriteCount(currentCount + 1);
-          toast.success('Added to favorites!');
+      const data = docSnap.data();
+      const currentCount = data.favoriteCount || 0;
+      const favoritedBy = data.favoritedBy || [];
+
+      if (isFavorited) {
+        await updateDoc(productRef, {
+          favoritedBy: arrayRemove(userId),
+          favoriteCount: Math.max(0, currentCount - 1),
+        });
+        setIsFavorited(false);
+        setFavoriteCount(Math.max(0, currentCount - 1));
+        toast.success('Removed from favorites!');
+      } else {
+        if (favoritedBy.includes(userId)) {
+          toast.info('You have already favorited this product.');
+          return;
         }
+        await updateDoc(productRef, {
+          favoritedBy: arrayUnion(userId),
+          favoriteCount: currentCount + 1,
+        });
+        setIsFavorited(true);
+        setFavoriteCount(currentCount + 1);
+        toast.success('Added to favorites!');
       }
     } catch (err) {
       console.error('Error updating favorite:', err);
@@ -96,10 +108,17 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     }
   };
 
+  // Show sizes only for Foremade Fashion category
+  const showSizes =
+    product?.category?.toLowerCase() === 'foremade fashion' &&
+    Array.isArray(product.sizes) &&
+    product.sizes.length > 0;
+
   // Styles for pro seller
-  const cardStyles = sellerType === 'pro'
-    ? 'relative w-full max-w-[260px] border-2 border-yellow-500 rounded-lg p-2 max-md:p-3 shadow-md'
-    : 'relative w-full max-w-[240px] rounded-lg p-2 max-md:p-3';
+  const cardStyles =
+    sellerType === 'pro'
+      ? 'relative w-full max-w-[260px] border-2 border-yellow-500 rounded-lg p-2 max-md:p-3 shadow-md'
+      : 'relative w-full max-w-[240px] rounded-lg p-2 max-md:p-3';
 
   const badgeContent = sellerType === 'pro' ? (
     <span className="inline-flex items-center mt-2 text-[14px] bg-yellow-500 text-white px-2 py-1 rounded">
@@ -116,55 +135,48 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
     <div className={cardStyles}>
       <div className="grid">
         <div className="relative">
-          
           <Link to={`/product/${product.id}`}>
             <img
-              src={imageSrc}
+              src={imageUrl}
               alt={product.name || 'Product'}
-              className="h-[250px] w-[250px] border rounded-sm object-cover mb-1"
+              className="h-[250px] w-[270px] border rounded-sm object-cover mb-1"
               onError={(e) => {
-                if (e.target.src !== '/images/placeholder.jpg') {
+                if (e.target.src !== 'https://placehold.co/250x250?text=Placeholder') {
                   console.warn('Image load error, falling back to placeholder:', {
                     productId: product.id,
-                    imageUrl: product.imageUrl,
-                    attemptedUrl: imageSrc,
+                    imageUrl: imageUrl,
+                    attemptedUrl: e.target.src,
                     name: product.name,
+                    error: e.message || 'Unknown error',
                   });
-                  e.target.src = '/images/placeholder.jpg';
+                  e.target.src = 'https://placehold.co/250x250?text=Placeholder';
+                  setImageUrl('https://placehold.co/250x250?text=Placeholder');
                 }
               }}
               onLoad={() => {
                 console.log('Image loaded successfully:', {
                   productId: product.id,
-                  imageUrl: imageSrc,
+                  imageUrl: imageUrl,
                   name: product.name,
                 });
               }}
             />
           </Link>
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleFavorite();
-            }}
+            onClick={handleFavorite}
             className="absolute bottom-2 left-2 bg-white rounded-full px-2 py-1 border border-gray-300 flex items-center"
           >
             <i
               className={`bx ${isFavorited ? 'bxs-heart text-red-500' : 'bx-heart text-gray-500'} text-lg`}
             ></i>
-                        {/* Fav count */}
-            <div>
-              {favoriteCount > 0 && (
-                <span className="text-slate-600 text-sm font-bold rounded-full px-1">
-                  {favoriteCount}
-                </span>
-              )}
-            </div>
+            {favoriteCount > 0 && (
+              <span className="text-slate-600 text-sm font-bold rounded-full px-1">
+                {favoriteCount}
+              </span>
+            )}
           </button>
         </div>
         <div className="flex flex-col w-full">
-          {/* Product name, price, and Add to Cart */}
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-800">{truncateName(product.name)}</h3>
@@ -177,28 +189,27 @@ const ProductCard = ({ product, sellerType = 'casual' }) => {
             </div>
             <AddToCartButton productId={product.id} />
           </div>
-
-          {/* Stars and favorite count */}
           <div className="flex justify-between mt-1">
             <div className="flex items-center">
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <i
-                    key={i}
-                    className={`bx bxs-star text-sm sm:text-base md:text-lg ${
-                      i < Math.floor(product.rating || 0) ? 'text-amber-400' : 'text-gray-400'
-                    }`}
-                  ></i>
-                ))}
-              </div>
+              {showSizes ? (
+                <div className="flex flex-wrap gap-1">
+                  {product.sizes.map((size, index) => (
+                    <span
+                      key={index}
+                      className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                    >
+                      {size}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-600">No sizes available</div>
+              )}
             </div>
           </div>
           {badgeContent}
         </div>
       </div>
-      {/* <div className="bottom-2 right-2 max-md:bottom-1 max-md:right-1">
-        <Help />
-      </div> */}
     </div>
   );
 };

@@ -187,14 +187,18 @@ const Header = () => {
               alt="Foremade"
             />
           </Link>
-          <Link to="/products" className="hover:text-gray-300 text-xs sm:text-sm">Shop</Link>
-          <Link to="/sell" className="hover:text-gray-300 text-xs sm:text-sm">Sell</Link>
-          <Link to="/smile" className="hover:text-gray-300 text-xs sm:text-sm">Smile</Link>
+
+        </div>
+
+        <div className="flex justify-evenly">
+          <Link to="/products" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Shop</Link>
+          <Link to="/sell" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Sell</Link>
+          <Link to="/smile" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Smile</Link>
           <div className="relative">
             <select
               value={selectedCountry}
               onChange={handleCountryChange}
-              className="bg-transparent text-green-500 focus:outline-none appearance-none text-xs sm:text-sm"
+              className="bg-transparent m-2 text-green-500 focus:outline-none appearance-none text-xs sm:text-sm"
             >
               {countries.map((country) => (
                 <option key={country.code} value={country.code} className="text-black">
@@ -204,6 +208,7 @@ const Header = () => {
             </select>
           </div>
         </div>
+        
         <div className="flex items-center space-x-2 sm:space-x-4">
           {user ? (
             <Link to="/profile" className="hover:text-gray-300 text-xs sm:text-sm">
@@ -212,9 +217,9 @@ const Header = () => {
           ) : (
             <div>
               <Link to="/login" className="hover:text-gray-300 text-xs sm:text-sm">
-                Login 
+                Login  
               </Link>
-              |
+               |
               <Link to="/signup" className="hover:text-gray-300 text-xs sm:text-sm">
                 Sign In
               </Link>

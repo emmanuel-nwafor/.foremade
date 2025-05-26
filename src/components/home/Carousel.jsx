@@ -1,26 +1,21 @@
 import { useState, useEffect } from 'react';
-// import bg from '/src/assets/images/sell.jpg'
-
-const bg_1 = '/src/assets/images/hero1.jpg'
-const bg_2 = 'src/assets/images/hero2.jpg'
-const bg_3 = 'src/assets/images/hero3.jpg'
 
 const Carousel = () => {
   const slides = [
     {
-      image: bg_1,
-      text: 'Discovered Supports Tailored For You',
-      description: 'Explore solutions for shipping, returns, and more.',
+      image: '/src/assets/images/hero1.jpg',
+      text: 'Your marketplace for everything that matters.',
+      description: 'From everyday essentials to hidden gems, this is where smart buyers meet trusted sellers.',
       button: 'Shop Now',
     },
     {
-      image: bg_2,
+      image: '/src/assets/images/hero2.jpg',
       text: 'Shop The Latest Deals',
       description: 'Find unique products at unbeatable prices.',
       button: 'Shop Now',
     },
     {
-      image: bg_3,
+      image: '/src/assets/images/hero3.jpg',
       text: 'Top Notch Findings.',
       description: 'Quality and refinable products.',
       button: 'Shop Now',
@@ -38,7 +33,7 @@ const Carousel = () => {
   }, [current, slides.length]);
 
   return (
-    <div className="relative h-[300px] sm:h-[300px] md:h-[450px] lg:h-[340px] xl:h-[380px] max-w-full w-full md:max-w-full md:w-full lg:max-w-[90%] xl:max-w-[93%] lg:mx-auto overflow-hidden">
+    <div className="relative h-[200px] sm:h-[250px] md:h-[300px] lg:h-[340px] xl:h-[380px] w-full overflow-hidden">
       {slides.map((slide, index) => (
         <div
           key={index}
@@ -55,15 +50,15 @@ const Carousel = () => {
             alt={`Slide ${index}`}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 flex items-center justify-start p-4 sm:p-6 md:p-8 lg:p-10 bg-black bg-opacity-30">
-            <div className="text-white max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg text-left">
-              <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-2">
+          <div className="absolute inset-0 flex items-center justify-start p-2 sm:p-4 md:p-6 lg:p-8 bg-black bg-opacity-30">
+            <div className="text-white max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md text-left">
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2">
                 {slide.text}
               </h2>
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg mb-4">
+              <p className="text-[10px] sm:text-xs md:text-sm lg:text-base mb-2 sm:mb-3">
                 {slide.description}
               </p>
-              <button className="bg-white border-none transition-all hover:text-white text-gray-800 px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 rounded-full border border-gray-300 hover:bg-blue-300 text-xs sm:text-sm md:text-base">
+              <button className="bg-white text-gray-800 px-3 sm:px-4 md:px-5 py-1 sm:py-1.5 md:py-2 rounded-full hover:bg-blue-300 hover:text-white transition-all text-[10px] sm:text-xs md:text-sm">
                 {slide.button}
               </button>
             </div>

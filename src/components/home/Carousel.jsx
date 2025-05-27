@@ -5,68 +5,37 @@ const Carousel = () => {
   const [current, setCurrent] = useState(0);
   const [prevSlide, setPrevSlide] = useState(null);
 
-  // Default slide data with text and descriptions
+  // Updated slide data with four custom images
   const slideData = [
     {
       text: 'Your marketplace for everything that matters.',
       description: 'From everyday essentials to hidden gems, this is where smart buyers meet trusted sellers.',
       button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298184/WhatsApp_Image_2025-05-26_at_2.22.03_PM_1_nf5aby.jpg',
     },
     {
       text: 'Shop The Latest Deals',
       description: 'Find unique products at unbeatable prices.',
       button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298181/WhatsApp_Image_2025-05-26_at_2.22.03_PM_t6903n.jpg',
     },
     {
       text: 'Top Notch Findings.',
       description: 'Quality and refinable products.',
       button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298175/WhatsApp_Image_2025-05-26_at_2.22.03_PM_3_mnnp3s.jpg',
+    },
+    {
+      text: 'Exclusive Offers Await!',
+      description: 'Discover exclusive deals just for you.',
+      button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298182/WhatsApp_Image_2025-05-26_at_2.22.03_PM_2_xnyfai.jpg',
     },
   ];
 
-  // Function to fetch images from Pexels API
-  const fetchImages = async () => {
-    try {
-      // Use a random page to get different images each time
-      const randomPage = Math.floor(Math.random() * 100) + 1;
-      const response = await fetch(
-        `https://api.pexels.com/v1/search?query=ecommerce&per_page=3&page=${randomPage}`,
-        {
-          headers: {
-            Authorization: '51SPMrbmugFd8lKtgNuHKLUvegqD5d7cO0YF8fWYJ6ZySEFmi3MdBz0N',
-          },
-        }
-      );
-      const data = await response.json();
-      const fetchedImages = data.photos.map((photo) => photo.src.landscape);
-
-      // Combine fetched images with slide data
-      const updatedSlides = slideData.map((slide, index) => ({
-        ...slide,
-        image: fetchedImages[index] || 'https://via.placeholder.com/1200x400?text=Image+Not+Found',
-      }));
-      setSlides(updatedSlides);
-    } catch (error) {
-      console.error('Error fetching images:', error);
-      // Fallback to placeholder images if fetch fails
-      setSlides(
-        slideData.map((slide) => ({
-          ...slide,
-          image: 'https://via.placeholder.com/1200x400?text=Image+Not+Found',
-        }))
-      );
-    }
-  };
-
-  // Fetch images initially and every 30 minutes
+  // Set slides with static data on mount
   useEffect(() => {
-    fetchImages(); // Initial fetch
-
-    const imageRefreshInterval = setInterval(() => {
-      fetchImages();
-    }, 30 * 60 * 1000); // 30 minutes
-
-    return () => clearInterval(imageRefreshInterval);
+    setSlides(slideData);
   }, []);
 
   // Carousel auto-slide effect
@@ -80,7 +49,7 @@ const Carousel = () => {
     return () => clearInterval(timer);
   }, [current, slides.length]);
 
-  // Skeleton loader while fetching images
+  // Skeleton loader while slides are not loaded
   if (slides.length === 0) {
     return (
       <div className="relative h-[200px] sm:h-[250px] md:h-[300px] lg:h-[340px] xl:h-[380px] w-full overflow-hidden">
@@ -117,7 +86,7 @@ const Carousel = () => {
             alt={`Slide ${index}`}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 flex items-center justify-start p-2 sm:p-4 md:p-6 lg:p-8 bg-black bg-opacity-30">
+          {/* <div className="absolute inset-0 flex items-center justify-start p-2 sm:p-4 md:p-6 lg:p-8 bg-black bg-opacity-30">
             <div className="text-white max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md text-left">
               <h2 className="text-md sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2">
                 {slide.text}
@@ -129,7 +98,7 @@ const Carousel = () => {
                 {slide.button}
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       ))}
     </div>

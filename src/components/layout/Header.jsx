@@ -19,6 +19,7 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const categories = [
     'Tablet & Phones',
@@ -169,7 +170,7 @@ const Header = () => {
 
   return (
     <header className="">
-      <div className="bg-[#112D4E] text-white py-1 sm:py-2 flex justify-between items-center px-2 sm:px-4">
+      <div className="bg-[#112D4E] hidden sm:flex text-white py-1 sm:py-2 justify-between items-center px-2 sm:px-4">
         <div className="flex items-center space-x-2 sm:space-x-4">
           <Link to="/">
             <img
@@ -214,7 +215,7 @@ const Header = () => {
             )}
           </Link>
           <Link to="/cart" className="relative">
-            <i className="bx bx-cart-alt text-lg sm:text-xl text-white"></i>
+            <i className="bx bx-cart-alt text-[22px] sm:text-xl text-white"></i>
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] sm:text-xs rounded-full h-4 w-4 flex items-center justify-center">
                 {cartCount}
@@ -224,9 +225,11 @@ const Header = () => {
         </div>
       </div>
 
-      <FreeShipping />
+      <div className="hidden sm:block">
+        <FreeShipping />
+      </div>
 
-      <div className="container mx-auto px-2 sm:px-4 py-1 sm:py-4">
+      <div className="hidden sm:block container mx-auto px-2 sm:px-4 py-1 sm:py-4">
         <div className="flex flex-col items-center">
           <div className="relative w-full">
             <input
@@ -289,7 +292,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="sm:hidden px-2 py-1">
+      <div className="sm:hidden px-2 py-3">
         <div className="flex overflow-x-auto scrollbar-hide gap-1 mt-1 text-[10px] text-gray-700">
           {categories.map((category) => (
             <Link
@@ -355,6 +358,69 @@ const Header = () => {
           <span className="text-sm">You</span>
         </Link>
       </nav>
+
+      {/* Mobile Sidebar */}
+      <div className="sm:hidden mb-3">
+        <div className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}>
+          <div className="p-4">
+            <button onClick={() => setSidebarOpen(false)} className="mb-4">
+              <i className="bx bx-x text-2xl text-[#112040]"></i>
+            </button>
+            <div className="flex flex-col space-y-2">
+              {categories.map((category) => (
+                <Link
+                  key={category}
+                  to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                  className="text-[#112040] hover:text-amber-500 text-sm"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  {category}
+                </Link>
+              ))}
+              {!user && (
+                <Link
+                  to="/login"
+                  className="mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Login | Sign Up
+                </Link>
+              )}
+              {user && (
+                <Link
+                  to="/profile"
+                  className="mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Hi, {getDisplayName()}
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+          <Link to="/">
+            <img src={logo} className="h-10" alt="Foremade" />
+          </Link>
+          <div className="flex items-center space-x-4">
+            <Link to="/cart" className="relative">
+              <i className="bx bx-cart-alt text-[22px] text-white"></i>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+            <button onClick={() => setSidebarOpen(true)} className="focus:outline-none">
+              <i className="bx bx-menu text-2xl"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="block sm:hidden">
+        <FreeShipping />
+      </div>
     </header>
   );
 };

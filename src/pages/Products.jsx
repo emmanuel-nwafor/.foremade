@@ -140,7 +140,9 @@ const Products = () => {
 
   return (
     <div className="mb-10 rounded-lg mx-auto p-3">
-      <h2 className="text-2xl font-bold mb-4 m-4">All Products</h2>
+      <div className="flex-col">
+        <h2 className="text-2xl font-bold mb-4 m-4">Shop All Products</h2>
+      </div>
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full rounded-lg border md:w-1/4">
           <ProductFilter onFilterChange={handleFilterChange} />

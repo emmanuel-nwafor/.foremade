@@ -10,7 +10,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
 
   // Dynamic Shipping Logic
   const baseShipping = 2000; // ₦2,000 for the first item
-  const additionalShippingPerItem = 500; // ₦500 per extra item
+  const additionalShippingPerItem = 900; // ₦900 per extra item
   const rawShipping = baseShipping + (totalItems - 1) * additionalShippingPerItem;
   const shipping = totalItems >= 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
   const grandTotal = totalPrice + shipping;

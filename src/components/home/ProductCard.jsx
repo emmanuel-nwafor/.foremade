@@ -159,7 +159,7 @@ const ProductCard = ({ product }) => {
               <img
                 src={imageUrl}
                 alt={product.name || 'Product'}
-                className="h-[250px] w-[250px] border rounded-sm object-cover mb-1"
+                className="h-[250px] w-[250px] border rounded-lg object-cover mb-1"
                 onError={() => {
                   console.warn('Image load error, falling back to shimmer:', {
                     productId: product.id,

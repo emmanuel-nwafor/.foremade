@@ -31,6 +31,7 @@ import AdminAdmins from '/src/admin/AdminAdmins';
 import AdminVendors from '/src/admin/AdminVendors';
 import SellersGuide from './seller/SellersGuide';
 import HowItWorks from './seller/HowItWorks';
+import FreeShipping from './components/home/FreeShipping';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -77,6 +78,7 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+          {/* <FreeShipping /> */}
       <Layout>
         <Routes>
           {/* === Authentication Routes (No Header/Footer) === */}

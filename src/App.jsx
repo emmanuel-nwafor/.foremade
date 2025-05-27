@@ -38,7 +38,7 @@ const Layout = ({ children }) => {
   const hideHeaderFooter = [
     '/login',
     '/register',
-    '/dashboard',
+    '/sell',
     '/overview',
     '/vendor/orders',
     '/vendor/products',
@@ -148,7 +148,7 @@ function App() {
 
           {/* === Seller Routes (Protected) === */}
           <Route
-            path="/dashboard"
+            path="/sell"
             element={
               <ProtectedRoute>
                 <Dashboard />

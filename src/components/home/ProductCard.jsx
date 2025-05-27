@@ -159,7 +159,7 @@ const ProductCard = ({ product }) => {
               <img
                 src={imageUrl}
                 alt={product.name || 'Product'}
-                className="h-[250px] w-[250px] border rounded-lg object-cover mb-1"
+                className="h-[250px] w-[250px] rounded-lg object-cover mb-1"
                 onError={() => {
                   console.warn('Image load error, falling back to shimmer:', {
                     productId: product.id,
@@ -185,7 +185,7 @@ const ProductCard = ({ product }) => {
             className="absolute bottom-2 left-2 bg-white rounded-full px-2 py-1 border border-gray-300 flex items-center"
           >
             <i
-              className={`bx ${isFavorited ? 'bxs-heart text-red-500' : 'bx-heart text-gray-500'} text-lg`}
+              className={`bx ${isFavorited ? 'bx-heart text-gray-500' : 'bx-heart text-slate-500'} text-lg`}
             ></i>
             {favoriteCount > 0 && (
               <span className="text-slate-600 text-sm font-bold rounded-full px-1">

@@ -197,8 +197,8 @@ const ProductCard = ({ product }) => {
         <div className="flex flex-col w-full">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm text-gray-800">{truncateName(product.name)}</h3>
-              <p className="text-gray-600">
+              <h3 className="text-sm mb-1 text-gray-800">{truncateName(product.name)}</h3>
+              <p className="text-amber-600 text-sm">
                 ₦{(product.price || 0).toLocaleString('en-NG', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
@@ -214,7 +214,7 @@ const ProductCard = ({ product }) => {
                   {product.sizes.map((size, index) => (
                     <span
                       key={index}
-                      className="text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded"
+                      className="text-md text-gray-700 mt-1 rounded"
                     >
                       {size}
                     </span>

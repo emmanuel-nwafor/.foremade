@@ -11,7 +11,6 @@ import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
 import cards from '/src/assets/card.png';
 
-// Custom toast style for success
 const customToastStyle = {
   background: '#22c55e',
   color: '#fff',
@@ -34,9 +33,9 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
       return;
     }
 
-    setLoading(true);
+    // set loading(true);
     try {
-      const gbpAmount = Math.round(totalPrice * 100); // Total in GBP pence
+      const gbpAmount = Math.round(totalPrice * 100);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       let attempts = 3;
       let lastError = null;
@@ -173,7 +172,6 @@ const Checkout = () => {
         const cartItems = await getCart(user?.uid);
         console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
 
-        // Process cart items to ensure valid imageUrls
         const processedCart = cartItems.map((item) => {
           const productData = item.product || {};
           let imageUrls = [];
@@ -304,15 +302,16 @@ const Checkout = () => {
     };
   }, []);
 
-  // Calculate shipping for Nigeria (Lagos Express Delivery)
+  // Dynamic Shipping Logic (aligned with CartSummary)
   const calculateShippingNgn = (itemCount) => {
     if (itemCount === 0) return 0;
-    const baseShipping = 25000; // ₦25,000 for first item
-    const shippingDiscount = itemCount === 9 ? 0.3 : 0; // 30% discount if exactly 9 items
-    return baseShipping * (1 - shippingDiscount);
+    const baseShipping = 2000; // ₦2,000 for the first item
+    const additionalShippingPerItem = 500; // ₦500 per extra item
+    const rawShipping = baseShipping + (itemCount - 1) * additionalShippingPerItem;
+    return itemCount >= 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
   };
 
-  // Calculate totals (base in NGN)
+  // Calculate totals
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalNgn = cart.reduce(
     (total, item) => total + (item.product ? item.product.price * item.quantity : 0),
@@ -322,13 +321,15 @@ const Checkout = () => {
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
   const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500; // Flat ₦500 for UK
+  const rawShippingNgn = formData.country === 'Nigeria' ? (totalItems === 0 ? 0 : 2000 + (totalItems - 1) * 500) : 500;
   const totalNgn = subtotalNgn + taxNgn + shippingNgn;
 
-  // Convert to GBP for Stripe (United Kingdom)
-  const conversionRateGbp = 0.00048; // 1 NGN = 0.00048 GBP
+  // Convert to GBP for Stripe
+  const conversionRateGbp = 0.00048;
   const subtotalGbp = subtotalNgn * conversionRateGbp;
   const taxGbp = taxNgn * conversionRateGbp;
   const shippingGbp = shippingNgn * conversionRateGbp;
+  const rawShippingGbp = rawShippingNgn * conversionRateGbp;
   const totalGbp = totalNgn * conversionRateGbp;
 
   const handleInputChange = (e) => {
@@ -403,7 +404,7 @@ const Checkout = () => {
 
         const userId = auth.currentUser?.uid || 'anonymous';
         const orderId = `order-${Date.now()}`;
-        const paymentGateway = formData.country === 'Nigeria' ? 'Paystack' : 'Stripe';
+        const paymentGateway = formData.country === 'United Kingdom' ? 'Stripe' : 'Paystack';
         const vendorId = cart[0]?.product?.sellerId;
         if (!vendorId) {
           console.warn('No vendorId found in cart:', cart);
@@ -551,6 +552,17 @@ const Checkout = () => {
     console.log('Image loaded for productId:', productId);
   };
 
+  const handleImageError = (e, productId, productName) => {
+    console.error('Checkout item image load error:', {
+      productId,
+      imageUrl: e.target.src,
+      name: productName,
+      error: e.message || 'Unknown error',
+    });
+    setImageLoading((prev) => ({ ...prev, [productId]: false }));
+    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -560,12 +572,12 @@ const Checkout = () => {
     );
   }
 
-  // Determine currency and amounts based on country
   const isStripe = formData.country === 'United Kingdom';
   const currency = isStripe ? 'GBP' : 'NGN';
   const subtotal = isStripe ? subtotalGbp : subtotalNgn;
   const tax = isStripe ? taxGbp : taxNgn;
   const shipping = isStripe ? shippingGbp : shippingNgn;
+  const rawShipping = isStripe ? rawShippingGbp : rawShippingNgn;
   const total = isStripe ? totalGbp : totalNgn;
 
   console.log('Currency:', currency, 'Total:', total);
@@ -731,16 +743,7 @@ const Checkout = () => {
                         item.slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'
                       } ${imageLoading[item.productId] ? 'opacity-0' : 'opacity-100'}`}
                       onLoad={() => handleImageLoad(item.productId)}
-                      onError={(e) => {
-                        console.error('Checkout item image load error:', {
-                          productId: item.productId,
-                          imageUrl: e.target.src,
-                          name: item.product?.name,
-                          error: e.message || 'Unknown error',
-                        });
-                        setImageLoading((prev) => ({ ...prev, [item.productId]: false }));
-                        e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
-                      }}
+                      onError={(e) => handleImageError(e, item.productId, item.product?.name)}
                     />
                   </div>
                   <div className="flex-1">
@@ -775,15 +778,7 @@ const Checkout = () => {
                                 item.product.imageUrls.indexOf(item.currentImage)
                               )
                             }
-                            onError={(e) => {
-                              console.error('Checkout thumbnail image load error:', {
-                                productId: item.productId,
-                                imageUrl: e.target.src,
-                                name: item.product?.name,
-                                error: e.message || 'Unknown error',
-                              });
-                              e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
-                            }}
+                            onError={(e) => handleImageError(e, item.productId, item.product?.name)}
                             onLoad={() => {
                               console.log('Checkout thumbnail image loaded successfully:', {
                                 productId: item.productId,
@@ -802,7 +797,7 @@ const Checkout = () => {
           </div>
           <div className="w-full lg:w-1/3">
             <div className="p-6 bg-gray-100 rounded-lg shadow-sm sticky top-4">
-              <img src={cards} alt="cards" />
+              <img src={cards} alt="Accepted payment cards" className="mb-4" />
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
               <div className="space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between">
@@ -842,11 +837,29 @@ const Checkout = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping {totalItems === 9 && formData.country === 'Nigeria' && <span className="text-green-600">(30% off)</span>}</span>
+                  <span>Shipping</span>
                   <span>
-                    {isStripe
-                      ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                      : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                    {totalItems >= 9 && formData.country === 'Nigeria' ? (
+                      <span className="flex items-center gap-1">
+                        <span className="line-through text-gray-500 mr-1">
+                          {isStripe
+                            ? `£${rawShipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
+                            : `₦${rawShipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                        </span>
+                        <span className="text-green-600 font-semibold">
+                          {isStripe
+                            ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
+                            : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                        </span>
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          30% OFF
+                        </span>
+                      </span>
+                    ) : (
+                      isStripe
+                        ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
+                        : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
@@ -858,9 +871,14 @@ const Checkout = () => {
                   </span>
                 </div>
               </div>
+              {totalItems >= 9 && !belowMinimumPrice && formData.country === 'Nigeria' && (
+                <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
+                  🎉 Congrats! You got a <strong>30% shipping discount</strong> for 9 items!
+                </p>
+              )}
               {belowMinimumPrice && (
-                <p className="text-red-600 text-xs mt-2">
-                  Total price must be at least ₦12,000 to proceed.
+                <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
+                  ❌ Minimum purchase amount is ₦12,000 to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -904,7 +922,7 @@ const Checkout = () => {
                   ) : formData.country === 'Nigeria' ? (
                     <PaystackCheckout
                       email={formData.email}
-                      amount={totalNgn * 100} // Paystack expects kobo
+                      amount={totalNgn * 100}
                       onSuccess={handlePaymentSuccess}
                       onClose={handleCancel}
                       disabled={!formValidity.isValid || cart.length === 0 || loading || belowMinimumPrice}

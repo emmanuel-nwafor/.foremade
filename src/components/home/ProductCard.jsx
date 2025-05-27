@@ -197,7 +197,7 @@ const ProductCard = ({ product }) => {
         <div className="flex flex-col w-full">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-800">{truncateName(product.name)}</h3>
+              <h3 className="text-sm text-gray-800">{truncateName(product.name)}</h3>
               <p className="text-gray-600">
                 ₦{(product.price || 0).toLocaleString('en-NG', {
                   minimumFractionDigits: 2,

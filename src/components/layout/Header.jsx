@@ -326,7 +326,7 @@ const Header = () => {
           <span className="text-sm">Search</span>
         </Link>
         <Link
-          to="/seller"
+          to="/sell"
           className={`flex flex-col items-center ${
             location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-amber-500`}

@@ -32,11 +32,6 @@ export default function Dashboard() {
           <SellerSidebar />
         </div>
 
-        {/* Main content */}
-        <div className="w-full md:w-3/4 p-6">
-          <Overview />
-          <Wallet />
-        </div>
       </div>
     </div>
   );

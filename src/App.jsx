@@ -29,9 +29,8 @@ import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminAdmins from '/src/admin/AdminAdmins';
 import AdminVendors from '/src/admin/AdminVendors';
-import SellersGuide from './seller/SellersGuide';
 import HowItWorks from './seller/HowItWorks';
-import FreeShipping from './components/home/FreeShipping';
+import Wallet from './seller/Wallet';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -39,6 +38,7 @@ const Layout = ({ children }) => {
     '/login',
     '/register',
     '/sell',
+    '/smile',
     '/overview',
     '/vendor/orders',
     '/vendor/products',
@@ -142,6 +142,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Setting />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/smile"
+            element={
+              <ProtectedRoute>
+                <Wallet />
               </ProtectedRoute>
             }
           />

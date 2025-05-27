@@ -20,6 +20,7 @@ const Header = () => {
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false); // State for More dropdown
 
   const categories = [
     'Tablet & Phones',
@@ -32,7 +33,6 @@ const Header = () => {
     'Home & Kitchen',
     'Smart Watches',
   ];
-
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -89,7 +89,7 @@ const Header = () => {
       setFavorites(storedFavorites ? JSON.parse(storedFavorites) : []);
     } catch (err) {
       console.error('Error loading favorites:', err);
-      toast.error('Failed to load favorites');
+      toast.error('Failed to sync favorites');
     }
 
     const handleCartUpdate = async () => {
@@ -166,6 +166,14 @@ const Header = () => {
     setTimeout(() => setShowDropdown(false), 200);
   };
 
+  const toggleMoreDropdown = () => {
+    setMoreDropdownOpen(!moreDropdownOpen);
+  };
+
+  const handleMoreDropdownBlur = () => {
+    setTimeout(() => setMoreDropdownOpen(false), 200);
+  };
+
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
 
   return (
@@ -175,18 +183,56 @@ const Header = () => {
           <Link to="/">
             <img
               src={logo}
-              className="h-10 sm:h-16 sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+              className="h-10 sm:h-14 sm:w-auto md:w-auto lg:w-auto xl:w-auto"
               alt="Foremade"
             />
           </Link>
-
         </div>
 
-        <div className="flex justify-evenly">
+        <div className="flex items-center space-x-4">
           <Link to="/products" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Shop</Link>
           <Link to="/sell" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Sell</Link>
           <Link to="/smile" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Smile</Link>
           <div className="relative">
+            <button
+              onClick={toggleMoreDropdown}
+              onBlur={handleMoreDropdownBlur}
+              className="hover:text-gray-300 text-xs sm:text-sm focus:outline-none"
+            >
+              More <i className="bx bx-chevron-down"></i>
+            </button>
+            {moreDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                <Link
+                  to="/daily-deals"
+                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                  onClick={() => setMoreDropdownOpen(false)}
+                >
+                  Daily Deals
+                </Link>
+                <Link
+                  to="/brand-outlet"
+                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                  onClick={() => setMoreDropdownOpen(false)}
+                >
+                  Brand Outlet
+                </Link>
+                <Link
+                  to="/gift-cards"
+                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                  onClick={() => setMoreDropdownOpen(false)}
+                >
+                  Gift Cards
+                </Link>
+                <Link
+                  to="/help-contact"
+                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                  onClick={() => setMoreDropdownOpen(false)}
+                >
+                  Help & Contact
+                </Link>
+              </div>
+            )}
           </div>
         </div>
         
@@ -326,7 +372,7 @@ const Header = () => {
           <span className="text-sm">Search</span>
         </Link>
         <Link
-          to="/sell"
+          to="/sellers-guide"
           className={`flex flex-col items-center ${
             location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-amber-500`}

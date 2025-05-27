@@ -47,7 +47,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
             `${backendUrl}/create-payment-intent`,
             {
               amount: gbpAmount,
-              currency: 'gbp', // Changed to GBP
+              currency: 'gbp',
               metadata: {
                 userId: auth.currentUser?.uid || 'anonymous',
                 orderId: `order-${Date.now()}`,
@@ -67,7 +67,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
                   line1: formData.address,
                   city: formData.city,
                   postal_code: formData.postalCode,
-                  country: 'GB', // Changed to GB
+                  country: 'GB',
                 },
               },
             },
@@ -173,7 +173,7 @@ const Checkout = () => {
         const cartItems = await getCart(user?.uid);
         console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
 
-        // Process cart items to include imageUrls and currentImage
+        // Process cart items to ensure valid imageUrls
         const processedCart = cartItems.map((item) => {
           const productData = item.product || {};
           let imageUrls = [];
@@ -188,7 +188,6 @@ const Checkout = () => {
           ) {
             imageUrls = [productData.imageUrl];
           }
-          // Fallback to a known working Cloudinary image
           if (imageUrls.length === 0) {
             imageUrls = ['https://res.cloudinary.com/demo/image/upload/v1/sample'];
             console.warn('No valid imageUrls for product:', productData.name, 'Using fallback');
@@ -200,7 +199,7 @@ const Checkout = () => {
               ...productData,
               imageUrls,
             },
-            currentImage: imageUrls[0],
+            currentImage: imageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
             slideDirection: 'right',
           };
         });
@@ -272,7 +271,7 @@ const Checkout = () => {
               ...productData,
               imageUrls,
             },
-            currentImage: imageUrls[0],
+            currentImage: imageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
             slideDirection: 'right',
           };
         });
@@ -305,15 +304,12 @@ const Checkout = () => {
     };
   }, []);
 
-  // Calculate progressive shipping discount for Nigeria (Lagos Express Delivery)
+  // Calculate shipping for Nigeria (Lagos Express Delivery)
   const calculateShippingNgn = (itemCount) => {
     if (itemCount === 0) return 0;
-    const baseShipping = 25000; // ₦25,000 for first item (Lagos Express, 3kg–25kg)
-    let shippingCharges = [baseShipping];
-    for (let i = 1; i < itemCount; i++) {
-      shippingCharges.push(shippingCharges[i - 1] * 0.7); // 30% discount on previous
-    }
-    return shippingCharges.reduce((sum, charge) => sum + charge, 0);
+    const baseShipping = 25000; // ₦25,000 for first item
+    const shippingDiscount = itemCount === 9 ? 0.3 : 0; // 30% discount if exactly 9 items
+    return baseShipping * (1 - shippingDiscount);
   };
 
   // Calculate totals (base in NGN)
@@ -322,6 +318,7 @@ const Checkout = () => {
     (total, item) => total + (item.product ? item.product.price * item.quantity : 0),
     0
   );
+  const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
   const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500; // Flat ₦500 for UK
@@ -331,7 +328,7 @@ const Checkout = () => {
   const conversionRateGbp = 0.00048; // 1 NGN = 0.00048 GBP
   const subtotalGbp = subtotalNgn * conversionRateGbp;
   const taxGbp = taxNgn * conversionRateGbp;
-  const shippingGbp = shippingNgn * conversionRateGbp; // ₦500 = £0.24
+  const shippingGbp = shippingNgn * conversionRateGbp;
   const totalGbp = totalNgn * conversionRateGbp;
 
   const handleInputChange = (e) => {
@@ -392,6 +389,10 @@ const Checkout = () => {
         const validation = validateForm();
         if (!validation.isValid) {
           toast.error(validation.message, { position: 'top-right', autoClose: 3000 });
+          return;
+        }
+        if (belowMinimumPrice) {
+          toast.error('Total price must be at least ₦12,000 to proceed.', { position: 'top-right', autoClose: 3000 });
           return;
         }
         const stockIssues = cart.filter((item) => item.quantity > (item.product?.stock || 0));
@@ -510,8 +511,8 @@ const Checkout = () => {
             }
           );
           navigate('/order-confirmation', { state: { order } });
-        } catch (е) {
-          console.error('Error clearing cart:', е);
+        } catch (e) {
+          console.error('Error clearing cart:', e);
           toast.warn('Order placed, but failed to clear cart.', { position: 'top-right', autoClose: 3000 });
         }
       } catch (err) {
@@ -523,7 +524,7 @@ const Checkout = () => {
         toast.error(err.message || 'Failed to place order.', { position: 'top-right', autoClose: 3000 });
       }
     },
-    [cart, formData, totalNgn, totalGbp, navigate]
+    [cart, formData, totalNgn, totalGbp, navigate, belowMinimumPrice]
   );
 
   const handleCancel = () => {
@@ -738,9 +739,7 @@ const Checkout = () => {
                           error: e.message || 'Unknown error',
                         });
                         setImageLoading((prev) => ({ ...prev, [item.productId]: false }));
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML +=
-                          '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Image N/A</span></div>';
+                        e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
                       }}
                     />
                   </div>
@@ -783,9 +782,7 @@ const Checkout = () => {
                                 name: item.product?.name,
                                 error: e.message || 'Unknown error',
                               });
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML +=
-                                '<div class="w-10 h-10 bg-gray-200 rounded flex items-center justify-center"><span class="text-gray-500 text-xs">N/A</span></div>';
+                              e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
                             }}
                             onLoad={() => {
                               console.log('Checkout thumbnail image loaded successfully:', {
@@ -845,7 +842,7 @@ const Checkout = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
+                  <span>Shipping {totalItems === 9 && formData.country === 'Nigeria' && <span className="text-green-600">(30% off)</span>}</span>
                   <span>
                     {isStripe
                       ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
@@ -861,6 +858,11 @@ const Checkout = () => {
                   </span>
                 </div>
               </div>
+              {belowMinimumPrice && (
+                <p className="text-red-600 text-xs mt-2">
+                  Total price must be at least ₦12,000 to proceed.
+                </p>
+              )}
               <div className="mt-6 border-t pt-4">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">Shipping Information</h2>
                 <div className="space-y-2 text-sm text-gray-600">
@@ -887,7 +889,7 @@ const Checkout = () => {
                   </p>
                 </div>
               </div>
-              {isAuthenticated && formValidity.isValid && cart.length > 0 && (
+              {isAuthenticated && formValidity.isValid && cart.length > 0 && !belowMinimumPrice && (
                 <div className="mt-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Payment Details</h2>
                   {formData.country === 'United Kingdom' ? (
@@ -905,10 +907,10 @@ const Checkout = () => {
                       amount={totalNgn * 100} // Paystack expects kobo
                       onSuccess={handlePaymentSuccess}
                       onClose={handleCancel}
-                      disabled={!formValidity.isValid || cart.length === 0 || loading}
+                      disabled={!formValidity.isValid || cart.length === 0 || loading || belowMinimumPrice}
                       buttonText="Pay Now"
                       className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow ${
-                        !formValidity.isValid || cart.length === 0 || loading
+                        !formValidity.isValid || cart.length === 0 || loading || belowMinimumPrice
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-blue-900 hover:bg-blue-800'
                       }`}

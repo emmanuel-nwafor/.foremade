@@ -6,17 +6,18 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const exceedsLimit = totalItems > 9;
+  const belowMinimumPrice = totalPrice < 12000;
 
-  const subtotal = totalPrice;
-  const taxRate = 0.075;
-  const tax = subtotal * taxRate;
-  const shipping = 0; // Free shipping
-  const grandTotal = subtotal + tax + shipping;
+  // Dynamic Shipping Logic
+  const baseShipping = 2000; // ₦2,000 for the first item
+  const additionalShippingPerItem = 500; // ₦500 per extra item
+  const rawShipping = baseShipping + (totalItems - 1) * additionalShippingPerItem;
+  const shipping = totalItems === 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
+  const grandTotal = totalPrice + shipping;
 
   const handleCheckout = () => {
-    if (exceedsLimit) {
-      alert('Maximum 9 products allowed per purchase. Please contact admin for bulk orders.');
+    if (belowMinimumPrice) {
+      alert('Minimum purchase amount is ₦12,000 to checkout.');
       return;
     }
     navigate('/checkout');
@@ -28,31 +29,57 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
       <div className="space-y-2 text-sm text-gray-700">
         <div className="flex justify-between">
           <span>Subtotal</span>
-          <span>₦{subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Tax (7.5%)</span>
-          <span>₦{tax.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+          <span>₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between">
           <span>Shipping</span>
-          <span>Free</span>
+          <span>
+            {totalItems === 9 ? (
+              <span className="flex items-center gap-1">
+                <span className="line-through text-gray-500 mr-1">
+                  ₦{rawShipping.toLocaleString('en-NG')}
+                </span>
+                <span className="text-green-600 font-semibold">
+                  ₦{shipping.toLocaleString('en-NG')}
+                </span>
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                  30% OFF
+                </span>
+              </span>
+            ) : (
+              `₦${rawShipping.toLocaleString('en-NG')}`
+            )}
+          </span>
         </div>
         <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
           <span>Grand Total</span>
           <span>₦{grandTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
+
+      {/* Success Message (Only shows if 9 items & no errors) */}
+      {totalItems === 9 && !belowMinimumPrice && !hasStockIssues && (
+        <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
+          🎉 Congrats! You got a <strong>30% shipping discount</strong> for 9 items!
+        </p>
+      )}
+
+      {/* Error Message (Minimum Purchase) */}
+      {belowMinimumPrice && (
+        <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
+          ❌ Minimum purchase amount is ₦12,000 to checkout.
+        </p>
+      )}
+
       <div className="mt-4 flex gap-3">
         <button
           onClick={handleCheckout}
           className={`flex-1 px-6 py-2 rounded-lg text-white transition ${
-            isCartEmpty || hasStockIssues || exceedsLimit
+            isCartEmpty || hasStockIssues || belowMinimumPrice
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
-          disabled={isCartEmpty || hasStockIssues || exceedsLimit}
-          aria-label="Proceed to checkout"
+          disabled={isCartEmpty || hasStockIssues || belowMinimumPrice}
         >
           Checkout
         </button>
@@ -62,16 +89,10 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
             isCartEmpty ? 'opacity-50 cursor-not-allowed' : ''
           }`}
           disabled={isCartEmpty}
-          aria-label="Clear cart"
         >
           Clear Cart
         </button>
       </div>
-      {exceedsLimit && (
-        <p className="text-red-600 text-xs mt-2">
-          Maximum 9 products allowed per purchase. Please remove items or contact admin.
-        </p>
-      )}
     </div>
   );
 };

@@ -19,7 +19,6 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [selectedCountry, setSelectedCountry] = useState('NG');
 
   const categories = [
     'Tablet & Phones',
@@ -33,10 +32,6 @@ const Header = () => {
     'Smart Watches',
   ];
 
-  const countries = [
-    { code: 'NG', name: 'Nigeria' },
-    { code: 'UK', name: 'United Kingdom' },
-  ];
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -170,10 +165,6 @@ const Header = () => {
     setTimeout(() => setShowDropdown(false), 200);
   };
 
-  const handleCountryChange = (e) => {
-    setSelectedCountry(e.target.value);
-  };
-
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
 
   return (
@@ -195,17 +186,6 @@ const Header = () => {
           <Link to="/sell" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Sell</Link>
           <Link to="/smile" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Smile</Link>
           <div className="relative">
-            <select
-              value={selectedCountry}
-              onChange={handleCountryChange}
-              className="bg-transparent m-2 text-green-500 focus:outline-none appearance-none text-xs sm:text-sm"
-            >
-              {countries.map((country) => (
-                <option key={country.code} value={country.code} className="text-black">
-                  {country.code}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
         

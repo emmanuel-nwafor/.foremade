@@ -12,7 +12,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
   const baseShipping = 2000; // ₦2,000 for the first item
   const additionalShippingPerItem = 500; // ₦500 per extra item
   const rawShipping = baseShipping + (totalItems - 1) * additionalShippingPerItem;
-  const shipping = totalItems === 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
+  const shipping = totalItems >= 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
   const grandTotal = totalPrice + shipping;
 
   const handleCheckout = () => {
@@ -24,7 +24,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
   };
 
   return (
-    <div className="mt-6 p-4 bg-gray-50 rounded-lg shadow-sm">
+    <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
       <div className="space-y-2 text-sm text-gray-700">
         <div className="flex justify-between">
@@ -34,7 +34,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         <div className="flex justify-between">
           <span>Shipping</span>
           <span>
-            {totalItems === 9 ? (
+            {totalItems >= 9 ? (
               <span className="flex items-center gap-1">
                 <span className="line-through text-gray-500 mr-1">
                   ₦{rawShipping.toLocaleString('en-NG')}
@@ -58,7 +58,7 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
       </div>
 
       {/* Success Message (Only shows if 9 items & no errors) */}
-      {totalItems === 9 && !belowMinimumPrice && !hasStockIssues && (
+      {totalItems >= 9 && !belowMinimumPrice && !hasStockIssues && (
         <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
           🎉 Congrats! You got a <strong>30% shipping discount</strong> for 9 items!
         </p>

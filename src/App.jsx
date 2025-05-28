@@ -32,6 +32,16 @@ import AdminVendors from '/src/admin/AdminVendors';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
+import TabletsPhones from './pages/TabletsPhones'
+import HealthBeauty from './pages/HealthBeauty'
+import Electronics from './pages/Electronics'
+import BabyProducts from './pages/BabyProducts'
+import ComputerAccessories from './pages/ComputerAccessories'
+import GamesFun from './pages/GamesFun'
+import Drinks from './pages/Drinks'
+import HomeKitchen from './pages/HomeKitchen'
+import SmartWatches from './pages/SmartWatches'
+
 const Layout = ({ children }) => {
   const location = useLocation();
   const hideHeaderFooter = [
@@ -93,6 +103,16 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/product/:id" element={<Product />} />
           <Route path="/best-selling" element={<BestSelling />} />
+          <Route path="/games-fun" element={<GamesFun />} />
+          <Route path="/electronics" element={<Electronics />} />
+          <Route path="/baby-products" element={<BabyProducts />} />
+          <Route path="/drinks-categories" element={<Drinks />} />
+          <Route path="/home-kitchen" element={<HomeKitchen />} />
+          <Route path="/tablet-phones" element={<TabletsPhones />} />
+          <Route path="/health-beauty" element={<HealthBeauty />} />
+          <Route path="/smart-watches" element={<SmartWatches />} />
+          <Route path="/computers-accessories" element={<ComputerAccessories />} />
+
 
           {/* === Protected User Routes === */}
           <Route path="/cart" element={<Cart />} />

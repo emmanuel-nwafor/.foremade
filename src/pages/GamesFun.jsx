@@ -12,7 +12,7 @@ export default function GamesFun() {
 
   const category = 'Games & Fun';
   const categoryId = 6;
-  const firestoreCategory = 'games & fun';
+  const firestoreCategory = 'game & fun';
 
   useEffect(() => {
     const fetchGamesFun = async () => {

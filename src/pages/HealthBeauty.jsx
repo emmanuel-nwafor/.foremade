@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import CategoriesCarousel from '/src/components/home/CategoriesCarousel';
+
 
 export default function HealthBeauty() {
   const [products, setProducts] = useState([]);
@@ -134,6 +136,7 @@ export default function HealthBeauty() {
     return (
       <section className="py-8 bg-white">
         <div className="container mx-auto px-4">
+          <CategoriesCarousel category={category} />
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg md:text-xl font-bold text-gray-800">
               {category}
@@ -142,7 +145,7 @@ export default function HealthBeauty() {
               <div className="h-5 bg-gray-200 rounded w-16"></div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, index) => (
               <div key={index} className="w-full">
                 <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
@@ -157,6 +160,7 @@ export default function HealthBeauty() {
   return (
     <section className="py-8 bg-white">
       <div className="container mx-auto px-4">
+        <CategoriesCarousel category={category} />
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg md:text-xl font-bold text-gray-800">
             {category}

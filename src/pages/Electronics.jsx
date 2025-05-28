@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import CategoriesCarousel from '/src/components/home/CategoriesCarousel';
 
 export default function ELectronics() {
   const [products, setProducts] = useState([]);
@@ -134,6 +135,7 @@ export default function ELectronics() {
     return (
       <section className="py-8 bg-white">
         <div className="container mx-auto px-4">
+         <CategoriesCarousel category={category} />
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg md:text-xl font-bold text-gray-800">
               {category}
@@ -157,7 +159,8 @@ export default function ELectronics() {
   return (
     <section className="py-8 bg-white">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-6">
+        <CategoriesCarousel category={category} />
+        <div className="flex mt-6 justify-between items-center mb-6">
           <h2 className="text-lg md:text-xl font-bold text-gray-800">
             {category}
           </h2>

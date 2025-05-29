@@ -6,28 +6,46 @@ import axios from 'axios';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import SellerSidebar from './SellerSidebar';
 
+// Set global Axios default timeout
+axios.defaults.timeout = 60000; // 60 seconds
+
 export default function SellerProductUpload() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    sellerName: '',
-    name: '',
-    description: '',
-    price: '',
-    stock: '',
-    category: '',
-    subcategory: '',
-    colors: [],
-    sizes: [],
-    condition: 'New',
-    productUrl: '',
-    images: [],
-    video: null,
-    tags: [],
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('sellerProductForm');
+    return savedData ? JSON.parse(savedData) : {
+      sellerName: '',
+      name: '',
+      description: '',
+      price: '',
+      stock: '',
+      category: '',
+      subcategory: '',
+      colors: [],
+      sizes: [],
+      condition: 'New',
+      productUrl: '',
+      images: [],
+      videos: [], // Changed from video: null to videos: []
+      tags: [],
+    };
   });
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
-  const [videoFile, setVideoFile] = useState(null);
-  const [videoPreview, setVideoPreview] = useState(null);
+  const [imageFiles, setImageFiles] = useState(() => {
+    const savedImages = localStorage.getItem('sellerProductImages');
+    return savedImages ? JSON.parse(savedImages) : [];
+  });
+  const [imagePreviews, setImagePreviews] = useState(() => {
+    const savedPreviews = localStorage.getItem('sellerProductPreviews');
+    return savedPreviews ? JSON.parse(savedPreviews) : [];
+  });
+  const [videoFiles, setVideoFiles] = useState(() => {
+    const savedVideos = localStorage.getItem('sellerProductVideos');
+    return savedVideos ? JSON.parse(savedVideos) : [];
+  });
+  const [videoPreviews, setVideoPreviews] = useState(() => {
+    const savedVideoPreviews = localStorage.getItem('sellerProductVideoPreviews');
+    return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
+  });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -41,7 +59,9 @@ export default function SellerProductUpload() {
     handlingFee: 0,
     totalEstimatedPrice: 0,
   });
+  const [isMobile, setIsMobile] = useState(false); // New state for mobile detection
   const fileInputRef = useRef(null);
+  const singleImageInputRef = useRef(null); // New ref for single image input
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
@@ -92,11 +112,42 @@ export default function SellerProductUpload() {
     { name: 'Silver', hex: '#e2f2ec' },
   ];
   const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
-  const conditions = ['New', 'Used', 'Refurbished'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
   const MAX_IMAGES = 4;
+  const MAX_VIDEOS = 3; // New constant for max videos
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
+
+  // Detect if the user is on a mobile device
+  useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const mobileRegex = /android|iphone|ipad|ipod|opera mini|mobile/i;
+    setIsMobile(mobileRegex.test(userAgent));
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          let sellerName = currentUser.displayName || '';
+          if (sellerName && sellerName.startsWith('{')) {
+            const parsed = JSON.parse(sellerName);
+            sellerName = parsed.name || '';
+          }
+          setFormData((prev) => ({ ...prev, sellerName }));
+          localStorage.setItem('sellerProductForm', JSON.stringify({ ...formData, sellerName }));
+        } catch (err) {
+          console.error('Error parsing displayName:', err);
+          addAlert('Failed to load seller profile', 'error');
+        }
+      } else {
+        addAlert('Please log in to add products.', 'error');
+        navigate('/login');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   useEffect(() => {
     const price = parseFloat(formData.price);
@@ -142,30 +193,16 @@ export default function SellerProductUpload() {
       handlingFee,
       totalEstimatedPrice,
     });
+    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
   }, [formData.price]);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        try {
-          let sellerName = currentUser.displayName || '';
-          if (sellerName && sellerName.startsWith('{')) {
-            const parsed = JSON.parse(sellerName);
-            sellerName = parsed.name || '';
-          }
-          setFormData((prev) => ({ ...prev, sellerName }));
-        } catch (err) {
-          console.error('Error parsing displayName:', err);
-          addAlert('Failed to load seller profile', 'error');
-        }
-      } else {
-        addAlert('Please log in to add products.', 'error');
-        navigate('/login');
-      }
-    });
-    return () => unsubscribe();
-  }, [navigate]);
+    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
+    localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
+    localStorage.setItem('sellerProductPreviews', JSON.stringify(imagePreviews));
+    localStorage.setItem('sellerProductVideos', JSON.stringify(videoFiles));
+    localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
+  }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -173,14 +210,20 @@ export default function SellerProductUpload() {
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleImageChange = (files) => {
+  const handleImageChange = (files, isSingleUpload = false) => {
     const newFiles = Array.from(files);
     const validFiles = newFiles.filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
 
-    if (validFiles.length + imageFiles.length > MAX_IMAGES) {
+    const totalImages = imageFiles.length + validFiles.length;
+    if (totalImages > MAX_IMAGES) {
       addAlert(`You can upload a maximum of ${MAX_IMAGES} images.`, 'error');
+      return;
+    }
+
+    if (isSingleUpload && validFiles.length > 1) {
+      addAlert('Please upload one image at a time.', 'error');
       return;
     }
 
@@ -189,38 +232,57 @@ export default function SellerProductUpload() {
     setImagePreviews((prev) => [...prev, ...previews]);
     setErrors((prev) => ({ ...prev, images: '' }));
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (singleImageInputRef.current) singleImageInputRef.current.value = '';
   };
 
   const handleVideoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('video/') || file.size > MAX_VIDEO_SIZE) {
-        addAlert('Please upload a video (MP4) under 10MB.', 'error');
-        return;
-      }
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        if (video.duration > MAX_VIDEO_DURATION) {
-          addAlert(`Video must be under ${MAX_VIDEO_DURATION} seconds.`, 'error');
-          return;
-        }
-        setVideoFile(file);
-        setVideoPreview(URL.createObjectURL(file));
-        setErrors((prev) => ({ ...prev, video: '' }));
-      };
-      video.src = URL.createObjectURL(file);
+    const newFiles = Array.from(e.target.files);
+    const validFiles = newFiles.filter(
+      (file) => file.type.startsWith('video/') && file.size <= MAX_VIDEO_SIZE
+    );
+
+    if (videoFiles.length + validFiles.length > MAX_VIDEOS) {
+      addAlert(`You can upload a maximum of ${MAX_VIDEOS} videos.`, 'error');
+      return;
     }
-    if (videoInputRef.current) {
-      videoInputRef.current.value = '';
-    }
+
+    const validateVideo = (file) => {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          if (video.duration > MAX_VIDEO_DURATION) {
+            reject(new Error(`Video must be under ${MAX_VIDEO_DURATION} seconds.`));
+          } else {
+            resolve(file);
+          }
+        };
+        video.onerror = () => reject(new Error('Error loading video metadata.'));
+        video.src = URL.createObjectURL(file);
+      });
+    };
+
+    Promise.all(validFiles.map((file) => validateVideo(file)))
+      .then((validatedFiles) => {
+        setVideoFiles((prev) => [...prev, ...validatedFiles]);
+        const newPreviews = validatedFiles.map((file) => URL.createObjectURL(file));
+        setVideoPreviews((prev) => [...prev, ...newPreviews]);
+        setErrors((prev) => ({ ...prev, videos: '' }));
+      })
+      .catch((error) => {
+        addAlert(error.message, 'error');
+      });
+
+    if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
   const handleFileInputChange = (e) => {
     handleImageChange(e.target.files);
+  };
+
+  const handleSingleImageInputChange = (e) => {
+    handleImageChange(e.target.files, true);
   };
 
   const handleDrop = (e) => {
@@ -246,14 +308,15 @@ export default function SellerProductUpload() {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     if (imageFiles.length <= 1) {
-      fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (singleImageInputRef.current) singleImageInputRef.current.value = '';
     }
   };
 
-  const handleRemoveVideo = () => {
-    setVideoFile(null);
-    setVideoPreview(null);
-    if (videoInputRef.current) {
+  const handleRemoveVideo = (index) => {
+    setVideoFiles((prev) => prev.filter((_, i) => i !== index));
+    setVideoPreviews((prev) => prev.filter((_, i) => i !== index));
+    if (videoFiles.length <= 1 && videoInputRef.current) {
       videoInputRef.current.value = '';
     }
   };
@@ -339,10 +402,10 @@ export default function SellerProductUpload() {
     if (!formData.category) newErrors.category = 'Select a category.';
     if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
     if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
+    if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} videos allowed.`;
     if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
     if (formData.category.toLowerCase() === 'foremade fashion' && formData.sizes.length === 0)
       newErrors.sizes = 'Select at least one size for fashion products.';
-    if (!formData.video && !videoFile) newErrors.video = 'A short video is required.';
     return newErrors;
   };
 
@@ -353,21 +416,34 @@ export default function SellerProductUpload() {
 
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      console.log(`Uploading ${isVideo ? 'video' : 'image'} to ${backendUrl}/upload`);
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 10000,
+        timeout: 60000, // 60 seconds
       });
 
       if (response.status !== 200 || !response.data.url) {
         throw new Error(`Failed to upload ${isVideo ? 'video' : 'image'} to Cloudinary.`);
       }
 
+      console.log(`${isVideo ? 'Video' : 'Image'} uploaded successfully:`, response.data.url);
       return response.data.url;
     } catch (error) {
-      console.error(`${isVideo ? 'Video' : 'Image'} upload error:`, error);
+      console.error(`${isVideo ? 'Video' : 'Image'} upload error:`, {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        request: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        },
+      });
       throw new Error(
-        error.code === 'ERR_NETWORK'
-          ? 'Sorry, cannot connect to server. Try again later.'
+        error.code === 'ECONNABORTED'
+          ? 'Request timed out. Please check your network or try again later.'
+          : error.code === 'ERR_NETWORK'
+          ? 'Cannot connect to server. Please check your network or server status.'
           : error.response?.data?.error || `Failed to upload ${isVideo ? 'video' : 'image'}.`
       );
     }
@@ -395,10 +471,9 @@ export default function SellerProductUpload() {
 
     try {
       const imageUrls = await Promise.all(imageFiles.map((file) => uploadFile(file)));
-      let videoUrl = null;
-      if (videoFile) {
-        videoUrl = await uploadFile(videoFile, true);
-      }
+      const videoUrls = videoFiles.length > 0
+        ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
+        : [];
 
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
@@ -417,7 +492,7 @@ export default function SellerProductUpload() {
         condition: formData.condition || 'New',
         productUrl: formData.productUrl || '',
         imageUrls,
-        videoUrl,
+        videoUrls, // Changed from videoUrl to videoUrls
         tags: formData.tags,
         sellerId: user.uid,
         seller: { name: formData.sellerName, id: user.uid },
@@ -445,15 +520,21 @@ export default function SellerProductUpload() {
         condition: 'New',
         productUrl: '',
         images: [],
-        video: null,
+        videos: [],
         tags: [],
       });
       setImageFiles([]);
       setImagePreviews([]);
-      setVideoFile(null);
-      setVideoPreview(null);
-      fileInputRef.current.value = '';
-      videoInputRef.current.value = '';
+      setVideoFiles([]);
+      setVideoPreviews([]);
+      localStorage.removeItem('sellerProductForm');
+      localStorage.removeItem('sellerProductImages');
+      localStorage.removeItem('sellerProductPreviews');
+      localStorage.removeItem('sellerProductVideos');
+      localStorage.removeItem('sellerProductVideoPreviews');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (singleImageInputRef.current) singleImageInputRef.current.value = '';
+      if (videoInputRef.current) videoInputRef.current.value = '';
       setColorSuggestions([]);
       setShowColorDropdown(false);
       setShowSubcategoryDropdown(false);
@@ -484,7 +565,7 @@ export default function SellerProductUpload() {
             Add a New Product
           </h2>
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Image upload */}
+            {/* Image Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
@@ -502,15 +583,39 @@ export default function SellerProductUpload() {
                   <div className="text-center">
                     <i className="bx bx-cloud-upload text-5xl text-gray-600"></i>
                     <p className="text-sm text-gray-600 mt-1">
-                      Drag and drop up to {MAX_IMAGES} images or{' '}
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current.click()}
-                        className="text-blue-600 hover:underline"
-                        disabled={loading}
-                      >
-                        select images
-                      </button>
+                      {isMobile ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => singleImageInputRef.current.click()}
+                            className="text-blue-600 hover:underline"
+                            disabled={loading}
+                          >
+                            Upload one image
+                          </button>
+                          {' or '}
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current.click()}
+                            className="text-blue-600 hover:underline"
+                            disabled={loading}
+                          >
+                            select multiple images
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          Drag and drop up to {MAX_IMAGES} images or{' '}
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current.click()}
+                            className="text-blue-600 hover:underline"
+                            disabled={loading}
+                          >
+                            select images
+                          </button>
+                        </>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
@@ -537,6 +642,7 @@ export default function SellerProductUpload() {
                     ))}
                   </div>
                 )}
+                {/* Input for multiple images (drag-and-drop or file picker) */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -546,51 +652,75 @@ export default function SellerProductUpload() {
                   disabled={loading}
                   multiple
                 />
+                {/* Input for single image upload (mobile) */}
+                <input
+                  ref={singleImageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={handleSingleImageInputChange}
+                  className="hidden"
+                  disabled={loading}
+                />
               </div>
               {errors.images && (
                 <p className="text-red-600 text-xs mt-1">{errors.images}</p>
               )}
+              {/* Additional button for adding more images on mobile */}
+              {isMobile && imagePreviews.length > 0 && imagePreviews.length < MAX_IMAGES && (
+                <button
+                  type="button"
+                  onClick={() => singleImageInputRef.current.click()}
+                  className="mt-2 text-blue-600 hover:underline text-sm"
+                  disabled={loading}
+                >
+                  Add another image
+                </button>
+              )}
             </div>
 
-            {/* Video upload */}
+            {/* Video Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Product Video <span className="text-red-500">*</span>
+                Product Videos (up to {MAX_VIDEOS}, Optional)
               </label>
               <div className="mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] border-gray-300 hover:border-blue-500 transition-colors">
-                {videoPreview ? (
-                  <div className="relative w-full">
-                    <video
-                      src={videoPreview}
-                      controls
-                      className="w-full h-32 object-cover rounded-md border border-gray-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveVideo}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                      disabled={loading}
-                    >
-                      <i className="bx bx-x text-sm"></i>
-                    </button>
-                  </div>
-                ) : (
+                {videoPreviews.length === 0 ? (
                   <div className="text-center">
                     <i className="bx bx-video-plus text-5xl text-gray-600"></i>
                     <p className="text-sm text-gray-600 mt-1">
-                      Drag and drop a video or{' '}
+                      Drag and drop videos or{' '}
                       <button
                         type="button"
                         onClick={() => videoInputRef.current.click()}
                         className="text-blue-600 hover:underline"
                         disabled={loading}
                       >
-                        select video
+                        select videos
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (MP4, max 10MB, under 30 seconds)
+                      (MP4, max 10MB each, under 30 seconds)
                     </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                    {videoPreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <video
+                          src={preview}
+                          controls
+                          className="w-full h-32 object-cover rounded-md border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVideo(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                          disabled={loading}
+                        >
+                          <i className="bx bx-x text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
                 <input
@@ -600,10 +730,21 @@ export default function SellerProductUpload() {
                   onChange={handleVideoChange}
                   className="hidden"
                   disabled={loading}
+                  multiple
                 />
               </div>
-              {errors.video && (
-                <p className="text-red-600 text-xs mt-1">{errors.video}</p>
+              {videoPreviews.length > 0 && videoPreviews.length < MAX_VIDEOS && (
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current.click()}
+                  className="mt-2 text-blue-600 hover:underline text-sm"
+                  disabled={loading}
+                >
+                  Add another video
+                </button>
+              )}
+              {errors.videos && (
+                <p className="text-red-600 text-xs mt-1">{errors.videos}</p>
               )}
             </div>
 
@@ -737,7 +878,7 @@ export default function SellerProductUpload() {
                       Total Estimated Price: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
-                      Note: If shipping internationally (e.g., to the UK), add shipping costs: Small ₦56,000, Medium ₦78,000, Large ₦110,000, X-Large ₦157,000.
+                      Note: If shipping internationally (e.g., to the UK), you can add shipping costs.
                     </p>
                   </div>
                 </div>

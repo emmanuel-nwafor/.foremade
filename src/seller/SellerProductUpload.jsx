@@ -15,21 +15,26 @@ export default function SellerProductUpload() {
     price: '',
     stock: '',
     category: '',
+    subcategory: '',
     colors: [],
     sizes: [],
     condition: 'New',
     productUrl: '',
     images: [],
+    video: null,
     tags: [],
   });
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [customColor, setCustomColor] = useState('');
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
+  const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [fees, setFees] = useState({
     productSize: '',
     buyerProtectionFee: 0,
@@ -37,13 +42,12 @@ export default function SellerProductUpload() {
     totalEstimatedPrice: 0,
   });
   const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
   const categories = [
-    'Tablet & Phones',
-    'Health & Beauty',
     'Foremade Fashion',
     'Electronics',
     'Baby Products',
@@ -52,7 +56,26 @@ export default function SellerProductUpload() {
     'Drinks & Categories',
     'Home & Kitchen',
     'Smart Watches',
+    'Tablet & Phones',
+    'Health & Beauty',
   ];
+
+  const subcategories = {
+    'Foremade Fashion': {
+      Men: ['Shoes', 'Clothing'],
+      Women: ['Shoes', 'Clothing'],
+    },
+    Electronics: ['Phones', 'Laptops', 'Accessories'],
+    'Baby Products': ['Clothing', 'Toys', 'Feeding'],
+    'Computers & Accessories': ['Laptops', 'Peripherals', 'Storage'],
+    'Game & Fun': ['Consoles', 'Board Games', 'Toys'],
+    'Drinks & Categories': ['Soft Drinks', 'Alcoholic', 'Juices'],
+    'Home & Kitchen': ['Appliances', 'Furniture', 'Decor'],
+    'Smart Watches': ['Fitness', 'Luxury', 'Budget'],
+    'Tablet & Phones': ['Tablets', 'Smartphones'],
+    'Health & Beauty': ['Skincare', 'Makeup', 'Supplements'],
+  };
+
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
     { name: 'Orange', hex: '#FFA500' },
@@ -72,8 +95,9 @@ export default function SellerProductUpload() {
   const conditions = ['New', 'Used', 'Refurbished'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
   const MAX_IMAGES = 4;
+  const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_VIDEO_DURATION = 30; // 30 seconds
 
-  // Calculate fees based on price
   useEffect(() => {
     const price = parseFloat(formData.price);
     if (!price || isNaN(price)) {
@@ -92,20 +116,20 @@ export default function SellerProductUpload() {
 
     if (price >= 2000 && price <= 2999) {
       productSize = 'Small';
-      buyerProtectionRate = 0.01; // 1%
-      handlingRate = 0.20; // 20%
+      buyerProtectionRate = 0.01;
+      handlingRate = 0.20;
     } else if (price >= 3000 && price <= 4999) {
       productSize = 'Medium';
-      buyerProtectionRate = 0.015; // 1.5%
-      handlingRate = 0.12; // 12%
+      buyerProtectionRate = 0.015;
+      handlingRate = 0.12;
     } else if (price >= 5000 && price <= 9999) {
       productSize = 'Large';
-      buyerProtectionRate = 0.017; // 1.7%
-      handlingRate = 0.39; // 39%
+      buyerProtectionRate = 0.017;
+      handlingRate = 0.39;
     } else if (price >= 10000) {
       productSize = 'X-Large';
-      buyerProtectionRate = 0.019; // 1.9%
-      handlingRate = 0.30; // 30%
+      buyerProtectionRate = 0.019;
+      handlingRate = 0.30;
     }
 
     const buyerProtectionFee = price * buyerProtectionRate;
@@ -170,6 +194,31 @@ export default function SellerProductUpload() {
     }
   };
 
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('video/') || file.size > MAX_VIDEO_SIZE) {
+        addAlert('Please upload a video (MP4) under 10MB.', 'error');
+        return;
+      }
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        if (video.duration > MAX_VIDEO_DURATION) {
+          addAlert(`Video must be under ${MAX_VIDEO_DURATION} seconds.`, 'error');
+          return;
+        }
+        setVideoFile(file);
+        setVideoPreview(URL.createObjectURL(file));
+        setErrors((prev) => ({ ...prev, video: '' }));
+      };
+      video.src = URL.createObjectURL(file);
+    }
+    if (videoInputRef.current) {
+      videoInputRef.current.value = '';
+    }
+  };
+
   const handleFileInputChange = (e) => {
     handleImageChange(e.target.files);
   };
@@ -198,6 +247,14 @@ export default function SellerProductUpload() {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     if (imageFiles.length <= 1) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    setVideoFile(null);
+    setVideoPreview(null);
+    if (videoInputRef.current) {
+      videoInputRef.current.value = '';
     }
   };
 
@@ -285,12 +342,14 @@ export default function SellerProductUpload() {
     if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
     if (formData.category.toLowerCase() === 'foremade fashion' && formData.sizes.length === 0)
       newErrors.sizes = 'Select at least one size for fashion products.';
+    if (!formData.video && !videoFile) newErrors.video = 'A short video is required.';
     return newErrors;
   };
 
-  const uploadImage = async (file) => {
+  const uploadFile = async (file, isVideo = false) => {
     const uploadData = new FormData();
-    uploadData.append('image', file);
+    uploadData.append('file', file);
+    uploadData.append('isVideo', isVideo);
 
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -299,17 +358,17 @@ export default function SellerProductUpload() {
         timeout: 10000,
       });
 
-      if (response.status !== 200 || !response.data.imageUrl) {
-        throw new Error('Failed to upload image to Cloudinary.');
+      if (response.status !== 200 || !response.data.url) {
+        throw new Error(`Failed to upload ${isVideo ? 'video' : 'image'} to Cloudinary.`);
       }
 
-      return response.data.imageUrl;
+      return response.data.url;
     } catch (error) {
-      console.error('Image upload error:', error);
+      console.error(`${isVideo ? 'Video' : 'Image'} upload error:`, error);
       throw new Error(
         error.code === 'ERR_NETWORK'
           ? 'Sorry, cannot connect to server. Try again later.'
-          : error.response?.data?.error || 'Failed to upload image.'
+          : error.response?.data?.error || `Failed to upload ${isVideo ? 'video' : 'image'}.`
       );
     }
   };
@@ -335,7 +394,11 @@ export default function SellerProductUpload() {
     }
 
     try {
-      const imageUrls = await Promise.all(imageFiles.map((file) => uploadImage(file)));
+      const imageUrls = await Promise.all(imageFiles.map((file) => uploadFile(file)));
+      let videoUrl = null;
+      if (videoFile) {
+        videoUrl = await uploadFile(videoFile, true);
+      }
 
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
@@ -348,11 +411,13 @@ export default function SellerProductUpload() {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock, 10),
         category: formData.category.toLowerCase(),
+        subcategory: formData.subcategory || '',
         colors: formData.colors,
         sizes: formData.sizes,
         condition: formData.condition || 'New',
         productUrl: formData.productUrl || '',
         imageUrls,
+        videoUrl,
         tags: formData.tags,
         sellerId: user.uid,
         seller: { name: formData.sellerName, id: user.uid },
@@ -374,25 +439,30 @@ export default function SellerProductUpload() {
         price: '',
         stock: '',
         category: '',
+        subcategory: '',
         colors: [],
         sizes: [],
         condition: 'New',
         productUrl: '',
         images: [],
+        video: null,
         tags: [],
       });
       setImageFiles([]);
       setImagePreviews([]);
+      setVideoFile(null);
+      setVideoPreview(null);
       fileInputRef.current.value = '';
+      videoInputRef.current.value = '';
       setColorSuggestions([]);
       setShowColorDropdown(false);
+      setShowSubcategoryDropdown(false);
       setFees({
         productSize: '',
         buyerProtectionFee: 0,
         handlingFee: 0,
         totalEstimatedPrice: 0,
       });
-      // navigate('/my-products');
     } catch (error) {
       console.error('Error uploading product:', {
         message: error.message,
@@ -424,15 +494,15 @@ export default function SellerProductUpload() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[400px] transition-colors ${
+                className={`mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] transition-colors ${
                   errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'
                 } ${loading ? 'opacity-50' : ''}`}
               >
                 {imagePreviews.length === 0 ? (
                   <div className="text-center">
-                    <i className='bx bx-cloud-upload text-9xl text-gray-600'></i>
+                    <i className="bx bx-cloud-upload text-5xl text-gray-600"></i>
                     <p className="text-sm text-gray-600 mt-1">
-                      Drag and drop up to {MAX_IMAGES} images (desktop) or{' '}
+                      Drag and drop up to {MAX_IMAGES} images or{' '}
                       <button
                         type="button"
                         onClick={() => fileInputRef.current.click()}
@@ -443,7 +513,7 @@ export default function SellerProductUpload() {
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (JPEG, JPG, PNG, WEBP, GIF, max 5MB each, multiple images allowed)
+                      (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
                     </p>
                   </div>
                 ) : (
@@ -453,7 +523,7 @@ export default function SellerProductUpload() {
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover rounded-md border border-gray-200"
+                          className="w-full h-32 object-cover rounded-md border border-gray-200"
                         />
                         <button
                           type="button"
@@ -479,6 +549,61 @@ export default function SellerProductUpload() {
               </div>
               {errors.images && (
                 <p className="text-red-600 text-xs mt-1">{errors.images}</p>
+              )}
+            </div>
+
+            {/* Video upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Product Video <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] border-gray-300 hover:border-blue-500 transition-colors">
+                {videoPreview ? (
+                  <div className="relative w-full">
+                    <video
+                      src={videoPreview}
+                      controls
+                      className="w-full h-32 object-cover rounded-md border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveVideo}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      disabled={loading}
+                    >
+                      <i className="bx bx-x text-sm"></i>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <i className="bx bx-video-plus text-5xl text-gray-600"></i>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Drag and drop a video or{' '}
+                      <button
+                        type="button"
+                        onClick={() => videoInputRef.current.click()}
+                        className="text-blue-600 hover:underline"
+                        disabled={loading}
+                      >
+                        select video
+                      </button>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      (MP4, max 10MB, under 30 seconds)
+                    </p>
+                  </div>
+                )}
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/mp4"
+                  onChange={handleVideoChange}
+                  className="hidden"
+                  disabled={loading}
+                />
+              </div>
+              {errors.video && (
+                <p className="text-red-600 text-xs mt-1">{errors.video}</p>
               )}
             </div>
 
@@ -601,7 +726,6 @@ export default function SellerProductUpload() {
                 </div>
               </div>
 
-              {/* Fees Display */}
               {fees.productSize && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Foremade Fees</h4>
@@ -620,60 +744,108 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Category & Condition Section */}
+            {/* Category & Subcategory Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-700 mb-4">Category & Condition</h3>
+              <h3 className="text-lg font-medium text-gray-700 mb-4">Category & Subcategory</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className={`mt-1 block w-full border rounded-md py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-2 ${
-                      errors.category
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                    disabled={loading}
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
+                      className="w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 bg-white flex justify-between items-center"
+                      disabled={loading}
+                    >
+                      <span>{formData.category || 'Select a category'}</span>
+                      <i className="bx bx-chevron-down text-gray-500"></i>
+                    </button>
+                    {showSubcategoryDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                        {categories.map((cat) => (
+                          <div key={cat} className="p-2 hover:bg-gray-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '' }));
+                                setShowSubcategoryDropdown(false);
+                              }}
+                              className="w-full text-left"
+                            >
+                              {cat}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {errors.category && (
                     <p className="text-red-600 text-xs mt-1">{errors.category}</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Condition</label>
-                  <select
-                    name="condition"
-                    value={formData.condition}
-                    onChange={handleChange}
-                    className={`mt-1 block w-full border rounded-md py-2 px-3 text-sm shadow-sm focus:outline-none focus:ring-2 ${
-                      errors.condition
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                    disabled={loading}
-                  >
-                    <option value="">Select a condition</option>
-                    {conditions.map((condition) => (
-                      <option key={condition} value={condition}>
-                        {condition}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.condition && (
-                    <p className="text-red-600 text-xs mt-1">{errors.condition}</p>
-                  )}
-                </div>
+                {formData.category && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Subcategory <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
+                        className="w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 bg-white flex justify-between items-center"
+                        disabled={loading}
+                      >
+                        <span>{formData.subcategory || 'Select a subcategory'}</span>
+                        <i className="bx bx-chevron-down text-gray-500"></i>
+                      </button>
+                      {showSubcategoryDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                          {Array.isArray(subcategories[formData.category]) ? (
+                            subcategories[formData.category].map((subcat) => (
+                              <div key={subcat} className="p-2 hover:bg-gray-100">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev) => ({ ...prev, subcategory: subcat }));
+                                    setShowSubcategoryDropdown(false);
+                                  }}
+                                  className="w-full text-left"
+                                >
+                                  {subcat}
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            Object.entries(subcategories[formData.category]).map(([group, subcats]) => (
+                              <div key={group}>
+                                <div className="p-2 font-medium text-gray-700">{group}</div>
+                                {subcats.map((subcat) => (
+                                  <div key={subcat} className="p-2 pl-4 hover:bg-gray-100">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData((prev) => ({ ...prev, subcategory: subcat }));
+                                        setShowSubcategoryDropdown(false);
+                                      }}
+                                      className="w-full text-left"
+                                    >
+                                      {subcat}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {errors.subcategory && (
+                      <p className="text-red-600 text-xs mt-1">{errors.subcategory}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

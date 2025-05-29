@@ -190,9 +190,9 @@ const Header = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Link to="/products" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Shop</Link>
-          <Link to="/sell" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Sell</Link>
-          <Link to="/smile" className="m-2 hover:text-gray-300 text-xs sm:text-sm">Smile</Link>
+          <Link to="/products" className="m-2 hover:text-gray-300 text-sm sm:text-sm">Shop</Link>
+          <Link to="/sell" className="m-2 hover:text-gray-300 text-sm sm:text-sm">Sell</Link>
+          <Link to="/smile" className="m-2 hover:text-gray-300 text-sm sm:text-sm">Smile</Link>
           <div className="relative">
             <button
               onClick={toggleMoreDropdown}
@@ -372,7 +372,7 @@ const Header = () => {
           <span className="text-sm">Search</span>
         </Link>
         <Link
-          to="/sellers-guide"
+          to="/sell"
           className={`flex flex-col items-center ${
             location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
           } hover:text-amber-500`}

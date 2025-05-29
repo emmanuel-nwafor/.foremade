@@ -30,6 +30,12 @@ export default function SellerProductUpload() {
   const [customColor, setCustomColor] = useState('');
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
+  const [fees, setFees] = useState({
+    productSize: '',
+    buyerProtectionFee: 0,
+    handlingFee: 0,
+    totalEstimatedPrice: 0,
+  });
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
@@ -66,6 +72,53 @@ export default function SellerProductUpload() {
   const conditions = ['New', 'Used', 'Refurbished'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
   const MAX_IMAGES = 4;
+
+  // Calculate fees based on price
+  useEffect(() => {
+    const price = parseFloat(formData.price);
+    if (!price || isNaN(price)) {
+      setFees({
+        productSize: '',
+        buyerProtectionFee: 0,
+        handlingFee: 0,
+        totalEstimatedPrice: 0,
+      });
+      return;
+    }
+
+    let productSize = '';
+    let buyerProtectionRate = 0;
+    let handlingRate = 0;
+
+    if (price >= 2000 && price <= 2999) {
+      productSize = 'Small';
+      buyerProtectionRate = 0.01; // 1%
+      handlingRate = 0.20; // 20%
+    } else if (price >= 3000 && price <= 4999) {
+      productSize = 'Medium';
+      buyerProtectionRate = 0.015; // 1.5%
+      handlingRate = 0.12; // 12%
+    } else if (price >= 5000 && price <= 9999) {
+      productSize = 'Large';
+      buyerProtectionRate = 0.017; // 1.7%
+      handlingRate = 0.39; // 39%
+    } else if (price >= 10000) {
+      productSize = 'X-Large';
+      buyerProtectionRate = 0.019; // 1.9%
+      handlingRate = 0.30; // 30%
+    }
+
+    const buyerProtectionFee = price * buyerProtectionRate;
+    const handlingFee = price * handlingRate;
+    const totalEstimatedPrice = price + buyerProtectionFee + handlingFee;
+
+    setFees({
+      productSize,
+      buyerProtectionFee,
+      handlingFee,
+      totalEstimatedPrice,
+    });
+  }, [formData.price]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -305,6 +358,9 @@ export default function SellerProductUpload() {
         seller: { name: formData.sellerName, id: user.uid },
         createdAt: new Date().toISOString(),
         reviews: [],
+        buyerProtectionFee: fees.buyerProtectionFee,
+        handlingFee: fees.handlingFee,
+        totalEstimatedPrice: fees.totalEstimatedPrice,
       };
 
       const docRef = await addDoc(collection(db, 'products'), productData);
@@ -330,6 +386,12 @@ export default function SellerProductUpload() {
       fileInputRef.current.value = '';
       setColorSuggestions([]);
       setShowColorDropdown(false);
+      setFees({
+        productSize: '',
+        buyerProtectionFee: 0,
+        handlingFee: 0,
+        totalEstimatedPrice: 0,
+      });
       // navigate('/my-products');
     } catch (error) {
       console.error('Error uploading product:', {
@@ -538,6 +600,24 @@ export default function SellerProductUpload() {
                   )}
                 </div>
               </div>
+
+              {/* Fees Display */}
+              {fees.productSize && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Foremade Fees</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>Product Size: <span className="font-semibold">{fees.productSize}</span></p>
+                    <p>Buyer Protection Fee: ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Handling Fee: ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p className="font-bold">
+                      Total Estimated Price: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Note: If shipping internationally (e.g., to the UK), add shipping costs: Small ₦56,000, Medium ₦78,000, Large ₦110,000, X-Large ₦157,000.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Category & Condition Section */}

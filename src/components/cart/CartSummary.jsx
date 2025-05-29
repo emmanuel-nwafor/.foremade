@@ -6,18 +6,31 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const belowMinimumPrice = totalPrice < 12000;
+  const belowMinimumPrice = totalPrice < 15000; // Minimum order is ₦15,000 from PDF
 
-  // Dynamic Shipping Logic
-  const baseShipping = 2000; // ₦2,000 for the first item
-  const additionalShippingPerItem = 900; // ₦900 per extra item
-  const rawShipping = baseShipping + (totalItems - 1) * additionalShippingPerItem;
-  const shipping = totalItems >= 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
-  const grandTotal = totalPrice + shipping;
+  // Shipping is free within Nigeria
+  const shipping = 0;
+
+  // Discount Logic
+  let discount = 0;
+  if (totalItems >= 10 && totalItems < 15) {
+    discount = 0.12; // 12% discount
+  } else if (totalItems >= 15 && totalItems < 20) {
+    discount = 0.22; // 12% + 10% = 22% discount
+  } else if (totalItems === 20) {
+    discount = 0.30; // 12% + 10% + 8% = 30% discount
+  }
+  const discountAmount = totalPrice * discount;
+  const subtotalAfterDiscount = totalPrice - discountAmount;
+  const grandTotal = subtotalAfterDiscount + shipping;
 
   const handleCheckout = () => {
     if (belowMinimumPrice) {
-      alert('Minimum purchase amount is ₦12,000 to checkout.');
+      alert('Minimum purchase amount is ₦15,000 to checkout.');
+      return;
+    }
+    if (totalItems > 20) {
+      alert('Maximum basket size is 20 items.');
       return;
     }
     navigate('/checkout');
@@ -31,25 +44,17 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
           <span>Subtotal</span>
           <span>₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
         </div>
+        {discount > 0 && (
+          <div className="flex justify-between">
+            <span>Discount ({(discount * 100).toFixed(0)}%)</span>
+            <span className="text-green-600 font-semibold">
+              -₦{discountAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span>Shipping</span>
-          <span>
-            {totalItems >= 9 ? (
-              <span className="flex items-center gap-1">
-                <span className="line-through text-gray-500 mr-1">
-                  ₦{rawShipping.toLocaleString('en-NG')}
-                </span>
-                <span className="text-green-600 font-semibold">
-                  ₦{shipping.toLocaleString('en-NG')}
-                </span>
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                  30% OFF
-                </span>
-              </span>
-            ) : (
-              `₦${rawShipping.toLocaleString('en-NG')}`
-            )}
-          </span>
+          <span className="text-green-600 font-semibold">FREE</span>
         </div>
         <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
           <span>Grand Total</span>
@@ -57,17 +62,22 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         </div>
       </div>
 
-      {/* Success Message (Only shows if 9 items & no errors) */}
-      {totalItems >= 9 && !belowMinimumPrice && !hasStockIssues && (
+      {/* Success Message (Discount applied) */}
+      {discount > 0 && !belowMinimumPrice && !hasStockIssues && (
         <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
-          🎉 Congrats! You got a <strong>30% shipping discount</strong> for 9 items!
+          🎉 Congrats! You got a <strong>{(discount * 100).toFixed(0)}% discount</strong> for {totalItems} items!
         </p>
       )}
 
-      {/* Error Message (Minimum Purchase) */}
+      {/* Error Messages */}
       {belowMinimumPrice && (
         <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-          ❌ Minimum purchase amount is ₦12,000 to checkout.
+          ❌ Minimum purchase amount is ₦15,000 to checkout.
+        </p>
+      )}
+      {totalItems > 20 && (
+        <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
+          ❌ Maximum basket size is 20 items.
         </p>
       )}
 
@@ -75,11 +85,11 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         <button
           onClick={handleCheckout}
           className={`flex-1 px-6 py-2 rounded-lg text-white transition ${
-            isCartEmpty || hasStockIssues || belowMinimumPrice
+            isCartEmpty || hasStockIssues || belowMinimumPrice || totalItems > 20
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
-          disabled={isCartEmpty || hasStockIssues || belowMinimumPrice}
+          disabled={isCartEmpty || hasStockIssues || belowMinimumPrice || totalItems > 20}
         >
           Checkout
         </button>

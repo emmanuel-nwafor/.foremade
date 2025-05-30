@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import SellerSidebar from './SellerSidebar';
-import Overview from './Overview';
-import Wallet from './Wallet';
+import SellersProducts from './SellersProducts';
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,13 +24,15 @@ export default function Dashboard() {
 
         {/* Sidebar */}
         <div
-          className={`${
-            sidebarOpen ? 'block' : 'hidden'
-          } md:block md:w-64 bg-blue-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out`}
+          className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-blue-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out`}
         >
           <SellerSidebar />
         </div>
 
+        {/* Main Content */}
+        <div className="flex-1 p-4">
+          <SellersProducts />
+        </div>
       </div>
     </div>
   );

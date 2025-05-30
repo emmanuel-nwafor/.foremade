@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import AdminSidebar from '/src/admin/AdminSidebar';
-import MediaPreview from './MediaPreview'; // Assume this component is created
-import AdminActionButtons from './AdminActionButtons'; // Assume this component is created
+import MediaPreview from '/src/admin/MediaPreview'; // Assume this component is created
+import AdminActionButtons from '/src/admin/AdminActionbuttons'; // Assume this component is created
 
 function Admin() {
   const [data, setData] = useState({ products: [] });

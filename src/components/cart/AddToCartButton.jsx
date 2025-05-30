@@ -38,7 +38,7 @@ const AddToCartButton = ({ productId }) => {
         }`}
         aria-label="Add to cart"
       >
-        <i className={`bx bx-plus text-md ${loading ? 'opacity-50' : ''}`}></i>
+        <i className={`bx bx-cart-add text-xl ${loading ? 'opacity-50' : ''}`}></i>
       </button>
       <CustomAlert alerts={alerts} removeAlert={(id) => setAlerts(alerts.filter((alert) => alert.id !== id))} />
     </div>

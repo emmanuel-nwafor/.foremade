@@ -124,7 +124,6 @@ const ProductCard = ({ product }) => {
         {`
           .shimmer {
             position: relative;
-            width: 250px;
             height: 250px;
             background: #f6f7f8;
             overflow: hidden;
@@ -159,7 +158,7 @@ const ProductCard = ({ product }) => {
               <img
                 src={imageUrl}
                 alt={product.name || 'Product'}
-                className="h-[300px] w-[210px] rounded-lg object-cover mb-1"
+                className="h-[300px] w-[300px] rounded-lg object-cover mb-1"
                 onError={() => {
                   console.warn('Image load error, falling back to shimmer:', {
                     productId: product.id,

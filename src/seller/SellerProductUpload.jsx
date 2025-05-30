@@ -3,14 +3,61 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, addDoc, getDocs, setDoc, doc } from 'firebase/firestore';
 import axios from 'axios';
-import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import SellerSidebar from './SellerSidebar';
 
-// Set global Axios default timeout
+// Set global Axios timeout
 axios.defaults.timeout = 60000; // 60 seconds
+
+// Custom Alert Component
+function CustomAlert({ alerts, removeAlert }) {
+  useEffect(() => {
+    if (alerts.length === 0) return;
+    const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
+    return () => clearTimeout(timer);
+  }, [alerts, removeAlert]);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className={`p-3 rounded-md shadow-md ${
+            alert.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+          }`}
+        >
+          {alert.message}
+          <button
+            onClick={() => removeAlert(alert.id)}
+            className="ml-2 text-sm font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Local hook for managing alerts
+function useAlerts() {
+  const [alerts, setAlerts] = useState([]);
+
+  const addAlert = (message, type = 'info') => {
+    const id = Date.now();
+    setAlerts((prev) => [...prev, { id, message, type }]);
+  };
+
+  const removeAlert = (id) => {
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
+  };
+
+  return { alerts, addAlert, removeAlert };
+}
 
 export default function SellerProductUpload() {
   const navigate = useNavigate();
+
+  // State for form data (persisted in localStorage)
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('sellerProductForm');
     return savedData ? JSON.parse(savedData) : {
@@ -28,9 +75,11 @@ export default function SellerProductUpload() {
       images: [],
       videos: [],
       tags: [],
-      manualSize: '', // New field for manual size input
+      manualSize: '',
     };
   });
+
+  // State for media files and previews (persisted in localStorage)
   const [imageFiles, setImageFiles] = useState(() => {
     const savedImages = localStorage.getItem('sellerProductImages');
     return savedImages ? JSON.parse(savedImages) : [];
@@ -47,15 +96,17 @@ export default function SellerProductUpload() {
     const savedVideoPreviews = localStorage.getItem('sellerProductVideoPreviews');
     return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
   });
+
+  // Other states
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0); // For upload progress
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [user, setUser] = useState(null);
   const [customColor, setCustomColor] = useState('');
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
-  const [showSizeWarning, setShowSizeWarning] = useState(false); // For size mismatch warning
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
   const [fees, setFees] = useState({
     productSize: '',
     buyerProtectionFee: 0,
@@ -63,16 +114,20 @@ export default function SellerProductUpload() {
     totalEstimatedPrice: 0,
   });
   const [isMobile, setIsMobile] = useState(false);
-  const [customSubcategories, setCustomSubcategories] = useState({}); // For dynamic subcategories
-  const [suggestedTags, setSuggestedTags] = useState([]); // For auto-suggested tags
-  const [zoomedMedia, setZoomedMedia] = useState(null); // For media zoom
+  const [customSubcategories, setCustomSubcategories] = useState({});
+  const [suggestedTags, setSuggestedTags] = useState([]);
+  const [zoomedMedia, setZoomedMedia] = useState(null);
+
+  // Refs for file inputs
   const fileInputRef = useRef(null);
   const singleImageInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
+  // Alert management
   const { alerts, addAlert, removeAlert } = useAlerts();
 
+  // Constants
   const categories = [
     'Foremade Fashion',
     'Electronics',
@@ -85,26 +140,6 @@ export default function SellerProductUpload() {
     'Tablet & Phones',
     'Health & Beauty',
   ];
-
-  const staticSubcategories = {
-    'Foremade Fashion': {
-      Men: ['Clothing', 'Shoes'],
-      Women: ['Clothing', 'Shoes'],
-    },
-    Electronics: ['Phones', 'Laptops', 'Accessories'],
-    'Baby Products': ['Clothing', 'Toys', 'Feeding'],
-    'Computers & Accessories': ['Laptops', 'Peripherals', 'Storage'],
-    'Game & Fun': ['Consoles', 'Board Games', 'Toys'],
-    'Drinks & Categories': ['Soft Drinks', 'Alcoholic', 'Juices'],
-    'Home & Kitchen': ['Appliances', 'Furniture', 'Decor'],
-    'Smart Watches': ['Fitness', 'Luxury', 'Budget'],
-    'Tablet & Phones': [
-      'Samsung', 'iPhones', 'Xiaomi', 'OnePlus', 'OPPO', 'Vivo', 'Realme',
-      'Motorola', 'Google', 'Nothing', 'Sony', 'Asus', 'Lenovo', 'HONOR',
-      'ZTE', 'Infinix', 'Tecno'
-    ],
-    'Health & Beauty': ['Skincare', 'Makeup', 'Supplements'],
-  };
 
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
@@ -130,31 +165,57 @@ export default function SellerProductUpload() {
   ];
   const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
-  const MAX_IMAGES = 4; // Updated to 4
-  const MAX_VIDEOS = 1; // Updated to 1
+  const MAX_IMAGES = 4;
+  const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
 
-  // Load custom subcategories from Firebase
+  // Default subcategories to initialize if none exist
+  const defaultSubcategories = {
+    'Foremade Fashion': ['Clothing', 'Shoes', 'Accessories'],
+    'Electronics': ['Phones', 'Laptops', 'Accessories'],
+    'Baby Products': ['Clothing', 'Toys', 'Gear'],
+    'Computers & Accessories': ['Desktops', 'Peripherals'],
+    'Game & Fun': ['Consoles', 'Games'],
+    'Drinks & Categories': ['Beverages', 'Snacks'],
+    'Home & Kitchen': ['Appliances', 'Furniture'],
+    'Smart Watches': ['Fitness', 'Classic'],
+    'Tablet & Phones': ['Tablets', 'Smartphones'],
+    'Health & Beauty': ['Skincare', 'Makeup'],
+  };
+
+  // Fetch and initialize subcategories from Firestore
   useEffect(() => {
     const fetchCustomSubcategories = async () => {
       try {
         const snapshot = await getDocs(collection(db, 'customSubcategories'));
         const customSubs = {};
+        let hasData = false;
+
         snapshot.forEach((doc) => {
           customSubs[doc.id] = doc.data().subcategories || [];
+          console.log(`Fetched subcategory for ${doc.id}:`, customSubs[doc.id]); // Debug log
+          if (doc.data().subcategories?.length > 0) hasData = true;
         });
+
+        // Initialize default subcategories if no data exists
+        if (!hasData) {
+          for (const [category, subcats] of Object.entries(defaultSubcategories)) {
+            const subcatRef = doc(db, 'customSubcategories', category);
+            await setDoc(subcatRef, { subcategories: subcats }, { merge: true });
+            customSubs[category] = subcats;
+            console.log(`Initialized subcategory for ${category}:`, subcats);
+          }
+        }
+
         setCustomSubcategories(customSubs);
       } catch (error) {
-        console.error('Error fetching custom subcategories:', error);
-        addAlert('Failed to load custom subcategories.', 'error');
+        console.error('Error fetching or initializing custom subcategories:', error);
+        addAlert('Failed to load or initialize subcategories.', 'error');
       }
     };
     fetchCustomSubcategories();
   }, []);
-
-  // Combine static and custom subcategories
-  const subcategories = { ...staticSubcategories, ...customSubcategories };
 
   // Auto-suggest tags based on product name and description
   useEffect(() => {
@@ -170,12 +231,14 @@ export default function SellerProductUpload() {
     suggestTags();
   }, [formData.name, formData.description]);
 
+  // Detect if user is on mobile
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const mobileRegex = /android|iphone|ipad|ipod|opera mini|mobile/i;
     setIsMobile(mobileRegex.test(userAgent));
   }, []);
 
+  // Handle user authentication state
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
@@ -200,6 +263,7 @@ export default function SellerProductUpload() {
     return () => unsubscribe();
   }, [navigate]);
 
+  // Calculate fees and size warnings based on price
   useEffect(() => {
     const price = parseFloat(formData.price);
     if (!price || isNaN(price)) {
@@ -218,19 +282,19 @@ export default function SellerProductUpload() {
 
     if (price >= 2000 && price <= 2999) {
       productSize = 'Small';
-      buyerProtectionRate = 0.08; // Updated to 8%
+      buyerProtectionRate = 0.08;
       handlingRate = 0.20;
     } else if (price >= 3000 && price <= 4999) {
       productSize = 'Medium';
-      buyerProtectionRate = 0.085; // Updated to 8.5%
+      buyerProtectionRate = 0.085;
       handlingRate = 0.12;
     } else if (price >= 5000 && price <= 9999) {
       productSize = 'Large';
-      buyerProtectionRate = 0.09; // Updated to 9%
+      buyerProtectionRate = 0.09;
       handlingRate = 0.39;
     } else if (price >= 10000) {
       productSize = 'X-Large';
-      buyerProtectionRate = 0.095; // Updated to 9.5%
+      buyerProtectionRate = 0.095;
       handlingRate = 0.30;
     }
 
@@ -245,7 +309,6 @@ export default function SellerProductUpload() {
       totalEstimatedPrice,
     });
 
-    // Check for size mismatch
     if (formData.manualSize && formData.manualSize !== productSize) {
       setShowSizeWarning(true);
     } else {
@@ -255,6 +318,7 @@ export default function SellerProductUpload() {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
   }, [formData.price, formData.manualSize]);
 
+  // Persist form data and media to localStorage
   useEffect(() => {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
     localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
@@ -313,6 +377,10 @@ export default function SellerProductUpload() {
         video.onloadedmetadata = () => {
           if (video.duration > MAX_VIDEO_DURATION) {
             reject(new Error(`Video must be under ${MAX_VIDEO_DURATION} seconds.`));
+          }
+          const audioTracks = video.audioTracks || [];
+          if (audioTracks.length > 0) {
+            reject(new Error('Please upload a video without audio.'));
           } else {
             resolve(file);
           }
@@ -336,13 +404,9 @@ export default function SellerProductUpload() {
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
-  const handleFileInputChange = (e) => {
-    handleImageChange(e.target.files);
-  };
+  const handleFileInputChange = (e) => handleImageChange(e.target.files);
 
-  const handleSingleImageInputChange = (e) => {
-    handleImageChange(e.target.files, true);
-  };
+  const handleSingleImageInputChange = (e) => handleImageChange(e.target.files, true);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -579,10 +643,8 @@ export default function SellerProductUpload() {
       return;
     }
 
-    // Save custom subcategory if it's not in the static list
-    const isStaticSubcategory = Object.values(staticSubcategories[formData.category] || {}).flat().includes(formData.subcategory) ||
-      staticSubcategories[formData.category]?.includes(formData.subcategory);
-    if (!isStaticSubcategory) {
+    const isExistingSubcategory = (customSubcategories[formData.category] || []).includes(formData.subcategory);
+    if (!isExistingSubcategory) {
       await saveCustomSubcategory(formData.category, formData.subcategory);
     }
 
@@ -626,7 +688,7 @@ export default function SellerProductUpload() {
 
       addAlert('Product uploaded successfully!', 'success');
       setFormData({
-        sellerName: formData.sellerName,
+        sellerName: '',
         name: '',
         description: '',
         price: '',
@@ -695,7 +757,7 @@ export default function SellerProductUpload() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] transition-colors ${
+                className={`mt-1 w-full h-[300px] p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] transition-colors ${
                   errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'
                 } ${loading ? 'opacity-50' : ''}`}
               >
@@ -825,17 +887,17 @@ export default function SellerProductUpload() {
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (Supports multiple formats, max 10MB, under 30 seconds)
+                      (Supports multiple formats, max 10MB, under 30 seconds, no audio)
                     </p>
                   </div>
                 ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                  <div className="w-full">
                     {videoPreviews.map((preview, index) => (
                       <div key={index} className="relative">
                         <video
                           src={preview}
                           controls
-                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 cursor-pointer"
+                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 cursor-pointer md:w-full md:h-auto"
                           onClick={() => setZoomedMedia({ type: 'video', src: preview })}
                         />
                         <button
@@ -885,8 +947,8 @@ export default function SellerProductUpload() {
                     name="sellerName"
                     value={formData.sellerName}
                     placeholder="Enter your full name"
-                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500`}
-                    disabled={true} // Disabled editing
+                    className="mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500"
+                    disabled
                   />
                   {errors.sellerName && (
                     <p className="text-red-600 text-xs mt-1">{errors.sellerName}</p>
@@ -1095,14 +1157,15 @@ export default function SellerProductUpload() {
                             ? 'border-red-500 focus:ring-red-500'
                             : 'border-gray-300 focus:ring-blue-500'
                         }`}
-                        disabled={loading}
+                        disabled={loading || Object.keys(customSubcategories).length === 0}
                       />
-                      {showSubcategoryDropdown && (
+                      {showSubcategoryDropdown && customSubcategories[formData.category] && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
-                          {Array.isArray(subcategories[formData.category]) ? (
-                            subcategories[formData.category].filter((subcat) =>
+                          {customSubcategories[formData.category]
+                            .filter((subcat) =>
                               subcat.toLowerCase().includes(formData.subcategory.toLowerCase())
-                            ).map((subcat) => (
+                            )
+                            .map((subcat) => (
                               <div key={subcat} className="p-2 hover:bg-gray-100">
                                 <button
                                   type="button"
@@ -1115,38 +1178,16 @@ export default function SellerProductUpload() {
                                   {subcat}
                                 </button>
                               </div>
-                            ))
-                          ) : (
-                            Object.entries(subcategories[formData.category] || {}).map(([group, subcats]) => (
-                              <div key={group}>
-                                <div className="p-2 font-medium text-gray-700">{group}</div>
-                                {subcats
-                                  .filter((subcat) =>
-                                    subcat.toLowerCase().includes(formData.subcategory.toLowerCase())
-                                  )
-                                  .map((subcat) => (
-                                    <div key={subcat} className="p-2 pl-4 hover:bg-gray-100">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setFormData((prev) => ({ ...prev, subcategory: subcat, sizes: [] }));
-                                          setShowSubcategoryDropdown(false);
-                                        }}
-                                        className="w-full text-left"
-                                      >
-                                        {subcat}
-                                      </button>
-                                    </div>
-                                  ))}
-                              </div>
-                            ))
-                          )}
+                            ))}
                         </div>
                       )}
+                      {!customSubcategories[formData.category] && (
+                        <p className="text-red-600 text-xs mt-1">Loading subcategories...</p>
+                      )}
+                      {errors.subcategory && (
+                        <p className="text-red-600 text-xs mt-1">{errors.subcategory}</p>
+                      )}
                     </div>
-                    {errors.subcategory && (
-                      <p className="text-red-600 text-xs mt-1">{errors.subcategory}</p>
-                    )}
                   </div>
                 )}
               </div>
@@ -1162,9 +1203,7 @@ export default function SellerProductUpload() {
                 {formData.subcategory === 'Clothing' ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {(formData.category === 'Foremade Fashion' && formData.subcategory === 'Clothing'
-                      ? (subcategories['Foremade Fashion'].Men.includes('Clothing') && formData.subcategory === 'Clothing'
-                          ? menClothingSizes
-                          : womenClothingSizes)
+                      ? (customSubcategories['Foremade Fashion']?.includes('Clothing') ? menClothingSizes : womenClothingSizes)
                       : []
                     ).map((size) => (
                       <button

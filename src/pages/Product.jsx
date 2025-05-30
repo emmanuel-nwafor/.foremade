@@ -6,7 +6,6 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
-// import SellerSidebar from './SellerSidebar';
 
 const Product = () => {
   const { id } = useParams();
@@ -22,9 +21,10 @@ const Product = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [mainImage, setMainImage] = useState('');
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [mainMedia, setMainMedia] = useState('');
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState('right');
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -43,6 +43,8 @@ const Product = () => {
     orange: '#FFA500',
     silver: '#e2f2ec',
   };
+
+  const SIZE_RELEVANT_CATEGORIES = ['foremade fashion', 'clothing', 'shoes', 'accessories'];
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -97,11 +99,19 @@ const Product = () => {
             data.imageUrl.startsWith('https://res.cloudinary.com/')
           ? [data.imageUrl]
           : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+        let videoUrls = Array.isArray(data.videoUrls)
+          ? data.videoUrls.filter(
+              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+            )
+          : [];
         if (imageUrls.length === 0) {
           imageUrls = ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
         }
         console.log('Product imageUrls:', imageUrls);
-        const isFashion = data.category?.trim().toLowerCase() === 'foremade fashion';
+        console.log('Product videoUrls:', videoUrls);
+        const category = data.category?.trim().toLowerCase() || 'uncategorized';
+        const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
+        console.log('Category:', category, 'Requires sizes:', requiresSizes, 'Sizes:', data.sizes || []);
         const reviewsSnapshot = await getDocs(collection(db, `products/${id}/reviews`));
         const reviews = reviewsSnapshot.docs.map((reviewDoc) => {
           const reviewData = reviewDoc.data();
@@ -121,11 +131,12 @@ const Product = () => {
           description: data.description || '',
           price: data.price || 0,
           stock: data.stock || 0,
-          category: data.category?.trim().toLowerCase() || 'uncategorized',
+          category,
           colors: data.colors || [],
-          sizes: isFashion ? data.sizes || [] : [],
+          sizes: requiresSizes ? data.sizes || [] : [],
           condition: data.condition || 'New',
           imageUrls,
+          videoUrls,
           imageUrl: imageUrls[0],
           tags: data.tags || [],
           seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
@@ -134,9 +145,9 @@ const Product = () => {
         };
         console.log('Fetched product:', productData);
         setProduct(productData);
-        setMainImage(productData.imageUrls[0]);
-        setCurrentImageIndex(0);
-        console.log('Main image set:', productData.imageUrls[0]);
+        setMainMedia(productData.imageUrls[0]);
+        setCurrentMediaIndex(0);
+        console.log('Main media set:', productData.imageUrls[0]);
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -168,15 +179,17 @@ const Product = () => {
                 ? data.imageUrls[0]
                 : 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
             if (doc.id === id) return null;
-            const isSimilarFashion = data.category?.trim().toLowerCase() === 'foremade fashion';
+            const similarCategory = data.category?.trim().toLowerCase() || 'uncategorized';
+            const requiresSizesForSimilar = SIZE_RELEVANT_CATEGORIES.includes(similarCategory);
+            console.log('Similar product category:', similarCategory, 'Requires sizes:', requiresSizesForSimilar, 'Sizes:', data.sizes || []);
             return {
               id: doc.id,
               name: data.name || 'Unnamed Product',
               price: data.price || 0,
               stock: data.stock || 0,
-              category: data.category?.trim().toLowerCase() || 'uncategorized',
+              category: similarCategory,
               colors: data.colors || [],
-              sizes: isSimilarFashion ? data.sizes || [] : [],
+              sizes: requiresSizesForSimilar ? data.sizes || [] : [],
               condition: data.condition || 'New',
               imageUrl,
               tags: data.tags || [],
@@ -225,15 +238,17 @@ const Product = () => {
                   data.imageUrls[0].startsWith('https://res.cloudinary.com/')
                 ? data.imageUrls[0]
                 : 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
-            const isFashion = data.category?.trim().toLowerCase() === 'foremade fashion';
+            const category = data.category?.trim().toLowerCase() || 'uncategorized';
+            const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
+            console.log('Recent search category:', category, 'Requires sizes:', requiresSizes, 'Sizes:', data.sizes || []);
             products.push({
               id: productSnap.id,
               name: data.name || 'Unnamed Product',
               price: data.price || 0,
               stock: data.stock || 0,
-              category: data.category?.trim().toLowerCase() || 'uncategorized',
+              category,
               colors: data.colors || [],
-              sizes: isFashion ? data.sizes || [] : [],
+              sizes: requiresSizes ? data.sizes || [] : [],
               condition: data.condition || 'New',
               imageUrl,
               tags: data.tags || [],
@@ -254,22 +269,23 @@ const Product = () => {
     fetchRecentSearches();
   }, [id, navigate]);
 
-  // Automatic image sliding
+  // Automatic image sliding (only for images, and only if a video isn't playing)
   useEffect(() => {
-    if (!product || product.imageUrls.length <= 1) return;
+    if (!product || product.imageUrls.length <= 1 || isVideoPlaying) return;
 
     const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => {
+      setCurrentMediaIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % product.imageUrls.length;
         setSlideDirection('right');
-        setMainImage(product.imageUrls[nextIndex]);
-        console.log('Auto-slid to image:', product.imageUrls[nextIndex], 'Index:', nextIndex);
+        setMainMedia(product.imageUrls[nextIndex]);
+        setIsVideoPlaying(false);
+        console.log('Auto-slid to media:', product.imageUrls[nextIndex], 'Index:', nextIndex);
         return nextIndex;
       });
-    }, 5000); // Slide every 5 seconds
+    }, 5000);
 
-    return () => clearInterval(interval); // Clean up on unmount
-  }, [product]);
+    return () => clearInterval(interval);
+  }, [product, isVideoPlaying]);
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -383,12 +399,13 @@ const Product = () => {
     }
   };
 
-  const handleImageClick = (url, index) => {
-    if (url && typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')) {
-      setSlideDirection(index > currentImageIndex ? 'right' : 'left');
-      setMainImage(url);
-      setCurrentImageIndex(index);
-      console.log('Main image updated:', url, 'Direction:', index > currentImageIndex ? 'right' : 'left');
+  const handleMediaClick = (media, index) => {
+    if (typeof media === 'string' && (media.startsWith('https://res.cloudinary.com/') || media.includes('.mp4'))) {
+      setSlideDirection(index > currentMediaIndex ? 'right' : 'left');
+      setMainMedia(media);
+      setCurrentMediaIndex(index);
+      setIsVideoPlaying(media.includes('.mp4'));
+      console.log('Main media updated:', media, 'Is video:', media.includes('.mp4'), 'Direction:', index > currentMediaIndex ? 'right' : 'left');
     }
   };
 
@@ -421,6 +438,7 @@ const Product = () => {
       : product.description;
   const shouldShowDescriptionToggle = product.description.length > DESCRIPTION_LIMIT;
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
+  const imageMedia = product.imageUrls;
 
   return (
     <div className="relative container mx-auto p-5">
@@ -440,11 +458,27 @@ const Product = () => {
           .slide-in-left {
             animation: slideInLeft 0.5s ease-in-out forwards;
           }
-          .main-image-container img {
-            transition: transform 0.3s ease-in-out;
+          .main-image-container {
+            position: relative;
+            width: 100%;
+            height: 24rem;
+            overflow: hidden;
           }
-          .main-image-container:hover img {
+          .main-image-container img, .main-image-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease-in-out;
+            border-radius: 0.5rem;
+          }
+          .main-image-container:hover img, .main-image-container:hover video {
             transform: scale(1.5);
+          }
+          .thumbnail-video {
+            width: 3.5rem;
+            height: 3.5rem;
+            object-fit: cover;
+            border-radius: 0.5rem;
           }
         `}
       </style>
@@ -452,62 +486,79 @@ const Product = () => {
         <div className="w-full md:w-3/4">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="md:w-1/2">
-              <div className="relative w-full h-96 overflow-hidden main-image-container">
-                <img
-                  src={mainImage}
-                  alt={product.name}
-                  className={`absolute w-full h-full object-cover bg-no-repeat rounded-lg ${
-                    slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'
-                  }`}
-                  onError={(e) => {
-                    console.error('Main image load error:', {
-                      productId: product.id,
-                      imageUrl: e.target.src,
-                      name: product.name,
-                    });
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML +=
-                      '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Image N/A</span></div>';
-                  }}
-                  onLoad={(e) => {
-                    console.log('Main image loaded successfully:', {
-                      productId: product.id,
-                      imageUrl: mainImage,
-                      name: product.name,
-                    });
-                    e.target.style.opacity = '1';
-                  }}
-                />
+              <div className="main-image-container">
+                {typeof mainMedia === 'string' && mainMedia.includes('.mp4') ? (
+                  <video
+                    src={mainMedia}
+                    controls
+                    className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    onError={(e) => {
+                      console.error('Video load error:', { productId: product.id, videoUrl: e.target.src, name: product.name });
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Video N/A</span></div>';
+                    }}
+                    onLoadedData={() => console.log('Video loaded:', { productId: product.id, videoUrl: mainMedia, name: product.name })}
+                  />
+                ) : (
+                  <img
+                    src={mainMedia}
+                    alt={product.name}
+                    className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    onError={(e) => {
+                      console.error('Image load error:', { productId: product.id, imageUrl: e.target.src, name: product.name });
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Image N/A</span></div>';
+                    }}
+                    onLoad={(e) => {
+                      console.log('Image loaded:', { productId: product.id, imageUrl: mainMedia, name: product.name });
+                      e.target.style.opacity = '1';
+                    }}
+                  />
+                )}
               </div>
-              {product.imageUrls.length > 1 && (
+              {(imageMedia.length > 1 || product.videoUrls.length > 0) && (
                 <div className="flex items-center justify-center gap-2 mt-2 overflow-x-auto">
-                  {product.imageUrls.map((url, index) => (
-                    <img
+                  {imageMedia.map((media, index) => (
+                    <div
                       key={index}
-                      src={url}
-                      alt={`${product.name} ${index + 1}`}
-                      className={`w-14 h-14 object-cover rounded-lg border cursor-pointer ${
-                        mainImage === url ? 'border-blue-500 border-2' : 'border-gray-300'
-                      }`}
-                      onClick={() => handleImageClick(url, index)}
-                      onError={(e) => {
-                        console.error('Thumbnail image load error:', {
-                          productId: product.id,
-                          imageUrl: e.target.src,
-                          name: product.name,
-                        });
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML +=
-                          '<div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Image N/A</span></div>';
-                      }}
-                      onLoad={() => {
-                        console.log('Thumbnail image loaded successfully:', {
-                          productId: product.id,
-                          imageUrl: url,
-                          name: product.name,
-                        });
-                      }}
-                    />
+                      className="relative"
+                      onClick={() => handleMediaClick(media, index)}
+                    >
+                      <img
+                        src={media}
+                        alt={`${product.name} ${index + 1}`}
+                        className={`w-14 h-14 object-cover rounded-lg border cursor-pointer ${
+                          mainMedia === media ? 'border-blue-500 border-2' : 'border-gray-300'
+                        }`}
+                        onError={(e) => {
+                          console.error('Thumbnail image error:', { productId: product.id, imageUrl: e.target.src, name: product.name });
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML += '<div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Image N/A</span></div>';
+                        }}
+                        onLoad={() => console.log('Thumbnail image loaded:', { productId: product.id, imageUrl: media, name: product.name })}
+                      />
+                    </div>
+                  ))}
+                  {product.videoUrls.map((video, index) => (
+                    <div
+                      key={`video-${index}`}
+                      className="relative"
+                      onClick={() => handleMediaClick(video, imageMedia.length + index)}
+                    >
+                      <video
+                        src={video}
+                        className="thumbnail-video border cursor-pointer"
+                        muted
+                        loop
+                        autoPlay
+                        onError={(e) => {
+                          console.error('Thumbnail video error:', { productId: product.id, videoUrl: e.target.src, name: product.name });
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML += '<div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Video N/A</span></div>';
+                        }}
+                        onLoadedData={() => console.log('Thumbnail video loaded:', { productId: product.id, videoUrl: video, name: product.name })}
+                      />
+                    </div>
                   ))}
                 </div>
               )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, setDoc, doc } from 'firebase/firestore';
 import axios from 'axios';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import SellerSidebar from './SellerSidebar';
@@ -26,8 +26,9 @@ export default function SellerProductUpload() {
       condition: 'New',
       productUrl: '',
       images: [],
-      videos: [], // Changed from video: null to videos: []
+      videos: [],
       tags: [],
+      manualSize: '', // New field for manual size input
     };
   });
   const [imageFiles, setImageFiles] = useState(() => {
@@ -48,20 +49,25 @@ export default function SellerProductUpload() {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0); // For upload progress
   const [user, setUser] = useState(null);
   const [customColor, setCustomColor] = useState('');
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
+  const [showSizeWarning, setShowSizeWarning] = useState(false); // For size mismatch warning
   const [fees, setFees] = useState({
     productSize: '',
     buyerProtectionFee: 0,
     handlingFee: 0,
     totalEstimatedPrice: 0,
   });
-  const [isMobile, setIsMobile] = useState(false); // New state for mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  const [customSubcategories, setCustomSubcategories] = useState({}); // For dynamic subcategories
+  const [suggestedTags, setSuggestedTags] = useState([]); // For auto-suggested tags
+  const [zoomedMedia, setZoomedMedia] = useState(null); // For media zoom
   const fileInputRef = useRef(null);
-  const singleImageInputRef = useRef(null); // New ref for single image input
+  const singleImageInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
@@ -80,10 +86,10 @@ export default function SellerProductUpload() {
     'Health & Beauty',
   ];
 
-  const subcategories = {
+  const staticSubcategories = {
     'Foremade Fashion': {
-      Men: ['Shoes', 'Clothing'],
-      Women: ['Shoes', 'Clothing'],
+      Men: ['Clothing', 'Shoes'],
+      Women: ['Clothing', 'Shoes'],
     },
     Electronics: ['Phones', 'Laptops', 'Accessories'],
     'Baby Products': ['Clothing', 'Toys', 'Feeding'],
@@ -92,7 +98,11 @@ export default function SellerProductUpload() {
     'Drinks & Categories': ['Soft Drinks', 'Alcoholic', 'Juices'],
     'Home & Kitchen': ['Appliances', 'Furniture', 'Decor'],
     'Smart Watches': ['Fitness', 'Luxury', 'Budget'],
-    'Tablet & Phones': ['Tablets', 'Smartphones'],
+    'Tablet & Phones': [
+      'Samsung', 'iPhones', 'Xiaomi', 'OnePlus', 'OPPO', 'Vivo', 'Realme',
+      'Motorola', 'Google', 'Nothing', 'Sony', 'Asus', 'Lenovo', 'HONOR',
+      'ZTE', 'Infinix', 'Tecno'
+    ],
     'Health & Beauty': ['Skincare', 'Makeup', 'Supplements'],
   };
 
@@ -111,14 +121,55 @@ export default function SellerProductUpload() {
     { name: 'Gold', hex: '#ff9a1d' },
     { name: 'Silver', hex: '#e2f2ec' },
   ];
-  const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+
+  const menClothingSizes = ['S', 'M', 'L', 'XL', 'XXL'];
+  const womenClothingSizes = ['3', '4', '6', '8', '10', '12', '14', '16', '18', '20'];
+  const footwearSizes = [
+    '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
+    '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"'
+  ];
+  const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
-  const MAX_IMAGES = 4;
-  const MAX_VIDEOS = 3; // New constant for max videos
+  const MAX_IMAGES = 4; // Updated to 4
+  const MAX_VIDEOS = 1; // Updated to 1
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
 
-  // Detect if the user is on a mobile device
+  // Load custom subcategories from Firebase
+  useEffect(() => {
+    const fetchCustomSubcategories = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'customSubcategories'));
+        const customSubs = {};
+        snapshot.forEach((doc) => {
+          customSubs[doc.id] = doc.data().subcategories || [];
+        });
+        setCustomSubcategories(customSubs);
+      } catch (error) {
+        console.error('Error fetching custom subcategories:', error);
+        addAlert('Failed to load custom subcategories.', 'error');
+      }
+    };
+    fetchCustomSubcategories();
+  }, []);
+
+  // Combine static and custom subcategories
+  const subcategories = { ...staticSubcategories, ...customSubcategories };
+
+  // Auto-suggest tags based on product name and description
+  useEffect(() => {
+    const suggestTags = () => {
+      const text = `${formData.name} ${formData.description}`.toLowerCase();
+      const possibleTags = [];
+      if (text.includes('leather')) possibleTags.push('Leather');
+      if (text.includes('shoe') || text.includes('footwear')) possibleTags.push('Footwear');
+      if (text.includes('phone') || text.includes('mobile')) possibleTags.push('Smartphone');
+      if (text.includes('fashion')) possibleTags.push('Fashion');
+      setSuggestedTags(possibleTags.filter((tag) => !formData.tags.includes(tag)));
+    };
+    suggestTags();
+  }, [formData.name, formData.description]);
+
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const mobileRegex = /android|iphone|ipad|ipod|opera mini|mobile/i;
@@ -167,19 +218,19 @@ export default function SellerProductUpload() {
 
     if (price >= 2000 && price <= 2999) {
       productSize = 'Small';
-      buyerProtectionRate = 0.01;
+      buyerProtectionRate = 0.08; // Updated to 8%
       handlingRate = 0.20;
     } else if (price >= 3000 && price <= 4999) {
       productSize = 'Medium';
-      buyerProtectionRate = 0.015;
+      buyerProtectionRate = 0.085; // Updated to 8.5%
       handlingRate = 0.12;
     } else if (price >= 5000 && price <= 9999) {
       productSize = 'Large';
-      buyerProtectionRate = 0.017;
+      buyerProtectionRate = 0.09; // Updated to 9%
       handlingRate = 0.39;
     } else if (price >= 10000) {
       productSize = 'X-Large';
-      buyerProtectionRate = 0.019;
+      buyerProtectionRate = 0.095; // Updated to 9.5%
       handlingRate = 0.30;
     }
 
@@ -193,8 +244,16 @@ export default function SellerProductUpload() {
       handlingFee,
       totalEstimatedPrice,
     });
+
+    // Check for size mismatch
+    if (formData.manualSize && formData.manualSize !== productSize) {
+      setShowSizeWarning(true);
+    } else {
+      setShowSizeWarning(false);
+    }
+
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-  }, [formData.price]);
+  }, [formData.price, formData.manualSize]);
 
   useEffect(() => {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
@@ -243,7 +302,7 @@ export default function SellerProductUpload() {
     );
 
     if (videoFiles.length + validFiles.length > MAX_VIDEOS) {
-      addAlert(`You can upload a maximum of ${MAX_VIDEOS} videos.`, 'error');
+      addAlert(`You can upload a maximum of ${MAX_VIDEOS} video.`, 'error');
       return;
     }
 
@@ -382,6 +441,26 @@ export default function SellerProductUpload() {
     });
   };
 
+  const handleCustomSizeAdd = (e) => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      const size = e.target.value.trim();
+      setFormData((prev) => {
+        const newSizes = prev.sizes.includes(size)
+          ? prev.sizes
+          : [...prev.sizes, size];
+        return { ...prev, sizes: newSizes };
+      });
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveSize = (size) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizes: prev.sizes.filter((s) => s !== size),
+    }));
+  };
+
   const handleTagToggle = (tag) => {
     setFormData((prev) => {
       const newTags = prev.tags.includes(tag)
@@ -400,12 +479,19 @@ export default function SellerProductUpload() {
     if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
       newErrors.stock = 'Enter a valid stock quantity (0 or more).';
     if (!formData.category) newErrors.category = 'Select a category.';
+    if (!formData.subcategory) newErrors.subcategory = 'Select a subcategory.';
     if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
     if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
-    if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} videos allowed.`;
+    if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
     if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
-    if (formData.category.toLowerCase() === 'foremade fashion' && formData.sizes.length === 0)
-      newErrors.sizes = 'Select at least one size for fashion products.';
+    if (
+      formData.category === 'Foremade Fashion' &&
+      ['Clothing', 'Shoes'].includes(formData.subcategory) &&
+      formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for fashion products.';
+    }
+    if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
     return newErrors;
   };
 
@@ -419,7 +505,11 @@ export default function SellerProductUpload() {
       console.log(`Uploading ${isVideo ? 'video' : 'image'} to ${backendUrl}/upload`);
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000, // 60 seconds
+        timeout: 60000,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
       });
 
       if (response.status !== 200 || !response.data.url) {
@@ -446,6 +536,26 @@ export default function SellerProductUpload() {
           ? 'Cannot connect to server. Please check your network or server status.'
           : error.response?.data?.error || `Failed to upload ${isVideo ? 'video' : 'image'}.`
       );
+    } finally {
+      setUploadProgress(0);
+    }
+  };
+
+  const saveCustomSubcategory = async (category, subcategory) => {
+    try {
+      const subcatRef = doc(db, 'customSubcategories', category);
+      const existingSubs = customSubcategories[category] || [];
+      if (!existingSubs.includes(subcategory)) {
+        const updatedSubs = [...existingSubs, subcategory];
+        await setDoc(subcatRef, { subcategories: updatedSubs }, { merge: true });
+        setCustomSubcategories((prev) => ({
+          ...prev,
+          [category]: updatedSubs,
+        }));
+      }
+    } catch (error) {
+      console.error('Error saving custom subcategory:', error);
+      addAlert('Failed to save custom subcategory.', 'error');
     }
   };
 
@@ -467,6 +577,13 @@ export default function SellerProductUpload() {
       setLoading(false);
       addAlert('Please fix the form errors.', 'error');
       return;
+    }
+
+    // Save custom subcategory if it's not in the static list
+    const isStaticSubcategory = Object.values(staticSubcategories[formData.category] || {}).flat().includes(formData.subcategory) ||
+      staticSubcategories[formData.category]?.includes(formData.subcategory);
+    if (!isStaticSubcategory) {
+      await saveCustomSubcategory(formData.category, formData.subcategory);
     }
 
     try {
@@ -492,7 +609,7 @@ export default function SellerProductUpload() {
         condition: formData.condition || 'New',
         productUrl: formData.productUrl || '',
         imageUrls,
-        videoUrls, // Changed from videoUrl to videoUrls
+        videoUrls,
         tags: formData.tags,
         sellerId: user.uid,
         seller: { name: formData.sellerName, id: user.uid },
@@ -501,6 +618,7 @@ export default function SellerProductUpload() {
         buyerProtectionFee: fees.buyerProtectionFee,
         handlingFee: fees.handlingFee,
         totalEstimatedPrice: fees.totalEstimatedPrice,
+        manualSize: formData.manualSize,
       };
 
       const docRef = await addDoc(collection(db, 'products'), productData);
@@ -522,6 +640,7 @@ export default function SellerProductUpload() {
         images: [],
         videos: [],
         tags: [],
+        manualSize: '',
       });
       setImageFiles([]);
       setImagePreviews([]);
@@ -544,6 +663,7 @@ export default function SellerProductUpload() {
         handlingFee: 0,
         totalEstimatedPrice: 0,
       });
+      setShowSizeWarning(false);
     } catch (error) {
       console.error('Error uploading product:', {
         message: error.message,
@@ -600,7 +720,7 @@ export default function SellerProductUpload() {
                             className="text-blue-600 hover:underline"
                             disabled={loading}
                           >
-                            select multiple images
+                            select up to {MAX_IMAGES} images
                           </button>
                         </>
                       ) : (
@@ -618,7 +738,7 @@ export default function SellerProductUpload() {
                       )}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
+                      (JPEG, JPG, PNG, WEBP, GIF etc)
                     </p>
                   </div>
                 ) : (
@@ -628,7 +748,8 @@ export default function SellerProductUpload() {
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-md border border-gray-200"
+                          className="w-full h-48 object-cover rounded-md border border-gray-200 cursor-pointer"
+                          onClick={() => setZoomedMedia({ type: 'image', src: preview })}
                         />
                         <button
                           type="button"
@@ -642,7 +763,6 @@ export default function SellerProductUpload() {
                     ))}
                   </div>
                 )}
-                {/* Input for multiple images (drag-and-drop or file picker) */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -652,7 +772,6 @@ export default function SellerProductUpload() {
                   disabled={loading}
                   multiple
                 />
-                {/* Input for single image upload (mobile) */}
                 <input
                   ref={singleImageInputRef}
                   type="file"
@@ -665,7 +784,6 @@ export default function SellerProductUpload() {
               {errors.images && (
                 <p className="text-red-600 text-xs mt-1">{errors.images}</p>
               )}
-              {/* Additional button for adding more images on mobile */}
               {isMobile && imagePreviews.length > 0 && imagePreviews.length < MAX_IMAGES && (
                 <button
                   type="button"
@@ -676,40 +794,49 @@ export default function SellerProductUpload() {
                   Add another image
                 </button>
               )}
+              {uploadProgress > 0 && (
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              )}
             </div>
 
             {/* Video Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Product Videos (up to {MAX_VIDEOS}, Optional)
+                Product Video (1 video, Optional)
               </label>
-              <div className="mt-1 w-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] border-gray-300 hover:border-blue-500 transition-colors">
+              <div className="mt-1 w-full h-[300px] p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] border-gray-300 hover:border-blue-500 transition-colors">
                 {videoPreviews.length === 0 ? (
                   <div className="text-center">
                     <i className="bx bx-video-plus text-5xl text-gray-600"></i>
                     <p className="text-sm text-gray-600 mt-1">
-                      Drag and drop videos or{' '}
+                      Drag and drop a video or{' '}
                       <button
                         type="button"
                         onClick={() => videoInputRef.current.click()}
                         className="text-blue-600 hover:underline"
                         disabled={loading}
                       >
-                        select videos
+                        select a video
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      (MP4, max 10MB each, under 30 seconds)
+                      (Supports multiple formats, max 10MB, under 30 seconds)
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
                     {videoPreviews.map((preview, index) => (
                       <div key={index} className="relative">
                         <video
                           src={preview}
                           controls
-                          className="w-full h-32 object-cover rounded-md border border-gray-200"
+                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 cursor-pointer"
+                          onClick={() => setZoomedMedia({ type: 'video', src: preview })}
                         />
                         <button
                           type="button"
@@ -726,25 +853,22 @@ export default function SellerProductUpload() {
                 <input
                   ref={videoInputRef}
                   type="file"
-                  accept="video/mp4"
+                  accept="video/mp4,video/mkv,video/webm"
                   onChange={handleVideoChange}
                   className="hidden"
                   disabled={loading}
-                  multiple
                 />
               </div>
-              {videoPreviews.length > 0 && videoPreviews.length < MAX_VIDEOS && (
-                <button
-                  type="button"
-                  onClick={() => videoInputRef.current.click()}
-                  className="mt-2 text-blue-600 hover:underline text-sm"
-                  disabled={loading}
-                >
-                  Add another video
-                </button>
-              )}
               {errors.videos && (
                 <p className="text-red-600 text-xs mt-1">{errors.videos}</p>
+              )}
+              {uploadProgress > 0 && (
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
               )}
             </div>
 
@@ -760,14 +884,9 @@ export default function SellerProductUpload() {
                     type="text"
                     name="sellerName"
                     value={formData.sellerName}
-                    onChange={handleChange}
                     placeholder="Enter your full name"
-                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.sellerName
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                    disabled={loading}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500`}
+                    disabled={true} // Disabled editing
                   />
                   {errors.sellerName && (
                     <p className="text-red-600 text-xs mt-1">{errors.sellerName}</p>
@@ -866,12 +985,44 @@ export default function SellerProductUpload() {
                   )}
                 </div>
               </div>
-
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700">
+                  Product Size <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="manualSize"
+                  value={formData.manualSize}
+                  onChange={handleChange}
+                  className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.manualSize
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
+                  disabled={loading}
+                >
+                  <option value="">Select a size</option>
+                  {manualSizes.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                {errors.manualSize && (
+                  <p className="text-red-600 text-xs mt-1">{errors.manualSize}</p>
+                )}
+              </div>
+              {showSizeWarning && (
+                <div className="mt-2 p-3 bg-yellow-100 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    Warning: Your price suggests a {fees.productSize} product, but you selected {formData.manualSize}. Are you sure you want to proceed?
+                  </p>
+                </div>
+              )}
               {fees.productSize && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Foremade Fees</h4>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p>Product Size: <span className="font-semibold">{fees.productSize}</span></p>
+                    <p>Product Size (based on price): <span className="font-semibold">{fees.productSize}</span></p>
                     <p>Buyer Protection Fee: ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p>Handling Fee: ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
@@ -910,7 +1061,7 @@ export default function SellerProductUpload() {
                             <button
                               type="button"
                               onClick={() => {
-                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '' }));
+                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', sizes: [] }));
                                 setShowSubcategoryDropdown(false);
                               }}
                               className="w-full text-left"
@@ -932,24 +1083,31 @@ export default function SellerProductUpload() {
                       Subcategory <span className="text-red-500">*</span>
                     </label>
                     <div className="relative mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
-                        className="w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 bg-white flex justify-between items-center"
+                      <input
+                        type="text"
+                        value={formData.subcategory}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, subcategory: e.target.value, sizes: [] }))}
+                        onFocus={() => setShowSubcategoryDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
+                        placeholder="Select or type a subcategory"
+                        className={`w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors.subcategory
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                         disabled={loading}
-                      >
-                        <span>{formData.subcategory || 'Select a subcategory'}</span>
-                        <i className="bx bx-chevron-down text-gray-500"></i>
-                      </button>
+                      />
                       {showSubcategoryDropdown && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
                           {Array.isArray(subcategories[formData.category]) ? (
-                            subcategories[formData.category].map((subcat) => (
+                            subcategories[formData.category].filter((subcat) =>
+                              subcat.toLowerCase().includes(formData.subcategory.toLowerCase())
+                            ).map((subcat) => (
                               <div key={subcat} className="p-2 hover:bg-gray-100">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setFormData((prev) => ({ ...prev, subcategory: subcat }));
+                                    setFormData((prev) => ({ ...prev, subcategory: subcat, sizes: [] }));
                                     setShowSubcategoryDropdown(false);
                                   }}
                                   className="w-full text-left"
@@ -959,23 +1117,27 @@ export default function SellerProductUpload() {
                               </div>
                             ))
                           ) : (
-                            Object.entries(subcategories[formData.category]).map(([group, subcats]) => (
+                            Object.entries(subcategories[formData.category] || {}).map(([group, subcats]) => (
                               <div key={group}>
                                 <div className="p-2 font-medium text-gray-700">{group}</div>
-                                {subcats.map((subcat) => (
-                                  <div key={subcat} className="p-2 pl-4 hover:bg-gray-100">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setFormData((prev) => ({ ...prev, subcategory: subcat }));
-                                        setShowSubcategoryDropdown(false);
-                                      }}
-                                      className="w-full text-left"
-                                    >
-                                      {subcat}
-                                    </button>
-                                  </div>
-                                ))}
+                                {subcats
+                                  .filter((subcat) =>
+                                    subcat.toLowerCase().includes(formData.subcategory.toLowerCase())
+                                  )
+                                  .map((subcat) => (
+                                    <div key={subcat} className="p-2 pl-4 hover:bg-gray-100">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData((prev) => ({ ...prev, subcategory: subcat, sizes: [] }));
+                                          setShowSubcategoryDropdown(false);
+                                        }}
+                                        className="w-full text-left"
+                                      >
+                                        {subcat}
+                                      </button>
+                                    </div>
+                                  ))}
                               </div>
                             ))
                           )}
@@ -989,6 +1151,94 @@ export default function SellerProductUpload() {
                 )}
               </div>
             </div>
+
+            {/* Sizes Section */}
+            {formData.category === 'Foremade Fashion' && ['Clothing', 'Shoes'].includes(formData.subcategory) && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 mb-4">Sizes</h3>
+                <label className="block text-sm font-medium text-gray-700">
+                  Sizes <span className="text-red-500">*</span>
+                </label>
+                {formData.subcategory === 'Clothing' ? (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {(formData.category === 'Foremade Fashion' && formData.subcategory === 'Clothing'
+                      ? (subcategories['Foremade Fashion'].Men.includes('Clothing') && formData.subcategory === 'Clothing'
+                          ? menClothingSizes
+                          : womenClothingSizes)
+                      : []
+                    ).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => handleSizeToggle(size)}
+                        className={`px-3 py-1 rounded-md border text-sm transition-colors ${
+                          formData.sizes.includes(size)
+                            ? 'border-blue-500 bg-blue-100 text-blue-700'
+                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={loading}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                ) : formData.subcategory === 'Shoes' ? (
+                  <>
+                    <div className="relative mt-2">
+                      <input
+                        type="text"
+                        placeholder="Enter shoe size (e.g., Size 35) and press Enter"
+                        onKeyDown={handleCustomSizeAdd}
+                        className={`w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors.sizes
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.sizes.map((size) => (
+                        <div
+                          key={size}
+                          className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs"
+                        >
+                          <span>{size}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSize(size)}
+                            className="text-red-500 hover:text-red-700"
+                            disabled={loading}
+                          >
+                            <i className="bx bx-x"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {footwearSizes.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => handleSizeToggle(size)}
+                          className={`px-3 py-1 rounded-md border text-sm transition-colors ${
+                            formData.sizes.includes(size)
+                              ? 'border-blue-500 bg-blue-100 text-blue-700'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={loading}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {errors.sizes && (
+                  <p className="text-red-600 text-xs mt-1">{errors.sizes}</p>
+                )}
+              </div>
+            )}
 
             {/* Colors Section */}
             <div>
@@ -1064,34 +1314,6 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Sizes Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 mb-4">Sizes</h3>
-              <label className="block text-sm font-medium text-gray-700">
-                Sizes {formData.category.toLowerCase() === 'foremade fashion' && <span className="text-red-500">*</span>}
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {sizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => handleSizeToggle(size)}
-                    className={`px-3 py-1 rounded-md border text-sm transition-colors ${
-                      formData.sizes.includes(size)
-                        ? 'border-blue-500 bg-blue-100 text-blue-700'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={loading}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              {errors.sizes && (
-                <p className="text-red-600 text-xs mt-1">{errors.sizes}</p>
-              )}
-            </div>
-
             {/* Authenticity Tags Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 mb-4">Authenticity Tags</h3>
@@ -1113,6 +1335,28 @@ export default function SellerProductUpload() {
                   </button>
                 ))}
               </div>
+              {suggestedTags.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">Suggested Tags:</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {suggestedTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleTagToggle(tag)}
+                        className={`px-3 py-1 rounded-md border text-sm transition-colors ${
+                          formData.tags.includes(tag)
+                            ? 'border-green-500 bg-green-100 text-green-700'
+                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={loading}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {errors.tags && (
                 <p className="text-red-600 text-xs mt-1">{errors.tags}</p>
               )}
@@ -1162,6 +1406,33 @@ export default function SellerProductUpload() {
         </div>
         <CustomAlert alerts={alerts} removeAlert={removeAlert} />
       </div>
+
+      {/* Zoomed Media Modal */}
+      {zoomedMedia && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="relative max-w-3xl max-h-[90vh]">
+            {zoomedMedia.type === 'image' ? (
+              <img
+                src={zoomedMedia.src}
+                alt="Zoomed preview"
+                className="max-w-full max-h-[90vh] object-contain"
+              />
+            ) : (
+              <video
+                src={zoomedMedia.src}
+                controls
+                className="max-w-full max-h-[90vh] object-cover"
+              />
+            )}
+            <button
+              onClick={() => setZoomedMedia(null)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+            >
+              <i className="bx bx-x text-xl"></i>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

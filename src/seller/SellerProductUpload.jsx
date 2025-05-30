@@ -757,7 +757,7 @@ export default function SellerProductUpload() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`mt-1 w-full h-[300px] p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] transition-colors ${
+                className={`mt-1 w-full h-full p-4 border-2 border-dashed rounded-md flex flex-col items-center justify-center min-h-[200px] transition-colors ${
                   errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'
                 } ${loading ? 'opacity-50' : ''}`}
               >

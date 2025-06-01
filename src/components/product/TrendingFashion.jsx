@@ -32,7 +32,7 @@ export default function TrendingFashion() {
     try {
       setLoading(true);
       setError(null);
-      const q = query(collection(db, 'products'), where('category', 'in', categories));
+      const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', categories));
       const querySnapshot = await getDocs(q);
       const allProducts = querySnapshot.docs.map((doc) => {
         const data = doc.data();
@@ -103,7 +103,7 @@ export default function TrendingFashion() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const products = await fetchTrendingProducts([...gadgetCategories, ...fashionCategories]);
+      const products = await fetchTrendingProducts(fashionCategories);
       setTrendingProducts(products);
     };
     fetchData();

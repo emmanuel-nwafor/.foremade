@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
@@ -13,7 +13,8 @@ export default function BestSelling() {
       try {
         setLoading(true);
         setError(null);
-        const querySnapshot = await getDocs(collection(db, 'products'));
+        const q = query(collection(db, 'products'), where('status', '==', 'approved'));
+        const querySnapshot = await getDocs(q);
         const allProducts = querySnapshot.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };

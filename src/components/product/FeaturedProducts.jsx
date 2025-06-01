@@ -22,13 +22,13 @@ export default function FeaturedProducts() {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('category', 'in', categories));
+        const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', categories));
         const querySnapshot = await getDocs(q);
         const allProducts = querySnapshot.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-        console.log('All fetched products (Featured):', allProducts.map(p => ({ id: p.id, category: p.category })));
+        console.log('All fetched products (Featured):', allProducts);
 
         const productsData = allProducts
           .map((doc) => {
@@ -77,7 +77,7 @@ export default function FeaturedProducts() {
           .sort(() => Math.random() - 0.5)
           .slice(0, 8);
 
-        console.log('Processed featured products:', productsData.map(p => ({ id: p.id, category: p.category })));
+        console.log('Processed featured products:', productsData);
         setProducts(productsData);
       } catch (err) {
         console.error('Error loading featured products:', {

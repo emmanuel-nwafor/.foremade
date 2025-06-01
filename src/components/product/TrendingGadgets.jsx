@@ -25,7 +25,7 @@ export default function TrendingGadgets() {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('category', 'in', firestoreCategories));
+        const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', firestoreCategories));
         const querySnapshot = await getDocs(q);
         const allProducts = querySnapshot.docs.map((doc) => {
           const data = doc.data();

@@ -88,7 +88,6 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
-          {/* <FreeShipping /> */}
       <Layout>
         <Routes>
           {/* === Authentication Routes (No Header/Footer) === */}
@@ -226,7 +225,7 @@ function App() {
           />
 
           {/* === Admin Routes (Protected) === */}
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin" element={<Admin />} />
           <Route
             path="/admin/dashboard"
             element={

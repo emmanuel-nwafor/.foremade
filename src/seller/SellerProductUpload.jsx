@@ -867,6 +867,7 @@ export default function SellerProductUpload() {
             </div>
 
             {/* Video Upload Section */}
+            
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Product Video (1 video, Optional)

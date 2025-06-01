@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { doc, getDoc, deleteDoc, collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -46,26 +46,26 @@ const Product = () => {
 
   const SIZE_RELEVANT_CATEGORIES = ['foremade fashion', 'clothing', 'shoes', 'accessories'];
 
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      if (!auth.currentUser) {
-        setFavorites([]);
-        return;
-      }
-      try {
-        const favoritesQuery = query(
-          collection(db, 'favorites'),
-          where('userId', '==', auth.currentUser.uid)
-        );
-        const favoritesSnapshot = await getDocs(favoritesQuery);
-        const favoriteIds = favoritesSnapshot.docs.map((doc) => doc.data().productId);
-        setFavorites(favoriteIds);
-      } catch (err) {
-        console.error('Error fetching favorites:', err);
-        addAlert('Failed to load favorites.', 'error', 3000);
-      }
-    };
+  const fetchFavorites = useCallback(async () => {
+    if (!auth.currentUser) {
+      setFavorites([]);
+      return;
+    }
+    try {
+      const favoritesQuery = query(
+        collection(db, 'favorites'),
+        where('userId', '==', auth.currentUser.uid)
+      );
+      const favoritesSnapshot = await getDocs(favoritesQuery);
+      const favoriteIds = favoritesSnapshot.docs.map((doc) => doc.data().productId);
+      setFavorites(favoriteIds);
+    } catch (err) {
+      console.error('Error fetching favorites:', err);
+      addAlert('Failed to load favorites.', 'error', 3000);
+    }
+  }, [addAlert]);
 
+  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchFavorites();
@@ -75,12 +75,12 @@ const Product = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [fetchFavorites]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        setLoading(true);
+        console.log('Starting fetchProduct for ID:', id);
         if (!id || typeof id !== 'string' || id.trim() === '' || id.includes('/')) {
           throw new Error('Invalid product ID');
         }
@@ -90,6 +90,9 @@ const Product = () => {
           throw new Error('Product not found');
         }
         const data = productSnap.data();
+        if (data.status !== 'approved') {
+          throw new Error('Product not approved');
+        }
         let imageUrls = Array.isArray(data.imageUrls)
           ? data.imageUrls.filter(
               (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
@@ -142,6 +145,7 @@ const Product = () => {
           seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
+          status: data.status || 'pending',
         };
         console.log('Fetched product:', productData);
         setProduct(productData);
@@ -156,6 +160,7 @@ const Product = () => {
             name: productData.name,
             imageUrl: productData.imageUrl,
             category: productData.category,
+            status: productData.status,
           };
           const updatedRecent = [newSearch, ...recent.filter((item) => item.id !== id)].slice(0, 5);
           localStorage.setItem('recentSearches', JSON.stringify(updatedRecent));
@@ -167,6 +172,7 @@ const Product = () => {
         const similar = querySnapshot.docs
           .map((doc) => {
             const data = doc.data();
+            if (data.status !== 'approved') return null;
             let imageUrl =
               data.imageUrl &&
               typeof data.imageUrl === 'string' &&
@@ -195,6 +201,7 @@ const Product = () => {
               tags: data.tags || [],
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
+              status: data.status || 'pending',
             };
           })
           .filter((product) => product && product.imageUrl);
@@ -205,28 +212,28 @@ const Product = () => {
         setProduct(null);
         setSimilarProducts([]);
         addAlert(err.message || 'Failed to load product.', 'error', 3000);
-        if (err.message.includes('Product not found') || err.message.includes('Invalid product ID')) {
+        if (err.message.includes('Product not found') || err.message.includes('Invalid product ID') || err.message.includes('Product not approved')) {
           navigate('/products');
         }
-      } finally {
-        setLoading(false);
       }
     };
 
     const fetchRecentSearches = async () => {
       try {
+        console.log('Starting fetchRecentSearches...');
         const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         if (recent.length === 0) {
           setRecentSearches([]);
           return;
         }
-        const productIds = recent.map((item) => item.id);
         const products = [];
-        for (const productId of productIds) {
-          const productRef = doc(db, 'products', productId);
+        for (const item of recent) {
+          if (item.status !== 'approved') continue;
+          const productRef = doc(db, 'products', item.id);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
             const data = productSnap.data();
+            if (data.status !== 'approved') continue;
             let imageUrl =
               data.imageUrl &&
               typeof data.imageUrl === 'string' &&
@@ -254,6 +261,7 @@ const Product = () => {
               tags: data.tags || [],
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
+              status: data.status || 'pending',
             });
           }
         }
@@ -262,14 +270,27 @@ const Product = () => {
       } catch (err) {
         console.error('Error fetching recent searches:', err);
         addAlert('Failed to load recent searches.', 'error', 3000);
+        setRecentSearches([]);
       }
     };
 
-    fetchProduct();
-    fetchRecentSearches();
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+        console.log('Starting fetchAllData...');
+        await Promise.all([fetchProduct(), fetchRecentSearches()]);
+        console.log('All data fetched successfully.');
+      } catch (err) {
+        console.error('Error in fetchAllData:', err);
+      } finally {
+        console.log('Setting loading to false...');
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
   }, [id, navigate]);
 
-  // Automatic image sliding (only for images, and only if a video isn't playing)
   useEffect(() => {
     if (!product || product.imageUrls.length <= 1 || isVideoPlaying) return;
 
@@ -421,7 +442,7 @@ const Product = () => {
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-red-600">Product not found.</p>
+        <p className="text-red-600">Product not found or not approved.</p>
         <Link to="/products" className="text-blue-600 hover:underline">
           Back to Products
         </Link>

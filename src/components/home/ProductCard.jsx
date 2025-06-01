@@ -13,6 +13,15 @@ const ProductCard = ({ product }) => {
 
   useEffect(() => {
     const fetchImageAndFavorites = async () => {
+      // Skip if product is invalid or not approved
+      if (!product || typeof product !== 'object' || product.status !== 'approved') {
+        console.log('Product not approved or invalid, skipping render:', product);
+        setIsFavorited(false);
+        setFavoriteCount(0);
+        setImageUrl(null);
+        return;
+      }
+
       if (!product?.id) {
         setIsFavorited(false);
         setFavoriteCount(0);
@@ -53,11 +62,6 @@ const ProductCard = ({ product }) => {
     fetchImageAndFavorites();
   }, [product?.id]);
 
-  if (!product || typeof product !== 'object') {
-    console.error('Invalid product prop:', product);
-    return null;
-  }
-
   const truncateName = (name) => {
     if (!name) return '';
     return name.length > 17 ? name.slice(0, 14) + '...' : name;
@@ -67,7 +71,7 @@ const ProductCard = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     const userId = auth.currentUser?.uid;
-    if (!userId || !product.id) {
+    if (!userId || !product?.id) {
       toast.error('Please sign in to favorite a product.');
       return;
     }
@@ -117,6 +121,8 @@ const ProductCard = ({ product }) => {
     Array.isArray(product.sizes) &&
     product.sizes.length > 0;
 
+  // Only render if imageUrl is set (indicating a valid, approved product)
+  if (!imageUrl) return null;
 
   return (
     <div>
@@ -179,6 +185,13 @@ const ProductCard = ({ product }) => {
               <div className="shimmer mb-1" />
             )}
           </Link>
+          {/* Verified Badge for Approved Products */}
+          {product.status === 'approved' && (
+            <div className="absolute top-2 right-2 bg-green-100 text-green-600 px-2 py-1 rounded-full flex items-center gap-1 text-xs">
+              <i className="bx bxs-check-circle text-green-600"></i>
+              <span>Verified</span>
+            </div>
+          )}
           <button
             onClick={handleFavorite}
             className="absolute bottom-2 left-2 bg-white rounded-full px-2 py-1 border border-gray-300 flex items-center"

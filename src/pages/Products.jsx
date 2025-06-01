@@ -10,7 +10,6 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Map Firestore category to categoryId for filtering
   const categoryMap = useMemo(
     () => ({
       'tablet & phones': 1,
@@ -33,10 +32,16 @@ const Products = () => {
       try {
         setLoading(true);
         const querySnapshot = await getDocs(collection(db, 'products'));
+        console.log('Total products fetched from Firestore:', querySnapshot.docs.length);
         const products = querySnapshot.docs
           .map((doc) => {
             const data = doc.data();
-            // Normalize imageUrl
+            const productStatus = data.status || 'pending';
+            if (productStatus !== 'approved') {
+              console.log(`Product ${doc.id} not approved, skipping (status: ${productStatus})`, data);
+              return null;
+            }
+
             let imageUrl;
             if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')) {
               imageUrl = data.imageUrl;
@@ -48,7 +53,7 @@ const Products = () => {
             ) {
               imageUrl = data.imageUrls[0];
             } else {
-              imageUrl = null; // Trigger shimmer in ProductCard
+              imageUrl = null;
               console.warn(`Product ${doc.id} has no valid imageUrl or imageUrls`, {
                 id: doc.id,
                 name: data.name,
@@ -56,7 +61,7 @@ const Products = () => {
                 imageUrls: data.imageUrls,
               });
             }
-            // Validate critical fields with defaults
+
             return {
               id: doc.id,
               name: data.name || 'Unknown Product',
@@ -73,9 +78,11 @@ const Products = () => {
               seller: data.seller || { name: data.sellerName || 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || 0,
               reviews: data.reviews || [],
+              status: productStatus,
             };
           })
           .filter((product) => {
+            if (!product) return false;
             if (!product.id) {
               console.error('Filtered out product with invalid id:', product);
               return false;
@@ -83,7 +90,11 @@ const Products = () => {
             return true;
           });
 
-        console.log('Fetched products from Firestore:', products);
+        console.log('Fetched approved products from Firestore:', products);
+        if (products.length === 0) {
+          console.warn('No approved products found in Firestore. Check if products have status: "approved".');
+          setError('No approved products available at the moment.');
+        }
         setInitialProducts(products);
         setFilteredProducts(products);
       } catch (err) {
@@ -113,15 +124,14 @@ const Products = () => {
         return withinPriceRange && inSelectedCategories && matchesSearch;
       });
 
-      // Apply sorting
       if (sortOption === 'price-low-high') {
         updatedProducts.sort((a, b) => a.price - b.price);
       } else if (sortOption === 'price-high-low') {
-        updatedProducts.sort((a, b) => b.price - b.price);
+        updatedProducts.sort((a, b) => b.price - a.price);
       } else if (sortOption === 'alpha-asc') {
         updatedProducts.sort((a, b) => a.name.localeCompare(b.name));
       } else if (sortOption === 'alpha-desc') {
-        updatedProducts.sort((a, b) => b.name.localeCompare(b.name));
+        updatedProducts.sort((a, b) => b.name.localeCompare(a.name));
       }
 
       console.log('Updated filtered products:', updatedProducts);

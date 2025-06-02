@@ -39,6 +39,8 @@ import AdminVendors from '/src/admin/AdminVendors';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import AllPolicies from './pages/AllPolicies';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
@@ -121,6 +123,8 @@ function App() {
           <Route path="/health-beauty" element={<HealthBeauty />} />
           <Route path="/smart-watches" element={<SmartWatches />} />
           <Route path="/computers-accessories" element={<ComputerAccessories />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/privacy-policy/:type" element={<AllPolicies />} />
 
           {/* === Previously Protected User Routes (Now Open) === */}
           <Route path="/cart" element={<Cart />} />

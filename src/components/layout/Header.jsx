@@ -257,12 +257,12 @@ const Header = () => {
               Hi, {getDisplayName()}
             </Link>
           ) : (
-            <div>
-              <Link to="/login" className="hover:text-gray-300 text-xs sm:text-sm">
+            <div className='flex items-center'>
+              <Link to="/login" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
                 Login  
               </Link>
                |
-              <Link to="/signup" className="hover:text-gray-300 text-xs sm:text-sm">
+              <Link to="/signup" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
                 Sign In
               </Link>
             </div>
@@ -304,8 +304,12 @@ const Header = () => {
           </button>
         </div>
       </div>
+      
+      <div className="block sm:hidden pt-16">
+        <FreeShipping />
+      </div>
 
-      <div className="block sm:hidden pt-16 px-2 pb-3">
+      <div className="block sm:hidden px-2 mt-2">
         <div className="relative w-full">
           <input
             type="text"
@@ -364,10 +368,6 @@ const Header = () => {
             </Link>
           ))}
         </div>
-      </div>
-
-      <div className="block sm:hidden">
-        <FreeShipping />
       </div>
 
       <div className="hidden sm:block">
@@ -543,13 +543,23 @@ const Header = () => {
                 </Link>
               ))}
               {!user && (
+                <div className="flex just items-center mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80">
                 <Link
                   to="/login"
-                  className="mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80"
+                  className=""
                   onClick={() => setSidebarOpen(false)}
                 >
-                  Login | Sign Up
+                  Login
                 </Link>
+                |
+                <Link
+                  to="/register"
+                  className=""
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Signup
+                </Link>
+                </div>
               )}
               {user && (
                 <Link

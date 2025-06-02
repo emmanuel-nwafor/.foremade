@@ -9,7 +9,6 @@ import NotFound from './pages/NotFound';
 import BestSelling from './components/product/BestSelling';
 import Product from './pages/Product';
 import AddPhone from './auth/AddPhone';
-import ProtectedRoute from './auth/ProtectedRoute';
 import Cart from './pages/Cart';
 import Favorites from './pages/Favorites';
 import Profile from './profile/Profile';
@@ -32,15 +31,15 @@ import AdminVendors from '/src/admin/AdminVendors';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
-import TabletsPhones from './pages/TabletsPhones'
-import HealthBeauty from './pages/HealthBeauty'
-import Electronics from './pages/Electronics'
-import BabyProducts from './pages/BabyProducts'
-import ComputerAccessories from './pages/ComputerAccessories'
-import GamesFun from './pages/GamesFun'
-import Drinks from './pages/Drinks'
-import HomeKitchen from './pages/HomeKitchen'
-import SmartWatches from './pages/SmartWatches'
+import TabletsPhones from './pages/TabletsPhones';
+import HealthBeauty from './pages/HealthBeauty';
+import Electronics from './pages/Electronics';
+import BabyProducts from './pages/BabyProducts';
+import ComputerAccessories from './pages/ComputerAccessories';
+import GamesFun from './pages/GamesFun';
+import Drinks from './pages/Drinks';
+import HomeKitchen from './pages/HomeKitchen';
+import SmartWatches from './pages/SmartWatches';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -66,7 +65,6 @@ const Layout = ({ children }) => {
     '/seller/login',
   ].includes(location.pathname);
 
-  // Show footer only on profile-related routes
   const showFooter = [
     '/profile',
     '/orders',
@@ -112,160 +110,32 @@ function App() {
           <Route path="/smart-watches" element={<SmartWatches />} />
           <Route path="/computers-accessories" element={<ComputerAccessories />} />
 
-
-          {/* === Protected User Routes === */}
+          {/* === Previously Protected User Routes (Now Open) === */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route
-            path="/favorites"
-            element={
-              <ProtectedRoute>
-                <Favorites />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order-confirmation"
-            element={
-              <ProtectedRoute>
-                <OrderConfirmation />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <Orders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/address"
-            element={
-              <ProtectedRoute>
-                <Address />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/setting"
-            element={
-              <ProtectedRoute>
-                <Setting />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/order-confirmation" element={<OrderConfirmation />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/address" element={<Address />} />
+          <Route path="/setting" element={<Setting />} />
+          <Route path="/smile" element={<Wallet />} />
 
-          <Route
-            path="/smile"
-            element={
-              <ProtectedRoute>
-                <Wallet />
-              </ProtectedRoute>
-            }
-          />
+          {/* === Previously Protected Seller Routes (Now Open) === */}
+          <Route path="/sell" element={<Dashboard />} />
+          <Route path="/sellers/products" element={<SellersProducts />} />
+          <Route path="/products-upload" element={<SellerProductUpload />} />
+          <Route path="/products-gallery" element={<SellerProductGallery />} />
+          <Route path="/sellers/orders" element={<UsersOrdersPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
 
-          {/* === Seller Routes (Protected) === */}
-          <Route
-            path="/sell"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sellers/products"
-            element={
-              <ProtectedRoute>
-                <SellersProducts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/products-upload"
-            element={
-              <ProtectedRoute>
-                <SellerProductUpload />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/products-gallery"
-            element={
-              <ProtectedRoute>
-                <SellerProductGallery />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sellers/orders"
-            element={
-              <ProtectedRoute>
-                <UsersOrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* === Admin Routes (Protected) === */}
+          {/* === Previously Protected Admin Routes (Now Open) === */}
           <Route path="/admin" element={<Admin />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute>
-                <AdminUsers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/admins"
-            element={
-              <ProtectedRoute>
-                <AdminAdmins />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/vendors"
-            element={
-              <ProtectedRoute>
-                <AdminVendors />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/products"
-            element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/admins" element={<AdminAdmins />} />
+          <Route path="/admin/vendors" element={<AdminVendors />} />
+          <Route path="/admin/products" element={<Admin />} />
 
           {/* === Fallback Route === */}
           <Route path="*" element={<NotFound />} />

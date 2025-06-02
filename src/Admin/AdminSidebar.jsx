@@ -1,21 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '/src/firebase';
-import { Link, useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
+import { Link } from 'react-router-dom';
 import logo from '/src/assets/logi.png';
 
 export default function AdminSidebar() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      if (!currentUser) {
-        navigate('/admin/login');
-      }
-    });
-    return () => unsubscribe();
-  }, [navigate]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -25,15 +13,6 @@ export default function AdminSidebar() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      navigate('/admin/login');
-    } catch (err) {
-      console.error('Error signing out:', err);
-    }
-  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -112,7 +91,6 @@ export default function AdminSidebar() {
             <li>
               <button
                 onClick={() => {
-                  handleSignOut();
                   if (window.innerWidth < 768) setIsSidebarOpen(false);
                 }}
                 className="flex items-center w-full p-3 hover:bg-gray-700 transition-colors text-left"

@@ -482,10 +482,14 @@ const Product = () => {
           .main-image-container {
             position: relative;
             width: 100%;
-            height: 24rem;
+            height: 0;
+            padding-top: 100%; /* Creates a perfect square (100% of width) */
             overflow: hidden;
           }
           .main-image-container img, .main-image-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;

@@ -100,19 +100,28 @@ export default function SellerSidebar() {
                 onClick={toggleRegisterDropdown}
                 className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700"
               >
-                <i className="bx bx-box text-lg mr-2"></i>Register
+                <i className="bx bx-registered text-lg mr-2"></i>Register
                 <i className={`bx ${isRegisterDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm`}></i>
               </button>
               {isRegisterDropdownOpen && (
                 <div className="ml-6 space-y-1 mt-1">
-                  <Link to="/sellers/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-list-ul text-lg mr-2"></i>Pro Seller
+                  <Link to="/sellers-guide" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bxl-product-hunt text-lg mr-2"></i>Pro Seller
                   </Link>
                   <Link to="/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-image-alt text-lg mr-2"></i>Seller
+                    <i className="bx bx-select-multiple text-lg mr-2"></i>Seller
                   </Link>
                 </div>
               )}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Your wallet</h3>
+            <div>
+              <Link to="/smile"
+                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700">
+                <i className="bx bx-wallet text-lg mr-2"></i>Wallet
+              </Link>
             </div>
           </div>
         </nav>

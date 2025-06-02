@@ -206,7 +206,7 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <Link to="/products" className="m-2 hover:text-gray-300">Shop</Link>
-          <Link to="/products-upload" className="m-2 hover:text-gray-300">Sell</Link>
+          <Link to="/dashboard" className="m-2 hover:text-gray-300">Sell</Link>
           <Link to="/smile" className="m-2 hover:text-gray-300">Smile</Link>
           <div className="relative group">
             <button

@@ -6,26 +6,19 @@ import { toast } from 'react-toastify';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const ProductCard = ({ product }) => {
+  console.log('ProductCard received product:', product);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [imageUrl, setImageUrl] = useState(null); // null for shimmer effect
-  const [imageFailed, setImageFailed] = useState(false); // Track if image load failed
+  const [imageUrl, setImageUrl] = useState('/images/placeholder.jpg');
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     const fetchImageAndFavorites = async () => {
-      // Skip if product is invalid or not approved
-      if (!product || typeof product !== 'object' || product.status !== 'approved') {
-        console.log('Product not approved or invalid, skipping render:', product);
+      if (!product || typeof product !== 'object' || !product.id || product.status !== 'approved') {
+        console.log('Product not approved, invalid, or missing ID:', { productId: product?.id, status: product?.status });
         setIsFavorited(false);
         setFavoriteCount(0);
-        setImageUrl(null);
-        return;
-      }
-
-      if (!product?.id) {
-        setIsFavorited(false);
-        setFavoriteCount(0);
-        setImageUrl(null); // Shimmer effect
+        setImageUrl('/images/placeholder.jpg');
         return;
       }
 
@@ -34,29 +27,24 @@ const ProductCard = ({ product }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Firestore product data:', data); // Debug Firestore data
-          // Set favorite status
+          console.log('Firestore product data:', { id: product.id, status: data.status, imageUrls: data.imageUrls, favoritedBy: data.favoritedBy, favoriteCount: data.favoriteCount });
           const userId = auth.currentUser?.uid;
-          setIsFavorited(userId && data.favoritedBy?.includes(userId) || false);
+          setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
-          // Set image URL
-          const validImage =
-            Array.isArray(data.imageUrls) &&
-            data.imageUrls.length > 0 &&
-            typeof data.imageUrls[0] === 'string' &&
-            data.imageUrls[0].startsWith('https://')
-              ? data.imageUrls[0]
-              : null; // Shimmer effect if invalid
+          const validImage = Array.isArray(data.imageUrls) && data.imageUrls.length > 0 && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://') 
+            ? data.imageUrls[0] 
+            : '/images/placeholder.jpg';
+          console.log('Setting imageUrl to:', validImage);
           setImageUrl(validImage);
           setImageFailed(false);
         } else {
           console.warn('Product not found in Firestore:', product.id);
-          setImageUrl(null); // Shimmer effect
+          setImageUrl('/images/placeholder.jpg');
         }
       } catch (err) {
         console.error('Error fetching product data:', err);
         toast.error('Failed to load product data.');
-        setImageUrl(null); // Shimmer effect
+        setImageUrl('/images/placeholder.jpg');
       }
     };
     fetchImageAndFavorites();
@@ -115,14 +103,10 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Show sizes only for Foremade Fashion category
   const showSizes =
     product?.category?.toLowerCase() === 'foremade fashion' &&
     Array.isArray(product.sizes) &&
     product.sizes.length > 0;
-
-  // Only render if imageUrl is set (indicating a valid, approved product)
-  if (!imageUrl) return null;
 
   return (
     <div>
@@ -160,32 +144,21 @@ const ProductCard = ({ product }) => {
       <div className="grid">
         <div className="relative">
           <Link to={`/product/${product.id}`}>
-            {imageUrl && !imageFailed ? (
+            {imageFailed ? (
+              <div className="shimmer mb-1" />
+            ) : (
               <img
                 src={imageUrl}
                 alt={product.name || 'Product'}
                 className="h-[300px] w-[300px] rounded-lg object-cover mb-1"
                 onError={() => {
-                  console.warn('Image load error, falling back to shimmer:', {
-                    productId: product.id,
-                    imageUrl: imageUrl,
-                    name: product.name,
-                  });
+                  console.warn('Image load error, falling back to shimmer:', { productId: product.id, imageUrl, name: product.name });
                   setImageFailed(true);
                 }}
-                onLoad={() => {
-                  console.log('Image loaded successfully:', {
-                    productId: product.id,
-                    imageUrl: imageUrl,
-                    name: product.name,
-                  });
-                }}
+                onLoad={() => console.log('Image loaded:', { productId: product.id, imageUrl, name: product.name })}
               />
-            ) : (
-              <div className="shimmer mb-1" />
             )}
           </Link>
-          {/* Verified Badge for Approved Products */}
           {product.status === 'approved' && (
             <div className="absolute top-2 right-2 bg-green-100 text-green-600 px-2 py-1 rounded-full flex items-center gap-1 text-xs">
               <i className="bx bxs-check-circle text-green-600"></i>
@@ -196,14 +169,8 @@ const ProductCard = ({ product }) => {
             onClick={handleFavorite}
             className="absolute bottom-2 left-2 bg-white rounded-full px-2 py-1 border border-gray-300 flex items-center"
           >
-            <i
-              className={`bx ${isFavorited ? 'bx-heart text-gray-500' : 'bx-heart text-slate-500'} text-lg`}
-            ></i>
-            {favoriteCount > 0 && (
-              <span className="text-slate-600 text-sm font-bold rounded-full px-1">
-                {favoriteCount}
-              </span>
-            )}
+            <i className={`bx ${isFavorited ? 'bx-heart text-gray-500' : 'bx-heart text-slate-500'} text-lg`}></i>
+            {favoriteCount > 0 && <span className="text-slate-600 text-sm font-bold rounded-full px-1">{favoriteCount}</span>}
           </button>
         </div>
         <div className="flex flex-col w-full">
@@ -211,10 +178,7 @@ const ProductCard = ({ product }) => {
             <div>
               <h3 className="text-sm mb-1 text-gray-800">{truncateName(product.name)}</h3>
               <p className="text-amber-600 text-sm">
-                ₦{(product.price || 0).toLocaleString('en-NG', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                ₦{(product.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <AddToCartButton productId={product.id} />
@@ -224,17 +188,10 @@ const ProductCard = ({ product }) => {
               {showSizes ? (
                 <div className="flex flex-wrap gap-1">
                   {product.sizes.map((size, index) => (
-                    <span
-                      key={index}
-                      className="text-md text-gray-700 mt-1 rounded"
-                    >
-                      {size}
-                    </span>
+                    <span key={index} className="text-md text-gray-700 mt-1 rounded">{size}</span>
                   ))}
                 </div>
-              ) : (
-                <div className="text-xs text-gray-600">No sizes available</div>
-              )}
+              ) : <div className="text-xs text-gray-600">No sizes available</div>}
             </div>
           </div>
         </div>

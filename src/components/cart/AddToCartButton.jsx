@@ -34,7 +34,7 @@ const AddToCartButton = ({ productId }) => {
         className={`rounded-full px-2 py-1 text-white focus:outline-none ml-2 transition-all duration-200 ${
           loading
             ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-[#06213e] hover:bg-blue-950'
+            : 'bg-[#000] hover:bg-blue-950'
         }`}
         aria-label="Add to cart"
       >

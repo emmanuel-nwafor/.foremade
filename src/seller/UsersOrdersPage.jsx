@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SellerSidebar from './SellerSidebar';
-import { vendorAuth, db } from '../firebase';
+import { auth, db } from '../firebase';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,10 +14,9 @@ export default function UsersOrdersPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
-      vendorAuth,
+      auth,
       async (user) => {
         if (user) {
-          console.log('Vendor authenticated:', { uid: user.uid, email: user.email });
           try {
             const ordersQuery = query(
               collection(db, 'orders'),
@@ -144,7 +143,7 @@ export default function UsersOrdersPage() {
             <div className="text-center py-8">
               <p className="text-gray-600 text-lg">No orders found.</p>
               <p className="mt-2">
-                <Link to="/seller/products" className="text-blue-600 hover:underline">
+                <Link to="/products-upload" className="text-blue-600 hover:underline">
                   Upload products to start receiving orders
                 </Link>
               </p>
@@ -200,7 +199,7 @@ export default function UsersOrdersPage() {
                               {order.items && order.items.length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm text-gray-600">
                                   {order.items
-                                    .filter((item) => item.sellerId === vendorAuth.currentUser?.uid)
+                                    .filter((item) => item.sellerId === auth.currentUser?.uid)
                                     .map((item, index) => (
                                       <li key={index}>
                                         {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.paymentGateway)}

@@ -31,7 +31,7 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="flex-1 p-4">
-          <SellersProducts />
+          
         </div>
       </div>
     </div>

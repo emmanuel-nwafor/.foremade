@@ -12,60 +12,35 @@ export default function TrendingFashion() {
 
   const category = 'Fashion';
   const categoryId = 2;
-  const gadgetCategories = [
-    'tablet & phones', 
-    'computers & accessories', 
-    'electronics', 
-    'smart watches', 
-    'game & fun'
-  ];
   const fashionCategories = [
     'foremade fashion',
     'clothing',
     'accessories',
     'footwear',
     'jewelry',
-    'bags & wallets'
+    'bags & wallets',
   ];
 
   const fetchTrendingProducts = async (categories) => {
     try {
       setLoading(true);
       setError(null);
-      const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', categories));
+      const q = query(
+        collection(db, 'products'),
+        where('status', '==', 'approved'),
+        where('category', 'in', categories)
+      );
       const querySnapshot = await getDocs(q);
-      const allProducts = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return { id: doc.id, ...data };
-      });
-      console.log('All fetched products:', allProducts);
+      const allProducts = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log('All fetched products (Trending Fashion):', allProducts);
 
-      const productsData = allProducts
-        .map((doc) => {
-          const data = doc;
-          let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
-            ? data.imageUrl
-            : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
-            ? data.imageUrls[0]
-            : '/images/placeholder.jpg';
-          return {
-            id: doc.id,
-            name: data.name || 'Unnamed Product',
-            description: data.description || '',
-            price: data.price || 0,
-            stock: data.stock || 0,
-            category: data.category || (categories.includes('tablet & phones') ? 'electronics' : 'foremade fashion'),
-            categoryId: categories.some(c => gadgetCategories.includes(c.toLowerCase())) ? 3 : 2,
-            colors: data.colors || [],
-            sizes: data.sizes || [],
-            condition: data.condition || '',
-            imageUrl,
-            sellerId: data.sellerId || '',
-            rating: data.rating || Math.random() * 2 + 3,
-          };
-        })
+      // Filter products with valid stock and sort by rating
+      const filteredProducts = allProducts
         .filter((product) => {
-          if (product.stock < 10) {
+          if ((product.stock || 0) < 10) {
             console.warn('Filtered out product with low stock:', {
               id: product.id,
               name: product.name,
@@ -73,22 +48,20 @@ export default function TrendingFashion() {
             });
             return false;
           }
-          const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
-          if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-            console.warn('Filtered out product with invalid imageUrl:', {
-              id: product.id,
-              name: product.name,
-              imageUrl: product.imageUrl,
-            });
-            return false;
-          }
           return true;
         })
-        .sort((a, b) => b.rating - a.rating)
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 10);
 
-      console.log(`Fetched ${categories.length > 1 ? 'combined' : category} products:`, productsData);
-      return productsData.length > 0 ? productsData : [];
+      console.log(`Fetched ${category} products:`, filteredProducts);
+
+      if (filteredProducts.length === 0) {
+        console.warn('No products passed the filters (Trending Fashion). Relaxing stock filter...');
+        const relaxedProducts = allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
+        console.log('Products with relaxed stock filter (Trending Fashion):', relaxedProducts);
+        return relaxedProducts;
+      }
+      return filteredProducts;
     } catch (err) {
       console.error(`Error loading products:`, {
         message: err.message,

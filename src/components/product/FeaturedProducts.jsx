@@ -14,7 +14,7 @@ export default function FeaturedProducts() {
     'drinks & categories',
     'health & beauty',
     'game & fun',
-    'computers & accessories'
+    'computers & accessories',
   ];
 
   useEffect(() => {
@@ -22,40 +22,22 @@ export default function FeaturedProducts() {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', categories));
+        const q = query(
+          collection(db, 'products'),
+          where('status', '==', 'approved'),
+          where('category', 'in', categories)
+        );
         const querySnapshot = await getDocs(q);
-        const allProducts = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return { id: doc.id, ...data };
-        });
+        const allProducts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         console.log('All fetched products (Featured):', allProducts);
 
-        const productsData = allProducts
-          .map((doc) => {
-            const data = doc;
-            let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
-              ? data.imageUrl
-              : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
-              ? data.imageUrls[0]
-              : '/images/placeholder.jpg';
-            return {
-              id: doc.id,
-              name: data.name || 'Unnamed Product',
-              description: data.description || '',
-              price: data.price || 0,
-              stock: data.stock || 0,
-              category: data.category || 'Uncategorized',
-              categoryId: 0,
-              colors: data.colors || [],
-              sizes: data.sizes || [],
-              condition: data.condition || '',
-              imageUrl,
-              sellerId: data.sellerId || '',
-              rating: data.rating || Math.random() * 2 + 3,
-            };
-          })
+        // Filter products with valid stock and randomize
+        const filteredProducts = allProducts
           .filter((product) => {
-            if (product.stock < 10) {
+            if ((product.stock || 0) < 10) {
               console.warn('Filtered out product with low stock:', {
                 id: product.id,
                 name: product.name,
@@ -63,22 +45,20 @@ export default function FeaturedProducts() {
               });
               return false;
             }
-            const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
-            if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-              console.warn('Filtered out product with invalid imageUrl:', {
-                id: product.id,
-                name: product.name,
-                imageUrl: product.imageUrl,
-              });
-              return false;
-            }
             return true;
           })
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 8);
+          .sort(() => Math.random() - 0.5);
 
-        console.log('Processed featured products:', productsData);
-        setProducts(productsData);
+        console.log('Fetched products (Featured - After Filter):', filteredProducts);
+
+        if (filteredProducts.length === 0) {
+          console.warn('No products passed the filters (Featured). Relaxing stock filter...');
+          const relaxedProducts = allProducts.sort(() => Math.random() - 0.5);
+          console.log('Products with relaxed stock filter (Featured):', relaxedProducts);
+          setProducts(relaxedProducts.slice(0, 8));
+        } else {
+          setProducts(filteredProducts.slice(0, 8));
+        }
       } catch (err) {
         console.error('Error loading featured products:', {
           message: err.message,

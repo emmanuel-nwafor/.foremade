@@ -1,23 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { vendorAuth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { Link } from 'react-router-dom';
 import logo from '../assets/logi.png';
 
 export default function SellerSidebar() {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(vendorAuth);
-      navigate('/login');
-    } catch (error) {
-      console.error('Sign out failed:', error);
-    }
-  };
+  const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -26,6 +15,10 @@ export default function SellerSidebar() {
   const toggleProductsDropdown = () => {
     setIsProductsDropdownOpen(!isProductsDropdownOpen);
   };
+
+  const toggleRegisterDropdown = () => {
+    setIsRegisterDropdownOpen(!isRegisterDropdownOpen)
+  }
 
   return (
     <>
@@ -46,7 +39,9 @@ export default function SellerSidebar() {
         } md:translate-x-0`}
       >
         <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <img src={logo} alt="Foremade logo" className="w-40" />
+          <Link to="/">
+            <img src={logo} alt="Foremade logo" className="w-40" />
+          </Link>
           {/* Close Button (Mobile Only) */}
           <button className="md:hidden p-2" onClick={toggleSidebar}>
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,20 +94,28 @@ export default function SellerSidebar() {
             </div>
           </div>
           <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Help & Support</h3>
-            <Link to="/inbox" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-message text-lg mr-2"></i>Inbox
-            </Link>
+            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Registering with us</h3>
+            <div>
+              <button
+                onClick={toggleRegisterDropdown}
+                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700"
+              >
+                <i className="bx bx-box text-lg mr-2"></i>Register
+                <i className={`bx ${isRegisterDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm`}></i>
+              </button>
+              {isRegisterDropdownOpen && (
+                <div className="ml-6 space-y-1 mt-1">
+                  <Link to="/sellers/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bx-list-ul text-lg mr-2"></i>Pro Seller
+                  </Link>
+                  <Link to="/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
+                    <i className="bx bx-image-alt text-lg mr-2"></i>Seller
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </nav>
-        <div className="p-4 border-t border-slate-700">
-          <button
-            onClick={handleSignOut}
-            className="w-full bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors duration-200"
-          >
-            <i className="bx bx-log-out text-lg mr-2"></i>Sign Out
-          </button>
-        </div>
       </div>
 
       {/* Overlay (Mobile Only, when sidebar is open) */}

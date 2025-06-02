@@ -63,6 +63,7 @@ const Layout = ({ children }) => {
     '/sellers/orders',
     '/sellers/products',
     '/seller/login',
+    '/dashboard',
   ].includes(location.pathname);
 
   const showFooter = [
@@ -126,6 +127,7 @@ function App() {
           <Route path="/sellers/products" element={<SellersProducts />} />
           <Route path="/products-upload" element={<SellerProductUpload />} />
           <Route path="/products-gallery" element={<SellerProductGallery />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sellers/orders" element={<UsersOrdersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
 

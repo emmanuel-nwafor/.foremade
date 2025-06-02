@@ -13,11 +13,11 @@ export default function TrendingGadgets() {
   const category = 'Gadgets';
   const categoryId = 3;
   const firestoreCategories = [
-    'tablet & phones', 
-    'computers & accessories', 
-    'electronics', 
-    'smart watches', 
-    'game & fun'
+    'tablet & phones',
+    'computers & accessories',
+    'electronics',
+    'smart watches',
+    'game & fun',
   ];
 
   useEffect(() => {
@@ -25,40 +25,22 @@ export default function TrendingGadgets() {
       try {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'products'), where('status', '==', 'approved'), where('category', 'in', firestoreCategories));
+        const q = query(
+          collection(db, 'products'),
+          where('status', '==', 'approved'),
+          where('category', 'in', firestoreCategories)
+        );
         const querySnapshot = await getDocs(q);
-        const allProducts = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return { id: doc.id, ...data };
-        });
+        const allProducts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         console.log('All fetched products (Gadgets):', allProducts);
 
-        const productsData = allProducts
-          .map((doc) => {
-            const data = doc;
-            let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
-              ? data.imageUrl
-              : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
-              ? data.imageUrls[0]
-              : '/images/placeholder.jpg';
-            return {
-              id: doc.id,
-              name: data.name || 'Unnamed Product',
-              description: data.description || '',
-              price: data.price || 0,
-              stock: data.stock || 0,
-              category: data.category || 'electronics',
-              categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? categoryId : 3,
-              colors: data.colors || [],
-              sizes: data.sizes || [],
-              condition: data.condition || '',
-              imageUrl,
-              sellerId: data.sellerId || '',
-              rating: data.rating || Math.random() * 2 + 3,
-            };
-          })
+        // Filter products with valid stock and sort by rating
+        const filteredProducts = allProducts
           .filter((product) => {
-            if (product.stock < 10) {
+            if ((product.stock || 0) < 10) {
               console.warn('Filtered out product with low stock (Gadgets):', {
                 id: product.id,
                 name: product.name,
@@ -66,62 +48,19 @@ export default function TrendingGadgets() {
               });
               return false;
             }
-            const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
-            if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-              console.warn('Filtered out product with invalid imageUrl (Gadgets):', {
-                id: product.id,
-                name: product.name,
-                imageUrl: product.imageUrl,
-              });
-              return false;
-            }
             return true;
           })
-          .sort((a, b) => b.rating - a.rating);
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
-        console.log(`Fetched ${category} products:`, productsData);
-        if (productsData.length === 0) {
-          console.warn('No products passed the filters (Gadgets). Relaxing stock filter to debug...');
-          const relaxedProductsData = allProducts
-            .map((doc) => {
-              const data = doc;
-              let imageUrl = data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')
-                ? data.imageUrl
-                : Array.isArray(data.imageUrls) && data.imageUrls[0] && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
-                ? data.imageUrls[0]
-                : '/images/placeholder.jpg';
-              return {
-                id: doc.id,
-                name: data.name || 'Unnamed Product',
-                description: data.description || '',
-                price: data.price || 0,
-                stock: data.stock || 0,
-                category: data.category || 'electronics',
-                categoryId: firestoreCategories.map(c => c.toLowerCase()).includes(data.category?.trim().toLowerCase()) ? categoryId : 3,
-                colors: data.colors || [],
-                sizes: data.sizes || [],
-                condition: data.condition || '',
-                imageUrl,
-                sellerId: data.sellerId || '',
-                rating: data.rating || Math.random() * 2 + 3,
-              };
-            })
-            .filter((product) => {
-              const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
-              if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-                console.warn('Filtered out product with invalid imageUrl (relaxed filter, Gadgets):', {
-                  id: product.id,
-                  name: product.name,
-                  imageUrl: product.imageUrl,
-                });
-                return false;
-              }
-              return true;
-            });
-          console.log('Products with relaxed stock filter (Gadgets):', relaxedProductsData);
-          setTrendingProducts(relaxedProductsData.sort((a, b) => b.rating - a.rating));
+        console.log(`Fetched ${category} products:`, filteredProducts);
+
+        if (filteredProducts.length === 0) {
+          console.warn('No products passed the filters (Gadgets). Relaxing stock filter...');
+          const relaxedProducts = allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          console.log('Products with relaxed stock filter (Gadgets):', relaxedProducts);
+          setTrendingProducts(relaxedProducts);
         } else {
-          setTrendingProducts(productsData);
+          setTrendingProducts(filteredProducts);
         }
       } catch (err) {
         console.error(`Error loading ${category} products:`, {

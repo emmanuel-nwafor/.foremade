@@ -200,7 +200,7 @@ const Header = () => {
             <Link to="/">
               <img
                 src={logo}
-                className="h-10 sm:h-[56px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+                className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
                 alt="Foremade"
               />
             </Link>

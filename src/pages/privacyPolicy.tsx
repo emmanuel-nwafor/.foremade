@@ -215,19 +215,19 @@ const PrivacyPolicy = () => {
       
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+        <div className="bg-gray-100">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="text-center">
               <div className="flex justify-center mb-6">
-                <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
-                  <i className="bx bx-shield text-4xl text-orange-400"></i>
+                <div className="bg-blue-100 p-4 rounded-2xl">
+                  <i className="bx bx-shield text-4xl text-blue-600"></i>
                 </div>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
                 Foremade Global Privacy Notice
               </h1>
-              <div className="bg-orange-500/20 px-4 py-2 rounded-full inline-block backdrop-blur-sm">
-                <p className="text-orange-200 font-medium">Effective Date: June 2, 2025</p>
+              <div className="bg-orange-100 px-4 py-2 rounded-full inline-block">
+                <p className="text-orange-600 font-medium">Effective Date: June 2, 2025</p>
               </div>
             </div>
           </div>

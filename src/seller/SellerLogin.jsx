@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { vendorAuth as auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import logo from '../assets/logi.png';
 
@@ -23,10 +23,11 @@ export default function SellerLogin() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      navigate('/vendor/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      console.log('Vendor logged in successfully:', userCredential.user.uid);
+      navigate('/seller/wallet');
     } catch (err) {
-      console.error(err);
+      console.error('Login error:', err);
       setError('Invalid email or password. Please try again.');
       setLoading(false);
     }
@@ -49,7 +50,7 @@ export default function SellerLogin() {
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Vendor Login</h2>
           <p className="text-gray-600 mb-6">
-            Don’t have an account?{' '}
+            Don't have an account?{' '}
             <Link to="/register" className="text-blue-600 hover:underline">
               Sign Up
             </Link>

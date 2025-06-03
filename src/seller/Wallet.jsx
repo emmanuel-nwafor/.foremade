@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { vendorAuth as auth, vendorDb as db } from '../firebase';
+import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { 
   collection, 
   doc, 
@@ -12,19 +12,20 @@ import {
   onSnapshot,
   serverTimestamp,
   orderBy,
-  limit 
+  limit,
+  getDoc
 } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import SellerSidebar from './SellerSidebar';
 
 // Paystack configuration
-const PAYSTACK_PUBLIC_KEY = process.env.REACT_APP_PAYSTACK_PUBLIC_KEY;
-const PAYSTACK_TEST_KEY = process.env.REACT_APP_PAYSTACK_TEST_KEY;
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+const PAYSTACK_TEST_KEY = import.meta.env.VITE_PAYSTACK_TEST_KEY;
 const PAYSTACK_API_URL = 'https://api.paystack.co';
 
 // Function to fetch banks from Paystack API
-const fetchBanks = async () => {
+const fetchBanksFromPaystack = async () => {
   try {
     const response = await fetch(`${PAYSTACK_API_URL}/bank`, {
       headers: {
@@ -33,9 +34,13 @@ const fetchBanks = async () => {
       }
     });
     
+    console.log('Paystack API Response:', response);
+    
     if (!response.ok) throw new Error('Failed to fetch banks');
     
     const data = await response.json();
+    console.log('Paystack API Data:', data);
+    
     if (data.status) {
       return data.data;
     }
@@ -68,7 +73,7 @@ const nigerianBanks = {
 };
 
 export default function Wallet() {
-  const [vendor, setVendor] = useState(null);
+  const { vendor } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0, updatedAt: null });
@@ -81,46 +86,144 @@ export default function Wallet() {
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isVerified, setIsVerified] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(vendor?.email || '');
   const [banks, setBanks] = useState([]);
   const [accountName, setAccountName] = useState('');
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
   useEffect(() => {
-    fetchBanks();
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    let unsubscribeWallet = null;
+    let unsubscribeTransactions = null;
+    let isInitialized = false;
+
+    const checkVendorStatus = async (uid) => {
+      try {
+        if (!uid) {
+          console.log('No UID provided to checkVendorStatus');
+          return false;
+        }
+        console.log('Checking vendor status for:', uid);
+        const vendorRef = doc(db, 'vendors', uid);
+        const vendorDoc = await getDoc(vendorRef);
+        const exists = vendorDoc.exists();
+        console.log('Vendor document exists:', exists);
+        return exists;
+      } catch (err) {
+        console.error('Error checking vendor status:', err);
+        return false;
+      }
+    };
+
+    const handleAuthStateChange = async (user) => {
+      console.log('Auth state change handler called with user:', user?.uid);
+      
       if (user) {
-        setVendor(user);
-        setEmail(user.email || '');
-        listenToWalletData(user.uid);
-        listenToTransactions(user.uid);
+        try {
+          // First check vendor status
+          const isVendor = await checkVendorStatus(user.uid);
+          if (!isVendor) {
+            console.log('Not a valid vendor account:', user.uid);
+            setIsAuthenticated(false);
+            if (!isInitialized) {
+              navigate('/seller/login');
+            }
+            return;
+          }
+
+          console.log('Valid vendor found:', user.uid);
+          setIsAuthenticated(true);
+
+          // Clean up existing listeners
+          if (unsubscribeWallet) {
+            console.log('Cleaning up old wallet listener');
+            unsubscribeWallet();
+          }
+          if (unsubscribeTransactions) {
+            console.log('Cleaning up old transactions listener');
+            unsubscribeTransactions();
+          }
+
+          // Set up new listeners
+          console.log('Setting up new wallet listener for:', user.uid);
+          unsubscribeWallet = listenToWalletData(user.uid);
+          console.log('Setting up new transactions listener for:', user.uid);
+          unsubscribeTransactions = listenToTransactions(user.uid);
+          
+        } catch (err) {
+          console.error('Error in auth state change:', err);
+          setIsAuthenticated(false);
+          if (!isInitialized) {
+            navigate('/seller/login');
+          }
+        }
       } else {
-        setError('Please log in to view your wallet.');
+        console.log('No user in auth state change');
+        setIsAuthenticated(false);
+        if (!isInitialized) {
+          navigate('/seller/login');
+        }
+      }
+      
+      if (!isInitialized) {
+        isInitialized = true;
         setLoading(false);
       }
+    };
+
+    // Initial setup
+    console.log('Setting up Wallet component');
+    console.log('Current auth instance:', auth?.currentUser?.uid);
+
+    // Check for current user immediately
+    const currentUser = auth.currentUser;
+    console.log('Initial auth check - current user:', currentUser?.uid);
+    
+    if (currentUser) {
+      handleAuthStateChange(currentUser);
+    } else {
+      console.log('No current user on initial check');
+      if (!isInitialized) {
+        isInitialized = true;
+        setLoading(false);
+        navigate('/seller/login');
+      }
+    }
+
+    // Set up auth state listener
+    console.log('Setting up auth state listener');
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user?.uid);
+      handleAuthStateChange(user);
     });
 
-    return () => unsubscribeAuth();
-  }, []);
+    // Cleanup function
+    return () => {
+      console.log('Cleaning up auth subscriptions');
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeWallet) unsubscribeWallet();
+      if (unsubscribeTransactions) unsubscribeTransactions();
+    };
+  }, [navigate]);
 
-  const fetchBanks = async () => {
-    try {
-      const banks = await fetchBanks();
-      setBanks(banks);
-    } catch (err) {
-      console.error('Error fetching banks:', err);
-      setError('Failed to load bank list. Please try again later.');
+  // Protect against unauthenticated access
+  useEffect(() => {
+    if (!loading && !isAuthenticated && location.pathname !== '/seller/login') {
+      console.log('Unauthenticated access detected, redirecting to login');
+      navigate('/seller/login');
     }
-  };
+  }, [loading, isAuthenticated, navigate, location.pathname]);
 
   const listenToWalletData = (uid) => {
     const walletRef = doc(db, 'wallets', uid);
-    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+    return onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setWallet({
@@ -128,52 +231,34 @@ export default function Wallet() {
           pendingBalance: data.pendingBalance || 0,
           updatedAt: data.updatedAt?.toDate() || null
         });
-        setLoading(false);
       } else {
         setInitialWallet(uid);
       }
     }, (err) => {
+      console.error('Wallet listener error:', err);
       setError('Failed to load wallet data: ' + err.message);
-      setLoading(false);
     });
-    return unsubscribe;
   };
 
   const listenToTransactions = (uid) => {
-    console.log('Setting up transactions listener for uid:', uid);
-    try {
-      // Simplified query that doesn't require a composite index
-      const q = query(
-        collection(db, 'transactions'),
-        where('userId', '==', uid),
-        limit(50)  // Keep more transactions for the wallet view
-      );
+    const q = query(
+      collection(db, 'transactions'),
+      where('userId', '==', uid),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
 
-      return onSnapshot(q, (querySnapshot) => {
-        console.log('Transactions data updated, count:', querySnapshot.size);
-        const transactions = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || null
-          };
-        });
-        // Sort transactions client-side instead
-        transactions.sort((a, b) => {
-          const dateA = a.createdAt || new Date(0);
-          const dateB = b.createdAt || new Date(0);
-          return dateB - dateA;
-        });
-        setTransactions(transactions);
-      }, (err) => {
-        console.error('Transactions listener error:', err);
-        setError('Failed to load transactions: ' + err.message);
-      });
-    } catch (err) {
-      console.error('Error setting up transactions listener:', err);
-      setError('Error setting up transactions: ' + err.message);
-    }
+    return onSnapshot(q, (querySnapshot) => {
+      const transactions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || null
+      }));
+      setTransactions(transactions);
+    }, (err) => {
+      console.error('Transactions listener error:', err);
+      setError('Failed to load transactions: ' + err.message);
+    });
   };
 
   const setInitialWallet = async (uid) => {
@@ -351,14 +436,14 @@ export default function Wallet() {
       <div className="flex flex-1">
         {/* Sidebar Toggle */}
         <button
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
+          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg"
           onClick={toggleSidebar}
         >
           <i className="bx bx-menu text-xl"></i>
         </button>
 
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-blue-900`}>
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-gray-100`}>
           <SellerSidebar />
         </div>
 

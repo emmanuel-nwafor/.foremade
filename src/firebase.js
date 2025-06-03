@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -20,6 +20,12 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  
+  // Set persistence for user auth
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => console.log('User auth persistence set to local'))
+    .catch(error => console.error('Error setting user auth persistence:', error));
+
   console.log('Firebase initialized successfully for users');
 } catch (error) {
   console.error('Firebase initialization error for users:', error);
@@ -44,6 +50,12 @@ try {
   vendorAuth = getAuth(vendorApp);
   vendorDb = getFirestore(vendorApp);
   vendorStorage = getStorage(vendorApp);
+
+  // Set persistence for vendor auth
+  setPersistence(vendorAuth, browserLocalPersistence)
+    .then(() => console.log('Vendor auth persistence set to local'))
+    .catch(error => console.error('Error setting vendor auth persistence:', error));
+
   console.log('Firebase initialized successfully for vendors');
 } catch (error) {
   console.error('Firebase initialization error for vendors:', error);

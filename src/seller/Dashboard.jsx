@@ -1,181 +1,293 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  addDoc, 
-  query, 
-  where, 
-  onSnapshot,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import SellerSidebar from './SellerSidebar';
 import { Link } from 'react-router-dom';
+import { auth, db } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  getDocs,
+  limit,
+  Timestamp
+} from 'firebase/firestore';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import SellerSidebar from './SellerSidebar';
 
-// Mock Nigerian bank lookup (replace with Paystack API in production)
-const nigerianBanks = {
-  '069': { name: 'Access Bank', code: '069' },
-  '044': { name: 'Access Bank (Diamond)', code: '044' },
-  '050': { name: 'Ecobank Nigeria', code: '050' },
-};
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+// IMPORTANT: This component requires a Firebase composite index on the 'transactions' collection
+// with fields: userId (Ascending), createdAt (Descending), __name__ (Descending)
+// Create the index here: https://console.firebase.google.com/v1/r/project/foremade-backend/firestore/indexes?create_composite=ClVwcm9qZWN0cy9mb3JlbWFkZS1iYWNrZW5kL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy90cmFuc2FjdGlvbnMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
 
 export default function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0 });
-  const [transactions, setTransactions] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState('');
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
-  const [email, setEmail] = useState('');
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  const [wallet, setWallet] = useState({
+    availableBalance: 0,
+    pendingBalance: 0,
+    updatedAt: null
+  });
+  const [orderStats, setOrderStats] = useState({
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    readyToShip: 0,
+    cancelled: 0,
+    delivered: 0,
+    returned: 0
+  });
+  const [salesStats, setSalesStats] = useState({
+    orders: { value: 0, change: 0 },
+    views: { value: 0, change: 0 },
+    conversionRate: { value: 0, change: 0 }
+  });
+  const [salesData, setSalesData] = useState({
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{
+      label: 'Sales',
+      data: [],
+      borderColor: 'rgb(99, 102, 241)',
+      backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      fill: true,
+      tension: 0.4
+    }]
+  });
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    console.log('Dashboard component mounted');
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? 'User logged in' : 'No user');
       if (user) {
         setVendor(user);
-        setEmail(user.email || '');
         listenToWalletData(user.uid);
         listenToTransactions(user.uid);
+        fetchOrderStats(user.uid);
+        fetchSalesStats(user.uid);
+        fetchWeeklySalesData(user.uid);
       } else {
         setError('Please log in to view your dashboard.');
-        setLoading(false);
       }
-    }, (err) => {
-      setError('Authentication error: ' + err.message);
       setLoading(false);
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      console.log('Dashboard component unmounting');
+      unsubscribeAuth();
+    };
   }, []);
 
+  const fetchOrderStats = async (uid) => {
+    try {
+      const ordersRef = collection(db, 'orders');
+      const statuses = ['pending', 'confirmed', 'processing', 'readyToShip', 'cancelled', 'delivered', 'returned'];
+      const stats = {};
+
+      for (const status of statuses) {
+        const q = query(
+          ordersRef,
+          where('sellerId', '==', uid),
+          where('status', '==', status)
+        );
+        const snapshot = await getDocs(q);
+        stats[status] = snapshot.size;
+      }
+
+      setOrderStats(stats);
+    } catch (err) {
+      console.error('Error fetching order stats:', err);
+    }
+  };
+
+  const fetchSalesStats = async (uid) => {
+    try {
+      const now = new Date();
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+      // Fetch orders for this month and last month
+      const ordersRef = collection(db, 'orders');
+      const thisMonthQuery = query(
+        ordersRef,
+        where('sellerId', '==', uid),
+        where('createdAt', '>=', Timestamp.fromDate(thisMonth))
+      );
+      const lastMonthQuery = query(
+        ordersRef,
+        where('sellerId', '==', uid),
+        where('createdAt', '>=', Timestamp.fromDate(lastMonth)),
+        where('createdAt', '<', Timestamp.fromDate(thisMonth))
+      );
+
+      const [thisMonthOrders, lastMonthOrders] = await Promise.all([
+        getDocs(thisMonthQuery),
+        getDocs(lastMonthQuery)
+      ]);
+
+      // Calculate percentage change
+      const thisMonthCount = thisMonthOrders.size;
+      const lastMonthCount = lastMonthOrders.size;
+      const orderChange = lastMonthCount ? ((thisMonthCount - lastMonthCount) / lastMonthCount) * 100 : 0;
+
+      // Similar calculations for views (assuming you have a views collection)
+      // This is a simplified version - you might want to adjust based on your actual data structure
+      const viewsRef = collection(db, 'productViews');
+      const thisMonthViewsQuery = query(
+        viewsRef,
+        where('sellerId', '==', uid),
+        where('viewedAt', '>=', Timestamp.fromDate(thisMonth))
+      );
+      const lastMonthViewsQuery = query(
+        viewsRef,
+        where('sellerId', '==', uid),
+        where('viewedAt', '>=', Timestamp.fromDate(lastMonth)),
+        where('viewedAt', '<', Timestamp.fromDate(thisMonth))
+      );
+
+      const [thisMonthViews, lastMonthViews] = await Promise.all([
+        getDocs(thisMonthViewsQuery),
+        getDocs(lastMonthViewsQuery)
+      ]);
+
+      const thisMonthViewCount = thisMonthViews.size;
+      const lastMonthViewCount = lastMonthViews.size;
+      const viewChange = lastMonthViewCount ? ((thisMonthViewCount - lastMonthViewCount) / lastMonthViewCount) * 100 : 0;
+
+      setSalesStats({
+        orders: { value: thisMonthCount, change: orderChange },
+        views: { value: thisMonthViewCount, change: viewChange },
+        conversionRate: { 
+          value: thisMonthViewCount ? Math.round((thisMonthCount / thisMonthViewCount) * 100) : 0,
+          change: 0 // You might want to calculate this based on your business logic
+        }
+      });
+    } catch (err) {
+      console.error('Error fetching sales stats:', err);
+    }
+  };
+
+  const fetchWeeklySalesData = async (uid) => {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const ordersRef = collection(db, 'orders');
+      const weeklyQuery = query(
+        ordersRef,
+        where('sellerId', '==', uid),
+        where('createdAt', '>=', Timestamp.fromDate(weekAgo))
+      );
+
+      const snapshot = await getDocs(weeklyQuery);
+      const dailySales = new Array(7).fill(0);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const date = data.createdAt.toDate();
+        const dayIndex = date.getDay();
+        dailySales[dayIndex] += data.amount || 0;
+      });
+
+      // Rotate array to start from Monday
+      const rotatedSales = [...dailySales.slice(1), dailySales[0]];
+      const rotatedDays = [...days.slice(1), days[0]];
+
+      setSalesData({
+        labels: rotatedDays,
+        datasets: [{
+          label: 'Sales',
+          data: rotatedSales,
+          borderColor: 'rgb(99, 102, 241)',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          fill: true,
+          tension: 0.4
+        }]
+      });
+    } catch (err) {
+      console.error('Error fetching weekly sales data:', err);
+    }
+  };
+
   const listenToWalletData = (uid) => {
+    console.log('Setting up wallet listener for uid:', uid);
     const walletRef = doc(db, 'wallets', uid);
-    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+    return onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
-        setWallet(docSnap.data());
-        setLoading(false);
+        const data = docSnap.data();
+        console.log('Wallet data updated:', data);
+        setWallet({
+          availableBalance: data.availableBalance || 0,
+          pendingBalance: data.pendingBalance || 0,
+          updatedAt: data.updatedAt?.toDate() || null
+        });
       } else {
-        setInitialWallet(uid);
-        setWallet({ availableBalance: 0, pendingBalance: 0 });
-        setLoading(false);
+        console.log('No wallet document exists for uid:', uid);
       }
     }, (err) => {
-      setError('Failed to fetch wallet data: ' + err.message);
-      setLoading(false);
+      console.error('Wallet listener error:', err);
+      setError('Failed to load wallet data: ' + err.message);
     });
-    return unsubscribe;
   };
 
   const listenToTransactions = (uid) => {
-    const q = query(collection(db, 'transactions'), where('userId', '==', uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const transactionList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTransactions(transactionList);
-    }, (err) => {
-      setError('Failed to fetch transactions: ' + err.message);
-    });
-    return unsubscribe;
-  };
-
-  const setInitialWallet = async (uid) => {
+    console.log('Setting up transactions listener for uid:', uid);
     try {
-      const walletRef = doc(db, 'wallets', uid);
-      await setDoc(walletRef, {
-        availableBalance: 0,
-        pendingBalance: 0,
-        updatedAt: serverTimestamp(),
+      // Simplified query that doesn't require a composite index
+      const q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', uid),
+        limit(5)
+      );
+
+      return onSnapshot(q, (querySnapshot) => {
+        console.log('Transactions data updated, count:', querySnapshot.size);
+        const transactions = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Transaction document:', doc.id, data);
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || null
+          };
+        });
+        // Sort transactions client-side instead
+        transactions.sort((a, b) => {
+          const dateA = a.createdAt || new Date(0);
+          const dateB = b.createdAt || new Date(0);
+          return dateB - dateA;
+        });
+        setRecentTransactions(transactions);
+      }, (err) => {
+        console.error('Transactions listener error:', err);
+        setError('Failed to load transactions: ' + err.message);
       });
     } catch (err) {
-      console.error('Error initializing wallet:', err);
-      setError('Error initializing wallet: ' + err.message);
-    }
-  };
-
-  const verifyBankAccount = () => {
-    const bankCode = accountNumber.slice(0, 3);
-    const bank = nigerianBanks[bankCode];
-    if (bank) {
-      setBankName(bank.name);
-      setIsVerified(true);
-      setMessage('Bank verified successfully.');
-    } else {
-      setBankName('');
-      setIsVerified(false);
-      setMessage('Bank not recognized. Please enter bank name manually.');
-    }
-  };
-
-  const handleWithdraw = async (e) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setMessage('');
-    const amount = parseFloat(withdrawAmount);
-
-    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified && email) {
-      try {
-        const uid = vendor.uid;
-        const walletRef = doc(db, 'wallets', uid);
-        await updateDoc(walletRef, {
-          availableBalance: wallet.availableBalance - amount,
-          pendingBalance: wallet.pendingBalance + amount,
-          updatedAt: serverTimestamp(),
-        });
-
-        // Initiate Paystack transfer (mocked for now)
-        const response = await fetch('/initiate-paystack-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: Math.round(amount * 100),
-            email,
-            bank: { account_number: accountNumber, bank_code: accountNumber.slice(0, 3) },
-            currency: 'NGN',
-            metadata: { userId: uid, description: `Withdrawal to ${bankName}` },
-          }),
-        });
-
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-
-        await addDoc(collection(db, 'transactions'), {
-          userId: uid,
-          type: 'Withdrawal',
-          description: `Withdrawal to ${bankName} (${accountNumber})`,
-          amount: amount,
-          date: new Date().toISOString().split('T')[0],
-          status: 'Pending',
-          createdAt: serverTimestamp(),
-          reference: result.reference || 'mock-ref-' + Date.now(),
-        });
-
-        setMessage(`Withdrawal request of ₦${amount} to ${bankName} (${accountNumber}) submitted. Awaiting processing.`);
-        setShowWithdrawModal(false);
-        setWithdrawAmount('');
-        setAccountNumber('');
-        setBankName('');
-        setIsVerified(false);
-      } catch (err) {
-        setError('Withdrawal failed: ' + err.message);
-      } finally {
-        setIsProcessing(false);
-      }
-    } else {
-      setError('Invalid amount, insufficient balance, unverified bank, or missing email.');
-      setIsProcessing(false);
+      console.error('Error setting up transactions listener:', err);
+      setError('Error setting up transactions: ' + err.message);
     }
   };
 
@@ -183,7 +295,6 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-        <p className="text-gray-600 mt-2">Loading...</p>
       </div>
     );
   }
@@ -191,244 +302,194 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <p className="text-red-600 text-sm mb-4">{error}</p>
-          <p className="text-gray-600">
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Return to Login
-            </Link>
-          </p>
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <p className="text-red-700">{error}</p>
+          <Link to="/login" className="text-blue-600 hover:underline mt-2 inline-block">
+            Return to Login
+          </Link>
         </div>
       </div>
     );
   }
 
-  const totalWithdrawals = transactions.filter(t => t.type === 'Withdrawal').length;
-  const successfulWithdrawals = transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Available').length;
-  const pendingWithdrawals = transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Pending').length;
-  const failedWithdrawals = transactions.filter(t => t.type === 'Withdrawal' && t.status === 'Failed').length;
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <div className="flex flex-1">
-        {/* Toggle button for mobile */}
-        <button
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
-          onClick={toggleSidebar}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
+    <div className="flex min-h-screen bg-gray-50">
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <i className="bx bx-menu text-xl"></i>
+      </button>
 
-        {/* Sidebar */}
-        <div
-          className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-blue-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out`}
-        >
-          <SellerSidebar />
-        </div>
+      <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-white border-r`}>
+        <SellerSidebar />
+      </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Wallet Overview</h2>
+      <div className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-8">Overview</h1>
 
-            {message && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-                {message}
-              </div>
-            )}
-
-            {/* Balance Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-green-600 bg-green-100 px-2 py-1 rounded-full text-sm">Available Balance</span>
+          {/* Balance Section */}
+          <div className="bg-white rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-medium mb-4">Balance</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-50 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i className="bx bx-wallet text-green-600"></i>
+                  </div>
+                  <h3 className="text-lg font-medium">Available Balance</h3>
                 </div>
-                <p className="text-2xl font-bold text-gray-800">₦{wallet.availableBalance.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Withdrawable now</p>
-                <button
-                  onClick={() => setShowWithdrawModal(true)}
-                  disabled={isProcessing}
-                  className={`mt-3 inline-block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-200 text-sm ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  Withdraw Funds
-                </button>
+                <p className="text-3xl font-bold mb-2">₦{wallet.availableBalance.toLocaleString()}</p>
+                <p className="text-gray-600">Withdrawable now</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full text-sm">Pending Balance</span>
+
+              <div className="bg-gray-50 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <i className="bx bx-time text-orange-600"></i>
+                  </div>
+                  <h3 className="text-lg font-medium">Pending Balance</h3>
                 </div>
-                <p className="text-2xl font-bold text-gray-800">₦{wallet.pendingBalance.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Awaiting confirmation</p>
-                <Link
-                  to="/pending-details"
-                  className="mt-3 inline-block bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition duration-200 text-sm"
-                >
-                  View Details
-                </Link>
+                <p className="text-3xl font-bold mb-2">₦{wallet.pendingBalance.toLocaleString()}</p>
+                <p className="text-gray-600">Awaiting confirmation</p>
               </div>
             </div>
+          </div>
 
-            {/* Transaction Stats Section */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
-                <span className="text-blue-600 bg-blue-100 px-2 py-1 rounded-full text-sm">Total Withdrawals</span>
-                <p className="text-xl font-semibold text-gray-800">{totalWithdrawals}</p>
+          {/* Order List */}
+          <div className="bg-white rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-medium mb-4">Order list</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-time text-orange-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.pending}</p>
+                <p className="text-gray-600 text-sm">Pending</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
-                <span className="text-green-600 bg-green-100 px-2 py-1 rounded-full text-sm">Successful</span>
-                <p className="text-xl font-semibold text-gray-800">{successfulWithdrawals}</p>
+              
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-check-circle text-green-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.confirmed}</p>
+                <p className="text-gray-600 text-sm">Confirmed</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
-                <span className="text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full text-sm">Pending</span>
-                <p className="text-xl font-semibold text-gray-800">{pendingWithdrawals}</p>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-cog text-blue-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.processing}</p>
+                <p className="text-gray-600 text-sm">Processing</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
-                <span className="text-red-600 bg-red-100 px-2 py-1 rounded-full text-sm">Failed</span>
-                <p className="text-xl font-semibold text-gray-800">{failedWithdrawals}</p>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-package text-purple-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.readyToShip}</p>
+                <p className="text-gray-600 text-sm">Ready to ship</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-x-circle text-red-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.cancelled}</p>
+                <p className="text-gray-600 text-sm">Cancelled</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-check-double text-green-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.delivered}</p>
+                <p className="text-gray-600 text-sm">Delivered</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mb-3">
+                  <i className="bx bx-revision text-yellow-600"></i>
+                </div>
+                <p className="text-2xl font-bold mb-1">{orderStats.returned}</p>
+                <p className="text-gray-600 text-sm">Returned</p>
               </div>
             </div>
+          </div>
 
-            {/* Transaction History Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Transaction History</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b text-gray-600">
-                      <th className="py-2 px-3">Date</th>
-                      <th className="py-2 px-3">Description</th>
-                      <th className="py-2 px-3">Amount</th>
-                      <th className="py-2 px-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((transaction) => (
-                      <tr key={transaction.id} className="border-b text-gray-700">
-                        <td className="py-2 px-3">{transaction.date}</td>
-                        <td className="py-2 px-3">{transaction.description || transaction.type}</td>
-                        <td className="py-2 px-3">₦{transaction.amount.toFixed(2)}</td>
-                        <td className="py-2 px-3">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs ${
-                              transaction.status === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : transaction.status === 'Available'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {transaction.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Sales Analysis */}
+          <div className="bg-white rounded-xl p-6">
+            <h2 className="text-lg font-medium mb-6">Sales analysis</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <i className="bx bx-shopping-bag text-gray-400"></i>
+                    <span className="text-gray-600">Orders</span>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    salesStats.orders.change > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {salesStats.orders.change > 0 ? '+' : ''}{salesStats.orders.change}%
+                  </span>
+                </div>
+                <p className="text-2xl font-bold">{salesStats.orders.value}</p>
+                <p className="text-sm text-gray-500">This month</p>
               </div>
-            </div>
 
-            {/* Withdrawal Analysis Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Withdrawal Analysis</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
-                  <span className="text-gray-600">Total Withdrawals</span>
-                  <p className="text-xl font-semibold text-gray-800">{totalWithdrawals} <span className="text-green-600 text-sm">+0%</span></p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <i className="bx bx-show text-gray-400"></i>
+                    <span className="text-gray-600">Views</span>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    salesStats.views.change > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {salesStats.views.change > 0 ? '+' : ''}{salesStats.views.change}%
+                  </span>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
-                  <span className="text-gray-600">Successful</span>
-                  <p className="text-xl font-semibold text-gray-800">{successfulWithdrawals} <span className="text-green-600 text-sm">+0%</span></p>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
-                  <span className="text-gray-600">Pending</span>
-                  <p className="text-xl font-semibold text-gray-800">{pendingWithdrawals} <span className="text-yellow-600 text-sm">+0%</span></p>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
-                  <span className="text-gray-600">Failed</span>
-                  <p className="text-xl font-semibold text-gray-800">{failedWithdrawals} <span className="text-red-600 text-sm">+0%</span></p>
-                </div>
+                <p className="text-2xl font-bold">{salesStats.views.value}</p>
+                <p className="text-sm text-gray-500">This month</p>
               </div>
-              <div className="h-40">
-                <canvas id="withdrawalChart"></canvas>
+
+              <div className="lg:col-span-2">
+                <div className="h-48 bg-gray-50 rounded-xl p-4">
+                  <Line data={salesData} options={chartOptions} />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Withdraw Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-md:p-10 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">Withdraw Funds</h2>
-            <form onSubmit={handleWithdraw}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Account Number</label>
-                <input
-                  type="text"
-                  value={accountNumber}
-                  onChange={(e) => {
-                    setAccountNumber(e.target.value);
-                    verifyBankAccount();
-                  }}
-                  className="mt-1 p-2 w-full border rounded"
-                  placeholder="e.g., 1234567890"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                <input
-                  type="text"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
-                  placeholder="Will auto-fill or enter manually"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Email (for verification)</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isProcessing || !isVerified}
-                  className={`bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isProcessing ? 'Processing...' : 'Withdraw'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

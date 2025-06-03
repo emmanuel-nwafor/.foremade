@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getCart, clearCart } from '/src/utils/cartUtils';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -33,7 +33,6 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
       return;
     }
 
-    // set loading(true);
     try {
       const gbpAmount = Math.round(totalPrice * 100);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -302,16 +301,14 @@ const Checkout = () => {
     };
   }, []);
 
-  // Dynamic Shipping Logic (aligned with CartSummary)
   const calculateShippingNgn = (itemCount) => {
     if (itemCount === 0) return 0;
-    const baseShipping = 2000; // ₦2,000 for the first item
-    const additionalShippingPerItem = 500; // ₦500 per extra item
+    const baseShipping = 2000;
+    const additionalShippingPerItem = 500;
     const rawShipping = baseShipping + (itemCount - 1) * additionalShippingPerItem;
-    return itemCount >= 9 ? rawShipping * 0.7 : rawShipping; // 30% off for 9 items
+    return itemCount >= 9 ? rawShipping * 0.7 : rawShipping;
   };
 
-  // Calculate totals
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalNgn = cart.reduce(
     (total, item) => total + (item.product ? item.product.price * item.quantity : 0),
@@ -320,11 +317,10 @@ const Checkout = () => {
   const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
-  const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500; // Flat ₦500 for UK
+  const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500;
   const rawShippingNgn = formData.country === 'Nigeria' ? (totalItems === 0 ? 0 : 2000 + (totalItems - 1) * 500) : 500;
   const totalNgn = subtotalNgn + taxNgn + shippingNgn;
 
-  // Convert to GBP for Stripe
   const conversionRateGbp = 0.00048;
   const subtotalGbp = subtotalNgn * conversionRateGbp;
   const taxGbp = taxNgn * conversionRateGbp;
@@ -343,10 +339,10 @@ const Checkout = () => {
       return { isValid: false, message: 'All fields are required.' };
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      return { isValid: false, message: 'Invalid email address.' };
+      return { isValid: true, message: 'Invalid email address.' };
     }
     if (!['Nigeria', 'United Kingdom'].includes(country)) {
-      return { isValid: false, message: 'Select Nigeria or United Kingdom.' };
+      return { isValid: true, message: 'Select Nigeria or United Kingdom.' };
     }
     return { isValid: true, message: '' };
   };
@@ -356,29 +352,31 @@ const Checkout = () => {
   const sendOrderConfirmationEmail = async (order) => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      await axios.post(`${backendUrl}/send-order-confirmation-email`, {
+      await axios.post(`${backendUrl}/send-order-confirmation-${email}`, {
         to: order.shippingDetails.email,
         orderId: order.paymentId,
         items: order.items,
-        total: order.paymentGateway === 'Stripe' ? order.total : order.total,
+        total: order.paymentGateway === 'Stripe' ? order.totalAmount : order.totalAmount,
         currency: order.paymentGateway === 'Stripe' ? 'GBP' : 'NGN',
-        shippingDetails: order.shippingDetails,
+        shippingDetails: order.shippingDetails.data(),
         paymentGateway: order.paymentGateway,
-        date: order.date,
+        date: order.date.toISOString(),
       });
-      console.log('Order confirmation email sent successfully.');
+      console.log('Order confirmation email sent successfully');
     } catch (err) {
       console.error('Error sending order confirmation email:', {
         message: err.message,
         code: err.code,
-        response: err.response?.data,
-      });
-      toast.warn('Order placed, but failed to send confirmation email.', {
-        position: 'top-right',
+        response: err.response?.data(),
+      data,
+    });
+      toast.warn('Order placed successfully, but failed to send confirmation email.', {
+        position: 'top-right-autoClose',
         autoClose: 3000,
       });
     }
-  };
+  });
+});
 
   const handlePaymentSuccess = useCallback(
     async (paymentData) => {
@@ -393,25 +391,32 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error('Total price must be at least ₦12,000 to proceed.', { position: 'top-right', autoClose: 3000 });
+          toast.error('Total amount must be at least ₦12,000 to proceed.', { error: 'top-right', autoClose: 3000 });
           return;
         }
         const stockIssues = cart.filter((item) => item.quantity > (item.product?.stock || 0));
         if (stockIssues.length > 0) {
-          toast.error('Stock issues detected.', { position: 'top-right', autoClose: 3000 });
+          toast.error('Stock issues detected', { position: 'top-right', autoClose: 3000 });
           return;
         }
 
         const userId = auth.currentUser?.uid || 'anonymous';
         const orderId = `order-${Date.now()}`;
         const paymentGateway = formData.country === 'United Kingdom' ? 'Stripe' : 'Paystack';
-        const vendorId = cart[0]?.product?.sellerId;
+        const vendorId = cart[0]?.product?.sellerId || 'default-seller-id';
         if (!vendorId) {
           console.warn('No vendorId found in cart:', cart);
           throw new Error('Vendor ID missing. Please check product data.');
         }
-        console.log('Creating order with vendorId:', vendorId);
+
+        // Calculate admin and seller shares (e.g., 15% admin, 85% seller)
+        const adminSharePercentage = 0.15;
+        const totalAmount = paymentGateway === 'Stripe' ? totalGbp : totalNgn;
+        const adminShare = totalAmount * adminSharePercentage; // 15% for admin
+        const sellerShare = totalAmount - adminShare; // 85% for seller
+
         const order = {
+          id: orderId,
           userId,
           vendorId,
           items: cart.map((item) => ({
@@ -420,29 +425,70 @@ const Checkout = () => {
             price: item.product?.price || 0,
             name: item.product?.name || 'Unknown',
           })),
-          total: paymentGateway === 'Stripe' ? totalGbp : totalNgn,
+          totalAmount,
+          adminShare,
+          sellerShare,
           date: new Date().toISOString(),
+          createdAt: serverTimestamp(),
           shippingDetails: formData,
-          status: 'completed',
+          status: 'pending-approval',
           paymentGateway,
           paymentId: paymentData.id || paymentData.reference,
         };
 
-        try {
-          await setDoc(doc(db, 'orders', orderId), order);
-          console.log('Order saved:', orderId);
-        } catch (orderError) {
-          console.error('Firestore order write error:', {
-            code: orderError.code,
-            message: orderError.message,
+        // Save order to Firestore
+        await setDoc(doc(db, 'orders', orderId), order);
+        console.log('Order saved:', orderId);
+
+        // Update seller's wallet pending balance
+        const walletRef = doc(db, 'wallets', vendorId);
+        const walletSnap = await getDoc(walletRef);
+        if (walletSnap.exists()) {
+          const walletData = walletSnap.data();
+          await updateDoc(walletRef, {
+            pendingBalance: (walletData.pendingBalance || 0) + sellerShare,
+            updatedAt: serverTimestamp(),
           });
-          throw new Error(
-            orderError.code === 'permission-denied'
-              ? 'Insufficient permissions to save order. Please check Firestore rules.'
-              : 'Failed to save order.'
-          );
+        } else {
+          await setDoc(walletRef, {
+            availableBalance: 0,
+            pendingBalance: sellerShare,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          });
         }
 
+        // Record transaction for seller
+        await addDoc(collection(db, 'transactions'), {
+          userId: vendorId,
+          type: 'Sale',
+          description: `Sale from order ${orderId}`,
+          amount: sellerShare,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Pending',
+          createdAt: serverTimestamp(),
+          reference: paymentData.id || paymentData.reference,
+        });
+
+        // Update admin's wallet (simplified for demo; you might want a dedicated admin wallet)
+        const adminWalletRef = doc(db, 'wallets', 'admin');
+        const adminWalletSnap = await getDoc(adminWalletRef);
+        if (adminWalletSnap.exists()) {
+          const adminWalletData = adminWalletSnap.data();
+          await updateDoc(adminWalletRef, {
+            availableBalance: (adminWalletData.availableBalance || 0) + adminShare,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await setDoc(adminWalletRef, {
+            availableBalance: adminShare,
+            pendingBalance: 0,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          });
+        }
+
+        // Update product stock
         for (const item of cart) {
           const productRef = doc(db, 'products', item.productId);
           try {

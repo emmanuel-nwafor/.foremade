@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { vendorAuth as auth, vendorDb as db } from '../firebase';
+import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { 
   collection, 
   doc, 
@@ -10,86 +10,260 @@ import {
   query, 
   where, 
   onSnapshot,
-  serverTimestamp 
+  serverTimestamp,
+  orderBy,
+  limit,
+  getDoc
 } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import SellerSidebar from './SellerSidebar';
 
-// Mock Nigerian bank lookup (replace with Paystack API in production)
+// Paystack configuration
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+const PAYSTACK_TEST_KEY = import.meta.env.VITE_PAYSTACK_TEST_KEY;
+const PAYSTACK_API_URL = 'https://api.paystack.co';
+
+// Function to fetch banks from Paystack API
+const fetchBanksFromPaystack = async () => {
+  try {
+    const response = await fetch(`${PAYSTACK_API_URL}/bank`, {
+      headers: {
+        'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Paystack API Response:', response);
+    
+    if (!response.ok) throw new Error('Failed to fetch banks');
+    
+    const data = await response.json();
+    console.log('Paystack API Data:', data);
+    
+    if (data.status) {
+      return data.data;
+    }
+  } catch (err) {
+    console.error('Error fetching banks:', err);
+    return [];
+  }
+};
+
+// Nigerian bank lookup (replace with Paystack API in production)
 const nigerianBanks = {
-  '069': { name: 'Access Bank', code: '069' },
-  '044': { name: 'Access Bank (Diamond)', code: '044' },
+  '044': { name: 'Access Bank', code: '044' },
+  '023': { name: 'Citibank Nigeria', code: '023' },
+  '063': { name: 'Access Bank (Diamond)', code: '063' },
   '050': { name: 'Ecobank Nigeria', code: '050' },
+  '011': { name: 'First Bank of Nigeria', code: '011' },
+  '214': { name: 'First City Monument Bank', code: '214' },
+  '058': { name: 'Guaranty Trust Bank', code: '058' },
+  '030': { name: 'Heritage Bank', code: '030' },
+  '301': { name: 'Jaiz Bank', code: '301' },
+  '082': { name: 'Keystone Bank', code: '082' },
+  '076': { name: 'Polaris Bank', code: '076' },
+  '221': { name: 'Stanbic IBTC Bank', code: '221' },
+  '232': { name: 'Sterling Bank', code: '232' },
+  '032': { name: 'Union Bank of Nigeria', code: '032' },
+  '033': { name: 'United Bank for Africa', code: '033' },
+  '215': { name: 'Unity Bank', code: '215' },
+  '035': { name: 'Wema Bank', code: '035' },
+  '057': { name: 'Zenith Bank', code: '057' }
 };
 
 export default function Wallet() {
-  const [vendor, setVendor] = useState(null);
+  const { vendor } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0 });
+  const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0, updatedAt: null });
   const [transactions, setTransactions] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+<<<<<<< HEAD
   const [email, setEmail] = useState(''); // For Paystack transfer recipient
   const [country, setCountry] = useState(''); // To select country
+=======
+  const [email, setEmail] = useState(vendor?.email || '');
+  const [banks, setBanks] = useState([]);
+  const [accountName, setAccountName] = useState('');
+  const [verificationLoading, setVerificationLoading] = useState(false);
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    let unsubscribeWallet = null;
+    let unsubscribeTransactions = null;
+    let isInitialized = false;
+
+    const checkVendorStatus = async (uid) => {
+      try {
+        if (!uid) {
+          console.log('No UID provided to checkVendorStatus');
+          return false;
+        }
+        console.log('Checking vendor status for:', uid);
+        const vendorRef = doc(db, 'vendors', uid);
+        const vendorDoc = await getDoc(vendorRef);
+        const exists = vendorDoc.exists();
+        console.log('Vendor document exists:', exists);
+        return exists;
+      } catch (err) {
+        console.error('Error checking vendor status:', err);
+        return false;
+      }
+    };
+
+    const handleAuthStateChange = async (user) => {
+      console.log('Auth state change handler called with user:', user?.uid);
+      
       if (user) {
-        setVendor(user);
-        setEmail(user.email || ''); // Use user's email for Paystack
-        listenToWalletData(user.uid);
-        listenToTransactions(user.uid);
+        try {
+          // First check vendor status
+          const isVendor = await checkVendorStatus(user.uid);
+          if (!isVendor) {
+            console.log('Not a valid vendor account:', user.uid);
+            setIsAuthenticated(false);
+            if (!isInitialized) {
+              navigate('/seller/login');
+            }
+            return;
+          }
+
+          console.log('Valid vendor found:', user.uid);
+          setIsAuthenticated(true);
+
+          // Clean up existing listeners
+          if (unsubscribeWallet) {
+            console.log('Cleaning up old wallet listener');
+            unsubscribeWallet();
+          }
+          if (unsubscribeTransactions) {
+            console.log('Cleaning up old transactions listener');
+            unsubscribeTransactions();
+          }
+
+          // Set up new listeners
+          console.log('Setting up new wallet listener for:', user.uid);
+          unsubscribeWallet = listenToWalletData(user.uid);
+          console.log('Setting up new transactions listener for:', user.uid);
+          unsubscribeTransactions = listenToTransactions(user.uid);
+          
+        } catch (err) {
+          console.error('Error in auth state change:', err);
+          setIsAuthenticated(false);
+          if (!isInitialized) {
+            navigate('/seller/login');
+          }
+        }
       } else {
-        setError('Please log in to view your wallet.');
+        console.log('No user in auth state change');
+        setIsAuthenticated(false);
+        if (!isInitialized) {
+          navigate('/seller/login');
+        }
+      }
+      
+      if (!isInitialized) {
+        isInitialized = true;
         setLoading(false);
       }
-    }, (err) => {
-      setError('Authentication error: ' + err.message);
-      setLoading(false);
+    };
+
+    // Initial setup
+    console.log('Setting up Wallet component');
+    console.log('Current auth instance:', auth?.currentUser?.uid);
+
+    // Check for current user immediately
+    const currentUser = auth.currentUser;
+    console.log('Initial auth check - current user:', currentUser?.uid);
+    
+    if (currentUser) {
+      handleAuthStateChange(currentUser);
+    } else {
+      console.log('No current user on initial check');
+      if (!isInitialized) {
+        isInitialized = true;
+        setLoading(false);
+        navigate('/seller/login');
+      }
+    }
+
+    // Set up auth state listener
+    console.log('Setting up auth state listener');
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user?.uid);
+      handleAuthStateChange(user);
     });
 
-    return () => unsubscribeAuth();
-  }, []);
+    // Cleanup function
+    return () => {
+      console.log('Cleaning up auth subscriptions');
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeWallet) unsubscribeWallet();
+      if (unsubscribeTransactions) unsubscribeTransactions();
+    };
+  }, [navigate]);
+
+  // Protect against unauthenticated access
+  useEffect(() => {
+    if (!loading && !isAuthenticated && location.pathname !== '/seller/login') {
+      console.log('Unauthenticated access detected, redirecting to login');
+      navigate('/seller/login');
+    }
+  }, [loading, isAuthenticated, navigate, location.pathname]);
 
   const listenToWalletData = (uid) => {
     const walletRef = doc(db, 'wallets', uid);
-    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+    return onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
-        setWallet(docSnap.data());
-        setLoading(false);
+        const data = docSnap.data();
+        setWallet({
+          availableBalance: data.availableBalance || 0,
+          pendingBalance: data.pendingBalance || 0,
+          updatedAt: data.updatedAt?.toDate() || null
+        });
       } else {
         setInitialWallet(uid);
-        setWallet({ availableBalance: 0, pendingBalance: 0 });
-        setLoading(false);
       }
     }, (err) => {
-      setError('Failed to listen to wallet data: ' + err.message);
-      setLoading(false);
+      console.error('Wallet listener error:', err);
+      setError('Failed to load wallet data: ' + err.message);
     });
-    return unsubscribe;
   };
 
   const listenToTransactions = (uid) => {
-    const q = query(collection(db, 'transactions'), where('userId', '==', uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const transactionList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTransactions(transactionList);
+    const q = query(
+      collection(db, 'transactions'),
+      where('userId', '==', uid),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+
+    return onSnapshot(q, (querySnapshot) => {
+      const transactions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || null
+      }));
+      setTransactions(transactions);
     }, (err) => {
-      setError('Failed to listen to transactions: ' + err.message);
+      console.error('Transactions listener error:', err);
+      setError('Failed to load transactions: ' + err.message);
     });
-    return unsubscribe;
   };
 
   const setInitialWallet = async (uid) => {
@@ -98,14 +272,17 @@ export default function Wallet() {
       await setDoc(walletRef, {
         availableBalance: 0,
         pendingBalance: 0,
-        updatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
+      setWallet({ availableBalance: 0, pendingBalance: 0, updatedAt: new Date() });
+      setLoading(false);
     } catch (err) {
-      console.error('Error initializing wallet:', err);
       setError('Error initializing wallet: ' + err.message);
+      setLoading(false);
     }
   };
 
+<<<<<<< HEAD
   const verifyBankAccount = () => {
     if (country !== 'Nigeria') {
       setIsVerified(true);
@@ -121,8 +298,46 @@ export default function Wallet() {
       setMessage('Bank verified successfully.');
     } else {
       setBankName('');
+=======
+  const verifyBankAccount = async () => {
+    if (!accountNumber || !bankCode) {
+      setMessage('Please enter account number and select a bank');
+      return;
+    }
+
+    setVerificationLoading(true);
+    setMessage('');
+    setIsVerified(false);
+    setAccountName('');
+
+    try {
+      const response = await fetch(
+        `${PAYSTACK_API_URL}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.status) {
+        setIsVerified(true);
+        setAccountName(data.data.account_name);
+        setMessage('Account verified successfully');
+      } else {
+        setIsVerified(false);
+        setMessage('Could not verify account. Please check the details and try again.');
+      }
+    } catch (err) {
+      console.error('Bank verification error:', err);
+      setMessage('Failed to verify account. Please try again later.');
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
       setIsVerified(false);
-      setMessage('Bank not recognized. Please enter bank name manually.');
+    } finally {
+      setVerificationLoading(false);
     }
   };
 
@@ -132,6 +347,7 @@ export default function Wallet() {
     setMessage('');
     const amount = parseFloat(withdrawAmount);
 
+<<<<<<< HEAD
     if (!country) {
       setError('Please select a country.');
       setIsProcessing(false);
@@ -139,9 +355,51 @@ export default function Wallet() {
     }
 
     if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified && email) {
+=======
+    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified) {
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
       try {
+        // Create transfer recipient
+        const recipientResponse = await fetch(`${PAYSTACK_API_URL}/transferrecipient`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: 'nuban',
+            name: accountName,
+            account_number: accountNumber,
+            bank_code: bankCode,
+            currency: 'NGN'
+          })
+        });
+
+        const recipientData = await recipientResponse.json();
+        if (!recipientData.status) throw new Error('Failed to create transfer recipient');
+
+        // Initiate transfer
+        const transferResponse = await fetch(`${PAYSTACK_API_URL}/transfer`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            source: 'balance',
+            amount: Math.round(amount * 100), // Convert to kobo
+            recipient: recipientData.data.recipient_code,
+            reason: `Withdrawal to ${accountName}`
+          })
+        });
+
+        const transferData = await transferResponse.json();
+        if (!transferData.status) throw new Error('Failed to initiate transfer');
+
+        // Update Firestore
         const uid = vendor.uid;
         const walletRef = doc(db, 'wallets', uid);
+<<<<<<< HEAD
         const transactionReference = `withdrawal-${uid}-${Date.now()}`;
 
         // Call the /initiate-seller-payout endpoint
@@ -181,10 +439,24 @@ export default function Wallet() {
           userId: uid,
           type: 'Withdrawal',
           description: `Withdrawal to ${bankName || 'Bank Account'} (${accountNumber || 'N/A'})`,
+=======
+        await updateDoc(walletRef, {
+          availableBalance: wallet.availableBalance - amount,
+          pendingBalance: wallet.pendingBalance + amount,
+          updatedAt: serverTimestamp()
+        });
+
+        // Create transaction record
+        await addDoc(collection(db, 'transactions'), {
+          userId: uid,
+          type: 'Withdrawal',
+          description: `Withdrawal to ${accountName} (${accountNumber})`,
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
           amount: amount,
           date: new Date().toISOString().split('T')[0],
           status: 'Pending',
           createdAt: serverTimestamp(),
+<<<<<<< HEAD
           reference: result.reference || result.transferId, // Paystack or Stripe reference
         });
 
@@ -195,22 +467,41 @@ export default function Wallet() {
         setBankName('');
         setIsVerified(false);
         setCountry('');
+=======
+          reference: transferData.data.reference,
+          transferCode: transferData.data.transfer_code,
+          recipientCode: recipientData.data.recipient_code
+        });
+
+        setMessage(`Withdrawal of ₦${amount.toLocaleString()} initiated successfully`);
+        setShowWithdrawModal(false);
+        resetWithdrawForm();
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
       } catch (err) {
+        console.error('Withdrawal error:', err);
         setError('Withdrawal failed: ' + err.message);
       } finally {
         setIsProcessing(false);
       }
     } else {
-      setError('Invalid amount, insufficient balance, unverified bank, or missing email.');
+      setError('Invalid amount, insufficient balance, or unverified account.');
       setIsProcessing(false);
     }
+  };
+
+  const resetWithdrawForm = () => {
+    setWithdrawAmount('');
+    setAccountNumber('');
+    setBankCode('');
+    setBankName('');
+    setIsVerified(false);
+    setAccountName('');
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-        <p className="text-gray-600 mt-2">Loading...</p>
       </div>
     );
   }
@@ -218,13 +509,11 @@ export default function Wallet() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <p className="text-red-600 text-sm mb-4">{error}</p>
-          <p className="text-gray-600">
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Return to Login
-            </Link>
-          </p>
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <p className="text-red-700">{error}</p>
+          <Link to="/login" className="text-blue-600 hover:underline mt-2 inline-block">
+            Return to Login
+          </Link>
         </div>
       </div>
     );
@@ -233,114 +522,134 @@ export default function Wallet() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <div className="flex flex-1">
-        {/* Toggle button for mobile */}
+        {/* Sidebar Toggle */}
         <button
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg"
+          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg"
           onClick={toggleSidebar}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
+          <i className="bx bx-menu text-xl"></i>
         </button>
 
         {/* Sidebar */}
-        <div
-          className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-blue-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out`}
-        >
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-gray-100`}>
           <SellerSidebar />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-4 sm:p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 uppercase">Your Wallet</h1>
-          </div>
-
-          {/* Messages */}
-          {message && (
-            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-              {message}
+        <div className="flex-1 p-6">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-900">Wallet Dashboard</h1>
+              {message && (
+                <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-lg">
+                  {message}
+                </div>
+              )}
             </div>
+<<<<<<< HEAD
           )}
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
               {error}
             </div>
           )}
+=======
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
 
-          {/* Balance Cards */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            {/* Available Balance Card */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-700 text-white rounded-lg p-4 w-full sm:w-1/2 shadow-lg">
-              <div className="flex items-center mb-2">
-                <i className="bx bx-check text-lg mr-2"></i>
-                <span className="text-sm">Available Balance</span>
+            {/* Balance Cards */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                <h3 className="text-lg font-semibold opacity-90">Available Balance</h3>
+                <p className="text-3xl font-bold mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
+                <p className="text-sm mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
+                <button
+                  onClick={() => setShowWithdrawModal(true)}
+                  className="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                >
+                  Withdraw Funds
+                </button>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold mb-1">₦{wallet.availableBalance.toFixed(2)}</p>
-              <p className="text-xs opacity-80">Withdrawable now</p>
-              <button
-                onClick={() => setShowWithdrawModal(true)}
-                disabled={isProcessing}
-                className={`mt-3 inline-block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-200 text-sm ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                Withdraw Funds
-              </button>
+
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                <h3 className="text-lg font-semibold opacity-90">Pending Balance</h3>
+                <p className="text-3xl font-bold mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
+                <p className="text-sm mt-2 opacity-75">Funds being processed</p>
+              </div>
             </div>
 
-            {/* Pending Balance Card */}
-            <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-lg p-4 w-full sm:w-1/2 shadow-lg">
-              <div className="flex items-center mb-2">
-                <i className="bx bx-time text-lg mr-2"></i>
-                <span className="text-sm">Pending Balance</span>
+            {/* Transactions */}
+            <div className="bg-white rounded-xl shadow-sm">
+              <div className="p-6 border-b">
+                <h2 className="text-xl font-semibold text-gray-900">Recent Transactions</h2>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold mb-1">₦{wallet.pendingBalance.toFixed(2)}</p>
-              <p className="text-xs opacity-80">Awaiting confirmation</p>
-              <Link
-                to="/pending-details"
-                className="mt-3 inline-block bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition duration-200 text-sm"
-              >
-                View Details
-              </Link>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {transactions.map((transaction) => (
+                      <tr key={transaction.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {transaction.type}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {transaction.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₦{transaction.amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            transaction.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            transaction.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Transaction History */}
-          <div className="bg-white rounded-lg p-4 shadow-sm">
-            <table className="w-full text-left text-sm sm:text-base">
-              <thead>
-                <tr className="border-b text-gray-600">
-                  <th className="py-2 px-3">Date</th>
-                  <th className="py-2 px-3">Description</th>
-                  <th className="py-2 px-3">Amount</th>
-                  <th className="py-2 px-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b text-gray-700">
-                    <td className="py-2 px-3">{transaction.date}</td>
-                    <td className="py-2 px-3">{transaction.description || transaction.type}</td>
-                    <td className="py-2 px-3">₦{transaction.amount.toFixed(2)}</td>
-                    <td className="py-2 px-3">
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs ${
-                          transaction.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : transaction.status === 'Available'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        {transaction.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Withdraw Funds</h3>
+            <form onSubmit={handleWithdraw}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount (₦)
+                  </label>
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                    placeholder="Enter amount"
+                    required
+                  />
+                </div>
 
+<<<<<<< HEAD
           {/* Withdraw Modal */}
           {showWithdrawModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -420,27 +729,92 @@ export default function Wallet() {
                     </div>
                   )}
                   <div className="flex justify-end gap-2">
+=======
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select Bank
+                  </label>
+                  <select
+                    value={bankCode}
+                    onChange={(e) => {
+                      setBankCode(e.target.value);
+                      setBankName(banks.find(bank => bank.code === e.target.value)?.name || '');
+                    }}
+                    className="w-full p-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select a bank</option>
+                    {banks.map((bank) => (
+                      <option key={bank.code} value={bank.code}>
+                        {bank.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Account Number
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      className="flex-1 p-2 border rounded-lg"
+                      placeholder="Enter account number"
+                      required
+                    />
+>>>>>>> 5866daf407017a6abb156996f934a5675027df2e
                     <button
                       type="button"
-                      onClick={() => setShowWithdrawModal(false)}
-                      className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                      onClick={verifyBankAccount}
+                      disabled={verificationLoading || !bankCode || !accountNumber}
+                      className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isProcessing || !isVerified}
-                      className={`bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      {isProcessing ? 'Processing...' : 'Withdraw'}
+                      {verificationLoading ? 'Verifying...' : 'Verify'}
                     </button>
                   </div>
-                </form>
+                </div>
+
+                {accountName && (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-green-700 text-sm">Account Name: {accountName}</p>
+                  </div>
+                )}
+
+                {message && (
+                  <div className={`p-3 rounded-lg ${isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <p className="text-sm">{message}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      resetWithdrawForm();
+                    }}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!isVerified || isProcessing || !withdrawAmount}
+                    className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${
+                      (!isVerified || isProcessing || !withdrawAmount) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                    }`}
+                  >
+                    {isProcessing ? 'Processing...' : 'Withdraw'}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

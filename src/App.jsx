@@ -5,6 +5,7 @@ import {
   Navigate, 
   useLocation 
 } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -39,6 +40,8 @@ import AdminVendors from '/src/admin/AdminVendors';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import AllPolicies from './pages/AllPolicies';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
@@ -95,66 +98,152 @@ const Layout = ({ children }) => {
   );
 };
 
+const ProtectedRoute = ({ children }) => {
+  const { vendor, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return <Navigate to="/seller/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          {/* === Authentication Routes (No Header/Footer) === */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/add-phone" element={<AddPhone />} />
-          <Route path="/seller/login" element={<Login />} />
-          <Route path="/sellers-guide" element={<HowItWorks />} />
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            {/* === Authentication Routes === */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/add-phone" element={<AddPhone />} />
+            <Route path="/seller/login" element={<Login />} />
+            <Route path="/sellers-guide" element={<HowItWorks />} />
 
-          {/* === Public Routes === */}
-          <Route path="/" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/product/:id" element={<Product />} />
-          <Route path="/best-selling" element={<BestSelling />} />
-          <Route path="/games-fun" element={<GamesFun />} />
-          <Route path="/electronics" element={<Electronics />} />
-          <Route path="/baby-products" element={<BabyProducts />} />
-          <Route path="/drinks-categories" element={<Drinks />} />
-          <Route path="/home-kitchen" element={<HomeKitchen />} />
-          <Route path="/tablet-phones" element={<TabletsPhones />} />
-          <Route path="/health-beauty" element={<HealthBeauty />} />
-          <Route path="/smart-watches" element={<SmartWatches />} />
-          <Route path="/computers-accessories" element={<ComputerAccessories />} />
+            {/* === Protected Seller Routes === */}
+            <Route
+              path="/smile"
+              element={
+                <ProtectedRoute>
+                  <Wallet />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sell"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sellers/products"
+              element={
+                <ProtectedRoute>
+                  <SellersProducts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products-upload"
+              element={
+                <ProtectedRoute>
+                  <SellerProductUpload />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products-gallery"
+              element={
+                <ProtectedRoute>
+                  <SellerProductGallery />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sellers/orders"
+              element={
+                <ProtectedRoute>
+                  <UsersOrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/seller-onboarding"
+              element={
+                <ProtectedRoute>
+                  <SellerOnboarding />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* === Previously Protected User Routes (Now Open) === */}
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/order-confirmation" element={<OrderConfirmation />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/address" element={<Address />} />
-          <Route path="/setting" element={<Setting />} />
-          <Route path="/smile" element={<Wallet />} />
+            {/* === Previously Protected Admin Routes (Now Open) === */}
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/admins" element={<AdminAdmins />} />
+            <Route path="/admin/vendors" element={<AdminVendors />} />
+            <Route path="/admin/products" element={<Admin />} />
+            <Route path="/admin/payouts " element={<AdminPayoutMonitor />} />
 
-          {/* === Previously Protected Seller Routes (Now Open) === */}
-          <Route path="/sell" element={<Dashboard />} />
-          <Route path="/sellers/products" element={<SellersProducts />} />
-          <Route path="/products-upload" element={<SellerProductUpload />} />
-          <Route path="/products-gallery" element={<SellerProductGallery />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/sellers/orders" element={<UsersOrdersPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/seller-onboarding" element={<SellerOnboarding />} />
+            {/* === Public Routes === */}
+            <Route path="/" element={<Home />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/product/:id" element={<Product />} />
+            <Route path="/best-selling" element={<BestSelling />} />
+            <Route path="/games-fun" element={<GamesFun />} />
+            <Route path="/electronics" element={<Electronics />} />
+            <Route path="/baby-products" element={<BabyProducts />} />
+            <Route path="/drinks-categories" element={<Drinks />} />
+            <Route path="/home-kitchen" element={<HomeKitchen />} />
+            <Route path="/tablet-phones" element={<TabletsPhones />} />
+            <Route path="/health-beauty" element={<HealthBeauty />} />
+            <Route path="/smart-watches" element={<SmartWatches />} />
+            <Route path="/computers-accessories" element={<ComputerAccessories />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/privacy-policy/:type" element={<AllPolicies />} />
 
-          {/* === Previously Protected Admin Routes (Now Open) === */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/admins" element={<AdminAdmins />} />
-          <Route path="/admin/vendors" element={<AdminVendors />} />
-          <Route path="/admin/products" element={<Admin />} />
-          <Route path="/admin/payouts " element={<AdminPayoutMonitor />} />
+            {/* === Previously Protected User Routes (Now Open) === */}
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/address" element={<Address />} />
+            <Route path="/setting" element={<Setting />} />
 
-          {/* === Fallback Route === */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Layout>
+            {/* === Fallback Route === */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -112,6 +112,7 @@ export default function SellerProductUpload() {
     buyerProtectionFee: 0,
     handlingFee: 0,
     totalEstimatedPrice: 0,
+    sellerEarnings: 0, // Kept as requested
   });
   const [isMobile, setIsMobile] = useState(false);
   const [customSubcategories, setCustomSubcategories] = useState({});
@@ -263,7 +264,7 @@ export default function SellerProductUpload() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Calculate fees and size warnings based on price
+  // Calculate fees and seller earnings based on price
   useEffect(() => {
     const price = parseFloat(formData.price);
     if (!price || isNaN(price)) {
@@ -272,6 +273,7 @@ export default function SellerProductUpload() {
         buyerProtectionFee: 0,
         handlingFee: 0,
         totalEstimatedPrice: 0,
+        sellerEarnings: 0,
       });
       return;
     }
@@ -301,12 +303,14 @@ export default function SellerProductUpload() {
     const buyerProtectionFee = price * buyerProtectionRate;
     const handlingFee = price * handlingRate;
     const totalEstimatedPrice = price + buyerProtectionFee + handlingFee;
+    const sellerEarnings = price - (buyerProtectionFee + handlingFee); // Seller earnings after fees
 
     setFees({
       productSize,
       buyerProtectionFee,
       handlingFee,
       totalEstimatedPrice,
+      sellerEarnings,
     });
 
     if (formData.manualSize && formData.manualSize !== productSize) {
@@ -680,6 +684,7 @@ export default function SellerProductUpload() {
         buyerProtectionFee: fees.buyerProtectionFee,
         handlingFee: fees.handlingFee,
         totalEstimatedPrice: fees.totalEstimatedPrice,
+        sellerEarnings: fees.sellerEarnings, // Kept as requested
         manualSize: formData.manualSize,
       };
 
@@ -724,6 +729,7 @@ export default function SellerProductUpload() {
         buyerProtectionFee: 0,
         handlingFee: 0,
         totalEstimatedPrice: 0,
+        sellerEarnings: 0,
       });
       setShowSizeWarning(false);
     } catch (error) {
@@ -867,7 +873,6 @@ export default function SellerProductUpload() {
             </div>
 
             {/* Video Upload Section */}
-            
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Product Video (1 video, Optional)
@@ -1089,7 +1094,10 @@ export default function SellerProductUpload() {
                     <p>Buyer Protection Fee: ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p>Handling Fee: ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
-                      Total Estimated Price: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                      Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="font-bold text-green-600">
+                      Your Estimated Earnings: ₦{fees.sellerEarnings.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
                       Note: If shipping internationally (e.g., to the UK), you can add shipping costs.

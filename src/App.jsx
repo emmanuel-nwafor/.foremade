@@ -1,4 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { 
+  BrowserRouter, 
+  Routes, 
+  Route, 
+  Navigate, 
+  useLocation 
+} from 'react-router-dom';
+
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -21,6 +28,7 @@ import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
 import Dashboard from './seller/Dashboard';
 import SellersProducts from './seller/SellersProducts';
+import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Admin from '/src/admin/Admin';
@@ -28,6 +36,7 @@ import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminAdmins from '/src/admin/AdminAdmins';
 import AdminVendors from '/src/admin/AdminVendors';
+import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
@@ -55,6 +64,7 @@ const Layout = ({ children }) => {
     '/products-gallery',
     '/products-upload',
     '/admin',
+    '/admin/payouts',
     '/admin/dashboard',
     '/admin/users',
     '/admin/admins',
@@ -63,6 +73,7 @@ const Layout = ({ children }) => {
     '/sellers/orders',
     '/sellers/products',
     '/seller/login',
+    '/seller-onboarding',
     '/dashboard',
   ].includes(location.pathname);
 
@@ -130,14 +141,15 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sellers/orders" element={<UsersOrdersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/seller-onboarding" element={<SellerOnboarding />} />
 
           {/* === Previously Protected Admin Routes (Now Open) === */}
-          <Route path="/admin" element={<Admin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/admins" element={<AdminAdmins />} />
           <Route path="/admin/vendors" element={<AdminVendors />} />
           <Route path="/admin/products" element={<Admin />} />
+          <Route path="/admin/payouts " element={<AdminPayoutMonitor />} />
 
           {/* === Fallback Route === */}
           <Route path="*" element={<NotFound />} />

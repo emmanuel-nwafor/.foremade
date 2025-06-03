@@ -194,60 +194,63 @@ const Header = () => {
   return (
     <header className="">
       <div className="bg-[#112D4E] hidden sm:flex text-white py-1 sm:py-2 justify-between items-center px-2 sm:px-4">
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Link to="/">
-            <img
-              src={logo}
-              className="h-10 sm:h-14 sm:w-auto md:w-auto lg:w-auto xl:w-auto"
-              alt="Foremade"
-            />
-          </Link>
-        </div>
+       {/* Comment */}
+        <div className='flex justify-between items-center'>
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <Link to="/">
+              <img
+                src={logo}
+                className="h-10 sm:h-[56px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+                alt="Foremade"
+              />
+            </Link>
+          </div>
 
-        <div className="flex items-center space-x-4">
-          <Link to="/products" className="m-2 hover:text-gray-300">Shop</Link>
-          <Link to="/dashboard" className="m-2 hover:text-gray-300">Sell</Link>
-          <Link to="/smile" className="m-2 hover:text-gray-300">Smile</Link>
-          <div className="relative group">
-            <button
-              onClick={toggleMoreDropdown}
-              onBlur={handleMoreDropdownBlur}
-              className="hover:text-gray-300 m-2 text-xs sm:text-sm focus:outline-none"
-            >
-              More <i className="bx bx-chevron-down"></i>
-            </button>
-            {moreDropdownOpen && (
-              <div className="absolute hidden group-hover:block top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                <Link
-                  to="/daily-deals"
-                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                  onClick={() => setMoreDropdownOpen(false)}
-                >
-                  Daily Deals
-                </Link>
-                <Link
-                  to="/brand-outlet"
-                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                  onClick={() => setMoreDropdownOpen(false)}
-                >
-                  Brand Outlet
-                </Link>
-                <Link
-                  to="/gift-cards"
-                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                  onClick={() => setMoreDropdownOpen(false)}
-                >
-                  Gift Cards
-                </Link>
-                <Link
-                  to="/help-contact"
-                  className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                  onClick={() => setMoreDropdownOpen(false)}
-                >
-                  Help & Contact
-                </Link>
-              </div>
-            )}
+          <div className="flex ml-5 items-center space-x-4">
+            <Link to="/products" className="hover:text-gray-300">Shop</Link>
+            <Link to="/dashboard" className="m-2 hover:text-gray-300">Sell</Link>
+            <Link to="/smile" className="m-2 hover:text-gray-300">Smile</Link>
+            <div className="relative group">
+              <button
+                onClick={toggleMoreDropdown}
+                onBlur={handleMoreDropdownBlur}
+                className="hover:text-gray-300 text-xs sm:text-sm focus:outline-none"
+              >
+                More <i className="bx bx-chevron-down"></i>
+              </button>
+              {moreDropdownOpen && (
+                <div className="absolute hidden group-hover:block top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <Link
+                    to="/daily-deals"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Daily Deals
+                  </Link>
+                  <Link
+                    to="/brand-outlet"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Brand Outlet
+                  </Link>
+                  <Link
+                    to="/gift-cards"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Gift Cards
+                  </Link>
+                  <Link
+                    to="/help-contact"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Help & Contact
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         

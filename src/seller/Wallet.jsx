@@ -37,6 +37,7 @@ export default function Wallet() {
   const [bankName, setBankName] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [email, setEmail] = useState(''); // For Paystack transfer recipient
+  const [country, setCountry] = useState(''); // To select country
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -106,6 +107,12 @@ export default function Wallet() {
   };
 
   const verifyBankAccount = () => {
+    if (country !== 'Nigeria') {
+      setIsVerified(true);
+      setMessage('Bank verification skipped for non-Nigerian accounts.');
+      return;
+    }
+
     const bankCode = accountNumber.slice(0, 3); // Mock: first 3 digits as bank code
     const bank = nigerianBanks[bankCode];
     if (bank) {
@@ -125,49 +132,69 @@ export default function Wallet() {
     setMessage('');
     const amount = parseFloat(withdrawAmount);
 
+    if (!country) {
+      setError('Please select a country.');
+      setIsProcessing(false);
+      return;
+    }
+
     if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified && email) {
       try {
         const uid = vendor.uid;
         const walletRef = doc(db, 'wallets', uid);
-        await updateDoc(walletRef, {
-          availableBalance: wallet.availableBalance - amount,
-          pendingBalance: wallet.pendingBalance + amount, // Moves to pending for processing
-          updatedAt: serverTimestamp(),
-        });
+        const transactionReference = `withdrawal-${uid}-${Date.now()}`;
 
-        // Initiate Paystack transfer
-        const response = await fetch('/initiate-paystack-payment', {
+        // Call the /initiate-seller-payout endpoint
+        const response = await fetch('http://localhost:5000/initiate-seller-payout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: Math.round(amount * 100), // Amount in kobo
+            sellerId: uid,
+            amount,
+            transactionReference,
+            bankCode: country === 'Nigeria' ? accountNumber.slice(0, 3) : undefined,
+            accountNumber: country === 'Nigeria' ? accountNumber : undefined,
+            country,
             email,
-            bank: { account_number: accountNumber, bank_code: accountNumber.slice(0, 3) },
-            currency: 'NGN',
-            metadata: { userId: uid, description: `Withdrawal to ${bankName}` },
           }),
         });
 
         const result = await response.json();
         if (result.error) throw new Error(result.error);
 
+        if (result.redirectUrl) {
+          // For Stripe (UK), redirect to onboarding
+          setMessage('Redirecting to Stripe for onboarding...');
+          window.location.href = result.redirectUrl;
+          return;
+        }
+
+        // Update wallet balances
+        await updateDoc(walletRef, {
+          availableBalance: wallet.availableBalance - amount,
+          pendingBalance: wallet.pendingBalance + amount, // Moves to pending for processing
+          updatedAt: serverTimestamp(),
+        });
+
+        // Record the transaction
         await addDoc(collection(db, 'transactions'), {
           userId: uid,
           type: 'Withdrawal',
-          description: `Withdrawal to ${bankName} (${accountNumber})`,
+          description: `Withdrawal to ${bankName || 'Bank Account'} (${accountNumber || 'N/A'})`,
           amount: amount,
           date: new Date().toISOString().split('T')[0],
           status: 'Pending',
           createdAt: serverTimestamp(),
-          reference: result.reference, // Paystack reference for tracking
+          reference: result.reference || result.transferId, // Paystack or Stripe reference
         });
 
-        setMessage(`Withdrawal request of ₦${amount} to ${bankName} (${accountNumber}) submitted. Awaiting Paystack processing.`);
+        setMessage(`Withdrawal request of ₦${amount} submitted successfully. Awaiting processing.`);
         setShowWithdrawModal(false);
         setWithdrawAmount('');
         setAccountNumber('');
         setBankName('');
         setIsVerified(false);
+        setCountry('');
       } catch (err) {
         setError('Withdrawal failed: ' + err.message);
       } finally {
@@ -234,6 +261,11 @@ export default function Wallet() {
           {message && (
             <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
               {message}
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+              {error}
             </div>
           )}
 
@@ -316,6 +348,19 @@ export default function Wallet() {
                 <h2 className="text-lg font-bold mb-4">Withdraw Funds</h2>
                 <form onSubmit={handleWithdraw}>
                   <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Country</label>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="mt-1 p-2 w-full border rounded"
+                      required
+                    >
+                      <option value="">Select Country</option>
+                      <option value="Nigeria">Nigeria</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                    </select>
+                  </div>
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
                     <input
                       type="number"
@@ -325,31 +370,35 @@ export default function Wallet() {
                       required
                     />
                   </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Account Number</label>
-                    <input
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => {
-                        setAccountNumber(e.target.value);
-                        verifyBankAccount();
-                      }}
-                      className="mt-1 p-2 w-full border rounded"
-                      placeholder="e.g., 1234567890"
-                      required
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                    <input
-                      type="text"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      className="mt-1 p-2 w-full border rounded"
-                      placeholder="Will auto-fill or enter manually"
-                      required
-                    />
-                  </div>
+                  {country === 'Nigeria' && (
+                    <>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                        <input
+                          type="text"
+                          value={accountNumber}
+                          onChange={(e) => {
+                            setAccountNumber(e.target.value);
+                            verifyBankAccount();
+                          }}
+                          className="mt-1 p-2 w-full border rounded"
+                          placeholder="e.g., 1234567890"
+                          required
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+                        <input
+                          type="text"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          className="mt-1 p-2 w-full border rounded"
+                          placeholder="Will auto-fill or enter manually"
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700">Email (for verification)</label>
                     <input
@@ -360,6 +409,16 @@ export default function Wallet() {
                       required
                     />
                   </div>
+                  {message && (
+                    <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-lg text-sm">
+                      {message}
+                    </div>
+                  )}
+                  {error && (
+                    <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"

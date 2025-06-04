@@ -40,6 +40,7 @@ import AdminVendors from '/src/admin/AdminVendors';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
+
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
 

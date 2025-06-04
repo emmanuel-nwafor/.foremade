@@ -42,6 +42,8 @@ import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
+import EmpowermentHub from './pages/EmpowermentHub';
+import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
@@ -85,6 +87,8 @@ const Layout = ({ children }) => {
     '/orders',
     '/address',
     '/setting',
+    '/empowerment-hub',
+    '/youth-empowerment-form',
   ].includes(location.pathname);
 
   return (
@@ -214,6 +218,8 @@ function App() {
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
+            <Route path="/empowerment-hub" element={<EmpowermentHub />} />
+            <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/best-selling" element={<BestSelling />} />

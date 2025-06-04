@@ -6,6 +6,7 @@ import RecommendedForYou from '../components/product/RecommendedForYou';
 import TrendingFashion from '../components/product/TrendingFashion';
 import TrendingGadgets from '../components/product/TrendingGadgets';
 import TopStores from '../components/store/TopStore';
+import EmpowermentHubPreview from '../components/home/EmpowermentHubPreview';
 
 const Home = () => {
   return (
@@ -13,6 +14,7 @@ const Home = () => {
       <Carousel />
       <TrendingGadgets  />
       <TrendingFashion /> 
+      <EmpowermentHubPreview />
       <Category />
       <RecommendedForYou />
       <SellerBanner />

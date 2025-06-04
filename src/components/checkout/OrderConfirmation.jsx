@@ -72,14 +72,11 @@ const OrderConfirmation = () => {
     );
   }
 
-  const { total, date, shippingDetails, paymentGateway, paymentId } = order;
+  const { totalAmount, date, shippingDetails, paymentGateway, paymentId, currency } = order;
+  const displayTotal = totalAmount;
 
-  const isStripe = paymentGateway === 'Stripe';
-  const currency = isStripe ? 'USD' : 'NGN';
-  const conversionRate = 0.0005;
-  const displayTotal = isStripe ? total : total / conversionRate;
+  console.log('Currency:', currency);
 
-  console.log(currency)
   return (
     <div className="container mx-auto px-4 py-8 text-gray-800">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Thank You!</h1>
@@ -97,8 +94,8 @@ const OrderConfirmation = () => {
             <strong>{shippingDetails.name}</strong>
           </p>
           <p className="text-sm">{shippingDetails.address}, {shippingDetails.city}, {shippingDetails.postalCode}</p>
-          <p className="text-sm">US</p>
-          <p className="text-sm">+1 {shippingDetails.phone}</p>
+          <p className="text-sm">{shippingDetails.country}</p>
+          <p className="text-sm">{shippingDetails.phone}</p>
         </div>
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Billing Details</h3>
@@ -106,8 +103,8 @@ const OrderConfirmation = () => {
             <strong>{shippingDetails.name}</strong>
           </p>
           <p className="text-sm">{shippingDetails.address}, {shippingDetails.city}, {shippingDetails.postalCode}</p>
-          <p className="text-sm">US</p>
-          <p className="text-sm">+1 {shippingDetails.phone}</p>
+          <p className="text-sm">{shippingDetails.country}</p>
+          <p className="text-sm">{shippingDetails.phone}</p>
         </div>
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Shipping Method</h3>
@@ -140,19 +137,15 @@ const OrderConfirmation = () => {
                 <span>{item.name} (x{item.quantity})</span>
               </div>
               <span>
-                {isStripe
-                  ? `$${item.price * item.quantity * conversionRate}`
-                  : `$${item.price * item.quantity / conversionRate}`}
+                {currency} {(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 0 })}
               </span>
             </div>
           ))}
         </div>
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
-          <p className="text-sm">Subtotal: ${displayTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-          <p className="text-sm">Shipping & Handling: $0.95</p>
-          <p className="text-sm">Est. Sales Tax: $0.95</p>
-          <p className="text-sm font-bold">Total: ${(displayTotal + 0.95 + 0.95).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-sm">Subtotal: {currency} {displayTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-sm font-bold">Total: {currency} {displayTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
         </div>
       </div>
       <div className="mt-6 flex gap-4">

@@ -35,11 +35,11 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
-import AdminAdmins from '/src/admin/AdminAdmins';
-import AdminVendors from '/src/admin/AdminVendors';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
+import AdminEditFees from './admin/AdminEditFees';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
+
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
 import EmpowermentHub from './pages/EmpowermentHub';
@@ -73,11 +73,11 @@ const Layout = ({ children }) => {
     '/admin/dashboard',
     '/admin/users',
     '/admin/admins',
-    '/admin/vendors',
+    '/admin/edit/fees',
+    '/admin/sellers/payouts',
     '/admin/products',
     '/sellers/orders',
     '/sellers/products',
-    '/seller/login',
     '/seller-onboarding',
     '/dashboard',
   ].includes(location.pathname);
@@ -103,8 +103,7 @@ const Layout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { vendor, loading } = useAuth();
-  const location = useLocation();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -114,9 +113,6 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!vendor) {
-    return <Navigate to="/seller/login" state={{ from: location }} replace />;
-  }
 
   return children;
 };
@@ -131,7 +127,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/add-phone" element={<AddPhone />} />
-            <Route path="/seller/login" element={<Login />} />
             <Route path="/sellers-guide" element={<HowItWorks />} />
 
             {/* === Protected Seller Routes === */}
@@ -211,10 +206,9 @@ function App() {
             {/* === Previously Protected Admin Routes (Now Open) === */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/admins" element={<AdminAdmins />} />
-            <Route path="/admin/vendors" element={<AdminVendors />} />
             <Route path="/admin/products" element={<Admin />} />
-            <Route path="/admin/payouts " element={<AdminPayoutMonitor />} />
+            <Route path="/admin/sellers/payouts" element={<AdminPayoutMonitor />} />
+            <Route path="/admin/edit/fees" element={<AdminEditFees />} />
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />

@@ -41,8 +41,8 @@ import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import AllPolicies from './pages/AllPolicies';
+import PrivacyPolicy from '/src/pages/PrivacyPolicy';
+import AllPolicies from '/src/pages/AllPolicies';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';

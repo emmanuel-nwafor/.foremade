@@ -2,22 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import AdminSidebar from '/src/admin/AdminSidebar';
-import MediaPreview from '/src/admin/MediaPreview'; // Assume this component is created
-import AdminActionButtons from '/src/admin/AdminActionbuttons'; // Assume this component is created
+import MediaPreview from '/src/admin/MediaPreview';
+import AdminActionButtons from '/src/admin/AdminActionbuttons';
 
 function Admin() {
   const [data, setData] = useState({ products: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [sortOption, setSortOption] = useState('default');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const productsSnap = await getDocs(collection(db, 'products'));
-        setData({
-          products: productsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-        });
+        const productsList = productsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setData({ products: productsList });
       } catch (err) {
         setError('Failed to fetch data: ' + err.message);
       }
@@ -64,6 +64,33 @@ function Admin() {
     setSelectedProduct(null);
   };
 
+  const sortProducts = (products) => {
+    const sorted = [...products];
+    switch (sortOption) {
+      case 'name-asc':
+        return sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      case 'name-desc':
+        return sorted.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+      case 'price-asc':
+        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+      case 'price-desc':
+        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+      case 'status-pending':
+        return sorted.sort((a, b) => (a.status === 'pending' ? -1 : 1));
+      case 'status-approved':
+        return sorted.sort((a, b) => (a.status === 'approved' ? -1 : 1));
+      case 'status-not-approved':
+        return sorted.sort((a, b) => (a.status !== 'approved' && a.status !== 'pending' ? -1 : 1));
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedProducts = sortProducts(data.products);
+
+  const approvedCount = data.products.filter(p => p.status === 'approved').length;
+  const notApprovedCount = data.products.filter(p => p.status !== 'approved').length;
+
   if (loading) {
     return (
       <div className="flex min-h-screen bg-white dark:bg-gray-900">
@@ -97,9 +124,37 @@ function Admin() {
       <AdminSidebar />
       <main className="flex-1 ml-0 md:ml-64 p-6">
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6">Product Verification</h1>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-0">
+              Product Verification
+            </h1>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+                className="p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+              >
+                <option value="default">Sort By</option>
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="price-asc">Price (Low to High)</option>
+                <option value="price-desc">Price (High to Low)</option>
+                <option value="status-pending">Status: Pending</option>
+                <option value="status-approved">Status: Approved</option>
+                <option value="status-not-approved">Status: Not Approved</option>
+              </select>
+            </div>
+          </div>
+          <div className="mb-6 flex flex-wrap gap-4">
+            <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg">
+              Approved: {approvedCount}
+            </div>
+            <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-4 py-2 rounded-lg">
+              Not Approved: {notApprovedCount}
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.products.map((product) => (
+            {sortedProducts.map((product) => (
               <div
                 key={product.id}
                 className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -123,8 +178,8 @@ function Admin() {
                 />
               </div>
             ))}
-            {data.products.length === 0 && (
-              <p className="text-gray-600 dark:text-gray-400 text-center mt-4">No products to verify.</p>
+            {sortedProducts.length === 0 && (
+              <p className="text-gray-600 dark:text-gray-400 text-center mt-4 col-span-3">No products to verify.</p>
             )}
           </div>
         </div>

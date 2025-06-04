@@ -5,7 +5,7 @@ import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp } f
 import { getCart, clearCart } from '/src/utils/cartUtils';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import axios from 'axios';
+import axios from 'axios'; 
 import { toast } from 'react-toastify';
 import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
@@ -20,6 +20,16 @@ const customToastStyle = {
 };
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+// Preload image utility to check if an image URL is valid
+const preloadImage = (url) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+  });
+};
 
 const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
   const stripe = useStripe();
@@ -171,35 +181,45 @@ const Checkout = () => {
         const cartItems = await getCart(user?.uid);
         console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
 
-        const processedCart = cartItems.map((item) => {
+        const processedCart = await Promise.all(cartItems.map(async (item) => {
           const productData = item.product || {};
           let imageUrls = [];
+          
+          // Process image URLs
           if (Array.isArray(productData.imageUrls)) {
             imageUrls = productData.imageUrls.filter(
-              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+              (url) => typeof url === 'string' && (url.startsWith('https://res.cloudinary.com/') || url.startsWith('http'))
             );
           } else if (
             productData.imageUrl &&
             typeof productData.imageUrl === 'string' &&
-            productData.imageUrl.startsWith('https://res.cloudinary.com/')
+            (productData.imageUrl.startsWith('https://res.cloudinary.com/') || productData.imageUrl.startsWith('http'))
           ) {
             imageUrls = [productData.imageUrl];
           }
-          if (imageUrls.length === 0) {
-            imageUrls = ['https://res.cloudinary.com/demo/image/upload/v1/sample'];
-            console.warn('No valid imageUrls for product:', productData.name, 'Using fallback');
+
+          // Validate each image URL by preloading
+          const validImageUrls = await Promise.all(imageUrls.map(url => preloadImage(url)));
+          const filteredImageUrls = imageUrls.filter((_, index) => validImageUrls[index]);
+
+          // Use fallback if no valid images
+          if (filteredImageUrls.length === 0) {
+            filteredImageUrls.push('https://res.cloudinary.com/demo/image/upload/v1/sample');
+            console.warn('No valid imageUrls for product:', productData.name || 'Unknown', 'Using fallback');
           }
-          console.log('Processed imageUrls for', productData.name, ':', imageUrls);
+
+          console.log('Processed valid imageUrls for', productData.name || 'Unknown', ':', filteredImageUrls);
+
           return {
             ...item,
             product: {
               ...productData,
-              imageUrls,
+              imageUrls: filteredImageUrls,
             },
-            currentImage: imageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
+            currentImage: filteredImageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
             slideDirection: 'right',
           };
-        });
+        }));
 
         setCart(processedCart);
         setImageLoading(
@@ -243,35 +263,44 @@ const Checkout = () => {
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
         console.log('Updated cart items:', JSON.stringify(cartItems, null, 2));
-        const processedCart = cartItems.map((item) => {
+
+        const processedCart = await Promise.all(cartItems.map(async (item) => {
           const productData = item.product || {};
           let imageUrls = [];
+
           if (Array.isArray(productData.imageUrls)) {
             imageUrls = productData.imageUrls.filter(
-              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+              (url) => typeof url === 'string' && (url.startsWith('https://res.cloudinary.com/') || url.startsWith('http'))
             );
           } else if (
             productData.imageUrl &&
             typeof productData.imageUrl === 'string' &&
-            productData.imageUrl.startsWith('https://res.cloudinary.com/')
+            (productData.imageUrl.startsWith('https://res.cloudinary.com/') || productData.imageUrl.startsWith('http'))
           ) {
             imageUrls = [productData.imageUrl];
           }
-          if (imageUrls.length === 0) {
-            imageUrls = ['https://res.cloudinary.com/demo/image/upload/v1/sample'];
-            console.warn('No valid imageUrls for product:', productData.name, 'Using fallback');
+
+          const validImageUrls = await Promise.all(imageUrls.map(url => preloadImage(url)));
+          const filteredImageUrls = imageUrls.filter((_, index) => validImageUrls[index]);
+
+          if (filteredImageUrls.length === 0) {
+            filteredImageUrls.push('https://res.cloudinary.com/demo/image/upload/v1/sample');
+            console.warn('No valid imageUrls for product:', productData.name || 'Unknown', 'Using default image');
           }
-          console.log('Updated imageUrls for', productData.name, ':', imageUrls);
+
+          console.log('Updated valid imageUrls for', productData.name || 'Unknown', ':', filteredImageUrls);
+
           return {
             ...item,
             product: {
               ...productData,
-              imageUrls,
+              imageUrls: filteredImageUrls,
             },
-            currentImage: imageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
+            currentImage: filteredImageUrls[0] || 'https://res.cloudinary.com/demo/image/upload/v1/sample',
             slideDirection: 'right',
           };
-        });
+        }));
+
         setCart(processedCart);
         setImageLoading(
           processedCart.reduce((acc, item) => ({
@@ -339,10 +368,10 @@ const Checkout = () => {
       return { isValid: false, message: 'All fields are required.' };
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      return { isValid: true, message: 'Invalid email address.' };
+      return { isValid: false, message: 'Invalid email address.' };
     }
     if (!['Nigeria', 'United Kingdom'].includes(country)) {
-      return { isValid: true, message: 'Select Nigeria or United Kingdom.' };
+      return { isValid: false, message: 'Select Nigeria or United Kingdom.' };
     }
     return { isValid: true, message: '' };
   };
@@ -352,31 +381,29 @@ const Checkout = () => {
   const sendOrderConfirmationEmail = async (order) => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      await axios.post(`${backendUrl}/send-order-confirmation-${email}`, {
+      await axios.post(`${backendUrl}/send-order-confirmation`, {
         to: order.shippingDetails.email,
         orderId: order.paymentId,
         items: order.items,
         total: order.paymentGateway === 'Stripe' ? order.totalAmount : order.totalAmount,
         currency: order.paymentGateway === 'Stripe' ? 'GBP' : 'NGN',
-        shippingDetails: order.shippingDetails.data(),
+        shippingDetails: order.shippingDetails,
         paymentGateway: order.paymentGateway,
-        date: order.date.toISOString(),
+        date: order.date,
       });
       console.log('Order confirmation email sent successfully');
     } catch (err) {
       console.error('Error sending order confirmation email:', {
         message: err.message,
         code: err.code,
-        response: err.response?.data(),
-      data,
-    });
+        response: err.response?.data,
+      });
       toast.warn('Order placed successfully, but failed to send confirmation email.', {
-        position: 'top-right-autoClose',
+        position: 'top-right',
         autoClose: 3000,
       });
     }
-  });
-});
+  };
 
   const handlePaymentSuccess = useCallback(
     async (paymentData) => {
@@ -391,7 +418,7 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error('Total amount must be at least ₦12,000 to proceed.', { error: 'top-right', autoClose: 3000 });
+          toast.error('Total amount must be at least ₦12,000 to proceed.', { position: 'top-right', autoClose: 3000 });
           return;
         }
         const stockIssues = cart.filter((item) => item.quantity > (item.product?.stock || 0));
@@ -409,11 +436,10 @@ const Checkout = () => {
           throw new Error('Vendor ID missing. Please check product data.');
         }
 
-        // Calculate admin and seller shares (e.g., 15% admin, 85% seller)
         const adminSharePercentage = 0.15;
         const totalAmount = paymentGateway === 'Stripe' ? totalGbp : totalNgn;
-        const adminShare = totalAmount * adminSharePercentage; // 15% for admin
-        const sellerShare = totalAmount - adminShare; // 85% for seller
+        const adminShare = totalAmount * adminSharePercentage;
+        const sellerShare = totalAmount - adminShare;
 
         const order = {
           id: orderId,
@@ -436,11 +462,9 @@ const Checkout = () => {
           paymentId: paymentData.id || paymentData.reference,
         };
 
-        // Save order to Firestore
         await setDoc(doc(db, 'orders', orderId), order);
         console.log('Order saved:', orderId);
 
-        // Update seller's wallet pending balance
         const walletRef = doc(db, 'wallets', vendorId);
         const walletSnap = await getDoc(walletRef);
         if (walletSnap.exists()) {
@@ -458,7 +482,6 @@ const Checkout = () => {
           });
         }
 
-        // Record transaction for seller
         await addDoc(collection(db, 'transactions'), {
           userId: vendorId,
           type: 'Sale',
@@ -470,7 +493,6 @@ const Checkout = () => {
           reference: paymentData.id || paymentData.reference,
         });
 
-        // Update admin's wallet (simplified for demo; you might want a dedicated admin wallet)
         const adminWalletRef = doc(db, 'wallets', 'admin');
         const adminWalletSnap = await getDoc(adminWalletRef);
         if (adminWalletSnap.exists()) {
@@ -488,80 +510,49 @@ const Checkout = () => {
           });
         }
 
-        // Update product stock
         for (const item of cart) {
           const productRef = doc(db, 'products', item.productId);
-          try {
-            const productSnap = await getDoc(productRef);
-            if (productSnap.exists()) {
-              await updateDoc(productRef, { stock: productSnap.data().stock - item.quantity });
-            } else {
-              console.warn(`Product ${item.productId} does not exist.`);
-            }
-          } catch (productError) {
-            console.error('Firestore product update error:', {
-              code: productError.code,
-              message: productError.message,
-              productId: item.productId,
-            });
-            throw new Error(
-              productError.code === 'permission-denied'
-                ? 'Insufficient permissions to update product stock.'
-                : 'Failed to update product stock.'
-            );
+          const productSnap = await getDoc(productRef);
+          if (productSnap.exists()) {
+            await updateDoc(productRef, { stock: productSnap.data().stock - item.quantity });
+          } else {
+            console.warn(`Product ${item.productId} does not exist.`);
           }
         }
 
         if (auth.currentUser) {
           const userDocRef = doc(db, 'users', auth.currentUser.uid);
-          try {
-            await setDoc(
-              userDocRef,
-              {
-                name: formData.name,
-                email: formData.email,
-                address: formData.address,
-                city: formData.city,
-                postalCode: formData.postalCode,
-                country: formData.country,
-                phone: formData.phone,
-              },
-              { merge: true }
-            );
-          } catch (userError) {
-            console.error('Firestore user update error:', {
-              code: userError.code,
-              message: userError.message,
-            });
-            throw new Error(
-              userError.code === 'permission-denied'
-                ? 'Insufficient permissions to update user profile.'
-                : 'Failed to update user profile.'
-            );
-          }
+          await setDoc(
+            userDocRef,
+            {
+              name: formData.name,
+              email: formData.email,
+              address: formData.address,
+              city: formData.city,
+              postalCode: formData.postalCode,
+              country: formData.country,
+              phone: formData.phone,
+            },
+            { merge: true }
+          );
         }
 
-        try {
-          await sendOrderConfirmationEmail(order);
-          await clearCart(auth.currentUser?.uid);
-          setCart([]);
-          toast.success(
-            <div>
-              <strong>Payment Successful!</strong>
-              <p>Your order has been placed. Check your email for confirmation.</p>
-            </div>,
-            {
-              position: 'top-right',
-              autoClose: 5000,
-              style: customToastStyle,
-              icon: <i className="bx bx-check-circle text-2xl"></i>,
-            }
-          );
-          navigate('/order-confirmation', { state: { order } });
-        } catch (e) {
-          console.error('Error clearing cart:', e);
-          toast.warn('Order placed, but failed to clear cart.', { position: 'top-right', autoClose: 3000 });
-        }
+        await sendOrderConfirmationEmail(order);
+        await clearCart(auth.currentUser?.uid);
+        setCart([]);
+        toast.success(
+          <div>
+            <strong>Payment Successful!</strong>
+            <p>Your order has been placed. Check your email for confirmation.</p>
+          </div>,
+          {
+            position: 'top-right',
+            autoClose: 5000,
+            style: customToastStyle,
+            icon: <i className="bx bx-check-circle text-blue-500 text-xl"></i>,
+          }
+        );
+        navigate('/order-confirmation', { state: { order } });
       } catch (err) {
         console.error('Checkout error:', {
           message: err.message,
@@ -571,7 +562,7 @@ const Checkout = () => {
         toast.error(err.message || 'Failed to place order.', { position: 'top-right', autoClose: 3000 });
       }
     },
-    [cart, formData, totalNgn, totalGbp, navigate, belowMinimumPrice]
+    [cart, subtotalNgn, belowMinimumPrice, formData, totalNgn, totalGbp, navigate, totalItems]
   );
 
   const handleCancel = () => {
@@ -579,57 +570,57 @@ const Checkout = () => {
   };
 
   const handleImageClick = (itemId, url, index, currentIndex) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.productId === itemId
-          ? {
-              ...item,
-              currentImage: url,
-              slideDirection: index > currentIndex ? 'right' : 'left',
-            }
-          : item
-      )
-    );
-    console.log('Checkout item image updated:', url, 'Direction:', index > currentIndex ? 'right' : 'left');
+    setCart((prev) => prev.map((item) =>
+      item.productId === itemId ? {
+          ...item,
+          currentImage: url,
+          slideDirection: index > currentIndex ? 'right' : 'left',
+        } : item
+    ));
+    console.log('Cart item image updated:', { itemId, url, direction: index > currentIndex ? 'right' : 'left' });
   };
 
-  const handleImageLoad = (productId) => {
-    setImageLoading((prev) => ({ ...prev, [productId]: false }));
-    console.log('Image loaded for productId:', productId);
+  const handleImageLoad = (productId, isThumbnail) => {
+    setImageLoading((prev) => {
+      const updated = { ...prev, [productId]: prev[productId] && !isThumbnail ? false : prev[productId] };
+      console.log(`Image ${isThumbnail ? 'thumbnail' : 'main'} loaded for productId: ${productId}`, { updated });
+      return updated;
+    });
   };
 
-  const handleImageError = (e, productId, productName) => {
-    console.error('Checkout item image load error:', {
-      productId,
+  const handleImageError = (e, productId) => {
+    console.error(`Cart item image load error for productId: ${productId}`, {
       imageUrl: e.target.src,
-      name: productName,
-      error: e.message || 'Unknown error',
+      productId,
+      error: e.message || 'Unknown error occurred',
     });
     setImageLoading((prev) => ({ ...prev, [productId]: false }));
-    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
+    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample'; // Fallback image
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <Spinner />
-        <p className="text-gray-600">Loading...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <Spinner />
+          <p className="text-gray-500 text-sm mt-2">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  const isStripe = formData.country === 'United Kingdom';
-  const currency = isStripe ? 'GBP' : 'NGN';
-  const subtotal = isStripe ? subtotalGbp : subtotalNgn;
-  const tax = isStripe ? taxGbp : taxNgn;
-  const shipping = isStripe ? shippingGbp : shippingNgn;
-  const rawShipping = isStripe ? rawShippingGbp : rawShippingNgn;
-  const total = isStripe ? totalGbp : totalNgn;
+  const isStripeCheckout = formData.country === 'United Kingdom';
+  const currency = isStripeCheckout ? 'GBP' : 'NGN';
+  const subtotal = isStripeCheckout ? subtotalGbp : subtotalNgn;
+  const tax = isStripeCheckout ? taxGbp : taxNgn;
+  const shipping = isStripeCheckout ? shippingGbp : shippingNgn;
+  const rawShipping = isStripeCheckout ? rawShippingGbp : rawShippingNgn;
+  const total = isStripeCheckout ? totalGbp : totalNgn;
 
   console.log('Currency:', currency, 'Total:', total);
 
   return (
-    <div className="container mx-auto px-4 py-8 text-gray-800">
+    <div className="container mx-auto px-4 py-8">
       <style>
         {`
           @keyframes slideInRight {
@@ -784,12 +775,12 @@ const Checkout = () => {
                     )}
                     <img
                       src={item.currentImage}
-                      alt={item.product?.name || 'Unknown'}
+                      alt={item.product?.name || 'Unknown Product'}
                       className={`absolute w-full h-full object-cover rounded-lg ${
                         item.slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'
                       } ${imageLoading[item.productId] ? 'opacity-0' : 'opacity-100'}`}
-                      onLoad={() => handleImageLoad(item.productId)}
-                      onError={(e) => handleImageError(e, item.productId, item.product?.name)}
+                      onLoad={() => handleImageLoad(item.productId, false)}
+                      onError={(e) => handleImageError(e, item.productId)}
                     />
                   </div>
                   <div className="flex-1">
@@ -797,7 +788,7 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {isStripe
+                      {isStripeCheckout
                         ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
                             minimumFractionDigits: 2,
                           })}`
@@ -812,10 +803,10 @@ const Checkout = () => {
                           <img
                             key={index}
                             src={url}
-                            alt={`${item.product?.name} ${index + 1}`}
+                            alt={`${item.product?.name || 'Unknown'} ${index + 1}`}
                             className={`w-10 h-10 object-cover rounded border cursor-pointer ${
                               item.currentImage === url ? 'border-blue-500 border-2' : 'border-gray-300'
-                            }`}
+                            } ${imageLoading[item.productId] ? 'opacity-0' : 'opacity-100'}`}
                             onClick={() =>
                               handleImageClick(
                                 item.productId,
@@ -824,14 +815,8 @@ const Checkout = () => {
                                 item.product.imageUrls.indexOf(item.currentImage)
                               )
                             }
-                            onError={(e) => handleImageError(e, item.productId, item.product?.name)}
-                            onLoad={() => {
-                              console.log('Checkout thumbnail image loaded successfully:', {
-                                productId: item.productId,
-                                imageUrl: url,
-                                name: item.product?.name,
-                              });
-                            }}
+                            onLoad={() => handleImageLoad(item.productId, true)}
+                            onError={(e) => handleImageError(e, item.productId)}
                           />
                         ))}
                       </div>
@@ -856,7 +841,7 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'} (x{item.quantity})
                     </span>
                     <span>
-                      {isStripe
+                      {isStripeCheckout
                         ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
                             minimumFractionDigits: 2,
                           })}`
@@ -869,7 +854,7 @@ const Checkout = () => {
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>
-                    {isStripe
+                    {isStripeCheckout
                       ? `£${subtotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
@@ -877,7 +862,7 @@ const Checkout = () => {
                 <div className="flex justify-between">
                   <span>Tax (7.5%)</span>
                   <span>
-                    {isStripe
+                    {isStripeCheckout
                       ? `£${tax.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
                       : `₦${tax.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
                   </span>
@@ -888,32 +873,32 @@ const Checkout = () => {
                     {totalItems >= 9 && formData.country === 'Nigeria' ? (
                       <span className="flex items-center gap-1">
                         <span className="line-through text-gray-500 mr-1">
-                          {isStripe
+                          {isStripeCheckout
                             ? `£${rawShipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                            : `₦${rawShipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                            : `₦${rawShipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
                         </span>
                         <span className="text-green-600 font-semibold">
-                          {isStripe
+                          {isStripeCheckout
                             ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                            : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                            : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
                         </span>
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                           30% OFF
                         </span>
                       </span>
                     ) : (
-                      isStripe
+                      isStripeCheckout
                         ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                        : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
+                        : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {isStripe
+                    {isStripeCheckout
                       ? `£${total.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                      : `₦${total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
+                      : `₦${total.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
                   </span>
                 </div>
               </div>

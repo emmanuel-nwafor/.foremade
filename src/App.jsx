@@ -75,7 +75,6 @@ const Layout = ({ children }) => {
     '/admin/products',
     '/sellers/orders',
     '/sellers/products',
-    '/seller/login',
     '/seller-onboarding',
     '/dashboard',
   ].includes(location.pathname);
@@ -99,8 +98,7 @@ const Layout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { vendor, loading } = useAuth();
-  const location = useLocation();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -110,9 +108,6 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!vendor) {
-    return <Navigate to="/seller/login" state={{ from: location }} replace />;
-  }
 
   return children;
 };
@@ -127,7 +122,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/add-phone" element={<AddPhone />} />
-            <Route path="/seller/login" element={<Login />} />
             <Route path="/sellers-guide" element={<HowItWorks />} />
 
             {/* === Protected Seller Routes === */}

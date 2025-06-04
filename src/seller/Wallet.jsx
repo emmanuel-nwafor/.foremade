@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { vendorAuth as auth, vendorDb as db } from '../firebase';
-import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { auth, db } from '../firebase';
 import { 
   collection, 
   doc, 
@@ -11,69 +10,40 @@ import {
   where, 
   onSnapshot,
   serverTimestamp,
-  orderBy,
-  limit,
   getDoc
 } from 'firebase/firestore';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import SellerSidebar from './SellerSidebar';
 
 // Paystack configuration
-const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-const PAYSTACK_TEST_KEY = import.meta.env.VITE_PAYSTACK_TEST_KEY;
-const PAYSTACK_API_URL = 'https://api.paystack.co';
+const PAYSTACK_API_URL = 'https://foremade-backend.onrender.com'; // Updated to deployed server
 
-// Function to fetch banks from Paystack API
+// Function to fetch banks from Paystack API via server
 const fetchBanksFromPaystack = async () => {
   try {
-    const response = await fetch(`${PAYSTACK_API_URL}/bank`, {
+    console.log('Attempting to fetch banks from:', `${PAYSTACK_API_URL}/fetch-banks`);
+    const response = await fetch(`${PAYSTACK_API_URL}/fetch-banks`, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
     
-    console.log('Paystack API Response:', response);
-    
-    if (!response.ok) throw new Error('Failed to fetch banks');
+    if (!response.ok) {
+      console.error('Fetch failed with status:', response.status);
+      throw new Error(`Failed to fetch banks: ${response.statusText}`);
+    }
     
     const data = await response.json();
-    console.log('Paystack API Data:', data);
-    
-    if (data.status) {
-      return data.data;
-    }
+    console.log('Successfully fetched banks:', data);
+    return data;
   } catch (err) {
-    console.error('Error fetching banks:', err);
+    console.error('Error fetching banks:', err.message);
     return [];
   }
 };
 
-// Nigerian bank lookup (replace with Paystack API in production)
-const nigerianBanks = {
-  '044': { name: 'Access Bank', code: '044' },
-  '023': { name: 'Citibank Nigeria', code: '023' },
-  '063': { name: 'Access Bank (Diamond)', code: '063' },
-  '050': { name: 'Ecobank Nigeria', code: '050' },
-  '011': { name: 'First Bank of Nigeria', code: '011' },
-  '214': { name: 'First City Monument Bank', code: '214' },
-  '058': { name: 'Guaranty Trust Bank', code: '058' },
-  '030': { name: 'Heritage Bank', code: '030' },
-  '301': { name: 'Jaiz Bank', code: '301' },
-  '082': { name: 'Keystone Bank', code: '082' },
-  '076': { name: 'Polaris Bank', code: '076' },
-  '221': { name: 'Stanbic IBTC Bank', code: '221' },
-  '232': { name: 'Sterling Bank', code: '232' },
-  '032': { name: 'Union Bank of Nigeria', code: '032' },
-  '033': { name: 'United Bank for Africa', code: '033' },
-  '215': { name: 'Unity Bank', code: '215' },
-  '035': { name: 'Wema Bank', code: '035' },
-  '057': { name: 'Zenith Bank', code: '057' }
-};
-
 export default function Wallet() {
-  const { vendor } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0, updatedAt: null });
@@ -86,145 +56,72 @@ export default function Wallet() {
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isVerified, setIsVerified] = useState(false);
-<<<<<<< HEAD
-  const [email, setEmail] = useState(''); // For Paystack transfer recipient
-  const [country, setCountry] = useState(''); // To select country
-=======
-  const [email, setEmail] = useState(vendor?.email || '');
+  const [email, setEmail] = useState('');
   const [banks, setBanks] = useState([]);
   const [accountName, setAccountName] = useState('');
   const [verificationLoading, setVerificationLoading] = useState(false);
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
+  const [country, setCountry] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
   useEffect(() => {
-    let unsubscribeWallet = null;
-    let unsubscribeTransactions = null;
-    let isInitialized = false;
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No user logged in, redirecting to login');
+      navigate('/login');
+      console.log(bankName)
+      return;
+    }
 
-    const checkVendorStatus = async (uid) => {
+    console.log('User logged in:', user.uid);
+    setEmail(user.email || '');
+
+    const checkUserStatus = async (uid) => {
       try {
-        if (!uid) {
-          console.log('No UID provided to checkVendorStatus');
-          return false;
+        console.log('Checking user status for:', uid);
+        const userRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userRef);
+        const exists = userDoc.exists();
+        console.log('User document exists:', exists);
+        if (!exists) {
+          console.log('User document does not exist, redirecting to login');
+          navigate('/login');
         }
-        console.log('Checking vendor status for:', uid);
-        const vendorRef = doc(db, 'vendors', uid);
-        const vendorDoc = await getDoc(vendorRef);
-        const exists = vendorDoc.exists();
-        console.log('Vendor document exists:', exists);
         return exists;
       } catch (err) {
-        console.error('Error checking vendor status:', err);
+        console.error('Error checking user status:', err);
+        setError('Error checking user status: ' + err.message);
+        setLoading(false);
         return false;
       }
     };
 
-    const handleAuthStateChange = async (user) => {
-      console.log('Auth state change handler called with user:', user?.uid);
-      
-      if (user) {
-        try {
-          // First check vendor status
-          const isVendor = await checkVendorStatus(user.uid);
-          if (!isVendor) {
-            console.log('Not a valid vendor account:', user.uid);
-            setIsAuthenticated(false);
-            if (!isInitialized) {
-              navigate('/seller/login');
-            }
-            return;
-          }
+    const initializeData = async () => {
+      const userExists = await checkUserStatus(user.uid);
+      if (!userExists) return;
 
-          console.log('Valid vendor found:', user.uid);
-          setIsAuthenticated(true);
+      const unsubscribeWallet = listenToWalletData(user.uid);
+      const unsubscribeTransactions = listenToTransactions(user.uid);
 
-          // Clean up existing listeners
-          if (unsubscribeWallet) {
-            console.log('Cleaning up old wallet listener');
-            unsubscribeWallet();
-          }
-          if (unsubscribeTransactions) {
-            console.log('Cleaning up old transactions listener');
-            unsubscribeTransactions();
-          }
-
-          // Set up new listeners
-          console.log('Setting up new wallet listener for:', user.uid);
-          unsubscribeWallet = listenToWalletData(user.uid);
-          console.log('Setting up new transactions listener for:', user.uid);
-          unsubscribeTransactions = listenToTransactions(user.uid);
-          
-        } catch (err) {
-          console.error('Error in auth state change:', err);
-          setIsAuthenticated(false);
-          if (!isInitialized) {
-            navigate('/seller/login');
-          }
-        }
-      } else {
-        console.log('No user in auth state change');
-        setIsAuthenticated(false);
-        if (!isInitialized) {
-          navigate('/seller/login');
-        }
-      }
-      
-      if (!isInitialized) {
-        isInitialized = true;
-        setLoading(false);
-      }
+      return () => {
+        if (unsubscribeWallet) unsubscribeWallet();
+        if (unsubscribeTransactions) unsubscribeTransactions();
+      };
     };
 
-    // Initial setup
-    console.log('Setting up Wallet component');
-    console.log('Current auth instance:', auth?.currentUser?.uid);
-
-    // Check for current user immediately
-    const currentUser = auth.currentUser;
-    console.log('Initial auth check - current user:', currentUser?.uid);
-    
-    if (currentUser) {
-      handleAuthStateChange(currentUser);
-    } else {
-      console.log('No current user on initial check');
-      if (!isInitialized) {
-        isInitialized = true;
-        setLoading(false);
-        navigate('/seller/login');
-      }
-    }
-
-    // Set up auth state listener
-    console.log('Setting up auth state listener');
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      console.log('Auth state changed:', user?.uid);
-      handleAuthStateChange(user);
-    });
-
-    // Cleanup function
-    return () => {
-      console.log('Cleaning up auth subscriptions');
-      if (unsubscribeAuth) unsubscribeAuth();
-      if (unsubscribeWallet) unsubscribeWallet();
-      if (unsubscribeTransactions) unsubscribeTransactions();
-    };
+    initializeData().finally(() => setLoading(false));
   }, [navigate]);
 
-  // Protect against unauthenticated access
   useEffect(() => {
-    if (!loading && !isAuthenticated && location.pathname !== '/seller/login') {
-      console.log('Unauthenticated access detected, redirecting to login');
-      navigate('/seller/login');
+    if (!loading && auth.currentUser && location.pathname !== '/login') {
+      fetchBanksFromPaystack().then(setBanks);
     }
-  }, [loading, isAuthenticated, navigate, location.pathname]);
+  }, [loading, location.pathname]);
 
   const listenToWalletData = (uid) => {
     const walletRef = doc(db, 'wallets', uid);
@@ -248,9 +145,7 @@ export default function Wallet() {
   const listenToTransactions = (uid) => {
     const q = query(
       collection(db, 'transactions'),
-      where('userId', '==', uid),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      where('userId', '==', uid)
     );
 
     return onSnapshot(q, (querySnapshot) => {
@@ -282,23 +177,6 @@ export default function Wallet() {
     }
   };
 
-<<<<<<< HEAD
-  const verifyBankAccount = () => {
-    if (country !== 'Nigeria') {
-      setIsVerified(true);
-      setMessage('Bank verification skipped for non-Nigerian accounts.');
-      return;
-    }
-
-    const bankCode = accountNumber.slice(0, 3); // Mock: first 3 digits as bank code
-    const bank = nigerianBanks[bankCode];
-    if (bank) {
-      setBankName(bank.name);
-      setIsVerified(true);
-      setMessage('Bank verified successfully.');
-    } else {
-      setBankName('');
-=======
   const verifyBankAccount = async () => {
     if (!accountNumber || !bankCode) {
       setMessage('Please enter account number and select a bank');
@@ -311,30 +189,34 @@ export default function Wallet() {
     setAccountName('');
 
     try {
-      const response = await fetch(
-        `${PAYSTACK_API_URL}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      console.log('Verifying account with server:', `${PAYSTACK_API_URL}/verify-bank-account`);
+      const response = await fetch(`${PAYSTACK_API_URL}/verify-bank-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountNumber, bankCode }),
+      });
+
+      console.log('Server Response Status:', response.status);
 
       const data = await response.json();
+      console.log('Server Response Data:', data);
 
-      if (data.status) {
+      if (response.status === 401) {
+        setMessage('Authentication failed. Please check server configuration.');
+        return;
+      }
+
+      if (data.status === 'success') {
         setIsVerified(true);
-        setAccountName(data.data.account_name);
+        setAccountName(data.accountName);
         setMessage('Account verified successfully');
       } else {
         setIsVerified(false);
-        setMessage('Could not verify account. Please check the details and try again.');
+        setMessage(`Could not verify account. Error: ${data.message || 'Unknown'}`);
       }
     } catch (err) {
       console.error('Bank verification error:', err);
-      setMessage('Failed to verify account. Please try again later.');
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
+      setMessage('Failed to verify account. Please try again later. Error: ' + err.message);
       setIsVerified(false);
     } finally {
       setVerificationLoading(false);
@@ -347,70 +229,25 @@ export default function Wallet() {
     setMessage('');
     const amount = parseFloat(withdrawAmount);
 
-<<<<<<< HEAD
     if (!country) {
       setError('Please select a country.');
       setIsProcessing(false);
       return;
     }
 
-    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified && email) {
-=======
     if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified) {
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
       try {
-        // Create transfer recipient
-        const recipientResponse = await fetch(`${PAYSTACK_API_URL}/transferrecipient`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            type: 'nuban',
-            name: accountName,
-            account_number: accountNumber,
-            bank_code: bankCode,
-            currency: 'NGN'
-          })
-        });
-
-        const recipientData = await recipientResponse.json();
-        if (!recipientData.status) throw new Error('Failed to create transfer recipient');
-
-        // Initiate transfer
-        const transferResponse = await fetch(`${PAYSTACK_API_URL}/transfer`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${PAYSTACK_TEST_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            source: 'balance',
-            amount: Math.round(amount * 100), // Convert to kobo
-            recipient: recipientData.data.recipient_code,
-            reason: `Withdrawal to ${accountName}`
-          })
-        });
-
-        const transferData = await transferResponse.json();
-        if (!transferData.status) throw new Error('Failed to initiate transfer');
-
-        // Update Firestore
-        const uid = vendor.uid;
-        const walletRef = doc(db, 'wallets', uid);
-<<<<<<< HEAD
+        const uid = auth.currentUser.uid;
         const transactionReference = `withdrawal-${uid}-${Date.now()}`;
 
-        // Call the /initiate-seller-payout endpoint
-        const response = await fetch('http://localhost:5000/initiate-seller-payout', {
+        const response = await fetch(`${PAYSTACK_API_URL}/initiate-seller-payout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sellerId: uid,
             amount,
             transactionReference,
-            bankCode: country === 'Nigeria' ? accountNumber.slice(0, 3) : undefined,
+            bankCode: country === 'Nigeria' ? bankCode : undefined,
             accountNumber: country === 'Nigeria' ? accountNumber : undefined,
             country,
             email,
@@ -421,62 +258,30 @@ export default function Wallet() {
         if (result.error) throw new Error(result.error);
 
         if (result.redirectUrl) {
-          // For Stripe (UK), redirect to onboarding
           setMessage('Redirecting to Stripe for onboarding...');
           window.location.href = result.redirectUrl;
           return;
         }
 
-        // Update wallet balances
-        await updateDoc(walletRef, {
+        await updateDoc(doc(db, 'wallets', uid), {
           availableBalance: wallet.availableBalance - amount,
-          pendingBalance: wallet.pendingBalance + amount, // Moves to pending for processing
           updatedAt: serverTimestamp(),
         });
 
-        // Record the transaction
-        await addDoc(collection(db, 'transactions'), {
-          userId: uid,
-          type: 'Withdrawal',
-          description: `Withdrawal to ${bankName || 'Bank Account'} (${accountNumber || 'N/A'})`,
-=======
-        await updateDoc(walletRef, {
-          availableBalance: wallet.availableBalance - amount,
-          pendingBalance: wallet.pendingBalance + amount,
-          updatedAt: serverTimestamp()
-        });
-
-        // Create transaction record
         await addDoc(collection(db, 'transactions'), {
           userId: uid,
           type: 'Withdrawal',
           description: `Withdrawal to ${accountName} (${accountNumber})`,
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
           amount: amount,
           date: new Date().toISOString().split('T')[0],
           status: 'Pending',
           createdAt: serverTimestamp(),
-<<<<<<< HEAD
-          reference: result.reference || result.transferId, // Paystack or Stripe reference
+          reference: result.reference || result.transferId,
         });
 
-        setMessage(`Withdrawal request of ₦${amount} submitted successfully. Awaiting processing.`);
-        setShowWithdrawModal(false);
-        setWithdrawAmount('');
-        setAccountNumber('');
-        setBankName('');
-        setIsVerified(false);
-        setCountry('');
-=======
-          reference: transferData.data.reference,
-          transferCode: transferData.data.transfer_code,
-          recipientCode: recipientData.data.recipient_code
-        });
-
-        setMessage(`Withdrawal of ₦${amount.toLocaleString()} initiated successfully`);
+        setMessage(`Withdrawal request of ₦${amount.toLocaleString()} submitted successfully. Awaiting processing.`);
         setShowWithdrawModal(false);
         resetWithdrawForm();
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
       } catch (err) {
         console.error('Withdrawal error:', err);
         setError('Withdrawal failed: ' + err.message);
@@ -496,6 +301,7 @@ export default function Wallet() {
     setBankName('');
     setIsVerified(false);
     setAccountName('');
+    setCountry('');
   };
 
   if (loading) {
@@ -522,7 +328,6 @@ export default function Wallet() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <div className="flex flex-1">
-        {/* Sidebar Toggle */}
         <button
           className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg"
           onClick={toggleSidebar}
@@ -530,15 +335,12 @@ export default function Wallet() {
           <i className="bx bx-menu text-xl"></i>
         </button>
 
-        {/* Sidebar */}
         <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-gray-100`}>
           <SellerSidebar />
         </div>
 
-        {/* Main Content */}
         <div className="flex-1 p-6">
           <div className="max-w-6xl mx-auto">
-            {/* Header */}
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-gray-900">Wallet Dashboard</h1>
               {message && (
@@ -546,18 +348,13 @@ export default function Wallet() {
                   {message}
                 </div>
               )}
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
             </div>
-<<<<<<< HEAD
-          )}
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-=======
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
 
-            {/* Balance Cards */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
                 <h3 className="text-lg font-semibold opacity-90">Available Balance</h3>
@@ -578,7 +375,6 @@ export default function Wallet() {
               </div>
             </div>
 
-            {/* Transactions */}
             <div className="bg-white rounded-xl shadow-sm">
               <div className="p-6 border-b">
                 <h2 className="text-xl font-semibold text-gray-900">Recent Transactions</h2>
@@ -595,8 +391,8 @@ export default function Wallet() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {transactions.map((transaction) => (
-                      <tr key={transaction.id}>
+                    {transactions.map((transaction, index) => (
+                      <tr key={`${transaction.id}-${index}`}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
@@ -628,188 +424,127 @@ export default function Wallet() {
         </div>
       </div>
 
-      {/* Withdraw Modal */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Withdraw Funds</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 max-md:p-10 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-lg font-bold mb-4">Withdraw Funds</h2>
             <form onSubmit={handleWithdraw}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount (₦)
-                  </label>
-                  <input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                    placeholder="Enter amount"
-                    required
-                  />
-                </div>
-
-<<<<<<< HEAD
-          {/* Withdraw Modal */}
-          {showWithdrawModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 max-md:p-10 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-lg font-bold mb-4">Withdraw Funds</h2>
-                <form onSubmit={handleWithdraw}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Country</label>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="mt-1 p-2 w-full border rounded"
+                  required
+                >
+                  <option value="">Select Country</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="mt-1 p-2 w-full border rounded"
+                  required
+                />
+              </div>
+              {country === 'Nigeria' && (
+                <>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Country</label>
+                    <label className="block text-sm font-medium text-gray-700">Select Bank</label>
                     <select
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="mt-1 p-2 w-full border rounded"
+                      value={bankCode}
+                      onChange={(e) => {
+                        setBankCode(e.target.value);
+                        setBankName(banks.find(bank => bank.code === e.target.value)?.name || '');
+                      }}
+                      className="mt-1 p-2 w-full border rounded-lg"
                       required
                     >
-                      <option value="">Select Country</option>
-                      <option value="Nigeria">Nigeria</option>
-                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="">Select a bank</option>
+                      {banks.length > 0 ? (
+                        banks.map((bank, index) => (
+                          <option key={`${bank.code}-${index}`} value={bank.code}>
+                            {bank.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option disabled>Loading banks...</option>
+                      )}
                     </select>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
-                    <input
-                      type="number"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      className="mt-1 p-2 w-full border rounded"
-                      required
-                    />
+                    <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        className="flex-1 p-2 border rounded-lg"
+                        placeholder="e.g., 9121059853"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={verifyBankAccount}
+                        disabled={verificationLoading || !bankCode || !accountNumber}
+                        className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {verificationLoading ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
                   </div>
-                  {country === 'Nigeria' && (
-                    <>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Account Number</label>
-                        <input
-                          type="text"
-                          value={accountNumber}
-                          onChange={(e) => {
-                            setAccountNumber(e.target.value);
-                            verifyBankAccount();
-                          }}
-                          className="mt-1 p-2 w-full border rounded"
-                          placeholder="e.g., 1234567890"
-                          required
-                        />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                        <input
-                          type="text"
-                          value={bankName}
-                          onChange={(e) => setBankName(e.target.value)}
-                          className="mt-1 p-2 w-full border rounded"
-                          placeholder="Will auto-fill or enter manually"
-                          required
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Email (for verification)</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1 p-2 w-full border rounded"
-                      required
-                    />
-                  </div>
-                  {message && (
-                    <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-lg text-sm">
-                      {message}
+                  {accountName && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-green-700 text-sm">Account Name: {accountName}</p>
                     </div>
                   )}
-                  {error && (
-                    <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
-                      {error}
-                    </div>
-                  )}
-                  <div className="flex justify-end gap-2">
-=======
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Bank
-                  </label>
-                  <select
-                    value={bankCode}
-                    onChange={(e) => {
-                      setBankCode(e.target.value);
-                      setBankName(banks.find(bank => bank.code === e.target.value)?.name || '');
-                    }}
-                    className="w-full p-2 border rounded-lg"
-                    required
-                  >
-                    <option value="">Select a bank</option>
-                    {banks.map((bank) => (
-                      <option key={bank.code} value={bank.code}>
-                        {bank.name}
-                      </option>
-                    ))}
-                  </select>
+                </>
+              )}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Email (for verification)</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 p-2 w-full border rounded"
+                  required
+                />
+              </div>
+              {message && (
+                <div className={`mb-4 p-2 rounded-lg ${isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  <p className="text-sm">{message}</p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Number
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      className="flex-1 p-2 border rounded-lg"
-                      placeholder="Enter account number"
-                      required
-                    />
->>>>>>> 5866daf407017a6abb156996f934a5675027df2e
-                    <button
-                      type="button"
-                      onClick={verifyBankAccount}
-                      disabled={verificationLoading || !bankCode || !accountNumber}
-                      className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {verificationLoading ? 'Verifying...' : 'Verify'}
-                    </button>
-                  </div>
+              )}
+              {error && (
+                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
+                  {error}
                 </div>
-
-                {accountName && (
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <p className="text-green-700 text-sm">Account Name: {accountName}</p>
-                  </div>
-                )}
-
-                {message && (
-                  <div className={`p-3 rounded-lg ${isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    <p className="text-sm">{message}</p>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowWithdrawModal(false);
-                      resetWithdrawForm();
-                    }}
-                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!isVerified || isProcessing || !withdrawAmount}
-                    className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${
-                      (!isVerified || isProcessing || !withdrawAmount) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-                    }`}
-                  >
-                    {isProcessing ? 'Processing...' : 'Withdraw'}
-                  </button>
-                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    resetWithdrawForm();
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isVerified || isProcessing || !withdrawAmount || !country}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${
+                    (!isVerified || isProcessing || !withdrawAmount || !country) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                  }`}
+                >
+                  {isProcessing ? 'Processing...' : 'Withdraw'}
+                </button>
               </div>
             </form>
           </div>

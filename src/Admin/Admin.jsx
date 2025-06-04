@@ -76,11 +76,11 @@ function Admin() {
       case 'price-desc':
         return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
       case 'status-pending':
-        return sorted.sort((a, b) => (a.status === 'pending' ? -1 : 1));
+        return sorted.sort((a) => (a.status === 'pending' ? -1 : 1));
       case 'status-approved':
-        return sorted.sort((a, b) => (a.status === 'approved' ? -1 : 1));
+        return sorted.sort((a) => (a.status === 'approved' ? -1 : 1));
       case 'status-not-approved':
-        return sorted.sort((a, b) => (a.status !== 'approved' && a.status !== 'pending' ? -1 : 1));
+        return sorted.sort((a) => (a.status !== 'approved' && a.status !== 'pending' ? -1 : 1));
       default:
         return sorted;
     }

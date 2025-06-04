@@ -62,22 +62,12 @@ export default function AdminSidebar() {
             </li>
             <li>
               <Link
-                to="/admin/admins"
-                onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
-                className="flex items-center p-3 hover:bg-gray-700 transition-colors"
-              >
-                <i className="bx bx-shield-alt-2 text-xl mr-3"></i>
-                <span className="text-sm font-medium">Manage Admins</span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/admin/vendors"
+                to="/admin/sellers/payouts"
                 onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
                 className="flex items-center p-3 hover:bg-gray-700 transition-colors"
               >
                 <i className="bx bx-store text-xl mr-3"></i>
-                <span className="text-sm font-medium">Manage Vendors</span>
+                <span className="text-sm font-medium">Approve payments</span>
               </Link>
             </li>
             <li>
@@ -91,15 +81,14 @@ export default function AdminSidebar() {
               </Link>
             </li>
             <li>
-              <button
-                onClick={() => {
-                  if (window.innerWidth < 768) setIsSidebarOpen(false);
-                }}
-                className="flex items-center w-full p-3 hover:bg-gray-700 transition-colors text-left"
+              <Link
+                to="/admin/edit/fees"
+                onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
+                className="flex items-center p-3 hover:bg-gray-700 transition-colors"
               >
-                <i className="bx bx-log-out text-xl mr-3"></i>
-                <span className="text-sm font-medium">Sign Out</span>
-              </button>
+                <i className="bx bx-shield-alt-2 text-xl mr-3"></i>
+                <span className="text-sm font-medium">Edit Fees</span>
+              </Link>
             </li>
           </ul>
         </nav>

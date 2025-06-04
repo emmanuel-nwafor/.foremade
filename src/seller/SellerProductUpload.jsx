@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, addDoc, getDocs, setDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, setDoc, doc, getDoc } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 
@@ -112,12 +112,13 @@ export default function SellerProductUpload() {
     buyerProtectionFee: 0,
     handlingFee: 0,
     totalEstimatedPrice: 0,
-    sellerEarnings: 0, // Kept as requested
+    sellerEarnings: 0,
   });
   const [isMobile, setIsMobile] = useState(false);
   const [customSubcategories, setCustomSubcategories] = useState({});
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [zoomedMedia, setZoomedMedia] = useState(null);
+  const [feeConfig, setFeeConfig] = useState(null); // State for dynamic fee configurations
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -185,6 +186,33 @@ export default function SellerProductUpload() {
     'Health & Beauty': ['Skincare', 'Makeup'],
   };
 
+  // Fetch fee configurations from Firestore
+  useEffect(() => {
+    const fetchFeeConfig = async () => {
+      try {
+        const docRef = doc(db, 'feeConfigurations', 'defaultFees');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFeeConfig(docSnap.data());
+        } else {
+          // Fallback to default fees if none exist in Firestore
+          const defaultFees = {
+            Small: { minPrice: 2000, maxPrice: 2999, buyerProtectionRate: 0.08, handlingRate: 0.20 },
+            Medium: { minPrice: 3000, maxPrice: 4999, buyerProtectionRate: 0.085, handlingRate: 0.12 },
+            Large: { minPrice: 5000, maxPrice: 9999, buyerProtectionRate: 0.09, handlingRate: 0.39 },
+            'X-Large': { minPrice: 10000, maxPrice: Infinity, buyerProtectionRate: 0.095, handlingRate: 0.30 },
+          };
+          await setDoc(docRef, defaultFees);
+          setFeeConfig(defaultFees);
+        }
+      } catch (err) {
+        console.error('Error fetching fee configurations:', err);
+        addAlert('Failed to load fee configurations.', 'error');
+      }
+    };
+    fetchFeeConfig();
+  }, []);
+
   // Fetch and initialize subcategories from Firestore
   useEffect(() => {
     const fetchCustomSubcategories = async () => {
@@ -195,7 +223,7 @@ export default function SellerProductUpload() {
 
         snapshot.forEach((doc) => {
           customSubs[doc.id] = doc.data().subcategories || [];
-          console.log(`Fetched subcategory for ${doc.id}:`, customSubs[doc.id]); // Debug log
+          console.log(`Fetched subcategory for ${doc.id}:`, customSubs[doc.id]);
           if (doc.data().subcategories?.length > 0) hasData = true;
         });
 
@@ -264,8 +292,10 @@ export default function SellerProductUpload() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Calculate fees and seller earnings based on price
+  // Calculate fees based on price and dynamic fee configurations
   useEffect(() => {
+    if (!feeConfig) return; // Wait until feeConfig is loaded
+
     const price = parseFloat(formData.price);
     if (!price || isNaN(price)) {
       setFees({
@@ -282,28 +312,20 @@ export default function SellerProductUpload() {
     let buyerProtectionRate = 0;
     let handlingRate = 0;
 
-    if (price >= 2000 && price <= 2999) {
-      productSize = 'Small';
-      buyerProtectionRate = 0.08;
-      handlingRate = 0.20;
-    } else if (price >= 3000 && price <= 4999) {
-      productSize = 'Medium';
-      buyerProtectionRate = 0.085;
-      handlingRate = 0.12;
-    } else if (price >= 5000 && price <= 9999) {
-      productSize = 'Large';
-      buyerProtectionRate = 0.09;
-      handlingRate = 0.39;
-    } else if (price >= 10000) {
-      productSize = 'X-Large';
-      buyerProtectionRate = 0.095;
-      handlingRate = 0.30;
+    // Determine product size and rates based on price
+    for (const [size, config] of Object.entries(feeConfig)) {
+      if (price >= config.minPrice && price <= (config.maxPrice || Infinity)) {
+        productSize = size;
+        buyerProtectionRate = config.buyerProtectionRate;
+        handlingRate = config.handlingRate;
+        break;
+      }
     }
 
     const buyerProtectionFee = price * buyerProtectionRate;
     const handlingFee = price * handlingRate;
     const totalEstimatedPrice = price + buyerProtectionFee + handlingFee;
-    const sellerEarnings = price - (buyerProtectionFee + handlingFee); // Seller earnings after fees
+    const sellerEarnings = price; // Set sellerEarnings to the original price
 
     setFees({
       productSize,
@@ -320,7 +342,7 @@ export default function SellerProductUpload() {
     }
 
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-  }, [formData.price, formData.manualSize]);
+  }, [formData.price, formData.manualSize, feeConfig]);
 
   // Persist form data and media to localStorage
   useEffect(() => {
@@ -684,7 +706,7 @@ export default function SellerProductUpload() {
         buyerProtectionFee: fees.buyerProtectionFee,
         handlingFee: fees.handlingFee,
         totalEstimatedPrice: fees.totalEstimatedPrice,
-        sellerEarnings: fees.sellerEarnings, // Kept as requested
+        sellerEarnings: fees.sellerEarnings,
         manualSize: formData.manualSize,
       };
 
@@ -1086,13 +1108,13 @@ export default function SellerProductUpload() {
                   </p>
                 </div>
               )}
-              {fees.productSize && (
+              {fees.productSize && feeConfig && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Foremade Fees</h4>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>Product Size (based on price): <span className="font-semibold">{fees.productSize}</span></p>
-                    <p>Buyer Protection Fee: ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p>Handling Fee: ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>

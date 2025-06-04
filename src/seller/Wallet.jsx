@@ -326,7 +326,7 @@ export default function Wallet() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       <div className="flex flex-1">
         <button
           className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg"
@@ -335,78 +335,78 @@ export default function Wallet() {
           <i className="bx bx-menu text-xl"></i>
         </button>
 
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-gray-100`}>
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 lg:w-72 bg-gray-100 transition-all duration-300`}>
           <SellerSidebar />
         </div>
 
-        <div className="flex-1 p-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">Wallet Dashboard</h1>
+        <div className="flex-1 p-4 md:p-6">
+          <div className="max-w-full mx-auto">
+            <div className="mb-4 md:mb-8">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Wallet Dashboard</h1>
               {message && (
-                <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-lg">
+                <div className="mt-2 md:mt-4 p-2 sm:p-4 bg-green-50 text-green-700 rounded-lg">
                   {message}
                 </div>
               )}
               {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                <div className="mt-2 md:mt-4 p-2 sm:p-3 bg-red-100 text-red-700 rounded-lg text-sm">
                   {error}
                 </div>
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold opacity-90">Available Balance</h3>
-                <p className="text-3xl font-bold mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
-                <p className="text-sm mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-8">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white">
+                <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
+                <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
                 <button
                   onClick={() => setShowWithdrawModal(true)}
-                  className="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                  className="mt-2 sm:mt-4 bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors"
                 >
                   Withdraw Funds
                 </button>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold opacity-90">Pending Balance</h3>
-                <p className="text-3xl font-bold mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
-                <p className="text-sm mt-2 opacity-75">Funds being processed</p>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
+                <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Balance</h3>
+                <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Funds being processed</p>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm">
-              <div className="p-6 border-b">
-                <h2 className="text-xl font-semibold text-gray-900">Recent Transactions</h2>
+              <div className="p-4 sm:p-6 border-b">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Transactions</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {transactions.map((transaction, index) => (
                       <tr key={`${transaction.id}-${index}`}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                           {transaction.type}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-2 sm:px-6 py-2 sm:py-4 text-sm text-gray-900">
                           {transaction.description}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                           ₦{transaction.amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                          <span className={`px-1 sm:px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             transaction.status === 'Completed' ? 'bg-green-100 text-green-800' :
                             transaction.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
@@ -426,10 +426,10 @@ export default function Wallet() {
 
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-md:p-10 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">Withdraw Funds</h2>
+          <div className="bg-white p-4 sm:p-6 max-md:p-4 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md md:max-w-lg">
+            <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Withdraw Funds</h2>
             <form onSubmit={handleWithdraw}>
-              <div className="mb-4">
+              <div className="mb-2 sm:mb-4">
                 <label className="block text-sm font-medium text-gray-700">Country</label>
                 <select
                   value={country}
@@ -442,7 +442,7 @@ export default function Wallet() {
                   <option value="United Kingdom">United Kingdom</option>
                 </select>
               </div>
-              <div className="mb-4">
+              <div className="mb-2 sm:mb-4">
                 <label className="block text-sm font-medium text-gray-700">Amount (₦)</label>
                 <input
                   type="number"
@@ -454,7 +454,7 @@ export default function Wallet() {
               </div>
               {country === 'Nigeria' && (
                 <>
-                  <div className="mb-4">
+                  <div className="mb-2 sm:mb-4">
                     <label className="block text-sm font-medium text-gray-700">Select Bank</label>
                     <select
                       value={bankCode}
@@ -477,9 +477,9 @@ export default function Wallet() {
                       )}
                     </select>
                   </div>
-                  <div className="mb-4">
+                  <div className="mb-2 sm:mb-4">
                     <label className="block text-sm font-medium text-gray-700">Account Number</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-col sm:flex-row">
                       <input
                         type="text"
                         value={accountNumber}
@@ -492,20 +492,20 @@ export default function Wallet() {
                         type="button"
                         onClick={verifyBankAccount}
                         disabled={verificationLoading || !bankCode || !accountNumber}
-                        className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {verificationLoading ? 'Verifying...' : 'Verify'}
                       </button>
                     </div>
                   </div>
                   {accountName && (
-                    <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="p-2 sm:p-3 bg-green-50 rounded-lg">
                       <p className="text-green-700 text-sm">Account Name: {accountName}</p>
                     </div>
                   )}
                 </>
               )}
-              <div className="mb-4">
+              <div className="mb-2 sm:mb-4">
                 <label className="block text-sm font-medium text-gray-700">Email (for verification)</label>
                 <input
                   type="email"
@@ -516,32 +516,32 @@ export default function Wallet() {
                 />
               </div>
               {message && (
-                <div className={`mb-4 p-2 rounded-lg ${isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={`mb-2 sm:mb-4 p-2 rounded-lg ${isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   <p className="text-sm">{message}</p>
                 </div>
               )}
               {error && (
-                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
+                <div className="mb-2 sm:mb-4 p-2 bg-red-100 text-red-700 rounded-lg text-sm">
                   {error}
                 </div>
               )}
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setShowWithdrawModal(false);
                     resetWithdrawForm();
                   }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  className="px-2 sm:px-4 py-1 sm:py-2 text-gray-700 hover:bg-gray-100 rounded-lg w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!isVerified || isProcessing || !withdrawAmount || !country}
-                  className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${
+                  className={`px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg ${
                     (!isVerified || isProcessing || !withdrawAmount || !country) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-                  }`}
+                  } w-full sm:w-auto`}
                 >
                   {isProcessing ? 'Processing...' : 'Withdraw'}
                 </button>

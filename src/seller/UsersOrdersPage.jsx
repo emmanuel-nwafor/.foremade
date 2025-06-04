@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SellerSidebar from './SellerSidebar';
 import { auth, db } from '../firebase';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -18,40 +18,80 @@ export default function UsersOrdersPage() {
       async (user) => {
         if (user) {
           try {
-            const ordersQuery = query(
-              collection(db, 'orders'),
-              orderBy('date', 'desc')
-            );
-            console.log('Executing orders query for all user orders');
-            const querySnapshot = await getDocs(ordersQuery);
-            const allOrders = querySnapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
+            console.log('Starting orders fetch for seller at:', new Date().toISOString());
+            console.log('Authenticated seller UID:', user.uid);
 
-            // Filter orders to only include those with items sold by this vendor
-            const vendorOrders = allOrders.filter((order) =>
-              order.items?.some((item) => item.sellerId === user.uid)
-            );
+            // Step 1: Fetch all products uploaded by the seller
+            const productsCollection = collection(db, 'products');
+            const productsSnap = await getDocs(productsCollection);
+            console.log('Products snapshot received, count:', productsSnap.docs.length);
 
-            console.log('Filtered orders for vendor UID:', user.uid, JSON.stringify(vendorOrders, null, 2));
-            setOrders(vendorOrders);
+            const sellerProducts = productsSnap.docs
+              .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }))
+              .filter((product) => product.sellerId === user.uid);
+
+            console.log('Seller products fetched, count:', sellerProducts.length);
+            if (sellerProducts.length === 0) {
+              console.log('No products found for this seller.');
+              setOrders([]);
+              setLoading(false);
+              return;
+            }
+
+            // Extract product IDs uploaded by the seller
+            const sellerProductIds = sellerProducts.map((product) => product.id);
+            console.log('Seller product IDs:', sellerProductIds);
+
+            // Step 2: Fetch all orders and filter based on seller's product IDs
+            const ordersCollection = collection(db, 'orders');
+            const ordersSnap = await getDocs(ordersCollection);
+            console.log('Orders snapshot received, count:', ordersSnap.docs.length);
+
+            const fetchedOrders = ordersSnap.docs
+              .map((orderDoc) => ({
+                id: orderDoc.id,
+                ...orderDoc.data(),
+              }))
+              .filter((order) =>
+                order.items.some((item) => sellerProductIds.includes(item.productId))
+              )
+              .map((order) => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                const sellerItems = items.filter((item) =>
+                  sellerProductIds.includes(item.productId)
+                );
+                return {
+                  ...order,
+                  items: sellerItems.map((item) => ({
+                    productId: item.productId,
+                    name: item.name || 'Unknown',
+                    quantity: item.quantity || 0,
+                    price: item.price || 0,
+                    sellerId: item.sellerId,
+                  })),
+                };
+              })
+              .sort((a, b) => {
+                const dateA = a.createdAt?.toDate() || new Date(0);
+                const dateB = b.createdAt?.toDate() || new Date(0);
+                return dateB - dateA;
+              });
+
+            console.log('Filtered orders for seller, count:', fetchedOrders.length);
+            setOrders(fetchedOrders);
           } catch (err) {
-            console.error('Firestore query error:', {
+            console.error('Firestore fetch error:', {
               code: err.code,
               message: err.message,
               stack: err.stack,
             });
-            setError(
-              `Failed to fetch user orders: ${err.message}. ${
-                err.message.includes('index')
-                  ? 'Please create the required index in Firestore (foremade-backend).'
-                  : ''
-              }`
-            );
+            setError(`Failed to fetch user orders: ${err.message}.`);
           }
         } else {
-          console.warn('No vendor authenticated');
+          console.warn('No seller authenticated');
           setError('Please log in to view user orders.');
           navigate('/seller/login');
         }
@@ -77,7 +117,7 @@ export default function UsersOrdersPage() {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
-    const date = new Date(timestamp);
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -85,11 +125,10 @@ export default function UsersOrdersPage() {
     });
   };
 
-  const formatCurrency = (amount, paymentGateway) => {
-    const currency = paymentGateway === 'Stripe' ? 'GBP' : 'NGN';
-    return new Intl.NumberFormat(currency === 'GBP' ? 'en-GB' : 'en-NG', {
+  const formatCurrency = (amount, currency) => {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency,
+      currency: currency || 'NGN',
     }).format(amount || 0);
   };
 
@@ -131,14 +170,7 @@ export default function UsersOrdersPage() {
         <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800">Your Orders</h1>
-            <Link
-              to="/seller/agreement"
-              className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-2 rounded-lg hover:from-slate-700 hover:to-slate-800 transition-all duration-300 transform hover:scale-105"
-            >
-              View Agreement
-            </Link>
           </div>
-
           {orders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-600 text-lg">No orders found.</p>
@@ -150,7 +182,8 @@ export default function UsersOrdersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              {/* Table for larger screens */}
+              <table className="w-full text-left border-collapse hidden md:table">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="p-3 text-sm font-semibold text-gray-700">Order ID</th>
@@ -167,14 +200,14 @@ export default function UsersOrdersPage() {
                       <tr className="border-b border-gray-200 hover:bg-gray-50">
                         <td className="p-3 text-sm">{order.orderId || order.id}</td>
                         <td className="p-3 text-sm">{order.shippingDetails?.name || 'N/A'}</td>
-                        <td className="p-3 text-sm">{formatDate(order.date)}</td>
-                        <td className="p-3 text-sm">{formatCurrency(order.total, order.paymentGateway)}</td>
+                        <td className="p-3 text-sm">{formatDate(order.createdAt)}</td>
+                        <td className="p-3 text-sm">{formatCurrency(order.sellerShare, order.currency)}</td>
                         <td className="p-3 text-sm">
                           <span
                             className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                               order.status === 'completed'
                                 ? 'bg-green-100 text-green-700'
-                                : order.status === 'pending'
+                                : order.status === 'pending-approval'
                                 ? 'bg-yellow-100 text-yellow-700'
                                 : 'bg-red-100 text-red-700'
                             }`}
@@ -198,13 +231,11 @@ export default function UsersOrdersPage() {
                               <h4 className="text-sm font-semibold text-gray-700">Items</h4>
                               {order.items && order.items.length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm text-gray-600">
-                                  {order.items
-                                    .filter((item) => item.sellerId === auth.currentUser?.uid)
-                                    .map((item, index) => (
-                                      <li key={index}>
-                                        {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.paymentGateway)}
-                                      </li>
-                                    ))}
+                                  {order.items.map((item, index) => (
+                                    <li key={index}>
+                                      {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.currency)}
+                                    </li>
+                                  ))}
                                 </ul>
                               ) : (
                                 <p className="text-sm text-gray-600">No items</p>
@@ -217,6 +248,71 @@ export default function UsersOrdersPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Card layout for mobile screens */}
+              <div className="md:hidden space-y-4">
+                {orders.map((order) => (
+                  <div key={order.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Order ID:</span>
+                        <span className="text-sm">{order.orderId || order.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Customer:</span>
+                        <span className="text-sm">{order.shippingDetails?.name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Date:</span>
+                        <span className="text-sm">{formatDate(order.createdAt)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Total:</span>
+                        <span className="text-sm">{formatCurrency(order.sellerShare, order.currency)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold text-gray-700">Status:</span>
+                        <span
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            order.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : order.status === 'pending-approval'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {order.status || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-gray-700">Details:</span>
+                        <button
+                          onClick={() => toggleOrderDetails(order.id)}
+                          className="text-blue-600 hover:underline text-sm"
+                        >
+                          {expandedOrder === order.id ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      {expandedOrder === order.id && (
+                        <div className="mt-2">
+                          <h4 className="text-sm font-semibold text-gray-700">Items</h4>
+                          {order.items && order.items.length > 0 ? (
+                            <ul className="list-disc pl-5 text-sm text-gray-600">
+                              {order.items.map((item, index) => (
+                                <li key={index}>
+                                  {item.name} x{item.quantity} - {formatCurrency(item.price * item.quantity, order.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-600">No items</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -5,7 +5,7 @@ import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp } f
 import { getCart, clearCart } from '/src/utils/cartUtils';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import axios from 'axios'; 
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
@@ -31,7 +31,7 @@ const preloadImage = (url) => {
   });
 };
 
-const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
+const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, cartItem }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -43,9 +43,14 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
       return;
     }
 
+    setLoading(true);
     try {
-      const gbpAmount = Math.round(totalPrice * 100);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const conversionRateNgnToGbp = 0.00048; // 1 NGN = 0.00048 GBP
+      const amountInCents = currency === 'GBP' 
+        ? Math.round(totalPrice * conversionRateNgnToGbp * 100) 
+        : Math.round(totalPrice * 100); // Convert to cents for GBP or kobo for NGN
+
+      const backendUrl = import.meta.env.VITE_URL || 'http://localhost:5000';
       let attempts = 3;
       let lastError = null;
 
@@ -54,17 +59,18 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
           const { data } = await axios.post(
             `${backendUrl}/create-payment-intent`,
             {
-              amount: gbpAmount,
-              currency: 'gbp',
+              amount: amountInCents,
+              currency: currency.toLowerCase(),
               metadata: {
                 userId: auth.currentUser?.uid || 'anonymous',
                 orderId: `order-${Date.now()}`,
+                productId: cartItem?.productId || 'default-product-id', // Placeholder, update with correct cart item
               },
             },
             { timeout: 15000 }
           );
 
-          const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
+          const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
             payment_method: {
               card: elements.getElement(CardElement),
               billing_details: {
@@ -75,19 +81,20 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
                   line1: formData.address,
                   city: formData.city,
                   postal_code: formData.postalCode,
-                  country: 'GB',
+                  country: currency === 'GBP' ? 'GB' : 'NG',
                 },
               },
             },
           });
 
-          if (error) {
-            toast.error(error.message, { position: 'top-right', autoClose: 3000 });
+          if (stripeError) {
+            toast.error(stripeError.message, { position: 'top-right', autoClose: 3000 });
             return;
           }
 
           if (paymentIntent.status === 'succeeded') {
             await onSuccess(paymentIntent);
+            setLoading(false);
             return;
           }
         } catch (err) {
@@ -113,7 +120,6 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
           : err.message || 'Payment failed. Try again.',
         { position: 'top-right', autoClose: 3000 }
       );
-    } finally {
       setLoading(false);
     }
   };
@@ -139,10 +145,10 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
           className={`flex-1 py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow ${
             loading || !stripe || !elements
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-900 hover:bg-blue-800'
+              : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {loading ? 'Processing...' : `Pay £${totalPrice.toFixed(2)}`}
+          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 0 })}`}
         </button>
         <button
           type="button"
@@ -160,7 +166,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel }) => {
 const Checkout = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState(true); // Changed to loadingState
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -176,36 +182,33 @@ const Checkout = () => {
   useEffect(() => {
     const loadCartAndUserData = async () => {
       try {
-        setLoading(true);
+        setLoadingState(true); // Fixed to use setLoadingState
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
         console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
 
         const processedCart = await Promise.all(cartItems.map(async (item) => {
-          const productData = item.product || {};
+          const productData = await item.product || {};
           let imageUrls = [];
-          
-          // Process image URLs
+
           if (Array.isArray(productData.imageUrls)) {
             imageUrls = productData.imageUrls.filter(
               (url) => typeof url === 'string' && (url.startsWith('https://res.cloudinary.com/') || url.startsWith('http'))
             );
           } else if (
             productData.imageUrl &&
-            typeof productData.imageUrl === 'string' &&
+            typeof productData.imageUrl === 'string' && 
             (productData.imageUrl.startsWith('https://res.cloudinary.com/') || productData.imageUrl.startsWith('http'))
           ) {
             imageUrls = [productData.imageUrl];
           }
 
-          // Validate each image URL by preloading
           const validImageUrls = await Promise.all(imageUrls.map(url => preloadImage(url)));
           const filteredImageUrls = imageUrls.filter((_, index) => validImageUrls[index]);
 
-          // Use fallback if no valid images
           if (filteredImageUrls.length === 0) {
             filteredImageUrls.push('https://res.cloudinary.com/demo/image/upload/v1/sample');
-            console.warn('No valid imageUrls for product:', productData.name || 'Unknown', 'Using fallback');
+            console.warn('No valid imageUrls found for product:', productData.name || 'Unknown', 'Using fallback');
           }
 
           console.log('Processed valid imageUrls for', productData.name || 'Unknown', ':', filteredImageUrls);
@@ -248,13 +251,13 @@ const Checkout = () => {
         }
       } catch (err) {
         console.error('Error loading cart or user data:', {
-          message: err.message,
-          stack: err.stack,
+          message: err.message || 'No message available',
+          stack: err.stack || 'No stack trace available',
         });
         setCart([]);
         toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
       } finally {
-        setLoading(false);
+        setLoadingState(false); // Fixed to use setLoadingState
       }
     };
 
@@ -330,14 +333,6 @@ const Checkout = () => {
     };
   }, []);
 
-  const calculateShippingNgn = (itemCount) => {
-    if (itemCount === 0) return 0;
-    const baseShipping = 2000;
-    const additionalShippingPerItem = 500;
-    const rawShipping = baseShipping + (itemCount - 1) * additionalShippingPerItem;
-    return itemCount >= 9 ? rawShipping * 0.7 : rawShipping;
-  };
-
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalNgn = cart.reduce(
     (total, item) => total + (item.product ? item.product.price * item.quantity : 0),
@@ -346,16 +341,17 @@ const Checkout = () => {
   const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
-  const shippingNgn = formData.country === 'Nigeria' ? calculateShippingNgn(totalItems) : 500;
-  const rawShippingNgn = formData.country === 'Nigeria' ? (totalItems === 0 ? 0 : 2000 + (totalItems - 1) * 500) : 500;
-  const totalNgn = subtotalNgn + taxNgn + shippingNgn;
+  const handlingFeeRate = 0.05; // 5% handling fee
+  const buyerProtectionRate = 0.02; // 2% buyer protection fee
+  const handlingFeeNgn = subtotalNgn * handlingFeeRate;
+  const buyerProtectionFeeNgn = subtotalNgn * buyerProtectionRate;
+  const totalNgnBeforeFees = subtotalNgn + taxNgn;
+  const totalFeesNgn = handlingFeeNgn + buyerProtectionFeeNgn;
+  const totalNgn = totalNgnBeforeFees + totalFeesNgn;
 
-  const conversionRateGbp = 0.00048;
-  const subtotalGbp = subtotalNgn * conversionRateGbp;
-  const taxGbp = taxNgn * conversionRateGbp;
-  const shippingGbp = shippingNgn * conversionRateGbp;
-  const rawShippingGbp = rawShippingNgn * conversionRateGbp;
-  const totalGbp = totalNgn * conversionRateGbp;
+  const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
+  const conversionRateNgnToGbp = 0.00048; // 1 NGN = 0.00048 GBP
+  const totalAmount = currency === 'GBP' ? totalNgn * conversionRateNgnToGbp : totalNgn;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -385,8 +381,8 @@ const Checkout = () => {
         to: order.shippingDetails.email,
         orderId: order.paymentId,
         items: order.items,
-        total: order.paymentGateway === 'Stripe' ? order.totalAmount : order.totalAmount,
-        currency: order.paymentGateway === 'Stripe' ? 'GBP' : 'NGN',
+        total: order.totalAmount,
+        currency: order.currency,
         shippingDetails: order.shippingDetails,
         paymentGateway: order.paymentGateway,
         date: order.date,
@@ -430,96 +426,177 @@ const Checkout = () => {
         const userId = auth.currentUser?.uid || 'anonymous';
         const orderId = `order-${Date.now()}`;
         const paymentGateway = formData.country === 'United Kingdom' ? 'Stripe' : 'Paystack';
-        const vendorId = cart[0]?.product?.sellerId || 'default-seller-id';
-        if (!vendorId) {
-          console.warn('No vendorId found in cart:', cart);
-          throw new Error('Vendor ID missing. Please check product data.');
-        }
 
-        const adminSharePercentage = 0.15;
-        const totalAmount = paymentGateway === 'Stripe' ? totalGbp : totalNgn;
-        const adminShare = totalAmount * adminSharePercentage;
-        const sellerShare = totalAmount - adminShare;
-
-        const order = {
-          id: orderId,
-          userId,
-          vendorId,
-          items: cart.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product?.price || 0,
-            name: item.product?.name || 'Unknown',
-          })),
-          totalAmount,
-          adminShare,
-          sellerShare,
-          date: new Date().toISOString(),
-          createdAt: serverTimestamp(),
-          shippingDetails: formData,
-          status: 'pending-approval',
-          paymentGateway,
-          paymentId: paymentData.id || paymentData.reference,
-        };
-
-        await setDoc(doc(db, 'orders', orderId), order);
-        console.log('Order saved:', orderId);
-
-        const walletRef = doc(db, 'wallets', vendorId);
-        const walletSnap = await getDoc(walletRef);
-        if (walletSnap.exists()) {
-          const walletData = walletSnap.data();
-          await updateDoc(walletRef, {
-            pendingBalance: (walletData.pendingBalance || 0) + sellerShare,
-            updatedAt: serverTimestamp(),
-          });
-        } else {
-          await setDoc(walletRef, {
-            availableBalance: 0,
-            pendingBalance: sellerShare,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          });
-        }
-
-        await addDoc(collection(db, 'transactions'), {
-          userId: vendorId,
-          type: 'Sale',
-          description: `Sale from order ${orderId}`,
-          amount: sellerShare,
-          date: new Date().toISOString().split('T')[0],
-          status: 'Pending',
-          createdAt: serverTimestamp(),
-          reference: paymentData.id || paymentData.reference,
+        // Group items by sellerId to handle multiple sellers in the cart
+        const sellers = {};
+        cart.forEach((item) => {
+          const sellerId = item.product?.sellerId || 'default-seller-id';
+          if (!sellerId) {
+            console.warn('No sellerId found for item:', item);
+            throw new Error('Seller ID missing for item: ' + item.productId);
+          }
+          if (!sellers[sellerId]) {
+            sellers[sellerId] = [];
+          }
+          sellers[sellerId].push(item);
         });
 
+        console.log('Sellers grouped:', sellers);
+
+        const adminSharePercentage = 0.15;
+        const handlingFee = totalNgnBeforeFees * handlingFeeRate; // In NGN
+        const buyerProtectionFee = totalNgnBeforeFees * buyerProtectionRate; // In NGN
+        const totalFees = handlingFee + buyerProtectionFee;
+
+        console.log('Fee calculations:', {
+          subtotalNgn,
+          taxNgn,
+          totalNgnBeforeFees,
+          handlingFee,
+          buyerProtectionFee,
+          totalFees,
+          totalNgn,
+          totalAmount: totalAmount,
+          currency,
+        });
+
+        // Process each seller's items
+        for (const sellerId of Object.keys(sellers)) {
+          const sellerItems = sellers[sellerId];
+          const sellerSubtotalNgn = sellerItems.reduce(
+            (total, item) => total + (item.product.price * item.quantity),
+            0
+          );
+          const sellerTaxNgn = sellerSubtotalNgn * taxRate;
+          const sellerTotalNgnBeforeFees = sellerSubtotalNgn + sellerTaxNgn;
+          const sellerHandlingFee = sellerTotalNgnBeforeFees * handlingFeeRate;
+          const sellerBuyerProtectionFee = sellerTotalNgnBeforeFees * buyerProtectionRate;
+          const sellerTotalFees = sellerHandlingFee + sellerBuyerProtectionFee;
+          const sellerTotalNgn = sellerTotalNgnBeforeFees + sellerTotalFees;
+          const sellerShareNgn = (sellerTotalNgnBeforeFees - sellerTotalFees) * (1 - adminSharePercentage);
+          const sellerShare = currency === 'GBP' ? sellerShareNgn * conversionRateNgnToGbp : sellerShareNgn;
+
+          console.log(`Seller ${sellerId} calculations:`, {
+            sellerSubtotalNgn,
+            sellerTaxNgn,
+            sellerTotalNgnBeforeFees,
+            sellerHandlingFee,
+            sellerBuyerProtectionFee,
+            sellerTotalFees,
+            sellerTotalNgn,
+            sellerShareNgn,
+            sellerShare,
+          });
+
+          const order = {
+            id: orderId,
+            userId,
+            sellerId,
+            items: sellerItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.product?.price || 0,
+              name: item.product?.name || 'Unknown',
+              sellerId: item.product?.sellerId || sellerId,
+            })),
+            totalAmount,
+            adminShare: totalAmount * adminSharePercentage,
+            handlingFee,
+            buyerProtectionFee,
+            sellerShare,
+            date: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            shippingDetails: formData,
+            status: 'pending-approval',
+            paymentGateway,
+            paymentId: paymentData.id || paymentData.reference,
+            currency,
+          };
+
+          await setDoc(doc(db, 'orders', `${orderId}-${sellerId}`), order);
+          console.log(`Order saved for seller ${sellerId}:`, `${orderId}-${sellerId}`);
+
+          // Update seller's wallet
+          const walletRef = doc(db, 'wallets', sellerId);
+          const walletSnap = await getDoc(walletRef);
+          if (walletSnap.exists()) {
+            const walletData = walletSnap.data();
+            const newPendingBalance = (walletData.pendingBalance || 0) + sellerShare;
+            await updateDoc(walletRef, {
+              pendingBalance: newPendingBalance,
+              updatedAt: serverTimestamp(),
+            });
+            console.log(`Updated wallet for seller ${sellerId}:`, {
+              previousPendingBalance: walletData.pendingBalance || 0,
+              addedAmount: sellerShare,
+              newPendingBalance,
+            });
+          } else {
+            await setDoc(walletRef, {
+              availableBalance: 0,
+              pendingBalance: sellerShare,
+              updatedAt: serverTimestamp(),
+              createdAt: serverTimestamp(),
+            });
+            console.log(`Created wallet for seller ${sellerId} with pendingBalance:`, sellerShare);
+          }
+
+          // Record transaction
+          await addDoc(collection(db, 'transactions'), {
+            userId: sellerId,
+            type: 'Sale',
+            description: `Sale from order ${orderId}`,
+            amount: sellerShare,
+            date: new Date().toISOString().split('T')[0],
+            status: 'Pending',
+            createdAt: serverTimestamp(),
+            reference: paymentData.id || paymentData.reference,
+          });
+          console.log(`Transaction recorded for seller ${sellerId}`);
+        }
+
+        // Update admin wallet
         const adminWalletRef = doc(db, 'wallets', 'admin');
         const adminWalletSnap = await getDoc(adminWalletRef);
+        const adminShareAmount = totalAmount * adminSharePercentage;
         if (adminWalletSnap.exists()) {
           const adminWalletData = adminWalletSnap.data();
           await updateDoc(adminWalletRef, {
-            availableBalance: (adminWalletData.availableBalance || 0) + adminShare,
+            availableBalance: (adminWalletData.availableBalance || 0) + adminShareAmount,
             updatedAt: serverTimestamp(),
+          });
+          console.log('Updated admin wallet:', {
+            previousBalance: adminWalletData.availableBalance || 0,
+            addedAmount: adminShareAmount,
+            newBalance: (adminWalletData.availableBalance || 0) + adminShareAmount,
           });
         } else {
           await setDoc(adminWalletRef, {
-            availableBalance: adminShare,
+            availableBalance: adminShareAmount,
             pendingBalance: 0,
             updatedAt: serverTimestamp(),
             createdAt: serverTimestamp(),
           });
+          console.log('Created admin wallet with availableBalance:', adminShareAmount);
         }
 
+        // Update product stock
         for (const item of cart) {
           const productRef = doc(db, 'products', item.productId);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
             await updateDoc(productRef, { stock: productSnap.data().stock - item.quantity });
+            console.log(`Updated stock for product ${item.productId}:`, {
+              previousStock: productSnap.data().stock,
+              soldQuantity: item.quantity,
+              newStock: productSnap.data().stock - item.quantity,
+            });
           } else {
             console.warn(`Product ${item.productId} does not exist.`);
           }
         }
 
+        // Save user details
         if (auth.currentUser) {
           const userDocRef = doc(db, 'users', auth.currentUser.uid);
           await setDoc(
@@ -535,9 +612,19 @@ const Checkout = () => {
             },
             { merge: true }
           );
+          console.log('Updated user details for user:', auth.currentUser.uid);
         }
 
-        await sendOrderConfirmationEmail(order);
+        await sendOrderConfirmationEmail({
+          ...order,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.product?.price || 0,
+            name: item.product?.name || 'Unknown',
+            sellerId: item.product?.sellerId,
+          })),
+        });
         await clearCart(auth.currentUser?.uid);
         setCart([]);
         toast.success(
@@ -552,7 +639,7 @@ const Checkout = () => {
             icon: <i className="bx bx-check-circle text-blue-500 text-xl"></i>,
           }
         );
-        navigate('/order-confirmation', { state: { order } });
+        navigate('/order-confirmation', { state: { order: { ...order, items: cart } } });
       } catch (err) {
         console.error('Checkout error:', {
           message: err.message,
@@ -562,7 +649,7 @@ const Checkout = () => {
         toast.error(err.message || 'Failed to place order.', { position: 'top-right', autoClose: 3000 });
       }
     },
-    [cart, subtotalNgn, belowMinimumPrice, formData, totalNgn, totalGbp, navigate, totalItems]
+    [cart, subtotalNgn, belowMinimumPrice, formData, totalNgn, navigate, totalItems, currency]
   );
 
   const handleCancel = () => {
@@ -595,10 +682,10 @@ const Checkout = () => {
       error: e.message || 'Unknown error occurred',
     });
     setImageLoading((prev) => ({ ...prev, [productId]: false }));
-    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample'; // Fallback image
+    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
   };
 
-  if (loading) {
+  if (loadingState) { // Changed to loadingState
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -608,16 +695,6 @@ const Checkout = () => {
       </div>
     );
   }
-
-  const isStripeCheckout = formData.country === 'United Kingdom';
-  const currency = isStripeCheckout ? 'GBP' : 'NGN';
-  const subtotal = isStripeCheckout ? subtotalGbp : subtotalNgn;
-  const tax = isStripeCheckout ? taxGbp : taxNgn;
-  const shipping = isStripeCheckout ? shippingGbp : shippingNgn;
-  const rawShipping = isStripeCheckout ? rawShippingGbp : rawShippingNgn;
-  const total = isStripeCheckout ? totalGbp : totalNgn;
-
-  console.log('Currency:', currency, 'Total:', total);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -666,7 +743,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -681,7 +758,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -696,7 +773,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -711,7 +788,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -726,7 +803,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -741,7 +818,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 />
               </div>
               <div>
@@ -755,7 +832,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loading}
+                  disabled={loadingState} // Changed to loadingState
                 >
                   <option value="">Select a country</option>
                   <option value="Nigeria">Nigeria</option>
@@ -788,14 +865,9 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {isStripeCheckout
-                        ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
-                            minimumFractionDigits: 2,
-                          })}`
-                        : `₦${(item.product?.price * item.quantity || 0).toLocaleString('en-NG', {
-                            minimumFractionDigits: 2,
-                          })}`}{' '}
-                      (x{item.quantity})
+                      {currency} {(item.product?.price * item.quantity || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 0,
+                      })} (x{item.quantity})
                     </p>
                     {item.product?.imageUrls?.length > 1 && (
                       <div className="flex gap-2 mt-2 overflow-x-auto">
@@ -841,72 +913,25 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'} (x{item.quantity})
                     </span>
                     <span>
-                      {isStripeCheckout
-                        ? `£${(item.product?.price * item.quantity * conversionRateGbp || 0).toLocaleString('en-GB', {
-                            minimumFractionDigits: 2,
-                          })}`
-                        : `₦${(item.product?.price * item.quantity || 0).toLocaleString('en-NG', {
-                            minimumFractionDigits: 2,
-                          })}`}
+                      {currency} {(item.product?.price * item.quantity || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 0,
+                      })}
                     </span>
                   </div>
                 ))}
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>
-                    {isStripeCheckout
-                      ? `£${subtotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                      : `₦${subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax (7.5%)</span>
-                  <span>
-                    {isStripeCheckout
-                      ? `£${tax.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                      : `₦${tax.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>
-                    {totalItems >= 9 && formData.country === 'Nigeria' ? (
-                      <span className="flex items-center gap-1">
-                        <span className="line-through text-gray-500 mr-1">
-                          {isStripeCheckout
-                            ? `£${rawShipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                            : `₦${rawShipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
-                        </span>
-                        <span className="text-green-600 font-semibold">
-                          {isStripeCheckout
-                            ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                            : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
-                        </span>
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                          30% OFF
-                        </span>
-                      </span>
-                    ) : (
-                      isStripeCheckout
-                        ? `£${shipping.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                        : `₦${shipping.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`
-                    )}
+                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </span>
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {isStripeCheckout
-                      ? `£${total.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`
-                      : `₦${total.toLocaleString('en-NG', { minimumFractionDigits: 0 })}`}
+                    {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>
-              {totalItems >= 9 && !belowMinimumPrice && formData.country === 'Nigeria' && (
-                <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
-                  🎉 Congrats! You got a <strong>30% shipping discount</strong> for 9 items!
-                </p>
-              )}
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
                   ❌ Minimum purchase amount is ₦12,000 to checkout.
@@ -944,22 +969,24 @@ const Checkout = () => {
                   {formData.country === 'United Kingdom' ? (
                     <Elements stripe={stripePromise}>
                       <StripeCheckoutForm
-                        totalPrice={totalGbp}
+                        totalPrice={totalAmount}
                         formData={formData}
                         onSuccess={handlePaymentSuccess}
                         onCancel={handleCancel}
+                        currency={currency}
+                        cartItem={cart[0]} // Placeholder, adjust based on your cart structure
                       />
                     </Elements>
                   ) : formData.country === 'Nigeria' ? (
                     <PaystackCheckout
                       email={formData.email}
-                      amount={totalNgn * 100}
+                      amount={totalAmount}
                       onSuccess={handlePaymentSuccess}
                       onClose={handleCancel}
-                      disabled={!formValidity.isValid || cart.length === 0 || loading || belowMinimumPrice}
+                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice} // Changed to loadingState
                       buttonText="Pay Now"
                       className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow ${
-                        !formValidity.isValid || cart.length === 0 || loading || belowMinimumPrice
+                        !formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-blue-900 hover:bg-blue-800'
                       }`}

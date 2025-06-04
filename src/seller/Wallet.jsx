@@ -4,8 +4,6 @@ import {
   collection, 
   doc, 
   setDoc, 
-  updateDoc, 
-  addDoc, 
   query, 
   where, 
   onSnapshot,
@@ -74,7 +72,6 @@ export default function Wallet() {
     if (!user) {
       console.log('No user logged in, redirecting to login');
       navigate('/login');
-      console.log(bankName)
       return;
     }
 
@@ -100,6 +97,8 @@ export default function Wallet() {
         return false;
       }
     };
+
+    console.log(bankName)
 
     const initializeData = async () => {
       const userExists = await checkUserStatus(user.uid);
@@ -257,29 +256,13 @@ export default function Wallet() {
         const result = await response.json();
         if (result.error) throw new Error(result.error);
 
-        if (result.redirectUrl) {
+        if (result.status === 'redirect') {
           setMessage('Redirecting to Stripe for onboarding...');
           window.location.href = result.redirectUrl;
           return;
         }
 
-        await updateDoc(doc(db, 'wallets', uid), {
-          availableBalance: wallet.availableBalance - amount,
-          updatedAt: serverTimestamp(),
-        });
-
-        await addDoc(collection(db, 'transactions'), {
-          userId: uid,
-          type: 'Withdrawal',
-          description: `Withdrawal to ${accountName} (${accountNumber})`,
-          amount: amount,
-          date: new Date().toISOString().split('T')[0],
-          status: 'Pending',
-          createdAt: serverTimestamp(),
-          reference: result.reference || result.transferId,
-        });
-
-        setMessage(`Withdrawal request of ₦${amount.toLocaleString()} submitted successfully. Awaiting processing.`);
+        setMessage(`Withdrawal request of ₦${amount.toLocaleString()} submitted successfully. Awaiting admin approval.`);
         setShowWithdrawModal(false);
         resetWithdrawForm();
       } catch (err) {

@@ -64,10 +64,10 @@ export default function AdminDashboard() {
   return (
     <div className="flex min-h-screen bg-white dark:bg-gray-900">
       <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6">
-        <div className="container mx-auto px-4 py-8">
+      <main className="flex-1 ml-0 md:ml-64 p-3">
+        <div className="container mx-auto px-2">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6">Admin Dashboard</h1>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
             <div className="bg-blue-100 p-4 rounded-lg shadow">
               <h2 className="text-lg font-semibold text-gray-700">Total Users</h2>
               <p className="text-2xl font-bold text-blue-600">{stats.users}</p>

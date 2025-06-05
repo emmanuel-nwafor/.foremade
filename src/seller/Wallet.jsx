@@ -14,9 +14,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import SellerSidebar from './SellerSidebar';
 
 // Paystack configuration
-const PAYSTACK_API_URL = 'https://foremade-backend.onrender.com'; // Updated to deployed server
+const PAYSTACK_API_URL = 'https://foremade-backend.onrender.com';
 
-// Function to fetch banks from Paystack API via server
 const fetchBanksFromPaystack = async () => {
   try {
     console.log('Attempting to fetch banks from:', `${PAYSTACK_API_URL}/fetch-banks`);
@@ -75,7 +74,7 @@ export default function Wallet() {
       return;
     }
 
-    console.log('User logged in:', user.uid);
+    console.log('User logged in:', user.uid, bankName);
     setEmail(user.email || '');
 
     const checkUserStatus = async (uid) => {
@@ -88,6 +87,7 @@ export default function Wallet() {
         if (!exists) {
           console.log('User document does not exist, redirecting to login');
           navigate('/login');
+          return false;
         }
         return exists;
       } catch (err) {
@@ -97,8 +97,6 @@ export default function Wallet() {
         return false;
       }
     };
-
-    console.log(bankName)
 
     const initializeData = async () => {
       const userExists = await checkUserStatus(user.uid);
@@ -234,7 +232,7 @@ export default function Wallet() {
       return;
     }
 
-    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && isVerified) {
+    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && (country === 'United Kingdom' || isVerified)) {
       try {
         const uid = auth.currentUser.uid;
         const transactionReference = `withdrawal-${uid}-${Date.now()}`;
@@ -325,7 +323,7 @@ export default function Wallet() {
         <div className="flex-1 p-4 md:p-6">
           <div className="max-w-full mx-auto">
             <div className="mb-4 md:mb-8">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Wallet Dashboard</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Seller Wallet</h1>
               {message && (
                 <div className="mt-2 md:mt-4 p-2 sm:p-4 bg-green-50 text-green-700 rounded-lg">
                   {message}
@@ -340,27 +338,27 @@ export default function Wallet() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white">
-                <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
+                <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Earnings</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
                 <button
                   onClick={() => setShowWithdrawModal(true)}
                   className="mt-2 sm:mt-4 bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors"
                 >
-                  Withdraw Funds
+                  Withdraw Earnings
                 </button>
               </div>
 
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 sm:p-6 text-white">
-                <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Balance</h3>
+                <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Earnings</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Funds being processed</p>
+                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Earnings from recent sales awaiting processing</p>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Transactions</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Sales Transactions</h2>
               </div>
               <div className="block sm:hidden">
                 {transactions.map((transaction, index) => (
@@ -442,7 +440,7 @@ export default function Wallet() {
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-4 sm:p-6 max-md:p-4 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md md:max-w-lg">
-            <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Withdraw Funds</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Withdraw Earnings</h2>
             <form onSubmit={handleWithdraw}>
               <div className="mb-2 sm:mb-4">
                 <label className="block text-sm font-medium text-gray-700">Country</label>
@@ -540,6 +538,7 @@ export default function Wallet() {
                   {error}
                 </div>
               )}
+              <p className="text-sm text-gray-600 mb-2 sm:mb-4">Note: Withdrawals are subject to admin approval.</p>
               <div className="flex flex-col sm:flex-row justify-end gap-2">
                 <button
                   type="button"
@@ -553,9 +552,9 @@ export default function Wallet() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isVerified || isProcessing || !withdrawAmount || !country}
+                  disabled={(country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country}
                   className={`px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg ${
-                    (!isVerified || isProcessing || !withdrawAmount || !country) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                    ((country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
                   } w-full sm:w-auto`}
                 >
                   {isProcessing ? 'Processing...' : 'Withdraw'}

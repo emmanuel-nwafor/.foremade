@@ -80,6 +80,8 @@ const Layout = ({ children }) => {
     '/sellers/products',
     '/seller-onboarding',
     '/dashboard',
+    '/empowerment-hub',
+    '/youth-empowerment-form',
   ].includes(location.pathname);
 
   const showFooter = [

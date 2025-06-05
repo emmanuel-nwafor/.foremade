@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { getCart, clearCart } from '/src/utils/cartUtils';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -31,7 +31,7 @@ const preloadImage = (url) => {
   });
 };
 
-const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, cartItem, handlingFee, buyerProtectionFee, adminShare }) => {
+const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, handlingFee, buyerProtectionFee }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -45,10 +45,9 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
 
     setLoading(true);
     try {
-      const conversionRateNgnToGbp = 0.00048; // 1 NGN = 0.00048 GBP
       const amountInCents = currency === 'GBP' 
-        ? Math.round(totalPrice * conversionRateNgnToGbp * 100) 
-        : Math.round(totalPrice * 100); // Convert to cents for GBP or kobo for NGN
+        ? Math.round(totalPrice * 100) // Already converted to GBP
+        : Math.round(totalPrice * 100); // Kobo for NGN
 
       const backendUrl = import.meta.env.VITE_URL || 'http://localhost:5000';
       let attempts = 3;
@@ -64,10 +63,8 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
               metadata: {
                 userId: auth.currentUser?.uid || 'anonymous',
                 orderId: `order-${Date.now()}`,
-                productId: cartItem?.productId || 'default-product-id',
-                handlingFee: currency === 'GBP' ? handlingFee * conversionRateNgnToGbp : handlingFee,
-                buyerProtectionFee: currency === 'GBP' ? buyerProtectionFee * conversionRateNgnToGbp : buyerProtectionFee,
-                adminShare: currency === 'GBP' ? adminShare * conversionRateNgnToGbp : adminShare,
+                handlingFee,
+                buyerProtectionFee,
               },
             },
             { timeout: 15000 }
@@ -151,7 +148,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 0 })}`}
+          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
         </button>
         <button
           type="button"
@@ -344,13 +341,13 @@ const Checkout = () => {
   const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
-  const handlingFeeRate = 0.05; // 5% handling fee (not displayed to buyer)
-  const buyerProtectionRate = 0.02; // 2% buyer protection fee (not displayed to buyer)
+  const handlingFeeRate = 0.05; // 5% handling fee
+  const buyerProtectionRate = 0.02; // 2% buyer protection fee
   const totalNgnBeforeFees = subtotalNgn + taxNgn;
   const handlingFeeNgn = totalNgnBeforeFees * handlingFeeRate;
   const buyerProtectionFeeNgn = totalNgnBeforeFees * buyerProtectionRate;
   const totalFeesNgn = handlingFeeNgn + buyerProtectionFeeNgn;
-  const totalNgn = totalNgnBeforeFees + totalFeesNgn; // Total including fees for internal use
+  const totalNgn = totalNgnBeforeFees + totalFeesNgn;
 
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048; // 1 NGN = 0.00048 GBP
@@ -420,17 +417,12 @@ const Checkout = () => {
           toast.error('Total amount must be at least ₦12,000 to proceed.', { position: 'top-right', autoClose: 3000 });
           return;
         }
-        const stockIssues = cart.filter((item) => item.quantity > (item.product?.stock || 0));
-        if (stockIssues.length > 0) {
-          toast.error('Stock issues detected', { position: 'top-right', autoClose: 3000 });
-          return;
-        }
 
         const userId = auth.currentUser?.uid || 'anonymous';
         const orderId = `order-${Date.now()}`;
         const paymentGateway = formData.country === 'United Kingdom' ? 'Stripe' : 'Paystack';
 
-        // Group items by sellerId to handle multiple sellers in the cart
+        // Group items by sellerId
         const sellers = {};
         cart.forEach((item) => {
           const sellerId = item.product?.sellerId || 'default-seller-id';
@@ -438,173 +430,150 @@ const Checkout = () => {
             console.warn('No sellerId found for item:', item);
             throw new Error('Seller ID missing for item: ' + item.productId);
           }
-          if (!sellers[sellerId]) {
-            sellers[sellerId] = [];
-          }
+          if (!sellers[sellerId]) sellers[sellerId] = [];
           sellers[sellerId].push(item);
         });
 
-        console.log('Sellers grouped:', sellers);
+        let lastOrder = null; // To store the last order for email confirmation
+        const walletUpdates = []; // To track wallet updates for rollback
 
-        const adminSharePercentage = 0.15;
-        const handlingFee = totalNgnBeforeFees * handlingFeeRate;
-        const buyerProtectionFee = totalNgnBeforeFees * buyerProtectionRate;
-        const totalFees = handlingFee + buyerProtectionFee;
-        const adminShareAmount = totalAmount * adminSharePercentage;
-
-        // Process each seller's items
-        for (const sellerId of Object.keys(sellers)) {
-          const sellerItems = sellers[sellerId];
-          const sellerSubtotalNgn = sellerItems.reduce(
-            (total, item) => total + (item.product.price * item.quantity),
-            0
-          );
-          const sellerTaxNgn = sellerSubtotalNgn * taxRate;
-          const sellerTotalNgnBeforeFees = sellerSubtotalNgn + sellerTaxNgn;
-          const sellerHandlingFee = sellerTotalNgnBeforeFees * handlingFeeRate;
-          const sellerBuyerProtectionFee = sellerTotalNgnBeforeFees * buyerProtectionRate;
-          const sellerTotalFees = sellerHandlingFee + sellerBuyerProtectionFee;
-          const sellerTotalNgn = sellerTotalNgnBeforeFees + sellerTotalFees;
-          const sellerShareNgn = (sellerTotalNgnBeforeFees - sellerTotalFees) * (1 - adminSharePercentage);
-          const sellerShare = currency === 'GBP' ? sellerShareNgn * conversionRateNgnToGbp : sellerShareNgn;
-
-          console.log(`Seller ${sellerId} calculations:`, {
-            sellerSubtotalNgn,
-            sellerTaxNgn,
-            sellerTotalNgnBeforeFees,
-            sellerHandlingFee,
-            sellerBuyerProtectionFee,
-            sellerTotalFees,
-            sellerTotalNgn,
-            sellerShareNgn,
-            sellerShare,
+        // Use a single transaction to ensure atomicity
+        await runTransaction(db, async (transaction) => {
+          // Step 1: Perform ALL reads first
+          // Read product stock
+          const productRefs = cart.map(item => doc(db, 'products', item.productId));
+          const productSnaps = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+          
+          const stockUpdates = [];
+          productSnaps.forEach((snap, index) => {
+            if (!snap.exists()) {
+              console.warn(`Product ${cart[index].productId} does not exist. Skipping stock update.`);
+              return; // Skip missing products
+            }
+            const currentStock = snap.data().stock;
+            const requestedQuantity = cart[index].quantity;
+            const newStock = currentStock - requestedQuantity;
+            if (newStock < 0) {
+              throw new Error(`Insufficient stock for product ${cart[index].productId} (${cart[index].product?.name || 'Unknown'})`);
+            }
+            stockUpdates.push({ ref: productRefs[index], newStock });
           });
 
-          const order = {
-            id: orderId,
-            userId,
-            sellerId,
-            items: sellerItems.map((item) => ({
+          // Read seller wallets
+          const sellerWalletRefs = Object.keys(sellers).map(sellerId => doc(db, 'wallets', sellerId));
+          const sellerWalletSnaps = await Promise.all(sellerWalletRefs.map(ref => transaction.get(ref)));
+          const sellerWallets = sellerWalletSnaps.map((snap, index) => ({
+            ref: sellerWalletRefs[index],
+            exists: snap.exists(),
+            data: snap.exists() ? snap.data() : null,
+            sellerId: Object.keys(sellers)[index],
+          }));
+
+          // Step 2: Compute changes (no writes yet)
+          const orders = [];
+          sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
+            const sellerItems = sellers[sellerId];
+            const sellerSubtotalNgn = sellerItems.reduce(
+              (total, item) => total + (item.product.price * item.quantity),
+              0
+            );
+            const sellerTaxNgn = sellerSubtotalNgn * taxRate;
+            const sellerTotalNgnBeforeFees = sellerSubtotalNgn + sellerTaxNgn;
+            const sellerHandlingFee = sellerTotalNgnBeforeFees * handlingFeeRate;
+            const sellerBuyerProtectionFee = sellerTotalNgnBeforeFees * buyerProtectionRate;
+            const sellerTotalFees = sellerHandlingFee + sellerBuyerProtectionFee;
+            const sellerShareNgn = sellerTotalNgnBeforeFees; // Seller gets subtotal + tax
+            const sellerShare = currency === 'GBP' ? sellerShareNgn * conversionRateNgnToGbp : sellerShareNgn;
+
+            const order = {
+              id: orderId,
+              userId,
+              sellerId,
+              items: sellerItems.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.product?.price || 0,
+                name: item.product?.name || 'Unknown',
+                sellerId: item.product?.sellerId || sellerId,
+              })),
+              totalAmount,
+              handlingFee: sellerHandlingFee,
+              buyerProtectionFee: sellerBuyerProtectionFee,
+              sellerShare,
+              date: new Date().toISOString(),
+              createdAt: serverTimestamp(),
+              shippingDetails: formData,
+              status: 'pending-approval',
+              paymentGateway,
+              paymentId: paymentData.id || paymentData.reference,
+              currency,
+            };
+            orders.push({ order, orderId: `${orderId}-${sellerId}` });
+
+            // Prepare wallet update
+            const pendingBalance = (exists ? (data.pendingBalance || 0) : 0) + sellerShare;
+            walletUpdates.push({ sellerId, amount: sellerShare }); // For rollback if needed
+            transaction.set(ref, {
+              availableBalance: exists ? (data.availableBalance || 0) : 0,
+              pendingBalance,
+              updatedAt: serverTimestamp(),
+              ...(exists ? {} : { createdAt: serverTimestamp() }),
+            }, { merge: true });
+          });
+
+          // Step 3: Perform ALL writes
+          // Create orders
+          orders.forEach(({ order, orderId }) => {
+            const orderRef = doc(db, 'orders', orderId);
+            transaction.set(orderRef, order);
+            lastOrder = order; // Update lastOrder for email confirmation
+          });
+
+          // Update product stock
+          stockUpdates.forEach(({ ref, newStock }) => {
+            transaction.update(ref, { stock: newStock });
+          });
+
+          // Record seller transactions
+          const transactionPromises = orders.map(({ order }) =>
+            addDoc(collection(db, 'transactions'), {
+              userId: order.sellerId,
+              type: 'Sale',
+              description: `Sale from order ${order.id}`,
+              amount: order.sellerShare,
+              date: new Date().toISOString().split('T')[0],
+              status: 'Pending',
+              createdAt: serverTimestamp(),
+              reference: order.paymentId,
+            })
+          );
+          await Promise.all(transactionPromises);
+        });
+
+        // Save user details (outside transaction, as it's not critical to atomicity)
+        if (auth.currentUser) {
+          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          await setDoc(userDocRef, formData, { merge: true });
+        }
+
+        // Send email confirmation using the last order
+        if (lastOrder) {
+          await sendOrderConfirmationEmail({
+            ...lastOrder,
+            items: cart.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
               price: item.product?.price || 0,
               name: item.product?.name || 'Unknown',
-              sellerId: item.product?.sellerId || sellerId,
+              sellerId: item.product?.sellerId,
             })),
-            totalAmount,
-            adminShare: adminShareAmount,
-            handlingFee,
-            buyerProtectionFee,
-            sellerShare,
-            date: new Date().toISOString(),
-            createdAt: serverTimestamp(),
-            shippingDetails: formData,
-            status: 'pending-approval',
-            paymentGateway,
-            paymentId: paymentData.id || paymentData.reference,
-            currency,
-          };
-
-          await setDoc(doc(db, 'orders', `${orderId}-${sellerId}`), order);
-          console.log(`Order saved for seller ${sellerId}:`, `${orderId}-${sellerId}`);
-
-          // Update seller's wallet with the seller share
-          const walletRef = doc(db, 'wallets', sellerId);
-          const walletSnap = await getDoc(walletRef);
-          if (walletSnap.exists()) {
-            const walletData = walletSnap.data();
-            const newPendingBalance = (walletData.pendingBalance || 0) + sellerShare;
-            await updateDoc(walletRef, {
-              pendingBalance: newPendingBalance,
-              updatedAt: serverTimestamp(),
-            });
-            console.log(`Updated wallet for seller ${sellerId}:`, {
-              previousPendingBalance: walletData.pendingBalance || 0,
-              addedAmount: sellerShare,
-              newPendingBalance,
-            });
-          } else {
-            await setDoc(walletRef, {
-              availableBalance: 0,
-              pendingBalance: sellerShare,
-              updatedAt: serverTimestamp(),
-              createdAt: serverTimestamp(),
-            });
-            console.log(`Created wallet for seller ${sellerId} with pendingBalance:`, sellerShare);
-          }
-
-          // Record seller transaction
-          await addDoc(collection(db, 'transactions'), {
-            userId: sellerId,
-            type: 'Sale',
-            description: `Sale from order ${orderId}`,
-            amount: sellerShare,
-            date: new Date().toISOString().split('T')[0],
-            status: 'Pending',
-            createdAt: serverTimestamp(),
-            reference: paymentData.id || paymentData.reference,
           });
-          console.log(`Transaction recorded for seller ${sellerId}`);
-
-          // For Paystack payments (Nigeria), log fees for manual admin handling
-          if (paymentGateway === 'Paystack') {
-            console.log(`Admin fees to be manually transferred for order ${orderId}:`, {
-              handlingFee,
-              buyerProtectionFee,
-              adminShare: adminShareAmount,
-              totalAdminAmount: handlingFee + buyerProtectionFee + adminShareAmount,
-              currency,
-            });
-          }
         }
 
-        // Update product stock
-        for (const item of cart) {
-          const productRef = doc(db, 'products', item.productId);
-          const productSnap = await getDoc(productRef);
-          if (productSnap.exists()) {
-            await updateDoc(productRef, { stock: productSnap.data().stock - item.quantity });
-            console.log(`Updated stock for product ${item.productId}:`, {
-              previousStock: productSnap.data().stock,
-              soldQuantity: item.quantity,
-              newStock: productSnap.data().stock - item.quantity,
-            });
-          } else {
-            console.warn(`Product ${item.productId} does not exist.`);
-          }
-        }
-
-        // Save user details
-        if (auth.currentUser) {
-          const userDocRef = doc(db, 'users', auth.currentUser.uid);
-          await setDoc(
-            userDocRef,
-            {
-              name: formData.name,
-              email: formData.email,
-              address: formData.address,
-              city: formData.city,
-              postalCode: formData.postalCode,
-              country: formData.country,
-              phone: formData.phone,
-            },
-            { merge: true }
-          );
-          console.log('Updated user details for user:', auth.currentUser.uid);
-        }
-
-        await sendOrderConfirmationEmail({
-          ...order,
-          items: cart.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product?.price || 0,
-            name: item.product?.name || 'Unknown',
-            sellerId: item.product?.sellerId,
-          })),
-        });
+        // Clear cart
         await clearCart(auth.currentUser?.uid);
         setCart([]);
+
         toast.success(
           <div>
             <strong>Payment Successful!</strong>
@@ -617,14 +586,37 @@ const Checkout = () => {
             icon: <i className="bx bx-check-circle text-blue-500 text-xl"></i>,
           }
         );
-        navigate('/order-confirmation', { state: { order: { ...order, items: cart } } });
+        navigate('/order-confirmation', { state: { order: { ...lastOrder, items: cart } } });
       } catch (err) {
         console.error('Checkout error:', {
           message: err.message,
           stack: err.stack,
           code: err.code,
         });
-        toast.error(err.message || 'Failed to place order.', { position: 'top-right', autoClose: 3000 });
+        toast.error(err.message || 'Failed to place order. Please try again.', { position: 'top-right', autoClose: 3000 });
+
+        // Rollback wallet updates if possible
+        if (walletUpdates.length > 0) {
+          try {
+            await runTransaction(db, async (transaction) => {
+              for (const { sellerId, amount } of walletUpdates) {
+                const walletRef = doc(db, 'wallets', sellerId);
+                const walletSnap = await transaction.get(walletRef);
+                if (walletSnap.exists()) {
+                  const currentPending = walletSnap.data().pendingBalance || 0;
+                  transaction.update(walletRef, {
+                    pendingBalance: Math.max(0, currentPending - amount),
+                    updatedAt: serverTimestamp(),
+                  });
+                }
+              }
+            });
+            console.log('Rolled back wallet updates due to checkout failure.');
+          } catch (rollbackErr) {
+            console.error('Rollback error:', rollbackErr);
+            toast.warn('Failed to rollback wallet updates. Please contact support.', { position: 'top-right', autoClose: 5000 });
+          }
+        }
       }
     },
     [cart, subtotalNgn, belowMinimumPrice, formData, totalNgn, navigate, totalItems, currency]
@@ -673,8 +665,6 @@ const Checkout = () => {
       </div>
     );
   }
-
-  const adminShareAmount = totalAmount * 0.15;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -911,10 +901,22 @@ const Checkout = () => {
                     {currency} {taxNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Handling Fee (5%)</span>
+                  <span>
+                    {currency} {handlingFeeNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Buyer Protection Fee (2%)</span>
+                  <span>
+                    {currency} {buyerProtectionFeeNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                  </span>
+                </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -960,16 +962,14 @@ const Checkout = () => {
                         onSuccess={handlePaymentSuccess}
                         onCancel={handleCancel}
                         currency={currency}
-                        cartItem={cart[0]} // Placeholder, adjust based on your cart structure
                         handlingFee={handlingFeeNgn}
                         buyerProtectionFee={buyerProtectionFeeNgn}
-                        adminShare={adminShareAmount}
                       />
                     </Elements>
                   ) : formData.country === 'Nigeria' ? (
                     <PaystackCheckout
                       email={formData.email}
-                      amount={totalAmount}
+                      amount={totalAmount * 100} // Convert to kobo
                       onSuccess={handlePaymentSuccess}
                       onClose={handleCancel}
                       disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}

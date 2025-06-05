@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar';
 
 const AdminPayoutMonitor = () => {
   const [payouts, setPayouts] = useState([]);
+  const [adminWallet, setAdminWallet] = useState({ availableBalance: 0, pendingBalance: 0 });
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -14,13 +15,26 @@ const AdminPayoutMonitor = () => {
   };
 
   useEffect(() => {
+    // Fetch seller payouts
     const q = query(collection(db, 'transactions'), where('type', '==', 'Withdrawal'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribePayouts = onSnapshot(q, (snapshot) => {
       const payoutList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPayouts(payoutList);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Fetch admin wallet
+    const adminWalletRef = doc(db, 'wallets', 'admin');
+    const unsubscribeAdminWallet = onSnapshot(adminWalletRef, (doc) => {
+      if (doc.exists()) {
+        setAdminWallet(doc.data());
+      }
+    });
+
+    return () => {
+      unsubscribePayouts();
+      unsubscribeAdminWallet();
+    };
   }, []);
 
   const approvePayout = async (payout) => {
@@ -86,7 +100,13 @@ const AdminPayoutMonitor = () => {
 
         <div className="flex-1 p-4 md:p-3">
           <div className="max-w-full mx-auto">
-            <h2 className="text-2xl font-bold mb-4">Payout Monitor</h2>
+            <h2 className="text-2xl font-bold mb-4">Admin Payout Monitor</h2>
+            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold mb-2">Admin Earnings</h3>
+              <p>Available Balance: {adminWallet.availableBalance.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</p>
+              <p>Pending Balance: {adminWallet.pendingBalance.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</p>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Seller Payouts</h3>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-200">

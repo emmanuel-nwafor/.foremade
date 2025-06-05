@@ -6,7 +6,7 @@ import '/src/index.css';
 
 const PaystackCheckout = ({
   email,
-  amount,
+  amount, // Already in kobo from Checkout.jsx
   onSuccess,
   onClose,
   disabled,
@@ -48,7 +48,7 @@ const PaystackCheckout = ({
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const payload = {
-        amount: amount, // Send in NGN
+        amount, // Use as-is (already in kobo)
         email,
         currency: 'NGN',
         metadata: {
@@ -56,19 +56,23 @@ const PaystackCheckout = ({
           orderId: `order-${Date.now()}`,
         },
       };
+      console.log('Initiating Paystack Payment with Payload:', payload); // Debug log
       const { data } = await axios.post(`${backendUrl}/initiate-paystack-payment`, payload);
 
       const handler = window.PaystackPop.setup({
         key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email,
-        amount: Math.round(amount * 100), // Paystack iframe expects kobo
+        amount, // Use as-is (already in kobo)
         currency: 'NGN',
         ref: data.reference,
+        language: 'en', // Explicitly set to prevent null error
         callback: (response) => {
+          console.log('Paystack Callback Response:', response); // Debug log
           onSuccess(response);
           setLoading(false);
         },
         onClose: () => {
+          console.log('Paystack Modal Closed'); // Debug log
           onClose();
           setLoading(false);
         },

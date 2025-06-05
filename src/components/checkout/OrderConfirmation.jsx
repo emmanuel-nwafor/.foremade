@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { db } from '/src/firebase';
@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 
 const OrderConfirmation = () => {
   const { state } = useLocation();
+  const navigate = useNavigate();
   const order = state?.order;
   const [orderItemsWithImages, setOrderItemsWithImages] = useState([]);
 
@@ -16,7 +17,7 @@ const OrderConfirmation = () => {
         autoClose: 3000,
       });
       setTimeout(() => {
-        window.location.href = '/';
+        navigate('/');
       }, 3000);
     } else {
       const fetchItemImages = async () => {
@@ -25,7 +26,7 @@ const OrderConfirmation = () => {
             order.items.map(async (item) => {
               const productRef = doc(db, 'products', item.productId);
               const productSnap = await getDoc(productRef);
-              let mainImage = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
+              let mainImage = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
               if (productSnap.exists()) {
                 const productData = productSnap.data();
                 console.log('Product data for', item.name, ':', productData);
@@ -54,7 +55,7 @@ const OrderConfirmation = () => {
           setOrderItemsWithImages(
             order.items.map((item) => ({
               ...item,
-              mainImage: 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg',
+              mainImage: 'https://res.cloudinary.com/demo/image/upload/v1/sample',
             }))
           );
         }
@@ -62,7 +63,7 @@ const OrderConfirmation = () => {
 
       fetchItemImages();
     }
-  }, [order]);
+  }, [order, navigate]);
 
   if (!order) {
     return (
@@ -73,7 +74,16 @@ const OrderConfirmation = () => {
   }
 
   const { totalAmount, date, shippingDetails, paymentGateway, paymentId, currency } = order;
-  const displayTotal = totalAmount;
+  const taxRate = 0.075;
+  const handlingFeeRate = 0.05;
+  const buyerProtectionRate = 0.02;
+  // Calculate subtotal by reversing the fees and tax from totalAmount
+  const totalNgn = currency === 'GBP' ? totalAmount / 0.00048 : totalAmount; // Convert back to NGN if in GBP
+  const totalNgnBeforeFees = totalNgn / (1 + handlingFeeRate + buyerProtectionRate);
+  const taxNgn = totalNgnBeforeFees * taxRate;
+  const subtotalNgn = totalNgnBeforeFees - taxNgn;
+  const subtotal = currency === 'GBP' ? subtotalNgn * 0.00048 : subtotalNgn;
+  const tax = currency === 'GBP' ? taxNgn * 0.00048 : taxNgn;
 
   console.log('Currency:', currency);
 
@@ -128,7 +138,7 @@ const OrderConfirmation = () => {
                       failedUrl: e.target.src,
                       name: item.name,
                     });
-                    e.target.src = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
+                    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
                   }}
                   onLoad={() => {
                     console.log('Image loaded for', item.name, 'at URL:', item.mainImage);
@@ -144,8 +154,9 @@ const OrderConfirmation = () => {
         </div>
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
-          <p className="text-sm">Subtotal: {currency} {displayTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
-          <p className="text-sm font-bold">Total: {currency} {displayTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-sm">Subtotal: {currency} {subtotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-sm">Tax (7.5%): {currency} {tax.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-sm font-bold">Total: {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
         </div>
       </div>
       <div className="mt-6 flex gap-4">

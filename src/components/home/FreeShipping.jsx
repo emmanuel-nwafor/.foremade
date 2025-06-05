@@ -5,7 +5,7 @@ export default function FreeShipping() {
         <>
          <div className="p-1 bg-[#eb9325]">
             <p className="text-white text-md max-md:text-[13px] m-2 max-md:m-0 text-center">
-                Up to 30% off when you buy multiple items | Free shipping Nationwide.   
+                Up to 30% off when you buy multiple items | Free shipping Nationwide !   
             </p>
          </div>
         </>

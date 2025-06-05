@@ -31,7 +31,7 @@ const preloadImage = (url) => {
   });
 };
 
-const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, cartItem }) => {
+const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, cartItem, handlingFee, buyerProtectionFee, adminShare }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,10 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
               metadata: {
                 userId: auth.currentUser?.uid || 'anonymous',
                 orderId: `order-${Date.now()}`,
-                productId: cartItem?.productId || 'default-product-id', // Placeholder, update with correct cart item
+                productId: cartItem?.productId || 'default-product-id',
+                handlingFee: currency === 'GBP' ? handlingFee * conversionRateNgnToGbp : handlingFee,
+                buyerProtectionFee: currency === 'GBP' ? buyerProtectionFee * conversionRateNgnToGbp : buyerProtectionFee,
+                adminShare: currency === 'GBP' ? adminShare * conversionRateNgnToGbp : adminShare,
               },
             },
             { timeout: 15000 }
@@ -166,7 +169,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
 const Checkout = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
-  const [loadingState, setLoadingState] = useState(true); // Changed to loadingState
+  const [loadingState, setLoadingState] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -182,7 +185,7 @@ const Checkout = () => {
   useEffect(() => {
     const loadCartAndUserData = async () => {
       try {
-        setLoadingState(true); // Fixed to use setLoadingState
+        setLoadingState(true);
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
         console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
@@ -257,7 +260,7 @@ const Checkout = () => {
         setCart([]);
         toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
       } finally {
-        setLoadingState(false); // Fixed to use setLoadingState
+        setLoadingState(false);
       }
     };
 
@@ -341,13 +344,13 @@ const Checkout = () => {
   const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
   const taxNgn = subtotalNgn * taxRate;
-  const handlingFeeRate = 0.05; // 5% handling fee
-  const buyerProtectionRate = 0.02; // 2% buyer protection fee
-  const handlingFeeNgn = subtotalNgn * handlingFeeRate;
-  const buyerProtectionFeeNgn = subtotalNgn * buyerProtectionRate;
+  const handlingFeeRate = 0.05; // 5% handling fee (not displayed to buyer)
+  const buyerProtectionRate = 0.02; // 2% buyer protection fee (not displayed to buyer)
   const totalNgnBeforeFees = subtotalNgn + taxNgn;
+  const handlingFeeNgn = totalNgnBeforeFees * handlingFeeRate;
+  const buyerProtectionFeeNgn = totalNgnBeforeFees * buyerProtectionRate;
   const totalFeesNgn = handlingFeeNgn + buyerProtectionFeeNgn;
-  const totalNgn = totalNgnBeforeFees + totalFeesNgn;
+  const totalNgn = totalNgnBeforeFees + totalFeesNgn; // Total including fees for internal use
 
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048; // 1 NGN = 0.00048 GBP
@@ -444,21 +447,10 @@ const Checkout = () => {
         console.log('Sellers grouped:', sellers);
 
         const adminSharePercentage = 0.15;
-        const handlingFee = totalNgnBeforeFees * handlingFeeRate; // In NGN
-        const buyerProtectionFee = totalNgnBeforeFees * buyerProtectionRate; // In NGN
+        const handlingFee = totalNgnBeforeFees * handlingFeeRate;
+        const buyerProtectionFee = totalNgnBeforeFees * buyerProtectionRate;
         const totalFees = handlingFee + buyerProtectionFee;
-
-        console.log('Fee calculations:', {
-          subtotalNgn,
-          taxNgn,
-          totalNgnBeforeFees,
-          handlingFee,
-          buyerProtectionFee,
-          totalFees,
-          totalNgn,
-          totalAmount: totalAmount,
-          currency,
-        });
+        const adminShareAmount = totalAmount * adminSharePercentage;
 
         // Process each seller's items
         for (const sellerId of Object.keys(sellers)) {
@@ -500,7 +492,7 @@ const Checkout = () => {
               sellerId: item.product?.sellerId || sellerId,
             })),
             totalAmount,
-            adminShare: totalAmount * adminSharePercentage,
+            adminShare: adminShareAmount,
             handlingFee,
             buyerProtectionFee,
             sellerShare,
@@ -516,7 +508,7 @@ const Checkout = () => {
           await setDoc(doc(db, 'orders', `${orderId}-${sellerId}`), order);
           console.log(`Order saved for seller ${sellerId}:`, `${orderId}-${sellerId}`);
 
-          // Update seller's wallet
+          // Update seller's wallet with the seller share
           const walletRef = doc(db, 'wallets', sellerId);
           const walletSnap = await getDoc(walletRef);
           if (walletSnap.exists()) {
@@ -541,7 +533,7 @@ const Checkout = () => {
             console.log(`Created wallet for seller ${sellerId} with pendingBalance:`, sellerShare);
           }
 
-          // Record transaction
+          // Record seller transaction
           await addDoc(collection(db, 'transactions'), {
             userId: sellerId,
             type: 'Sale',
@@ -553,31 +545,17 @@ const Checkout = () => {
             reference: paymentData.id || paymentData.reference,
           });
           console.log(`Transaction recorded for seller ${sellerId}`);
-        }
 
-        // Update admin wallet
-        const adminWalletRef = doc(db, 'wallets', 'admin');
-        const adminWalletSnap = await getDoc(adminWalletRef);
-        const adminShareAmount = totalAmount * adminSharePercentage;
-        if (adminWalletSnap.exists()) {
-          const adminWalletData = adminWalletSnap.data();
-          await updateDoc(adminWalletRef, {
-            availableBalance: (adminWalletData.availableBalance || 0) + adminShareAmount,
-            updatedAt: serverTimestamp(),
-          });
-          console.log('Updated admin wallet:', {
-            previousBalance: adminWalletData.availableBalance || 0,
-            addedAmount: adminShareAmount,
-            newBalance: (adminWalletData.availableBalance || 0) + adminShareAmount,
-          });
-        } else {
-          await setDoc(adminWalletRef, {
-            availableBalance: adminShareAmount,
-            pendingBalance: 0,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          });
-          console.log('Created admin wallet with availableBalance:', adminShareAmount);
+          // For Paystack payments (Nigeria), log fees for manual admin handling
+          if (paymentGateway === 'Paystack') {
+            console.log(`Admin fees to be manually transferred for order ${orderId}:`, {
+              handlingFee,
+              buyerProtectionFee,
+              adminShare: adminShareAmount,
+              totalAdminAmount: handlingFee + buyerProtectionFee + adminShareAmount,
+              currency,
+            });
+          }
         }
 
         // Update product stock
@@ -685,19 +663,21 @@ const Checkout = () => {
     e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
   };
 
-  if (loadingState) { // Changed to loadingState
+  if (loadingState) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <Spinner />
-          <p className="text-gray-500 text-sm mt-2">Loading...</p>
+          <p className="text-gray-600 text-sm mt-2">Loading...</p>
         </div>
       </div>
     );
   }
 
+  const adminShareAmount = totalAmount * 0.15;
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 mb-20">
       <style>
         {`
           @keyframes slideInRight {
@@ -743,7 +723,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -758,7 +738,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -773,7 +753,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -788,7 +768,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -803,7 +783,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -818,7 +798,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 />
               </div>
               <div>
@@ -832,7 +812,7 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                  disabled={loadingState} // Changed to loadingState
+                  disabled={loadingState}
                 >
                   <option value="">Select a country</option>
                   <option value="Nigeria">Nigeria</option>
@@ -925,6 +905,12 @@ const Checkout = () => {
                     {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Tax (7.5%)</span>
+                  <span>
+                    {currency} {taxNgn.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                  </span>
+                </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
@@ -975,6 +961,9 @@ const Checkout = () => {
                         onCancel={handleCancel}
                         currency={currency}
                         cartItem={cart[0]} // Placeholder, adjust based on your cart structure
+                        handlingFee={handlingFeeNgn}
+                        buyerProtectionFee={buyerProtectionFeeNgn}
+                        adminShare={adminShareAmount}
                       />
                     </Elements>
                   ) : formData.country === 'Nigeria' ? (
@@ -983,7 +972,7 @@ const Checkout = () => {
                       amount={totalAmount}
                       onSuccess={handlePaymentSuccess}
                       onClose={handleCancel}
-                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice} // Changed to loadingState
+                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}
                       buttonText="Pay Now"
                       className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow ${
                         !formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice

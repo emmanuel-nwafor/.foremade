@@ -1,0 +1,105 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+// Import Boxicons CSS
+const boxiconsLink = document.createElement('link');
+boxiconsLink.rel = 'stylesheet';
+boxiconsLink.href = 'https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css';
+if (!document.head.querySelector('link[href*="boxicons"]')) {
+  document.head.appendChild(boxiconsLink);
+}
+
+const EmpowermentHubPreview = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 py-8 px-4 sm:px-6 lg:px-8 my-6 rounded-2xl mx-4 shadow-lg">
+      {/* Subtle animated background pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+      </div>
+      
+      {/* Subtle decorative elements */}
+      <div className="absolute top-8 left-8 w-1.5 h-1.5 bg-purple-200 rounded-full animate-ping opacity-50"></div>
+      <div className="absolute top-16 right-12 w-1 h-1 bg-indigo-200 rounded-full animate-ping opacity-50 animation-delay-1000"></div>
+      <div className="absolute bottom-12 left-16 w-1 h-1 bg-purple-200 rounded-full animate-ping opacity-50 animation-delay-3000"></div>
+      
+      <div className="relative max-w-6xl mx-auto">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+          
+          {/* Left side - Content */}
+          <div className="flex-1 text-center lg:text-left">
+            {/* Compact header */}
+            <div className="mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white leading-tight flex items-center justify-center lg:justify-start">
+                <i className="bx bx-rocket text-2xl text-purple-200 mr-3"></i>
+                Foremade Youth
+                <span className="ml-2 bg-gradient-to-r from-purple-200 to-indigo-200 bg-clip-text text-transparent">
+                  Empowerment Hub
+                </span>
+              </h2>
+            </div>
+            
+            {/* Compact description */}
+            <p className="text-base md:text-lg mb-6 text-purple-100 leading-relaxed">
+              Join our community of young creators and entrepreneurs. Get funding, mentorship, 
+              and a <span className="font-medium text-purple-200">free platform</span> to showcase your talents.
+            </p>
+            
+            {/* Compact feature highlights */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-6">
+              <div className="flex items-center space-x-2 bg-white bg-opacity-5 px-3 py-1 rounded-full backdrop-blur-sm text-sm">
+                <i className="bx bx-dollar-circle text-purple-200"></i>
+                <span className="text-white font-medium">Funding</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white bg-opacity-5 px-3 py-1 rounded-full backdrop-blur-sm text-sm">
+                <i className="bx bx-user-voice text-purple-200"></i>
+                <span className="text-white font-medium">Mentorship</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white bg-opacity-5 px-3 py-1 rounded-full backdrop-blur-sm text-sm">
+                <i className="bx bx-devices text-purple-200"></i>
+                <span className="text-white font-medium">Free Platform</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right side - CTA Buttons */}
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3">
+            <button
+              onClick={() => navigate('/youth-empowerment-form')}
+              className="group relative inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-full text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-opacity-50 transition-all duration-200 transform hover:scale-105 hover:shadow-md whitespace-nowrap"
+            >
+              <span className="relative z-10">Join Now</span>
+              <i className="bx bx-right-arrow-alt ml-2 group-hover:translate-x-1 transition-transform duration-200"></i>
+            </button>
+            
+            <button
+              onClick={() => navigate('/empowerment-hub')}
+              className="group inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-full text-white border border-purple-200 hover:bg-white hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-opacity-50 transition-all duration-200 transform hover:scale-105 backdrop-blur-sm whitespace-nowrap"
+            >
+              <i className="bx bx-info-circle mr-2"></i>
+              <span>Learn More</span>
+              <i className="bx bx-chevron-right ml-1 group-hover:translate-x-1 transition-transform duration-200"></i>
+            </button>
+            
+            {/* Compact trust indicator */}
+            <div className="flex items-center justify-center lg:justify-start mt-2 text-xs text-purple-200">
+              <i className="bx bx-group mr-1"></i>
+              <span>1000+ members</span>
+              <div className="flex ml-2">
+                {[...Array(5)].map((_, i) => (
+                  <i key={i} className="bx bxs-star text-purple-200 text-xs"></i>
+                ))}
+              </div>
+              <span className="ml-1">4.9</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EmpowermentHubPreview;

@@ -35,14 +35,16 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
-
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
-import PrivacyPolicy from '/src/pages/PrivacyPolicy';
-import AllPolicies from '/src/pages/AllPolicies';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import AllPolicies from './pages/AllPolicies';
+import EmpowermentHub from './pages/EmpowermentHub';
+import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
+
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
 import Electronics from './pages/Electronics';
@@ -85,6 +87,8 @@ const Layout = ({ children }) => {
     '/orders',
     '/address',
     '/setting',
+    '/empowerment-hub',
+    '/youth-empowerment-form',
   ].includes(location.pathname);
 
   return (
@@ -208,6 +212,8 @@ function App() {
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
+            <Route path="/empowerment-hub" element={<EmpowermentHub />} />
+            <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/best-selling" element={<BestSelling />} />

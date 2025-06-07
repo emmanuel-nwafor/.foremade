@@ -340,7 +340,7 @@ const Checkout = () => {
   );
   const belowMinimumPrice = subtotalNgn < 12000;
   const taxRate = 0.075;
-  const taxNgn = subtotalNgn * taxRate;
+  const taxNgn = subtotalNgn * taxRate; // Define taxNgn before using it
   const handlingFeeRate = 0.05; // 5% handling fee
   const buyerProtectionRate = 0.02; // 2% buyer protection fee
   const totalNgnBeforeFees = subtotalNgn + taxNgn;
@@ -469,6 +469,14 @@ const Checkout = () => {
             sellerId: Object.keys(sellers)[index],
           }));
 
+          // Log wallet data before updates
+          console.log('Seller wallets before update:', sellerWallets.map(wallet => ({
+            sellerId: wallet.sellerId,
+            exists: wallet.exists,
+            pendingBalance: wallet.data?.pendingBalance || 0,
+            availableBalance: wallet.data?.availableBalance || 0,
+          })));
+
           // Step 2: Compute changes (no writes yet)
           const orders = [];
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
@@ -519,6 +527,12 @@ const Checkout = () => {
               updatedAt: serverTimestamp(),
               ...(exists ? {} : { createdAt: serverTimestamp() }),
             }, { merge: true });
+
+            // Log wallet update
+            console.log(`Updated wallet for seller ${sellerId}:`, {
+              pendingBalance,
+              availableBalance: exists ? (data.availableBalance || 0) : 0,
+            });
           });
 
           // Step 3: Perform ALL writes
@@ -549,6 +563,25 @@ const Checkout = () => {
           );
           await Promise.all(transactionPromises);
         });
+
+        // Verify wallet updates after transaction
+        const updatedWallets = await Promise.all(
+          walletUpdates.map(async ({ sellerId }) => {
+            const walletRef = doc(db, 'wallets', sellerId);
+            const walletSnap = await getDoc(walletRef);
+            return {
+              sellerId,
+              exists: walletSnap.exists(),
+              data: walletSnap.exists() ? walletSnap.data() : null,
+            };
+          })
+        );
+        console.log('Seller wallets after update:', updatedWallets.map(wallet => ({
+          sellerId: wallet.sellerId,
+          exists: wallet.exists,
+          pendingBalance: wallet.data?.pendingBalance || 0,
+          availableBalance: wallet.data?.availableBalance || 0,
+        })));
 
         // Save user details (outside transaction, as it's not critical to atomicity)
         if (auth.currentUser) {

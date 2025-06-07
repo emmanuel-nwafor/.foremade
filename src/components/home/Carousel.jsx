@@ -19,17 +19,29 @@ const Carousel = () => {
       button: 'Shop Now',
       image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298181/WhatsApp_Image_2025-05-26_at_2.22.03_PM_t6903n.jpg',
     },
-    {
-      text: 'Top Notch Findings.',
-      description: 'Quality and refinable products.',
-      button: 'Shop Now',
-      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298175/WhatsApp_Image_2025-05-26_at_2.22.03_PM_3_mnnp3s.jpg',
-    },
+    // {
+    //   text: 'Top Notch Findings.',
+    //   description: 'Quality and refinable products.',
+    //   button: 'Shop Now',
+    //   image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298175/WhatsApp_Image_2025-05-26_at_2.22.03_PM_3_mnnp3s.jpg',
+    // },
     {
       text: 'Exclusive Offers Await!',
       description: 'Discover exclusive deals just for you.',
       button: 'Shop Now',
       image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1748298182/WhatsApp_Image_2025-05-26_at_2.22.03_PM_2_xnyfai.jpg',
+    },
+    {
+      text: 'Exclusive Offers Await!',
+      description: 'Just for you.',
+      button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1749269120/474724fd-05dd-426b-8038-5dbe08b8d257_ddxbqd.jpg',
+    },
+    {
+      text: 'Exclusive Offers Await!',
+      description: 'Just for you.',
+      button: 'Shop Now',
+      image: 'https://res.cloudinary.com/dbczfoqnc/image/upload/v1749269119/a586b6ab-eabe-4f59-921c-1176e593e05c_vgbb1j.jpg',
     },
   ];
 

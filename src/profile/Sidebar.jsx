@@ -1,44 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function Sidebar() {
   const [userData, setUserData] = useState({
     name: 'Emmanuel Chinecherem',
     username: 'emmaChi',
-    profileImage: localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg',
+    email: '',
+    profileImage: localStorage.getItem('profileImage') || null,
   });
-  const [orderCount, setOrderCount] = useState(0);
-  const [wishlistCount] = useState(0);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-      if (!user) return;
+      if (!user) {
+        setUserData({
+          name: 'Guest',
+          username: 'guest',
+          email: '',
+          profileImage: null,
+        });
+        return;
+      }
 
-      const userDocRef = doc(db, 'users', user.uid);
-      const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const firestoreData = docSnap.data();
-          setUserData((prev) => ({
-            ...prev,
-            name: firestoreData.name || user.displayName || 'Emmanuel Chinecherem',
-            username: firestoreData.username || 'emmaChi',
-          }));
-        }
-      });
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const firestoreData = docSnap.data();
+            setUserData((prev) => ({
+              ...prev,
+              name: firestoreData.name || user.displayName || 'Emmanuel Chinecherem',
+              username: firestoreData.username || 'emmaChi',
+              email: user.email || '',
+            }));
+          }
+        });
 
-      const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
-      const ordersSnap = await getDocs(ordersQuery);
-      setOrderCount(ordersSnap.docs.length);
-
-      return () => unsubscribeUser();
+        return () => unsubscribeUser();
+      } catch (err) {
+        console.error('Error fetching sidebar data:', err);
+      }
     });
 
     const handleProfileImageUpdate = () => {
       setUserData((prev) => ({
         ...prev,
-        profileImage: localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg',
+        profileImage: localStorage.getItem('profileImage') || null,
       }));
     };
 
@@ -49,6 +57,7 @@ export default function Sidebar() {
           ...prev,
           name: storedUserData.name || prev.name,
           username: storedUserData.username || prev.username,
+          email: storedUserData.email || prev.email,
         }));
       }
     };
@@ -62,58 +71,71 @@ export default function Sidebar() {
     };
   }, []);
 
+  const getAvatar = () => {
+    if (userData.profileImage) {
+      return (
+        <img
+          src={userData.profileImage}
+          alt="Profile"
+          className="w-full h-full object-cover"
+          onError={() => {
+            setUserData((prev) => ({ ...prev, profileImage: null }));
+          }}
+        />
+      );
+    }
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-300 text-white text-lg font-bold uppercase rounded-full">
+        {userData.email ? userData.email[0] : 'U'}
+      </div>
+    );
+  };
+
   return (
-    <div className="md:w-1/4 bg-gray-50 p-6 rounded-lg shadow-md">
-      <div className="flex flex-col items-center mb-6">
-        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-          <img
-            src={userData.profileImage}
-            alt="Profile"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.src = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
-            }}
-          />
+    <div className="md:w-1/4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div className="flex flex-col items-center mb-6 text-center">
+        <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center overflow-hidden">
+          {getAvatar()}
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-gray-800">
-          {userData.name.split(' ')[0]}
+        <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-200">
+          {userData.name}
         </h3>
-        <p className="text-gray-600 text-sm">{userData.username}</p>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">{userData.username}</p>
       </div>
       <nav className="flex flex-col space-y-2">
         <Link
           to="/profile"
-          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <i className="bx bx-user text-lg"></i>
+          <i className="bx bx-user text-lg text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"></i>
           <span>Profile</span>
         </Link>
         <Link
           to="/orders"
-          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <i className="bx bx-package text-lg"></i>
-          <span>Orders ({orderCount})</span>
+          <i className="bx bx-package text-lg text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300"></i>
+          <span>Orders</span>
         </Link>
         <Link
           to="/favorites"
-          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <i className="bx bx-heart text-lg"></i>
-          <span>Wishlist ({wishlistCount})</span>
+          <i className="bx bx-heart text-lg text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"></i>
+          <span>Wishlist</span>
         </Link>
         <Link
           to="/address"
-          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <i className="bx bx-map text-lg"></i>
+          <i className="bx bx-map text-lg text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"></i>
           <span>Addresses</span>
         </Link>
         <Link
           to="/setting"
-          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
-          <i className="bx bx-cog text-lg"></i>
+          <i className="bx bx-cog text-lg text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300"></i>
           <span>Settings</span>
         </Link>
       </nav>

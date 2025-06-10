@@ -184,7 +184,7 @@ export default function Login() {
       <div className="w-full h-screen flex">
         <div
           className="hidden md:block md:w-1/2 h-full bg-cover bg-center"
-          style={{ backgroundImage: "url('https://i.pinimg.com/736x/f2/8c/a4/f28ca4118a46e68b6871946e65ab5665.jpg')" }}
+          style={{ backgroundImage: "url('https://images.pexels.com/photos/7621356/pexels-photo-7621356.jpeg?auto=compress&cs=tinysrgb&w=600')" }}
         >
           <div className="w-full h-full bg-black bg-opacity-40 flex flex-col justify-center items-center text-white p-8">
             <h1 className="text-3xl font-bold mb-4 flex-col items-center">
@@ -266,6 +266,13 @@ export default function Login() {
               {loadingEmail ? 'Logging in...' : 'Sign In'}
             </button>
           </form>
+
+          <p className="text-gray-600 mt-5">
+            Forgot Password ?
+            <Link to="/recover-password" className="text-blue-600 hover:underline">
+              Recover
+            </Link>
+          </p>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600 mb-4">Or continue with</p>

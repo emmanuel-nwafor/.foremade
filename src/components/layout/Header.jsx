@@ -88,6 +88,8 @@ const Header = () => {
     }
   }, [user]);
 
+  console.log(favorites)
+
   useEffect(() => {
     const loadFavorites = () => {
       try {

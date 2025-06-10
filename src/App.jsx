@@ -54,20 +54,31 @@ import GamesFun from './pages/GamesFun';
 import Drinks from './pages/Drinks';
 import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
+import ForgetPassword from './auth/ForgetPassword';
 
 const Layout = ({ children }) => {
   const location = useLocation();
   const hideHeaderFooter = [
     '/login',
     '/register',
+    '/recover-password',
     '/sell',
     '/smile',
     '/overview',
-    '/vendor/orders',
-    '/vendor/products',
     '/settings',
     '/products-gallery',
     '/products-upload',
+
+    '/privacy-policy',
+    '/privacy-policy/cookies',
+    '/privacy-policy',
+    '/privacy-policy/contact',
+    '/privacy-policy/us',
+    '/privacy-policy/nigeria',
+    '/privacy-policy/asia',
+    '/privacy-policy/eu',
+    '/privacy-policy/australia',
+
     '/admin',
     '/admin/payouts',
     '/admin/dashboard',
@@ -76,6 +87,7 @@ const Layout = ({ children }) => {
     '/admin/edit/fees',
     '/admin/sellers/payouts',
     '/admin/products',
+
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
@@ -204,7 +216,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/recover-password"
+              element={
+                <ProtectedRoute>
+                  <ForgetPassword />
+                </ProtectedRoute>
+              }
+            />
+            
             {/* === Previously Protected Admin Routes (Now Open) === */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />

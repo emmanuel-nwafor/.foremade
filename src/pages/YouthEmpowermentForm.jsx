@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { CheckCircle, ArrowRight, Users, Target, Lightbulb } from 'lucide-react';
 
 const YouthEmpowermentForm = () => {
   const [formData, setFormData] = useState({

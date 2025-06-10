@@ -8,7 +8,8 @@ import {
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
+import TopNavigation from './components/layout/TopNavigation';
+import Footer from './components/layout/EnhancedFooter';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import Login from './auth/Login';
@@ -19,7 +20,7 @@ import Product from './pages/Product';
 import AddPhone from './auth/AddPhone';
 import Cart from './pages/Cart';
 import Favorites from './pages/Favorites';
-import Profile from './profile/Profile';
+import Profile from './profile/EnhancedProfile';
 import Checkout from './components/checkout/Checkout';
 import Orders from './profile/Orders';
 import Address from './profile/Address';
@@ -32,6 +33,7 @@ import SellersProducts from './seller/SellersProducts';
 import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
+import Support from './pages/Support';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminUsers from '/src/admin/AdminUsers';
@@ -96,22 +98,17 @@ const Layout = ({ children }) => {
     '/youth-empowerment-form',
   ].includes(location.pathname);
 
-  const showFooter = [
-    '/profile',
-    '/orders',
-    '/address',
-    '/setting',
-    '/empowerment-hub',
-    '/youth-empowerment-form',
-  ].includes(location.pathname);
+  // Only show footer on profile page
+  const showFooter = location.pathname === '/profile';
 
   return (
     <>
+      {!hideHeaderFooter && <TopNavigation />}
       {!hideHeaderFooter && <Header />}
       <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
         {children}
       </main>
-      {!hideHeaderFooter && showFooter && <Footer />}
+      {showFooter && <Footer />}
     </>
   );
 };
@@ -234,6 +231,7 @@ function App() {
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
+            <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />
             <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
             <Route path="/products" element={<Products />} />

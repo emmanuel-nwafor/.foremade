@@ -6,6 +6,14 @@ const CategoriesCarousel = ({ category }) => {
   const [current, setCurrent] = useState(0);
   const location = useLocation();
 
+  // Add static image mapping
+  const staticImages = {
+    'Games & Fun': 'https://res.cloudinary.com/dvhogp27g/image/upload/v1749425277/photo_2025-06-09_00-28-12_dt7sp3.jpg',
+    'Drinks & Categories': 'https://res.cloudinary.com/dvhogp27g/image/upload/v1749425306/photo_2025-06-09_00-28-11_xcb6cg.jpg',
+    'Home & Kitchen': 'https://res.cloudinary.com/dvhogp27g/image/upload/v1749425370/photo_2025-06-09_00-28-16_mildb8.jpg',
+    'Smart Watches': 'https://res.cloudinary.com/dvhogp27g/image/upload/v1749425266/photo_2025-06-09_00-28-13_hai2go.jpg'
+  };
+
   // Determine the search query based on the category
   const getSearchQuery = () => {
     if (!category) {
@@ -28,6 +36,17 @@ const CategoriesCarousel = ({ category }) => {
   // Function to fetch images from Pexels API based on category
   const fetchImages = async () => {
     try {
+      // Check if we have a static image for this category
+      if (staticImages[category]) {
+        const slideData = [{ text: category }];
+        setSlides([{
+          ...slideData[0],
+          image: staticImages[category]
+        }]);
+        return;
+      }
+
+      // Fallback to API fetch for other categories
       const searchQuery = getSearchQuery();
       const randomPage = Math.floor(Math.random() * 100) + 1;
       const response = await fetch(
@@ -111,11 +130,7 @@ const CategoriesCarousel = ({ category }) => {
             alt={`Category ${category}`}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8 bg-black bg-opacity-30">
-            <h2 className="text-md text-center text-white md:text-lg lg:text-xl xl:text-2xl font-bold">
-              {slide.text}
-            </h2>
-          </div>
+         
         </div>
       ))}
     </div>

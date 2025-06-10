@@ -3,7 +3,7 @@ import { auth } from '/src/firebase';
 import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 
-const AddToCartButton = ({ productId }) => {
+const AddToCartButton = ({ productId, isIconOnly = false, customClass = '' }) => {
   const [loading, setLoading] = useState(false);
   const { alerts, addAlert } = useAlerts();
   const { setAlerts } = useAlerts();
@@ -26,16 +26,21 @@ const AddToCartButton = ({ productId }) => {
     }
   };
 
+  // Base button styles based on mode
+  let buttonClassName = isIconOnly
+    ? `${customClass} focus:outline-none`
+    : `rounded-full px-2 py-1 text-white focus:outline-none ml-2 transition-all duration-200 ${
+        loading
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-[#000] hover:bg-blue-950'
+      }`;
+
   return (
     <div className="">
       <button
         onClick={handleAddToCart}
         disabled={loading}
-        className={`rounded-full px-2 py-1 text-white focus:outline-none ml-2 transition-all duration-200 ${
-          loading
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-[#000] hover:bg-blue-950'
-        }`}
+        className={buttonClassName}
         aria-label="Add to cart"
       >
         <i className={`bx bx-cart-add text-xl ${loading ? 'opacity-50' : ''}`}></i>

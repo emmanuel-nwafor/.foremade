@@ -1,203 +1,277 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '/src/firebase';
-import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import AdminSidebar from '/src/admin/AdminSidebar';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from '/src/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import AdminSidebar from './AdminSidebar';
 
-export default function AdminUsers() {
-  const [users, setUsers] = useState([]);
-  const [newUser, setNewUser] = useState({ email: '', name: '' });
-  const [editingUser, setEditingUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
+// Custom Alert Component
+function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        setUsers(usersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        setError('Failed to fetch users: ' + err.message);
-      }
-      setLoading(false);
-    };
+    if (alerts.length === 0) return;
+    const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
+    return () => clearTimeout(timer);
+  }, [alerts, removeAlert]);
 
-    fetchUsers();
-  }, []);
+  return (
+    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className={`p-3 rounded-md shadow-md ${
+            alert.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+          }`}
+        >
+          {alert.message}
+          <button onClick={() => removeAlert(alert.id)} className="ml-2 text-sm font-bold">✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      const docRef = doc(collection(db, 'users'));
-      await setDoc(docRef, {
-        email: newUser.email,
-        name: newUser.name,
-        createdAt: new Date().toISOString(),
-      });
-      setUsers([...users, { id: docRef.id, ...newUser, createdAt: new Date().toISOString() }]);
-      setNewUser({ email: '', name: '' });
-    } catch (err) {
-      setError('Failed to create user: ' + err.message);
-    }
+// Local hook for managing alerts
+function useAlerts() {
+  const [alerts, setAlerts] = useState([]);
+  const addAlert = (message, type = 'info') => {
+    const id = Date.now();
+    setAlerts((prev) => [...prev, { id, message, type }]);
   };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      const docRef = doc(db, 'users', editingUser.id);
-      await updateDoc(docRef, { email: editingUser.email, name: editingUser.name });
-      setUsers(users.map((u) => (u.id === editingUser.id ? { ...u, ...editingUser } : u)));
-      setEditingUser(null);
-    } catch (err) {
-      setError('Failed to update user: ' + err.message);
-    }
+  const removeAlert = (id) => {
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
+  return { alerts, addAlert, removeAlert };
+}
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await deleteDoc(doc(db, 'users', id));
-      setUsers(users.filter((u) => u.id !== id));
-    } catch (err) {
-      setError('Failed to delete user: ' + err.message);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen bg-white dark:bg-gray-900">
-        <AdminSidebar />
-        <main className="flex-1 ml-0 md:ml-64 p-6">
-          <div className="container mx-auto px-4 py-8 text-center">
-            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-          </div>
-        </main>
-      </div>
-    );
+// Generate random password
+const generatePassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return password;
+};
 
-  if (error) {
+// Generate username
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part && part.trim());
+  const firstPart = nameParts[0] ? nameParts[0].slice(0, 4).toLowerCase() : 'user';
+  const secondPart = nameParts[1] ? nameParts[1].slice(0, 3).toLowerCase() : '';
+  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
+};
+
+export default function AdminUser() {
+  const navigate = useNavigate();
+  const { alerts, addAlert, removeAlert } = useAlerts();
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [formData, setFormData] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'buyer',
+  });
+  const [errors, setErrors] = useState({});
+
+  // Check admin authentication
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (!userDoc.exists() || userDoc.data().role !== 'admin') {
+          addAlert('Unauthorized access.', 'error');
+          // navigate('/login');
+        }
+      } else {
+        addAlert('Please log in as an admin.', 'error');
+        navigate('/login');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Validate email
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Handle input changes
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required.';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required.';
+    if (!formData.email) newErrors.email = 'Email is required.';
+    else if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email address.';
+    if (!['buyer', 'seller', 'admin'].includes(formData.role)) newErrors.role = 'Invalid role selected.';
+    return newErrors;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    setLoading(true);
+
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
+      addAlert('Please fix the form errors.', 'error');
+      return;
+    }
+
+    try {
+      const password = generatePassword();
+      const username = generateUsername(formData.firstName, formData.lastName);
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, password);
+      const newUser = userCredential.user;
+
+      await updateProfile(newUser, { displayName: username });
+
+      const userData = {
+        email: formData.email,
+        name: `${formData.firstName} ${formData.lastName}`,
+        username,
+        role: formData.role,
+        preRegistered: true,
+        createdAt: new Date().toISOString(),
+        uid: newUser.uid,
+        profileImage: null,
+      };
+      await setDoc(doc(db, 'users', newUser.uid), userData);
+
+      // Placeholder for sending email with credentials
+      console.log(`Send email to ${formData.email} with password: ${password}`);
+      // Example: await sendEmail(formData.email, 'Your Account Details', `Username: ${username}\nPassword: ${password}\nLogin at /login`);
+
+      addAlert(`User ${formData.email} added successfully! Credentials logged to console.`, 'success');
+      setFormData({ email: '', firstName: '', lastName: '', role: 'buyer' });
+    } catch (err) {
+      console.error('Error adding user:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setErrors({ email: 'This email is already in use.' });
+      } else {
+        addAlert('Failed to add user.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) {
     return (
-      <div className="flex min-h-screen bg-white dark:bg-gray-900">
+      <div className="min-h-screen flex bg-gray-50">
         <AdminSidebar />
-        <main className="flex-1 ml-0 md:ml-64 p-6">
-          <div className="container mx-auto px-4 py-8">
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded-lg dark:bg-red-900 dark:border-red-700">
-              <p className="text-red-700 dark:text-red-300">{error}</p>
-            </div>
-          </div>
-        </main>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen flex bg-gray-50">
       <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6">
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6">Manage Users</h1>
-          <form onSubmit={handleCreate} className="mb-8 bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Add New User</h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <input
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                placeholder="Enter user email"
-                className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                required
-              />
-              <input
-                type="text"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                placeholder="Enter user name"
-                className="p-2 border rounded-lg dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                required
-              />
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                Add User
+      <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-start">
+        <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-lg shadow-lg">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
+            Add New User
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-700 mb-4">User Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => handleChange('firstName', e.target.value)}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  />
+                  {errors.firstName && <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => handleChange('lastName', e.target.value)}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  />
+                  {errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  />
+                  {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => handleChange('role', e.target.value)}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.role ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  >
+                    <option value="buyer">Buyer</option>
+                    <option value="seller">Seller</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  {errors.role && <p className="text-red-600 text-xs mt-1">{errors.role}</p>}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={loading}
+                className={`py-2 px-6 rounded-md text-white text-sm font-medium transition duration-200 shadow ${
+                  loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-900 hover:bg-blue-800'
+                }`}
+              >
+                {loading ? 'Adding...' : 'Add User'}
               </button>
             </div>
           </form>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-800">
-                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">User ID</th>
-                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Name</th>
-                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Email</th>
-                  <th className="p-3 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">{user.id}</td>
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                      {editingUser?.id === user.id ? (
-                        <input
-                          type="text"
-                          value={editingUser.name}
-                          onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                          className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        user.name
-                      )}
-                    </td>
-                    <td className="p-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                      {editingUser?.id === user.id ? (
-                        <input
-                          type="email"
-                          value={editingUser.email}
-                          onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                          className="p-1 border rounded dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        user.email
-                      )}
-                    </td>
-                    <td className="p-3 text-xs sm:text-sm">
-                      {editingUser?.id === user.id ? (
-                        <>
-                          <button
-                            onClick={handleUpdate}
-                            className="text-green-600 hover:underline mr-2 dark:text-green-400"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingUser(null)}
-                            className="text-gray-600 hover:underline dark:text-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setEditingUser({ ...user })}
-                            className="text-blue-600 hover:underline mr-2 dark:text-blue-400"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="text-red-600 hover:underline dark:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         </div>
-      </main>
+      </div>
     </div>
   );
 }

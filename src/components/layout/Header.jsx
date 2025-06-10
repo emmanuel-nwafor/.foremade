@@ -15,7 +15,7 @@ const Header = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
-  const [setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState([]); // Fixed: Corrected setFavorites
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -35,8 +35,8 @@ const Header = () => {
     'Smart Watches',
   ];
 
-  const visibleCategories = categories.slice(0, 4); // First 4 stay visible on smaller screens
-  const dropdownCategories = categories.slice(4); // Last 5 go into dropdown on smaller screens
+  const visibleCategories = categories.slice(0, 4);
+  const dropdownCategories = categories.slice(4);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -57,6 +57,7 @@ const Header = () => {
         } else {
           setUserData(null);
           setNotificationCount(0);
+          setFavorites([]); // Clear favorites when logged out
           localStorage.removeItem('userData');
         }
       } catch (err) {
@@ -88,13 +89,21 @@ const Header = () => {
   }, [user]);
 
   useEffect(() => {
-    try {
-      const storedFavorites = localStorage.getItem('favorites');
-      setFavorites(storedFavorites ? JSON.parse(storedFavorites) : []);
-    } catch (err) {
-      console.error('Error loading favorites:', err);
-      toast.error('Failed to sync favorites');
-    }
+    const loadFavorites = () => {
+      try {
+        const storedFavorites = localStorage.getItem('favorites');
+        if (storedFavorites) {
+          setFavorites(JSON.parse(storedFavorites));
+        } else {
+          setFavorites([]);
+        }
+      } catch (err) {
+        console.error('Error loading favorites:', err);
+        toast.error('Failed to sync favorites');
+      }
+    };
+
+    loadFavorites();
 
     const handleCartUpdate = async () => {
       try {
@@ -108,13 +117,7 @@ const Header = () => {
 
     const handleStorageChange = (event) => {
       if (event.key === 'favorites') {
-        try {
-          const storedFavorites = localStorage.getItem('favorites');
-          setFavorites(storedFavorites ? JSON.parse(storedFavorites) : []);
-        } catch (err) {
-          console.error('Error parsing favorites:', err);
-          toast.error('Failed to sync favorites');
-        }
+        loadFavorites();
       }
     };
 
@@ -124,7 +127,7 @@ const Header = () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [user]);
+  }, [user, setFavorites]);
 
   const getDisplayName = () => {
     if (userData && userData.name) return userData.name.split(' ')[0] || 'User';
@@ -142,16 +145,11 @@ const Header = () => {
 
     setLoading(true);
     try {
-      const q = query(
-        collection(db, 'products'),
-        where('status', '==', 'approved')
-      );
+      const q = query(collection(db, 'products'), where('status', '==', 'approved'));
       const querySnapshot = await getDocs(q);
       const filtered = querySnapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((product) =>
-          product.name.toLowerCase().includes(queryText.toLowerCase())
-        );
+        .filter((product) => product.name.toLowerCase().includes(queryText.toLowerCase()));
       setSearchResults(filtered);
       setShowDropdown(true);
     } catch (err) {
@@ -194,7 +192,6 @@ const Header = () => {
   return (
     <header className="">
       <div className="bg-[#112D4E] hidden sm:flex text-white py-1 sm:py-2 justify-between items-center px-2 sm:px-4">
-       {/* Comment */}
         <div className='flex justify-between items-center'>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link to="/">
@@ -253,7 +250,7 @@ const Header = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 sm:space-x-4">
           {user ? (
             <Link to="/profile" className="hover:text-gray-300 text-xs sm:text-sm">
@@ -262,9 +259,9 @@ const Header = () => {
           ) : (
             <div className='flex items-center'>
               <Link to="/login" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
-                Login  
+                Login
               </Link>
-               |
+              |
               <Link to="/signup" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
                 Sign Up
               </Link>
@@ -307,7 +304,7 @@ const Header = () => {
           </button>
         </div>
       </div>
-      
+
       <div className="block sm:hidden pt-16">
         <FreeShipping />
       </div>
@@ -477,36 +474,28 @@ const Header = () => {
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-40">
         <Link
           to="/"
-          className={`flex flex-col items-center ${
-            location.pathname === '/' ? 'text-gray-600' : 'text-gray-600'
-          } hover:text-amber-500`}
+          className={`flex flex-col items-center ${location.pathname === '/' ? 'text-gray-600' : 'text-gray-600'} hover:text-amber-500`}
         >
           <i className="bx bx-home-alt text-2xl"></i>
           <span className="text-sm">Home</span>
         </Link>
         <Link
           to="/search"
-          className={`flex flex-col items-center ${
-            location.pathname === '/search' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`}
+          className={`flex flex-col items-center ${location.pathname === '/search' ? 'text-blue-600' : 'text-gray-600'} hover:text-amber-500`}
         >
           <i className="bx bx-search text-2xl"></i>
           <span className="text-sm">Search</span>
         </Link>
         <Link
           to="/products-upload"
-          className={`flex flex-col items-center ${
-            location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`}
+          className={`flex flex-col items-center ${location.pathname === '/sellers-guide' ? 'text-blue-600' : 'text-gray-600'} hover:text-amber-500`}
         >
           <i className="bx bxs-plus-circle text-2xl"></i>
           <span className="text-sm">Sell</span>
         </Link>
         <Link
           to="/notifications"
-          className={`flex flex-col items-center relative ${
-            location.pathname === '/notifications' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`}
+          className={`flex flex-col items-center relative ${location.pathname === '/notifications' ? 'text-blue-600' : 'text-gray-600'} hover:text-amber-500`}
         >
           <i className="bx bx-bell text-2xl"></i>
           {notificationCount > 0 && (
@@ -518,9 +507,7 @@ const Header = () => {
         </Link>
         <Link
           to="/profile"
-          className={`flex flex-col items-center ${
-            location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'
-          } hover:text-amber-500`}
+          className={`flex flex-col items-center ${location.pathname === '/profile' ? 'text-blue-600' : 'text-gray-600'} hover:text-amber-500`}
         >
           <i className="bx bx-user text-2xl"></i>
           <span className="text-sm">You</span>
@@ -528,8 +515,10 @@ const Header = () => {
       </nav>
 
       <div className="sm:hidden mb-3">
-        <div className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
-          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}>
+        <div
+          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
+        >
           <div className="p-4">
             <button onClick={() => setSidebarOpen(false)} className="mb-4">
               <i className="bx bx-x text-2xl text-[#112040]"></i>
@@ -546,22 +535,14 @@ const Header = () => {
                 </Link>
               ))}
               {!user && (
-                <div className="flex just items-center mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80">
-                <Link
-                  to="/login"
-                  className=""
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Login
-                </Link>
-                |
-                <Link
-                  to="/register"
-                  className=""
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Signup
-                </Link>
+                <div className="flex justify-center items-center mt-4 bg-[#112040] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#112040]/80">
+                  <Link to="/login" className="" onClick={() => setSidebarOpen(false)}>
+                    Log in
+                  </Link>
+                  |
+                  <Link to="/register" className="" onClick={() => setSidebarOpen(false)}>
+                    Sign up
+                  </Link>
                 </div>
               )}
               {user && (

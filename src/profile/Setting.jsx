@@ -3,6 +3,7 @@ import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import Sidebar from './Sidebar';
 import Spinner from '../components/common/Spinner';
 
@@ -17,7 +18,7 @@ export default function Settings() {
     phone: '',
     address: '',
   });
-  const [previewImage, setPreviewImage] = useState(localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+  const [previewImage, setPreviewImage] = useState('https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
   const [uploadError, setUploadError] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -58,9 +59,10 @@ export default function Settings() {
           phone: firestoreData.phone || '+234-8052975966',
           address,
         });
+        setPreviewImage(firestoreData.profileImage || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
       } catch (err) {
         setError('Failed to load profile data.');
-        console.log(err);
+        console.error('Error loading profile:', err);
       } finally {
         setLoading(false);
       }
@@ -75,7 +77,7 @@ export default function Settings() {
     setUserData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -90,14 +92,46 @@ export default function Settings() {
     }
 
     setUploadError('');
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imageUrl = reader.result;
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'profile_uploads');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'your_cloud_name'}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image to Cloudinary.');
+      }
+
+      const data = await response.json();
+      const imageUrl = data.secure_url;
+
+      const user = auth.currentUser;
+      if (!user) {
+        setUploadError('Please sign in to upload an image.');
+        setLoading(false);
+        return;
+      }
+
+      await updateDoc(doc(db, 'users', user.uid), { profileImage: imageUrl });
       setPreviewImage(imageUrl);
       localStorage.setItem('profileImage', imageUrl);
       window.dispatchEvent(new Event('profileImageUpdated'));
-    };
-    reader.readAsDataURL(file);
+      toast.success('Profile image updated successfully!');
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -118,14 +152,21 @@ export default function Settings() {
       return;
     }
 
+    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPasswordError('New password must contain at least one uppercase letter and one number.');
+      return;
+    }
+
+    setLoading(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
       setCurrentPassword('');
       setNewPassword('');
-      alert('Password updated successfully!');
+      toast.success('Password updated successfully!');
     } catch (err) {
+      console.error('Error changing password:', err);
       if (err.code === 'auth/wrong-password') {
         setPasswordError('Current password is incorrect.');
       } else if (err.code === 'auth/requires-recent-login') {
@@ -134,6 +175,8 @@ export default function Settings() {
       } else {
         setPasswordError('Failed to change password. Please try again.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,6 +187,7 @@ export default function Settings() {
       return;
     }
 
+    setLoading(true);
     try {
       const addressParts = userData.address.split(', ');
       const addressObj = addressParts.length === 5
@@ -172,23 +216,29 @@ export default function Settings() {
 
       localStorage.setItem('userData', JSON.stringify(userData));
       window.dispatchEvent(new Event('userDataUpdated'));
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (err) {
-      console.log(err);
+      console.error('Error saving profile:', err);
       setError('Failed to save profile. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
+    setLoading(true);
     try {
       await auth.signOut();
       localStorage.removeItem('userData');
       localStorage.removeItem('profileImage');
       window.dispatchEvent(new Event('profileImageUpdated'));
       navigate('/login');
+      toast.success('Logged out successfully!');
     } catch (err) {
-      console.log(err);
+      console.error('Error logging out:', err);
       setError('Failed to log out. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,6 +251,7 @@ export default function Settings() {
       return;
     }
 
+    setLoading(true);
     try {
       await deleteDoc(doc(db, 'users', user.uid));
       await user.delete();
@@ -208,9 +259,12 @@ export default function Settings() {
       localStorage.removeItem('profileImage');
       window.dispatchEvent(new Event('profileImageUpdated'));
       navigate('/login');
+      toast.success('Account deleted successfully!');
     } catch (err) {
+      console.error('Error deleting account:', err);
       setError('Failed to delete account. Please try again.');
-      console.log(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -225,7 +279,7 @@ export default function Settings() {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <Spinner />
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
       </div>
     );
   }

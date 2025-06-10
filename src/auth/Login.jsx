@@ -1,24 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, GoogleAuthProvider, FacebookAuthProvider, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  setPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
+    case 'auth/invalid-credential':
+      return 'Invalid email or password.';
     case 'auth/wrong-password':
       return 'Incorrect password. Please try again.';
     case 'auth/user-not-found':
-      return 'No account found with this email. Please sign up.';
+      return 'No account found with this email. Contact your admin.';
     case 'auth/invalid-email':
       return 'Please enter a valid email address.';
     case 'auth/user-disabled':
-      return 'This account has been disabled.';
+      return 'This account has been disabled. Contact your admin.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please try again later.';
     default:
-      return 'An unexpected error occurred. Please try again later.';
+      return 'An unexpected error occurred. Please try again.';
   }
 };
 
@@ -33,6 +43,11 @@ export default function Login() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   useEffect(() => {
     getRedirectResult(auth)
@@ -81,11 +96,17 @@ export default function Login() {
     setLoadingEmail(true);
 
     let hasError = false;
-    if (!email) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail) {
       setEmailError('Email is required.');
       hasError = true;
+    } else if (!validateEmail(trimmedEmail)) {
+      setEmailError('Please enter a valid email address.');
+      hasError = true;
     }
-    if (!password) {
+    if (!trimmedPassword) {
       setPasswordError('Password is required.');
       hasError = true;
     }
@@ -97,14 +118,8 @@ export default function Login() {
 
     try {
       await setPersistence(auth, browserSessionPersistence);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
-
-      if (!user.emailVerified) {
-        setEmailError('Please verify your email before logging in.');
-        setLoadingEmail(false);
-        return;
-      }
 
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
@@ -118,13 +133,13 @@ export default function Login() {
           navigate('/profile');
         }, 2000);
       } else {
-        setEmailError('No account found. Please sign up.');
+        setEmailError('No account found. Contact your admin.');
         setLoadingEmail(false);
       }
     } catch (err) {
       setLoadingEmail(false);
       const errorMessage = getFriendlyErrorMessage(err);
-      if (errorMessage.includes('email') || errorMessage.includes('account')) {
+      if (errorMessage.includes('email') || errorMessage.includes('account') || errorMessage.includes('valid')) {
         setEmailError(errorMessage);
       } else {
         setPasswordError(errorMessage);
@@ -167,12 +182,15 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="w-full h-screen flex">
-        <div className="hidden md:block md:w-1/2 h-full bg-cover bg-center" style={{ backgroundImage: "url('https://i.pinimg.com/736x/f2/8c/a4/f28ca4118a46e68b6871946e65ab5665.jpg')" }}>
+        <div
+          className="hidden md:block md:w-1/2 h-full bg-cover bg-center"
+          style={{ backgroundImage: "url('https://i.pinimg.com/736x/f2/8c/a4/f28ca4118a46e68b6871946e65ab5665.jpg')" }}
+        >
           <div className="w-full h-full bg-black bg-opacity-40 flex flex-col justify-center items-center text-white p-8">
             <h1 className="text-3xl font-bold mb-4 flex-col items-center">
-              Welcome to <img src={logo} alt="Formade logo" className="h-20" />
+              Welcome to <img src={logo} alt="Logo" className="h-20" />
             </h1>
-            <p className="text-lg text-center">Where quality meet NEEDS!</p>
+            <p className="text-lg text-center">Where quality meets NEEDS!</p>
           </div>
         </div>
 
@@ -206,7 +224,7 @@ export default function Login() {
               >
                 Email
               </label>
-              {emailError && <p className="text-red-600 text-[10px] mt-1">{emailError}</p>}
+              {emailError && <p className="text-red-600 text-xs mt-1">{emailError}</p>}
             </div>
 
             <div className="relative">
@@ -235,10 +253,10 @@ export default function Login() {
               >
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
-              {passwordError && <p className="text-red-600 text-[10px] mt-1">{passwordError}</p>}
+              {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             </div>
 
-            {successMessage && <p className="text-green-600 text-[10px] mb-4">{successMessage}</p>}
+            {successMessage && <p className="text-green-600 text-xs mt-1">{successMessage}</p>}
 
             <button
               type="submit"
@@ -254,7 +272,7 @@ export default function Login() {
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleGoogleSignIn}
-                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
                 disabled={loadingGoogle}
               >
                 <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
@@ -262,7 +280,7 @@ export default function Login() {
               </button>
               <button
                 onClick={handleFacebookSignIn}
-                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
                 disabled={loadingFacebook}
               >
                 <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />

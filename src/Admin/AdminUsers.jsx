@@ -43,16 +43,6 @@ function useAlerts() {
   return { alerts, addAlert, removeAlert };
 }
 
-// Generate random password
-const generatePassword = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
-};
-
 // Generate username
 const generateUsername = (firstName, lastName) => {
   const nameParts = [firstName, lastName].filter(part => part && part.trim());
@@ -63,7 +53,7 @@ const generateUsername = (firstName, lastName) => {
   return usernameBase + randomNum;
 };
 
-export default function AdminUser() {
+export default function AdminUsers() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
   const [loading, setLoading] = useState(false);
@@ -72,6 +62,7 @@ export default function AdminUser() {
     email: '',
     firstName: '',
     lastName: '',
+    password: '',
     role: 'buyer',
   });
   const [errors, setErrors] = useState({});
@@ -88,7 +79,7 @@ export default function AdminUser() {
         }
       } else {
         addAlert('Please log in as an admin.', 'error');
-        navigate('/login');
+        // navigate('/login');
       }
     });
     return () => unsubscribe();
@@ -98,6 +89,14 @@ export default function AdminUser() {
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  // Validate password
+  const validatePassword = (password) => {
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters long.';
+    }
+    return '';
   };
 
   // Handle input changes
@@ -113,6 +112,11 @@ export default function AdminUser() {
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required.';
     if (!formData.email) newErrors.email = 'Email is required.';
     else if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email address.';
+    if (!formData.password) newErrors.password = 'Password is required.';
+    else {
+      const passwordError = validatePassword(formData.password);
+      if (passwordError) newErrors.password = passwordError;
+    }
     if (!['buyer', 'seller', 'admin'].includes(formData.role)) newErrors.role = 'Invalid role selected.';
     return newErrors;
   };
@@ -132,9 +136,8 @@ export default function AdminUser() {
     }
 
     try {
-      const password = generatePassword();
       const username = generateUsername(formData.firstName, formData.lastName);
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const newUser = userCredential.user;
 
       await updateProfile(newUser, { displayName: username });
@@ -151,16 +154,16 @@ export default function AdminUser() {
       };
       await setDoc(doc(db, 'users', newUser.uid), userData);
 
-      // Placeholder for sending email with credentials
-      console.log(`Send email to ${formData.email} with password: ${password}`);
-      // Example: await sendEmail(formData.email, 'Your Account Details', `Username: ${username}\nPassword: ${password}\nLogin at /login`);
-
-      addAlert(`User ${formData.email} added successfully! Credentials logged to console.`, 'success');
-      setFormData({ email: '', firstName: '', lastName: '', role: 'buyer' });
+      addAlert(`User ${formData.email} added successfully! Password: ${formData.password}`, 'success');
+      setFormData({ email: '', firstName: '', lastName: '', password: '', role: 'buyer' });
     } catch (err) {
       console.error('Error adding user:', err);
       if (err.code === 'auth/email-already-in-use') {
         setErrors({ email: 'This email is already in use.' });
+      } else if (err.code === 'auth/invalid-email') {
+        setErrors({ email: 'Invalid email format.' });
+      } else if (err.code === 'auth/weak-password') {
+        setErrors({ password: 'Password is too weak.' });
       } else {
         addAlert('Failed to add user.', 'error');
       }
@@ -236,6 +239,21 @@ export default function AdminUser() {
                     disabled={loading}
                   />
                   {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                    className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  />
+                  {errors.password && <p className="text-red-600 text-xs mt-1">{errors.password}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">

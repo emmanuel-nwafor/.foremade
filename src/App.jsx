@@ -46,6 +46,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
 import EmpowermentHub from './pages/EmpowermentHub';
 import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
+import YouthEmpowermentTerms from './pages/YouthEmpowermentTerms';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
@@ -94,8 +95,6 @@ const Layout = ({ children }) => {
     '/sellers/products',
     '/seller-onboarding',
     '/dashboard',
-    '/empowerment-hub',
-    '/youth-empowerment-form',
   ].includes(location.pathname);
 
   // Only show footer on profile page
@@ -234,6 +233,7 @@ function App() {
             <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />
             <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
+            <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/best-selling" element={<BestSelling />} />

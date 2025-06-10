@@ -1,23 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-
-const FloatingElement = ({ children, delay = 0 }) => (
-  <motion.div
-    animate={{ 
-      y: [0, -10, 0],
-      rotate: [0, -2, 0] 
-    }}
-    transition={{ 
-      repeat: Infinity,
-      duration: 4,
-      delay,
-      ease: "easeInOut" 
-    }}
-  >
-    {children}
-  </motion.div>
-);
+import { motion } from 'framer-motion';
 
 export default function SellerBanner() {
   const slides = [
@@ -33,8 +15,8 @@ export default function SellerBanner() {
       button: 'Start Selling',
       secondaryButton: 'Learn More',
       link: '/sell',
-      bgClass: 'bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800',
-      accentColor: 'bg-indigo-600 text-white hover:bg-indigo-700'
+      bgClass: 'bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900',
+      accentColor: 'bg-amber-600 text-white hover:bg-amber-700'
     },
     {
       image: 'https://pngimg.com/uploads/laptop/laptop_PNG101773.png',
@@ -48,8 +30,8 @@ export default function SellerBanner() {
       button: 'Learn More',
       secondaryButton: 'View Features',
       link: '/products',
-      bgClass: 'bg-gradient-to-br from-slate-800 to-slate-900',
-      accentColor: 'bg-indigo-600 text-white hover:bg-indigo-700'
+      bgClass: 'bg-gradient-to-br from-neutral-900 to-neutral-950',
+      accentColor: 'bg-amber-600 text-white hover:bg-amber-700'
     }
   ];
 
@@ -61,7 +43,7 @@ export default function SellerBanner() {
     
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, 5000); // Slide every 5 seconds
+    }, 5000);
     
     return () => clearInterval(timer);
   }, [current, slides.length, autoplay]);
@@ -69,41 +51,40 @@ export default function SellerBanner() {
   const goToSlide = (index) => {
     setCurrent(index);
     setAutoplay(false);
-    
-    // Resume autoplay after a period of inactivity
     setTimeout(() => setAutoplay(true), 10000);
   };
 
   return (
-    <div className="relative overflow-hidden my-4 mx-4 rounded-xl border border-slate-700/50 h-[300px]">
+    <div className="relative overflow-hidden my-2 sm:my-4 lg:my-6 mx-2 sm:mx-4 lg:mx-6 rounded-xl border border-neutral-700/50 h-[200px] xs:h-[220px] sm:h-[280px] lg:h-[400px]">
       {/* Background image with overlay */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500"
-        style={{ backgroundImage: `url(${slides[current].image})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-900/50"></div>
-        <div className="absolute inset-0 backdrop-blur-sm"></div>
+      <div className="absolute inset-0">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500 opacity-20 sm:opacity-30"
+          style={{ backgroundImage: `url(${slides[current].image})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#112d4e] via-[#112d4e]/95 to-[#112d4e]/80 sm:to-[#112d4e]/50" />
+        <div className="absolute inset-0 backdrop-blur-sm" />
       </div>
 
-      <motion.div className="relative z-10 h-full flex items-center">
-        <div className="container mx-auto px-8">
-          <div className="max-w-xl space-y-5">
+      <motion.div className="relative z-10 h-full flex items-center w-full">
+        <div className="w-full mx-auto px-3 xs:px-4 sm:px-6 lg:px-12 xl:px-16">
+          <div className="max-w-4xl lg:max-w-5xl space-y-2 xs:space-y-3 sm:space-y-4 lg:space-y-6">
             {/* Tag and Heading group */}
-            <div className="space-y-3">
+            <div className="space-y-1 xs:space-y-2 sm:space-y-3">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="inline-flex items-center h-5 px-3 rounded-full 
-                  bg-gradient-to-r from-indigo-600/20 to-purple-600/20 
-                  border border-indigo-500/20"
+                className="hidden sm:inline-flex items-center h-6 lg:h-7 px-3 lg:px-4 rounded-full 
+                  bg-gradient-to-r from-amber-600/20 to-orange-600/20 
+                  border border-amber-500/30"
               >
-                <span className="text-xs font-medium text-indigo-400">
+                <span className="text-xs lg:text-sm font-medium text-amber-300">
                   {slides[current].tagline}
                 </span>
               </motion.div>
 
               <motion.h2 
-                className="text-3xl font-bold leading-tight"
+                className="text-lg xs:text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold leading-tight"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
@@ -112,31 +93,57 @@ export default function SellerBanner() {
                   {slides[current].text}
                 </span>
               </motion.h2>
+
+              <motion.p 
+                className="text-xs xs:text-sm sm:hidden text-slate-300 max-w-xs"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {slides[current].description}
+              </motion.p>
             </div>
 
-            {/* Description and Features group */}
-            <div className="space-y-4">
+            {/* Features - Mobile: simplified, Desktop: full */}
+            <div className="space-y-3 sm:space-y-4 w-full">
+              {/* Mobile features - simplified */}
+              <div className="flex sm:hidden gap-4 xs:gap-6">
+                {slides[current].features.slice(0, 2).map((feature, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <i className={`${feature.icon} text-sm xs:text-base text-amber-400`} />
+                    <span className="text-xs xs:text-sm text-gray-200">{feature.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Desktop description */}
               <motion.p 
-                className="text-sm text-gray-300 max-w-md"
+                className="hidden sm:block text-sm lg:text-base text-gray-300 max-w-2xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
                 {slides[current].description}
               </motion.p>
 
-              <div className="flex gap-6">
+              {/* Desktop features - full */}
+              <div className="hidden sm:flex gap-6 lg:gap-8 w-full">
                 {slides[current].features.map((feature, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-3"
                   >
-                    <i className={`${feature.icon} text-xl text-indigo-400`}></i>
+                    <i className={`${feature.icon} text-xl lg:text-2xl text-indigo-400`} />
                     <div>
-                      <div className="text-sm font-medium text-white">{feature.text}</div>
-                      <div className="text-xs text-gray-400">{feature.desc}</div>
+                      <div className="text-sm lg:text-base font-medium text-white">{feature.text}</div>
+                      <div className="text-xs lg:text-sm text-gray-400">{feature.desc}</div>
                     </div>
                   </motion.div>
                 ))}
@@ -144,17 +151,14 @@ export default function SellerBanner() {
             </div>
 
             {/* CTA buttons */}
-            <div className="flex gap-3 pt-2">
-              <Link 
-                to={slides[current].link}
-                className="px-4 py-1.5 text-sm rounded-lg font-semibold bg-gradient-to-r 
-                  from-indigo-600 to-indigo-500 text-white hover:from-indigo-500 
-                  hover:to-indigo-600 transition-all duration-300"
-              >
+            <div className="flex gap-2 xs:gap-3 sm:gap-4 pt-1 xs:pt-2">
+              <button className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-gradient-to-r 
+                from-amber-600 to-amber-500 text-white hover:from-amber-500 
+                hover:to-amber-600 transition-all duration-300 shadow-lg">
                 {slides[current].button}
-              </Link>
-              <button className="px-4 py-1.5 text-sm rounded-lg font-semibold border 
-                border-gray-700 text-gray-300 hover:bg-white/5">
+              </button>
+              <button className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border 
+                border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200">
                 {slides[current].secondaryButton}
               </button>
             </div>
@@ -163,15 +167,17 @@ export default function SellerBanner() {
       </motion.div>
 
       {/* Navigation dots */}
-      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-4">
+      <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-0 right-0 flex justify-center gap-2 sm:gap-3">
         {slides.map((slide, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className="group flex items-center space-x-2"
+            className="group"
           >
-            <span className={`w-3 h-3 rounded-full transition-all ${
-              current === index ? 'bg-indigo-500 scale-110' : 'bg-white/30 group-hover:bg-white/50'
+            <span className={`block w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${
+              current === index 
+                ? 'bg-amber-400 scale-110 shadow-lg shadow-amber-400/50' 
+                : 'bg-white/40 group-hover:bg-white/60 group-hover:scale-105'
             }`} />
           </button>
         ))}

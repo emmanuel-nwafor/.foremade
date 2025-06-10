@@ -98,32 +98,32 @@ export default function DailyDeals() {
 
   if (loading) {
     return (
-      <section className="py-8 bg-yellow-50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center">
-              <i className="bx bx-time text-yellow-600 text-2xl mr-2"></i>
-              <h2 className="text-lg md:text-xl font-bold text-gray-800">
+      <section className="py-4 xs:py-6 sm:py-8 bg-yellow-50">
+        <div className="container mx-auto px-3 xs:px-4">
+          <div className="flex justify-between items-center mb-4 xs:mb-5 sm:mb-6">
+            <div className="flex items-center space-x-2 xs:space-x-3">
+              <i className="bx bx-time text-yellow-600 text-xl xs:text-2xl"></i>
+              <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">
                 Daily Deals
               </h2>
-              <div className="flex ml-4 space-x-2">
-                <div className="h-6 bg-gray-200 rounded w-10 animate-pulse"></div>
+              <div className="flex ml-2 xs:ml-3 space-x-1 xs:space-x-2">
+                <div className="h-5 xs:h-6 bg-gray-200 rounded w-8 xs:w-10 animate-pulse"></div>
                 <span>:</span>
-                <div className="h-6 bg-gray-200 rounded w-10 animate-pulse"></div>
+                <div className="h-5 xs:h-6 bg-gray-200 rounded w-8 xs:w-10 animate-pulse"></div>
                 <span>:</span>
-                <div className="h-6 bg-gray-200 rounded w-10 animate-pulse"></div>
+                <div className="h-5 xs:h-6 bg-gray-200 rounded w-8 xs:w-10 animate-pulse"></div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="h-5 bg-gray-200 rounded w-16 animate-pulse"></div>
-              <div className="bg-gray-200 rounded-full p-1 h-8 w-8 animate-pulse"></div>
-              <div className="bg-gray-200 rounded-full p-1 h-8 w-8 animate-pulse"></div>
+            <div className="flex items-center gap-2 xs:gap-3">
+              <div className="h-4 xs:h-5 bg-gray-200 rounded w-12 xs:w-16 animate-pulse"></div>
+              <div className="bg-gray-200 rounded-full p-1 h-6 w-6 xs:h-8 xs:w-8 animate-pulse"></div>
+              <div className="bg-gray-200 rounded-full p-1 h-6 w-6 xs:h-8 xs:w-8 animate-pulse"></div>
             </div>
           </div>
-          <div className="flex overflow-x-auto scrollbar-hide">
+          <div className="flex overflow-x-auto scrollbar-hide gap-3 xs:gap-4">
             {[...Array(7)].map((_, index) => (
-              <div key={index} className="flex-shrink-0 w-60 mr-4">
-                <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
+              <div key={index} className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[200px] md:w-[220px]">
+                <div className="bg-gray-200 rounded-lg h-[200px] xs:h-[240px] sm:h-[260px] w-full animate-pulse"></div>
               </div>
             ))}
           </div>
@@ -133,30 +133,30 @@ export default function DailyDeals() {
   }
 
   return (
-    <section className="py-8 bg-yellow-50">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
-            <i className="bx bx-time text-yellow-600 text-2xl mr-2"></i>
-            <h2 className="text-lg md:text-xl font-bold text-gray-800">
+    <section className="py-4 xs:py-6 sm:py-8 bg-yellow-50">
+      <div className="container mx-auto px-3 xs:px-4">
+        <div className="flex justify-between items-center mb-4 xs:mb-5 sm:mb-6">
+          <div className="flex items-center space-x-2 xs:space-x-3">
+            <i className="bx bx-time text-yellow-600 text-xl xs:text-2xl"></i>
+            <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">
               Daily Deals
             </h2>
-            <div className="ml-4 flex items-center space-x-1">
-              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-mono">
+            <div className="ml-2 xs:ml-3 flex items-center space-x-1">
+              <span className="bg-yellow-100 text-yellow-800 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded text-xs xs:text-sm font-mono">
                 {String(timeRemaining.hours).padStart(2, '0')}
               </span>
               <span className="text-yellow-800">:</span>
-              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-mono">
+              <span className="bg-yellow-100 text-yellow-800 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded text-xs xs:text-sm font-mono">
                 {String(timeRemaining.minutes).padStart(2, '0')}
               </span>
               <span className="text-yellow-800">:</span>
-              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-mono">
+              <span className="bg-yellow-100 text-yellow-800 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded text-xs xs:text-sm font-mono">
                 {String(timeRemaining.seconds).padStart(2, '0')}
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Link to="/products?deals=true" className="text-blue-600 text-sm hover:text-blue-800">
+          <div className="flex items-center gap-2 xs:gap-3">
+            <Link to="/products?deals=true" className="text-blue-600 text-xs xs:text-sm hover:text-blue-800">
               See All
             </Link>
             <button
@@ -164,36 +164,36 @@ export default function DailyDeals() {
               className="bg-yellow-200 rounded-full p-1 hover:bg-yellow-300"
               aria-label="Scroll left"
             >
-              <i className="bx bx-chevron-left text-xl text-yellow-700"></i>
+              <i className="bx bx-chevron-left text-lg xs:text-xl text-yellow-700"></i>
             </button>
             <button
               onClick={scrollRight}
               className="bg-yellow-200 rounded-full p-1 hover:bg-yellow-300"
               aria-label="Scroll right"
             >
-              <i className="bx bx-chevron-right text-xl text-yellow-700"></i>
+              <i className="bx bx-chevron-right text-lg xs:text-xl text-yellow-700"></i>
             </button>
           </div>
         </div>
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory gap-3 xs:gap-4"
         >
           {dealProducts.length === 0 ? (
-            <p className="text-gray-600 p-4">No deals available at the moment.</p>
+            <p className="text-gray-600 text-sm xs:text-base p-3 xs:p-4">No deals available at the moment.</p>
           ) : (
             dealProducts.map((product) => (
               <div
                 key={product.id}
-                className="flex-shrink-0 w-60 mr-4 snap-start"
+                className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[200px] md:w-[220px] snap-start"
               >
                 <div className="relative">
                   <ProductCard product={product} />
-                  <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                  <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
                     {product.discountPercent}% OFF
                   </div>
                   <div className="mt-1">
-                    <span className="text-gray-500 line-through text-xs">
+                    <span className="text-gray-500 line-through text-[10px] xs:text-xs">
                       ₦{(product.originalPrice || 0).toLocaleString('en-NG')}
                     </span>
                   </div>

@@ -68,14 +68,6 @@ const EmpowermentHubPreview = () => {
           {/* Right side - CTA Buttons */}
           <div className="flex flex-col w-full sm:w-auto sm:flex-row lg:flex-col gap-2 sm:gap-3">
             <button
-              onClick={() => navigate('/youth-empowerment-form')}
-              className="w-full sm:w-auto group relative inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-full text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-opacity-50 transition-all duration-200 transform hover:scale-105 hover:shadow-md whitespace-nowrap"
-            >
-              <span className="relative z-10">Join Now</span>
-              <i className="bx bx-right-arrow-alt ml-2 group-hover:translate-x-1 transition-transform duration-200"></i>
-            </button>
-            
-            <button
               onClick={() => navigate('/empowerment-hub')}
               className="w-full sm:w-auto group inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-full text-white border border-purple-200 hover:bg-white hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-opacity-50 transition-all duration-200 transform hover:scale-105 backdrop-blur-sm whitespace-nowrap"
             >

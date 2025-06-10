@@ -7,7 +7,6 @@ export const addToCart = async (productId, quantity, userId = null) => {
     throw new Error('Invalid cart item data');
   }
 
-  // Validate product exists
   try {
     const productRef = doc(db, 'products', productId);
     const productSnap = await getDoc(productRef);
@@ -42,6 +41,7 @@ export const addToCart = async (productId, quantity, userId = null) => {
             price: productData.price,
             image: productData.imageUrl,
             stock: productData.stock,
+            sellerId: productData.sellerId || 'default-seller-id',
           },
         },
       ];
@@ -70,7 +70,6 @@ export const getCart = async (userId = null) => {
       }
     }
 
-    // Validate and clean cart
     const validCart = [];
     for (const item of cart) {
       if (!item.productId || item.quantity <= 0) {
@@ -89,6 +88,7 @@ export const getCart = async (userId = null) => {
               price: productData.price,
               image: productData.imageUrl,
               stock: productData.stock,
+              sellerId: productData.sellerId || 'default-seller-id',
             },
           });
         } else {
@@ -214,7 +214,7 @@ export const mergeGuestCart = async (userId) => {
     }
 
     await updateCart(mergedCart, userId);
-    await clearCart(null); // Clear guest cart
+    await clearCart(null);
     toast.success('Guest cart merged with your account');
   } catch (error) {
     console.error('Error merging guest cart:', error);

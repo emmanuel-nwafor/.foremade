@@ -68,6 +68,7 @@ export default function SellerProductUpload() {
       stock: '',
       category: '',
       subcategory: '',
+      subSubcategory: '',
       colors: [],
       sizes: [],
       condition: 'New',
@@ -106,6 +107,7 @@ export default function SellerProductUpload() {
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
+  const [showSubSubcategoryDropdown, setShowSubSubcategoryDropdown] = useState(false);
   const [showSizeWarning, setShowSizeWarning] = useState(false);
   const [fees, setFees] = useState({
     productSize: '',
@@ -116,9 +118,10 @@ export default function SellerProductUpload() {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [customSubcategories, setCustomSubcategories] = useState({});
+  const [customSubSubcategories, setCustomSubSubcategories] = useState({});
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [zoomedMedia, setZoomedMedia] = useState(null);
-  const [feeConfig, setFeeConfig] = useState(null); // State for dynamic fee configurations
+  const [feeConfig, setFeeConfig] = useState(null); // State for category-based fee configurations
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -129,19 +132,131 @@ export default function SellerProductUpload() {
   // Alert management
   const { alerts, addAlert, removeAlert } = useAlerts();
 
-  // Constants
+  // Categories from PDF
   const categories = [
-    'Foremade Fashion',
-    'Electronics',
-    'Baby Products',
-    'Computers & Accessories',
-    'Game & Fun',
-    'Drinks & Categories',
-    'Home & Kitchen',
-    'Smart Watches',
-    'Tablet & Phones',
+    'Clothing',
     'Health & Beauty',
+    'Perfumes',
+    'Footwear',
+    'Computers',
+    'Phone & Tablet',
+    'Watches',
+    'Home & Garden',
+    'Game & Fun',
+    'Drinks & Containers',
+    'Television & Sound',
+    'Gadget & Accessories',
+    'Children',
+    'Power & Cables',
+    'Refrigerator & Air Conditioning',
+    'Car & Circle',
+    'Jewellery & Accessories',
+    'Sports & Outdoor',
   ];
+
+  // Subcategories and Sub-Subcategories from PDF
+  const defaultSubcategories = {
+    'Clothing': ['Men', 'Women'],
+    'Health & Beauty': ['General Use'],
+    'Perfumes': ['Men', 'Women'],
+    'Footwear': ['Men', 'Women'],
+    'Computers': ['Desktop', 'Laptop', 'Handheld'],
+    'Phone & Tablet': ['All Brands'],
+    'Watches': ['Men', 'Women'],
+    'Home & Garden': ['Indoor', 'Outdoor'],
+    'Game & Fun': ['Console', 'Digital', 'Physical'],
+    'Drinks & Containers': ['Empty Bottles', 'Alcoholic', 'Non-Alcoholic'],
+    'Television & Sound': ['Flat Screen', 'Sound Systems'],
+    'Gadget & Accessories': ['Air', 'Land'],
+    'Children': ['Girls', 'Boys'],
+    'Power & Cables': ['Power Generators', 'Cables'],
+    'Refrigerator & Air Conditioning': ['Standing', 'Laying Units'],
+    'Car & Circle': ['New', 'Used', 'Faulty'],
+    'Jewellery & Accessories': ['Men', 'Women', 'New', 'Used', 'Refurbished'],
+    'Sports & Outdoor': ['Men', 'Women', 'New', 'Used'],
+  };
+
+  const subSubcategories = {
+    'Clothing': {
+      'Men': ['New', 'Used', 'Vintage'],
+      'Women': ['New', 'Used', 'Vintage'],
+    },
+    'Health & Beauty': {
+      'General Use': ['Supplements', 'Creams', 'Body Wash - New', 'Body Wash - Used'],
+    },
+    'Perfumes': {
+      'Men': ['Floral', 'Oriental', 'Woody', 'Fresh', 'Oil - 30ml', 'Oil - 50ml', 'Oil - 60ml', 'Oil - 75ml', 'Oil - 100ml'],
+      'Women': ['Floral', 'Oriental', 'Woody', 'Fresh', 'Oil - 30ml', 'Oil - 50ml', 'Oil - 60ml', 'Oil - 75ml', 'Oil - 100ml'],
+    },
+    'Footwear': {
+      'Men': ['New', 'Used', 'Vintage - Trainers', 'Boots', 'Shoes', 'Slippers'],
+      'Women': ['New', 'Used', 'Vintage - Trainers', 'Boots', 'Shoes', 'Heels', 'Slippers'],
+    },
+    'Computers': {
+      'Desktop': ['New', 'Used', 'Faulty'],
+      'Laptop': ['New', 'Used', 'Faulty'],
+      'Handheld': ['New', 'Used', 'Faulty'],
+    },
+    'Phone & Tablet': {
+      'All Brands': ['New', 'Used', 'Refurbished', 'Faulty'],
+    },
+    'Watches': {
+      'Men': ['Smart', 'Non-Smart - New', 'Used', 'Refurbished', 'Faulty'],
+      'Women': ['Smart', 'Non-Smart - New', 'Used', 'Refurbished', 'Faulty'],
+    },
+    'Home & Garden': {
+      'Indoor': ['Furniture', 'Kitchenware - New', 'Used', 'Refurbished', 'Faulty'],
+      'Outdoor': ['Furniture', 'Gardening - New', 'Used', 'Refurbished', 'Faulty'],
+    },
+    'Game & Fun': {
+      'Console': ['Standard', 'Mini - New', 'Used', 'Refurbished', 'Faulty'],
+      'Digital': ['Standard', 'Mini - New', 'Used', 'Refurbished', 'Faulty'],
+      'Physical': ['Snooker', 'Pool', 'Tennis', 'Ludo', 'Cards - New', 'Used', 'Refurbished', 'Faulty'],
+    },
+    'Drinks & Containers': {
+      'Empty Bottles': ['Plastic', 'Carton', 'Glass - 6 Pack', '10 Pack', '12 Pack', '16 Pack', '18 Pack', '24 Pack'],
+      'Alcoholic': ['Plastic', 'Carton', 'Glass - 6 Pack', '10 Pack', '12 Pack', '16 Pack', '18 Pack', '24 Pack'],
+      'Non-Alcoholic': ['Plastic', 'Carton', 'Glass - 6 Pack', '10 Pack', '12 Pack', '16 Pack', '18 Pack', '24 Pack'],
+    },
+    'Television & Sound': {
+      'Flat Screen': ['20-40"', '42-55"', '57-75"'],
+      'Sound Systems': ['Sound Bar', 'Subwoofer', '3 or 5 Speakers', 'Mixers', 'BT Players'],
+    },
+    'Gadget & Accessories': {
+      'Air': ['Audio Devices', 'Visual Gear', 'Tools'],
+      'Land': ['Audio Devices', 'Visual Gear', 'Tools'],
+    },
+    'Children': {
+      'Girls': ['Clothing', 'Footwear', 'Hair & Skin', 'Toys', 'Accessories'],
+      'Boys': ['Clothing', 'Footwear', 'Hair & Skin', 'Toys', 'Accessories'],
+    },
+    'Power & Cables': {
+      'Power Generators': ['5-10kW Generators'],
+      'Cables': ['Cables up to 100m Reels'],
+    },
+    'Refrigerator & Air Conditioning': {
+      'Standing': ['Fridge & Freezer', 'Fridge', 'Freezer', 'Standing AC', 'Split AC'],
+      'Laying Units': ['Fridge & Freezer', 'Fridge', 'Freezer', 'Window AC', 'Split AC'],
+    },
+    'Car & Circle': {
+      'New': ['Truck', 'Trailer', 'SUV', '4x4', 'Saloon', 'Bus', 'Coach', 'Tricycle', 'Moped', 'Power Bike', 'EV', 'Scooter', 'Motorcycle'],
+      'Used': ['Truck', 'Trailer', 'SUV', '4x4', 'Saloon', 'Bus', 'Coach', 'Tricycle', 'Moped', 'Power Bike', 'EV', 'Scooter', 'Motorcycle'],
+      'Faulty': ['Truck', 'Trailer', 'SUV', '4x4', 'Saloon', 'Bus', 'Coach', 'Tricycle', 'Moped', 'Power Bike', 'EV', 'Scooter', 'Motorcycle'],
+    },
+    'Jewellery & Accessories': {
+      'Men': ['Gold', 'Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Bronze', 'Non-Metallic', 'Diamond', 'Emerald', 'Ruby', 'Amber', 'Jade'],
+      'Women': ['Gold', 'Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Bronze', 'Non-Metallic', 'Diamond', 'Emerald', 'Ruby', 'Amber', 'Jade'],
+      'New': ['Gold', 'Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Bronze', 'Non-Metallic', 'Diamond', 'Emerald', 'Ruby', 'Amber', 'Jade'],
+      'Used': ['Gold', 'Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Bronze', 'Non-Metallic', 'Diamond', 'Emerald', 'Ruby', 'Amber', 'Jade'],
+      'Refurbished': ['Gold', 'Silver', 'Platinum', 'Rose Gold', 'White Gold', 'Bronze', 'Non-Metallic', 'Diamond', 'Emerald', 'Ruby', 'Amber', 'Jade'],
+    },
+    'Sports & Outdoor': {
+      'Men': ['Basketball', 'Speed Ball', 'Football Shoes', 'Swim Suits', 'Gym'],
+      'Women': ['Basketball', 'Speed Ball', 'Football Shoes', 'Swim Suits', 'Gym'],
+      'New': ['Basketball', 'Speed Ball', 'Football Shoes', 'Swim Suits', 'Gym'],
+      'Used': ['Basketball', 'Speed Ball', 'Football Shoes', 'Swim Suits', 'Gym'],
+    },
+  };
 
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
@@ -165,6 +280,7 @@ export default function SellerProductUpload() {
     '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
     '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"'
   ];
+  const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
   const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
   const MAX_IMAGES = 4;
@@ -172,36 +288,20 @@ export default function SellerProductUpload() {
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
 
-  // Default subcategories to initialize if none exist
-  const defaultSubcategories = {
-    'Foremade Fashion': ['Clothing', 'Shoes', 'Accessories'],
-    'Electronics': ['Phones', 'Laptops', 'Accessories'],
-    'Baby Products': ['Clothing', 'Toys', 'Gear'],
-    'Computers & Accessories': ['Desktops', 'Peripherals'],
-    'Game & Fun': ['Consoles', 'Games'],
-    'Drinks & Categories': ['Beverages', 'Snacks'],
-    'Home & Kitchen': ['Appliances', 'Furniture'],
-    'Smart Watches': ['Fitness', 'Classic'],
-    'Tablet & Phones': ['Tablets', 'Smartphones'],
-    'Health & Beauty': ['Skincare', 'Makeup'],
-  };
-
-  // Fetch fee configurations from Firestore
+  // Fetch fee configurations from Firestore (category-based)
   useEffect(() => {
     const fetchFeeConfig = async () => {
       try {
-        const docRef = doc(db, 'feeConfigurations', 'defaultFees');
+        const docRef = doc(db, 'feeConfigurations', 'categoryFees');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setFeeConfig(docSnap.data());
         } else {
           // Fallback to default fees if none exist in Firestore
-          const defaultFees = {
-            Small: { minPrice: 2000, maxPrice: 2999, buyerProtectionRate: 0.08, handlingRate: 0.20 },
-            Medium: { minPrice: 3000, maxPrice: 4999, buyerProtectionRate: 0.085, handlingRate: 0.12 },
-            Large: { minPrice: 5000, maxPrice: 9999, buyerProtectionRate: 0.09, handlingRate: 0.39 },
-            'X-Large': { minPrice: 10000, maxPrice: Infinity, buyerProtectionRate: 0.095, handlingRate: 0.30 },
-          };
+          const defaultFees = categories.reduce((acc, cat) => ({
+            ...acc,
+            [cat]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20 },
+          }), {});
           await setDoc(docRef, defaultFees);
           setFeeConfig(defaultFees);
         }
@@ -213,52 +313,69 @@ export default function SellerProductUpload() {
     fetchFeeConfig();
   }, []);
 
-  // Fetch and initialize subcategories from Firestore
+  // Fetch and initialize subcategories and sub-subcategories from Firestore
   useEffect(() => {
-    const fetchCustomSubcategories = async () => {
+    const fetchCustomCategories = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'customSubcategories'));
+        const subcatSnapshot = await getDocs(collection(db, 'customSubcategories'));
+        const subSubcatSnapshot = await getDocs(collection(db, 'customSubSubcategories'));
         const customSubs = {};
-        let hasData = false;
+        const customSubSubcats = {};
+        let hasSubcatData = false;
+        let hasSubSubcatData = false;
 
-        snapshot.forEach((doc) => {
+        subcatSnapshot.forEach((doc) => {
           customSubs[doc.id] = doc.data().subcategories || [];
-          console.log(`Fetched subcategory for ${doc.id}:`, customSubs[doc.id]);
-          if (doc.data().subcategories?.length > 0) hasData = true;
+          if (doc.data().subcategories?.length > 0) hasSubcatData = true;
         });
 
-        // Initialize default subcategories if no data exists
-        if (!hasData) {
+        subSubcatSnapshot.forEach((doc) => {
+          customSubSubcats[doc.id] = doc.data().subSubcategories || {};
+          if (Object.keys(doc.data().subSubcategories || {}).length > 0) hasSubSubcatData = true;
+        });
+
+        // Initialize default subcategories and sub-subcategories if no data exists
+        if (!hasSubcatData) {
           for (const [category, subcats] of Object.entries(defaultSubcategories)) {
             const subcatRef = doc(db, 'customSubcategories', category);
             await setDoc(subcatRef, { subcategories: subcats }, { merge: true });
             customSubs[category] = subcats;
-            console.log(`Initialized subcategory for ${category}:`, subcats);
+          }
+        }
+
+        if (!hasSubSubcatData) {
+          for (const [category, subcats] of Object.entries(subSubcategories)) {
+            const subSubcatRef = doc(db, 'customSubSubcategories', category);
+            await setDoc(subSubcatRef, { subSubcategories: subcats }, { merge: true });
+            customSubSubcats[category] = subcats;
           }
         }
 
         setCustomSubcategories(customSubs);
+        setCustomSubSubcategories(customSubSubcats);
       } catch (error) {
-        console.error('Error fetching or initializing custom subcategories:', error);
-        addAlert('Failed to load or initialize subcategories.', 'error');
+        console.error('Error fetching or initializing custom categories:', error);
+        addAlert('Failed to load or initialize categories.', 'error');
       }
     };
-    fetchCustomSubcategories();
+    fetchCustomCategories();
   }, []);
 
-  // Auto-suggest tags based on product name and description
+  // Auto-suggest tags based on product name, description, and sub-subcategory
   useEffect(() => {
     const suggestTags = () => {
-      const text = `${formData.name} ${formData.description}`.toLowerCase();
+      const text = `${formData.name} ${formData.description} ${formData.subSubcategory}`.toLowerCase();
       const possibleTags = [];
       if (text.includes('leather')) possibleTags.push('Leather');
       if (text.includes('shoe') || text.includes('footwear')) possibleTags.push('Footwear');
       if (text.includes('phone') || text.includes('mobile')) possibleTags.push('Smartphone');
       if (text.includes('fashion')) possibleTags.push('Fashion');
+      if (text.includes('vintage')) possibleTags.push('Vintage');
+      if (text.includes('smart')) possibleTags.push('Smart');
       setSuggestedTags(possibleTags.filter((tag) => !formData.tags.includes(tag)));
     };
     suggestTags();
-  }, [formData.name, formData.description]);
+  }, [formData.name, formData.description, formData.subSubcategory]);
 
   // Detect if user is on mobile
   useEffect(() => {
@@ -292,9 +409,9 @@ export default function SellerProductUpload() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Calculate fees based on price and dynamic fee configurations
+  // Calculate fees based on price and category-based fee configurations
   useEffect(() => {
-    if (!feeConfig) return; // Wait until feeConfig is loaded
+    if (!feeConfig || !formData.category) return; // Wait until feeConfig and category are loaded
 
     const price = parseFloat(formData.price);
     if (!price || isNaN(price)) {
@@ -308,41 +425,28 @@ export default function SellerProductUpload() {
       return;
     }
 
-    let productSize = '';
-    let buyerProtectionRate = 0;
-    let handlingRate = 0;
+    const config = feeConfig[formData.category] || {
+      minPrice: 1000,
+      maxPrice: Infinity,
+      buyerProtectionRate: 0.08,
+      handlingRate: 0.20,
+    };
 
-    // Determine product size and rates based on price
-    for (const [size, config] of Object.entries(feeConfig)) {
-      if (price >= config.minPrice && price <= (config.maxPrice || Infinity)) {
-        productSize = size;
-        buyerProtectionRate = config.buyerProtectionRate;
-        handlingRate = config.handlingRate;
-        break;
-      }
-    }
-
-    const buyerProtectionFee = price * buyerProtectionRate;
-    const handlingFee = price * handlingRate;
+    const buyerProtectionFee = price * config.buyerProtectionRate;
+    const handlingFee = price * config.handlingRate;
     const totalEstimatedPrice = price + buyerProtectionFee + handlingFee;
-    const sellerEarnings = price; // Set sellerEarnings to the original price
+    const sellerEarnings = price; // Seller earnings are the original price
 
     setFees({
-      productSize,
+      productSize: formData.category,
       buyerProtectionFee,
       handlingFee,
       totalEstimatedPrice,
       sellerEarnings,
     });
 
-    if (formData.manualSize && formData.manualSize !== productSize) {
-      setShowSizeWarning(true);
-    } else {
-      setShowSizeWarning(false);
-    }
-
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-  }, [formData.price, formData.manualSize, feeConfig]);
+  }, [formData.price, formData.category, feeConfig]);
 
   // Persist form data and media to localStorage
   useEffect(() => {
@@ -355,7 +459,12 @@ export default function SellerProductUpload() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'category' ? { subcategory: '', subSubcategory: '', sizes: [] } : {}),
+      ...(name === 'subcategory' ? { subSubcategory: '', sizes: [] } : {}),
+    }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -570,16 +679,26 @@ export default function SellerProductUpload() {
       newErrors.stock = 'Enter a valid stock quantity (0 or more).';
     if (!formData.category) newErrors.category = 'Select a category.';
     if (!formData.subcategory) newErrors.subcategory = 'Select a subcategory.';
+    if (subSubcategories[formData.category]?.[formData.subcategory] && !formData.subSubcategory)
+      newErrors.subSubcategory = 'Select a sub-subcategory.';
     if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
     if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
     if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
     if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
     if (
-      formData.category === 'Foremade Fashion' &&
-      ['Clothing', 'Shoes'].includes(formData.subcategory) &&
-      formData.sizes.length === 0
+      formData.category === 'Clothing' && formData.subcategory && formData.sizes.length === 0
     ) {
-      newErrors.sizes = 'Select or enter at least one size for fashion products.';
+      newErrors.sizes = 'Select or enter at least one size for clothing products.';
+    }
+    if (
+      formData.category === 'Footwear' && formData.subcategory && formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for footwear products.';
+    }
+    if (
+      formData.category === 'Perfumes' && formData.subcategory && formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for perfume products.';
     }
     if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
     return newErrors;
@@ -592,7 +711,6 @@ export default function SellerProductUpload() {
 
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      console.log(`Uploading ${isVideo ? 'video' : 'image'} to ${backendUrl}/upload`);
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
@@ -606,18 +724,12 @@ export default function SellerProductUpload() {
         throw new Error(`Failed to upload ${isVideo ? 'video' : 'image'} to Cloudinary.`);
       }
 
-      console.log(`${isVideo ? 'Video' : 'Image'} uploaded successfully:`, response.data.url);
       return response.data.url;
     } catch (error) {
       console.error(`${isVideo ? 'Video' : 'Image'} upload error:`, {
         message: error.message,
         code: error.code,
         response: error.response?.data,
-        request: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-        },
       });
       throw new Error(
         error.code === 'ECONNABORTED'
@@ -649,6 +761,28 @@ export default function SellerProductUpload() {
     }
   };
 
+  const saveCustomSubSubcategory = async (category, subcategory, subSubcategory) => {
+    try {
+      const subSubcatRef = doc(db, 'customSubSubcategories', category);
+      const existingSubSubcats = customSubSubcategories[category] || {};
+      const existingSubs = existingSubSubcats[subcategory] || [];
+      if (!existingSubs.includes(subSubcategory)) {
+        const updatedSubSubcats = {
+          ...existingSubSubcats,
+          [subcategory]: [...existingSubs, subSubcategory],
+        };
+        await setDoc(subSubcatRef, { subSubcategories: updatedSubSubcats }, { merge: true });
+        setCustomSubSubcategories((prev) => ({
+          ...prev,
+          [category]: updatedSubSubcats,
+        }));
+      }
+    } catch (error) {
+      console.error('Error saving custom sub-subcategory:', error);
+      addAlert('Failed to save custom sub-subcategory.', 'error');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -674,6 +808,11 @@ export default function SellerProductUpload() {
       await saveCustomSubcategory(formData.category, formData.subcategory);
     }
 
+    const isExistingSubSubcategory = (customSubSubcategories[formData.category]?.[formData.subcategory] || []).includes(formData.subSubcategory);
+    if (formData.subSubcategory && !isExistingSubSubcategory) {
+      await saveCustomSubSubcategory(formData.category, formData.subcategory, formData.subSubcategory);
+    }
+
     try {
       const imageUrls = await Promise.all(imageFiles.map((file) => uploadFile(file)));
       const videoUrls = videoFiles.length > 0
@@ -692,6 +831,7 @@ export default function SellerProductUpload() {
         stock: parseInt(formData.stock, 10),
         category: formData.category.toLowerCase(),
         subcategory: formData.subcategory || '',
+        subSubcategory: formData.subSubcategory || '',
         colors: formData.colors,
         sizes: formData.sizes,
         condition: formData.condition || 'New',
@@ -722,6 +862,7 @@ export default function SellerProductUpload() {
         stock: '',
         category: '',
         subcategory: '',
+        subSubcategory: '',
         colors: [],
         sizes: [],
         condition: 'New',
@@ -746,6 +887,7 @@ export default function SellerProductUpload() {
       setColorSuggestions([]);
       setShowColorDropdown(false);
       setShowSubcategoryDropdown(false);
+      setShowSubSubcategoryDropdown(false);
       setFees({
         productSize: '',
         buyerProtectionFee: 0,
@@ -764,6 +906,20 @@ export default function SellerProductUpload() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Dynamic size options based on category and subcategory
+  const getSizeOptions = () => {
+    if (formData.category === 'Clothing' && formData.subcategory) {
+      return formData.subcategory === 'Men' ? menClothingSizes : womenClothingSizes;
+    }
+    if (formData.category === 'Footwear' && formData.subcategory) {
+      return footwearSizes;
+    }
+    if (formData.category === 'Perfumes' && formData.subSubcategory?.startsWith('Oil -')) {
+      return perfumeSizes;
+    }
+    return [];
   };
 
   return (
@@ -1101,18 +1257,11 @@ export default function SellerProductUpload() {
                   <p className="text-red-600 text-xs mt-1">{errors.manualSize}</p>
                 )}
               </div>
-              {showSizeWarning && (
-                <div className="mt-2 p-3 bg-yellow-100 rounded-lg">
-                  <p className="text-sm text-yellow-700">
-                    Warning: Your price suggests a {fees.productSize} product, but you selected {formData.manualSize}. Are you sure you want to proceed?
-                  </p>
-                </div>
-              )}
               {fees.productSize && feeConfig && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Foremade Fees</h4>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p>Product Size (based on price): <span className="font-semibold">{fees.productSize}</span></p>
+                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
                     <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
@@ -1129,10 +1278,10 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Category & Subcategory Section */}
+            {/* Category, Subcategory & Sub-Subcategory Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 mb-4">Category & Subcategory</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Category <span className="text-red-500">*</span>
@@ -1154,7 +1303,7 @@ export default function SellerProductUpload() {
                             <button
                               type="button"
                               onClick={() => {
-                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', sizes: [] }));
+                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', subSubcategory: '', sizes: [] }));
                                 setShowSubcategoryDropdown(false);
                               }}
                               className="w-full text-left"
@@ -1179,7 +1328,7 @@ export default function SellerProductUpload() {
                       <input
                         type="text"
                         value={formData.subcategory}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, subcategory: e.target.value, sizes: [] }))}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, subcategory: e.target.value, subSubcategory: '', sizes: [] }))}
                         onFocus={() => setShowSubcategoryDropdown(true)}
                         onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
                         placeholder="Select or type a subcategory"
@@ -1201,7 +1350,7 @@ export default function SellerProductUpload() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setFormData((prev) => ({ ...prev, subcategory: subcat, sizes: [] }));
+                                    setFormData((prev) => ({ ...prev, subcategory: subcat, subSubcategory: '', sizes: [] }));
                                     setShowSubcategoryDropdown(false);
                                   }}
                                   className="w-full text-left"
@@ -1221,89 +1370,115 @@ export default function SellerProductUpload() {
                     </div>
                   </div>
                 )}
+                {formData.subcategory && subSubcategories[formData.category]?.[formData.subcategory] && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Sub-Subcategory <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative mt-1">
+                      <input
+                        type="text"
+                        value={formData.subSubcategory}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, subSubcategory: e.target.value, sizes: [] }))}
+                        onFocus={() => setShowSubSubcategoryDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowSubSubcategoryDropdown(false), 200)}
+                        placeholder="Select or type a sub-subcategory"
+                        className={`w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors.subSubcategory
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
+                        disabled={loading || Object.keys(customSubSubcategories).length === 0}
+                      />
+                      {showSubSubcategoryDropdown && customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                          {customSubSubcategories[formData.category][formData.subcategory]
+                            .filter((subSubcat) =>
+                              subSubcat.toLowerCase().includes(formData.subSubcategory.toLowerCase())
+                            )
+                            .map((subSubcat) => (
+                              <div key={subSubcat} className="p-2 hover:bg-gray-100">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev) => ({ ...prev, subSubcategory: subSubcat, sizes: [] }));
+                                    setShowSubSubcategoryDropdown(false);
+                                  }}
+                                  className="w-full text-left"
+                                >
+                                  {subSubcat}
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                      {!customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                        <p className="text-red-600 text-xs mt-1">Loading sub-subcategories...</p>
+                      )}
+                      {errors.subSubcategory && (
+                        <p className="text-red-600 text-xs mt-1">{errors.subSubcategory}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Sizes Section */}
-            {formData.category === 'Foremade Fashion' && ['Clothing', 'Shoes'].includes(formData.subcategory) && (
+            {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && formData.subcategory && (
               <div>
                 <h3 className="text-lg font-medium text-gray-700 mb-4">Sizes</h3>
                 <label className="block text-sm font-medium text-gray-700">
                   Sizes <span className="text-red-500">*</span>
                 </label>
-                {formData.subcategory === 'Clothing' ? (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(formData.category === 'Foremade Fashion' && formData.subcategory === 'Clothing'
-                      ? (customSubcategories['Foremade Fashion']?.includes('Clothing') ? menClothingSizes : womenClothingSizes)
-                      : []
-                    ).map((size) => (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {getSizeOptions().map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => handleSizeToggle(size)}
+                      className={`px-3 py-1 rounded-md border text-sm transition-colors ${
+                        formData.sizes.includes(size)
+                          ? 'border-blue-500 bg-blue-100 text-blue-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={loading}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative mt-2">
+                  <input
+                    type="text"
+                    placeholder="Enter custom size (e.g., Size 35) and press Enter"
+                    onKeyDown={handleCustomSizeAdd}
+                    className={`w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.sizes
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.sizes.map((size) => (
+                    <div
+                      key={size}
+                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs"
+                    >
+                      <span>{size}</span>
                       <button
-                        key={size}
                         type="button"
-                        onClick={() => handleSizeToggle(size)}
-                        className={`px-3 py-1 rounded-md border text-sm transition-colors ${
-                          formData.sizes.includes(size)
-                            ? 'border-blue-500 bg-blue-100 text-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={() => handleRemoveSize(size)}
+                        className="text-red-500 hover:text-red-700"
                         disabled={loading}
                       >
-                        {size}
+                        <i className="bx bx-x"></i>
                       </button>
-                    ))}
-                  </div>
-                ) : formData.subcategory === 'Shoes' ? (
-                  <>
-                    <div className="relative mt-2">
-                      <input
-                        type="text"
-                        placeholder="Enter shoe size (e.g., Size 35) and press Enter"
-                        onKeyDown={handleCustomSizeAdd}
-                        className={`w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors.sizes
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:ring-blue-500'
-                        }`}
-                        disabled={loading}
-                      />
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.sizes.map((size) => (
-                        <div
-                          key={size}
-                          className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs"
-                        >
-                          <span>{size}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSize(size)}
-                            className="text-red-500 hover:text-red-700"
-                            disabled={loading}
-                          >
-                            <i className="bx bx-x"></i>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {footwearSizes.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => handleSizeToggle(size)}
-                          className={`px-3 py-1 rounded-md border text-sm transition-colors ${
-                            formData.sizes.includes(size)
-                              ? 'border-blue-500 bg-blue-100 text-blue-700'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={loading}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
+                  ))}
+                </div>
                 {errors.sizes && (
                   <p className="text-red-600 text-xs mt-1">{errors.sizes}</p>
                 )}
@@ -1480,25 +1655,25 @@ export default function SellerProductUpload() {
       {/* Zoomed Media Modal */}
       {zoomedMedia && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative max-w-3xl max-h-[90vh]">
+          <div className="relative max-w-3xl max-h-[90vh] p-4 bg-white rounded-lg">
             {zoomedMedia.type === 'image' ? (
               <img
                 src={zoomedMedia.src}
-                alt="Zoomed preview"
-                className="max-w-full max-h-[90vh] object-contain"
+                alt="Zoomed"
+                className="w-full h-auto max-h-[80vh] object-contain"
               />
             ) : (
               <video
                 src={zoomedMedia.src}
                 controls
-                className="max-w-full max-h-[90vh] object-cover"
+                className="w-full h-auto max-h-[80vh] object-contain"
               />
             )}
             <button
               onClick={() => setZoomedMedia(null)}
               className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
             >
-              <i className="bx bx-x text-xl"></i>
+              <i className="bx bx-x text-lg"></i>
             </button>
           </div>
         </div>

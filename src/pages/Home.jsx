@@ -5,7 +5,7 @@ import SellerBanner from '../components/home/SellerBanner';
 import RecommendedForYou from '../components/product/RecommendedForYou';
 import TrendingFashion from '../components/product/TrendingFashion';
 import TrendingGadgets from '../components/product/TrendingGadgets';
-import TopStores from '../components/store/TopStore';
+// import TopStores from '../components/store/TopStore';
 import EmpowermentHubPreview from '../components/home/EmpowermentHubPreview';
 
 const Home = () => {
@@ -19,7 +19,7 @@ const Home = () => {
       <RecommendedForYou />
       <SellerBanner />
       <BuyerBanner />
-      <TopStores />
+      {/* <TopStores /> */}
     </div>
   );
 };

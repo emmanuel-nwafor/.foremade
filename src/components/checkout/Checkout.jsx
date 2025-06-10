@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, setDoc, updateDoc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { getCart, clearCart } from '/src/utils/cartUtils';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -628,28 +628,6 @@ const Checkout = () => {
         });
         toast.error(err.message || 'Failed to place order. Please try again.', { position: 'top-right', autoClose: 3000 });
 
-        // Rollback wallet updates if possible
-        if (walletUpdates.length > 0) {
-          try {
-            await runTransaction(db, async (transaction) => {
-              for (const { sellerId, amount } of walletUpdates) {
-                const walletRef = doc(db, 'wallets', sellerId);
-                const walletSnap = await transaction.get(walletRef);
-                if (walletSnap.exists()) {
-                  const currentPending = walletSnap.data().pendingBalance || 0;
-                  transaction.update(walletRef, {
-                    pendingBalance: Math.max(0, currentPending - amount),
-                    updatedAt: serverTimestamp(),
-                  });
-                }
-              }
-            });
-            console.log('Rolled back wallet updates due to checkout failure.');
-          } catch (rollbackErr) {
-            console.error('Rollback error:', rollbackErr);
-            toast.warn('Failed to rollback wallet updates. Please contact support.', { position: 'top-right', autoClose: 5000 });
-          }
-        }
       }
     },
     [cart, subtotalNgn, belowMinimumPrice, formData, totalNgn, navigate, totalItems, currency]
@@ -1013,6 +991,9 @@ const Checkout = () => {
                           : 'bg-blue-900 hover:bg-blue-800'
                       }`}
                       iconClass="bx bx-cart mr-2"
+                      sellerId={cart[0]?.product?.sellerId || 'default-seller-id'} // Use first item’s sellerId
+                      handlingFee={handlingFeeNgn}
+                      buyerProtectionFee={buyerProtectionFeeNgn}
                     />
                   ) : (
                     <p className="text-red-600 text-sm">Please select a valid country.</p>

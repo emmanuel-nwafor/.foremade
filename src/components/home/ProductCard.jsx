@@ -123,7 +123,13 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 h-[360px] flex flex-col">
+    <Link
+      to={`/product/${product.id}`}
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 h-[360px] flex flex-col"
+      onClick={trackProductView}
+      tabIndex={0}
+      aria-label={product.name}
+    >
       {/* Image Container with fixed height */}
       <div className="relative h-[200px] overflow-hidden rounded-t-lg">
         <img
@@ -139,6 +145,8 @@ const ProductCard = ({ product }) => {
         <button
           onClick={handleFavorite}
           className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+          onMouseDown={e => e.stopPropagation()}
+          onClickCapture={e => e.preventDefault()}
         >
           <i className={`bx ${isFavorited ? 'bxs-heart text-red-500' : 'bx-heart'} text-xl`}></i>
         </button>
@@ -169,7 +177,7 @@ const ProductCard = ({ product }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

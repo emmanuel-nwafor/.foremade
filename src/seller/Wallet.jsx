@@ -337,7 +337,7 @@ export default function Wallet() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-8">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 sm:p-6 text-white">
                 <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Earnings</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
@@ -349,7 +349,7 @@ export default function Wallet() {
                 </button>
               </div>
 
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 sm:p-6 text-white">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-8 sm:p-8 text-white">
                 <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Earnings</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Earnings from recent sales awaiting processing</p>
@@ -363,23 +363,23 @@ export default function Wallet() {
               <div className="block sm:hidden">
                 {transactions.map((transaction, index) => (
                   <div key={`${transaction.id}-${index}`} className="border-b p-4">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between max-md:text-sm">
                       <span className="font-medium text-gray-700">Date:</span>
                       <span className="text-gray-900">{new Date(transaction.date).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex justify-between mt-1">
+                    <div className="flex justify-between mt-1 max-md:text-sm">
                       <span className="font-medium text-gray-700">Type:</span>
                       <span className="text-gray-900">{transaction.type}</span>
                     </div>
-                    <div className="flex justify-between mt-1">
+                    <div className="flex justify-between mt-1 max-md:text-sm">
                       <span className="font-medium text-gray-700">Description:</span>
-                      <span className="text-gray-900">{transaction.description}</span>
+                      <span className="text-gray-900 max-md:text-xs">{transaction.description}</span>
                     </div>
-                    <div className="flex justify-between mt-1">
+                    <div className="flex justify-between mt-1 max-md:text-sm">
                       <span className="font-medium text-gray-700">Amount:</span>
                       <span className="text-gray-900">₦{transaction.amount.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between mt-1">
+                    <div className="flex justify-between mt-1 max-md:text-sm">
                       <span className="font-medium text-gray-700">Status:</span>
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         transaction.status === 'Completed' ? 'bg-green-100 text-green-800' :
@@ -439,7 +439,7 @@ export default function Wallet() {
 
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 sm:p-6 max-md:p-4 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md md:max-w-lg">
+          <div className="bg-white p-4 sm:p-4 max-md:p-4 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md md:max-w-lg">
             <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Withdraw Earnings</h2>
             <form onSubmit={handleWithdraw}>
               <div className="mb-2 sm:mb-4">

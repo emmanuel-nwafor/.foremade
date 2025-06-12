@@ -6,59 +6,59 @@ const CategoryGrid = () => {
   const categories = [
     { 
       name: 'Shoes', 
-      path: '/shoes', 
+      route: '/pages/Shoes', 
       color: 'from-red-500/10 to-red-500/5', 
       hoverColor: 'hover:bg-red-500/10',
       image: 'https://banner2.cleanpng.com/20180406/wow/kisspng-shoe-jumpman-sneakers-air-jordan-teal-jordan-5ac6ff9c2fcfe2.7959868915229910041959.jpg'
     },
     { 
       name: 'Fashion', 
-      path: '/fashion', 
+      route: '/pages/Fashion', 
       color: 'from-blue-500/10 to-blue-500/5', 
       hoverColor: 'hover:bg-blue-500/10',
       image: 'https://pngimg.com/uploads/dress_shirt/dress_shirt_PNG8088.png'
     },
     { 
       name: 'Phones', 
-      path: '/phones', 
+      route: '/tablet-phones', // TabletsPhones page
       color: 'from-green-500/10 to-green-500/5', 
       hoverColor: 'hover:bg-green-500/10',
       image: 'https://banner2.cleanpng.com/20240415/cv/transparent-apple-logo-person-holding-iphone-11-pro-max661df755177ea1.73458741.webp'
     },
     { 
       name: 'Laptops', 
-      path: '/laptops', 
+      route: '/computers-accessories', // ComputerAccessories page
       color: 'from-yellow-500/10 to-yellow-500/5', 
       hoverColor: 'hover:bg-yellow-500/10',
       image: 'https://banner2.cleanpng.com/lnd/20240424/uxz/transparent-rainbow-open-laptop-with-rainbow-gradient-background-image662945f170dc49.58708681.webp'
     },
     { 
-      name: 'watches', 
-      path: '/watches', 
+      name: 'Watches', 
+      route: '/smart-watches', // SmartWatches page
       color: 'from-purple-500/10 to-purple-500/5', 
       hoverColor: 'hover:bg-purple-500/10',
       image: 'https://banner2.cleanpng.com/20180202/lie/av2ldq3r4.webp'
     },
     { 
       name: 'Gaming', 
-      path: '/gaming', 
+      route: '/pages/GamesAndFun', // Special case
       color: 'from-pink-500/10 to-pink-500/5', 
       hoverColor: 'hover:bg-pink-500/10',
       image: 'https://banner2.cleanpng.com/lnd/20240424/jfa/aav33rgh3.webp'
     },
     { 
       name: 'Kitchen', 
-      path: '/kitchen', 
+      route: '/pages/HomeAndKitchen', // Special case
       color: 'from-indigo-500/10 to-indigo-500/5', 
       hoverColor: 'hover:bg-indigo-500/10',
       image: 'https://banner2.cleanpng.com/20180809/atv/kisspng-ferm-living-asymmetric-cutting-board-ferm-living-b-5b6c3d78edff15.1714747115338202809749.jpg'
     },
     { 
       name: 'Electronics', 
-      path: '/electronics', 
+      route: '/electronics', // Electronics page
       color: 'from-orange-500/10 to-orange-500/5', 
       hoverColor: 'hover:bg-orange-500/10',
-      image: 'https://banner2.cleanpng.com/20180517/rze/avcxbrui3.webp'
+      image: 'https://banner2.cleanpng.com/20180131/jgw/av1z4nree.webp'
     },
   ];
   
@@ -72,7 +72,7 @@ const CategoryGrid = () => {
         {categories.map((category, index) => (
           <Link 
             key={index} 
-            to={category.path} 
+            to={category.route} 
             className="text-center group"
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}

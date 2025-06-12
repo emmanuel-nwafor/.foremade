@@ -8,8 +8,6 @@ const TopNavigation = () => {
   const links = [
     { name: 'Help & Support', path: '/support' },
     { name: 'FAQ', path: '/support?tab=faq' },
-    { name: 'Privacy Policy', path: '/privacy-policy' },
-    { name: 'Terms & Conditions', path: '/terms-conditions' }
   ];
 
   return (

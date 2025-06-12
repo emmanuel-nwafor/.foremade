@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import 'boxicons/css/boxicons.min.css';
 
 const EmpowermentHubPreview = () => {
   const navigate = useNavigate();

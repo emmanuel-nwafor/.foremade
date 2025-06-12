@@ -59,6 +59,8 @@ import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
 
+import OtherProductsPage from './pages/OtherProducts'; // Dynamic page
+
 const Layout = ({ children }) => {
   const location = useLocation();
   const hideHeaderFooter = [
@@ -248,6 +250,11 @@ function App() {
             <Route path="/computers-accessories" element={<ComputerAccessories />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/privacy-policy/:type" element={<AllPolicies />} />
+            <Route path="/pages/Shoes" element={<OtherProductsPage category="Shoes" />} />
+            <Route path="/pages/Fashion" element={<OtherProductsPage category="Fashion" />} />
+            <Route path="/pages/GamesAndFun" element={<GamesFun />} />
+            <Route path="/pages/HomeAndKitchen" element={<HomeKitchen />} />
+            <Route path="/pages/OtherProducts/:category" element={<OtherProductsPage />} />
 
             {/* === Previously Protected User Routes (Now Open) === */}
             <Route path="/cart" element={<Cart />} />

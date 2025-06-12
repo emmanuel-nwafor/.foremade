@@ -13,7 +13,7 @@ const EmpowermentHubPreview = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 py-8 px-4 sm:px-6 lg:px-8 my-6 rounded-2xl mx-4 shadow-lg">
+    <div className="relative overflow-hidden bg-gradient-to-br p-10 from-purple-600 via-indigo-600 to-purple-700 py-8 px-4 sm:px-6 lg:px-8 my-6 rounded-2xl mx-4 shadow-lg">
       {/* Subtle animated background pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-0 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>

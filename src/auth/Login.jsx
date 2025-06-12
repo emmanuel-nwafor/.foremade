@@ -267,10 +267,9 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-gray-600 mt-5">
-            Forgot Password ?
-            <Link to="/recover-password" className="text-blue-600 hover:underline">
-              Recover
+          <p className="text-gray-600 mt-2">
+            <Link to="/recover-password" className="hover:underline hover:text-blue-700">
+              Forgot Password ?
             </Link>
           </p>
 

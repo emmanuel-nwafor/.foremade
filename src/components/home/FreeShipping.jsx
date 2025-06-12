@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 
 export default function FreeShipping() {
     return(
@@ -11,3 +11,4 @@ export default function FreeShipping() {
         </>
     )
 }
+

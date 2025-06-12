@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const EmpowermentHub = () => {
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -51,26 +54,26 @@ const EmpowermentHub = () => {
                   <span className="inline-block bg-indigo-100 text-indigo-800 text-sm font-semibold px-3 py-1 rounded-full mb-4">
                     Featured Creator
                   </span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">Mercy</h3>
-                  <p className="text-xl text-gray-600 mb-2">Founder, SBB Jewelry Store</p>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-2">Rhoda</h3>
+                  <p className="text-xl text-gray-600 mb-2">Founder, Rhodabella Crafted</p>
                   <p className="text-lg text-indigo-600 font-medium">Handmade • Heritage-Inspired • Uniquely Crafted</p>
                 </div>
                 
                 <div className="mb-8">
                   <p className="text-gray-700 mb-6 leading-relaxed">
-                    Mercy is a distinguished jewelry designer who masterfully blends traditional African artistry with contemporary aesthetics. Her brand, <strong>SBB Jewelry Store</strong>, creates handcrafted pieces that serve as both elegant accessories and powerful expressions of cultural identity.
+                    Rhoda is a distinguished jewelry designer who masterfully blends traditional African artistry with contemporary aesthetics. Her brand, <strong>Rhodabella Crafted</strong>, creates handcrafted pieces that serve as both elegant accessories and powerful expressions of cultural identity.
                   </p>
                   <p className="text-gray-700 mb-6 leading-relaxed">
-                    From intricately beaded chokers to custom waist beads, each piece in Mercy's collections tells a story of heritage, pride, and individual expression.
+                    From intricately beaded chokers to custom waist beads, each piece in Rhoda's collections tells a story of heritage, pride, and individual expression.
                   </p>
                   <blockquote className="border-l-4 border-indigo-500 pl-6 italic text-gray-600 mb-8">
                     "My jewelry transcends mere aesthetics. It honors our heritage while expressing our authentic selves."
-                    <footer className="text-sm font-semibold text-gray-900 mt-2">— Mercy, SBB Jewelry Store</footer>
+                    <footer className="text-sm font-semibold text-gray-900 mt-2">— Rhoda, Rhodabella Crafted</footer>
                   </blockquote>
                 </div>
                 
                 <a
-                  href="https://foremade.com/store/SBBJewelryStore"
+                  href="https://foremade.com/store/RhodabellaCrafted"
                   className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-200"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -141,7 +144,7 @@ const EmpowermentHub = () => {
       </section>
 
       {/* Call to Action */}
-      <section className="py-16 bg-gradient-to-r from-indigo-600 to-purple-600">
+      <section className="py-16 bg-gradient-to-r from-indigo-600 to-purple-600 mb-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Join Our Creator Program
@@ -149,27 +152,49 @@ const EmpowermentHub = () => {
           <p className="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto leading-relaxed">
             Are you a young creator or entrepreneur ready to transform your vision into reality? Apply to become part of our exclusive empowerment program.
           </p>
-          <a 
-            href="/youth-empowerment-form" 
-            className="inline-flex items-center px-8 py-4 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-200"
+
+          {/* Terms and Conditions Checkbox */}
+          <div className="flex items-center justify-center mb-8">
+            <label className="flex items-center text-white">
+              <input
+                type="checkbox"
+                className="form-checkbox h-5 w-5 text-indigo-300 rounded border-white"
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                checked={termsAccepted}
+              />
+              <span className="ml-2 text-sm">
+                I have read and agree to the{' '}
+                <Link
+                  to="/youth-empowerment-terms"
+                  className="underline hover:text-indigo-200"
+                >
+                  Terms and Conditions
+                </Link>
+              </span>
+            </label>
+          </div>
+
+          <Link 
+            to={termsAccepted ? "/youth-empowerment-form" : "#"}
+            className={`inline-flex items-center px-8 py-4 font-semibold rounded-lg transition-colors duration-200 ${
+              termsAccepted 
+                ? "bg-white text-indigo-600 hover:bg-gray-100" 
+                : "bg-gray-400 text-gray-700 cursor-not-allowed"
+            }`}
+            onClick={(e) => {
+              if (!termsAccepted) {
+                e.preventDefault();
+                alert("Please accept the terms and conditions to continue.");
+              }
+            }}
           >
             Apply Now
             <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
-          </a>
+          </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h3 className="text-2xl font-bold mb-4">Powered by Purpose. Backed by Foremade.</h3>
-          <p className="text-gray-300 text-lg">
-            More than a marketplace—we are a movement dedicated to empowering the next generation of African creators and entrepreneurs.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 };

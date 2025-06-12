@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import db from '../../db.json';
 import SkeletonLoader from '../common/SkeletonLoader';
 
 const TopStores = () => {

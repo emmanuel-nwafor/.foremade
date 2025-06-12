@@ -288,7 +288,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="block sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+      <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
         <Link to="/">
           <img src={logo} className="h-10" alt="Foremade" />
         </Link>

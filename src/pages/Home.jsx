@@ -86,6 +86,9 @@ const Home = () => {
       
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
+
+      {/* This is for spacing the nav on mobile */}
+      <div className="h-20"></div>
     </div>
   );
 };

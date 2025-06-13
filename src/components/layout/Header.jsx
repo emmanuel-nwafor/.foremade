@@ -206,9 +206,9 @@ const Header = () => {
           </div>
 
           <div className="flex ml-5 items-center space-x-4 mt-2">
-            <Link to="/products" className="hover:text-gray-300">Shop</Link>
-            <Link to="/dashboard" className="m-2 hover:text-gray-300">Sell</Link>
-            <Link to="/smile" className="m-2 hover:text-gray-300">Smile</Link>
+            <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">Shop</Link>
+            <Link to="/dashboard" className="m-2 hover:text-gray-100 hover:underline transition-all">Sell</Link>
+            <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">Smile</Link>
             <div className="relative group">
               <button
                 onClick={toggleMoreDropdown}
@@ -316,7 +316,7 @@ const Header = () => {
           <input
             type="text"
             placeholder="Search for electronics, accessories..."
-            className="w-full p-2 pl-8 border border-gray-300 rounded-md text-black placeholder-gray-600 focus:outline-none text-xs"
+            className="w-full p-2 pl-8 border border-gray-400 rounded-md text-black placeholder-gray-600 focus:outline-none text-xs"
             value={searchQuery}
             onChange={handleSearch}
             onFocus={handleFocus}
@@ -381,8 +381,8 @@ const Header = () => {
           <div className="relative w-full hidden sm:block">
             <input
               type="text"
-              placeholder="Search here for electronics, accessories and more"
-              className="w-full p-2 pl-8 border border-gray-300 rounded-md text-black placeholder-gray-600 focus:outline-none text-xs sm:text-base"
+              placeholder="Search Foremade"
+              className="placeholder-slate-400 w-full p-2 pl-8 border border-gray-400 rounded-md text-black focus:outline-none text-xs sm:text-base"
               value={searchQuery}
               onChange={handleSearch}
               onFocus={handleFocus}

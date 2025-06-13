@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -216,33 +216,6 @@ export default function Settings() {
     } catch (err) {
       console.error('Error logging out:', err);
       setError('Failed to log out. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
-
-    const user = auth.currentUser;
-    if (!user) {
-      setError('Please sign in to delete.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await deleteDoc(doc(db, 'users', user.uid));
-      await user.delete();
-      localStorage.removeItem('userData');
-      localStorage.removeItem('profileImage');
-      setPreviewImage(null);
-      window.dispatchEvent(new Event('profileImageUpdated'));
-      navigate('/login');
-      toast.success('Account deleted successfully! 🗑️');
-    } catch (err) {
-      console.error('Error deleting account:', err);
-      setError('Failed to delete account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -467,24 +440,9 @@ export default function Settings() {
             <div className="flex flex-wrap gap-4 mb-6">
               <button
                 onClick={handleLogout}
-                className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-800 transition-colors"
+                className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-800 transition-colors"
               >
                 Log Out 🚪
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                className="px-6 py-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg shadow-md hover:from-gray-800 hover:to-black transition-colors"
-              >
-                Delete Account 🗑️
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={handleSave}
-                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transition-colors"
-              >
-                Save Changes 💾
               </button>
               <Link
                 to="/profile"
@@ -492,6 +450,12 @@ export default function Settings() {
               >
                 Cancel ❌
               </Link>
+              <button
+                onClick={handleSave}
+                className="px-3 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transition-colors"
+              >
+                Save Changes 💾
+              </button>
             </div>
             {error && <p className="text-red-600 dark:text-red-400 mt-2">{error}</p>}
           </div>

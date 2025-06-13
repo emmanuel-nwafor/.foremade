@@ -323,7 +323,7 @@ export default function Wallet() {
         <div className="flex-1 p-4 md:p-6">
           <div className="max-w-full mx-auto">
             <div className="mb-4 md:mb-8">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Seller Wallet</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Smile Wallet</h1>
               {message && (
                 <div className="mt-2 md:mt-4 p-2 sm:p-4 bg-green-50 text-green-700 rounded-lg">
                   {message}

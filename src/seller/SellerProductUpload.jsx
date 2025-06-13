@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, addDoc, getDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
@@ -122,6 +122,8 @@ export default function SellerProductUpload() {
   const [zoomedMedia, setZoomedMedia] = useState(null);
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
+
+  console.log(showSizeWarning)
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -723,6 +725,7 @@ export default function SellerProductUpload() {
         manualSize: formData.manualSize,
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
+      docRef
       addAlert('Product uploaded successfully! 🎉', 'success');
       setFormData({
         sellerName: '',
@@ -1227,9 +1230,9 @@ export default function SellerProductUpload() {
                     Foremade Fees
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
-                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p> 
+                    <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
@@ -1544,28 +1547,6 @@ export default function SellerProductUpload() {
                     ))}
                   </div>
                 )}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {availableColors.map((color) => (
-                  <button
-                    key={color.name}
-                    type="button"
-                    onClick={() => handleColorToggle(color.name)}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                      formData.colors.includes(color.name)
-                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={loading}
-                    title={`Add ${color.name}`}
-                  >
-                    <span
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    <span className="ml-1">{color.name}</span>
-                  </button>
-                ))}
               </div>
               {errors.colors && (
                 <p className="text-red-600 text-xs mt-1 flex items-center gap-1">

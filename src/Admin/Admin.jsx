@@ -3,7 +3,7 @@ import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import AdminSidebar from '/src/admin/AdminSidebar';
 import MediaPreview from '/src/admin/MediaPreview';
-import AdminActionButtons from '/src/admin/AdminActionButtons';
+import AdminActionButtons from '/src/admin/AdminActionbuttons';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {

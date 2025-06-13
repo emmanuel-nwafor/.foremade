@@ -205,7 +205,7 @@ const Header = () => {
             </Link>
           </div>
 
-          <div className="flex ml-5 items-center space-x-4">
+          <div className="flex ml-5 items-center space-x-4 mt-2">
             <Link to="/products" className="hover:text-gray-300">Shop</Link>
             <Link to="/dashboard" className="m-2 hover:text-gray-300">Sell</Link>
             <Link to="/smile" className="m-2 hover:text-gray-300">Smile</Link>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,8 +9,6 @@ const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
     case 'auth/network-request-failed':
       return 'Check your network connection and try again.';
-    case 'auth/email-already-in-use':
-      return 'This email is already in use. Please log in instead.';
     case 'auth/weak-password':
       return 'Password is too weak.';
     case 'auth/invalid-email':
@@ -59,7 +57,7 @@ export default function Register() {
       .then((result) => {
         if (result) {
           const user = result.user;
-          handleSocialSignIn(user);
+          handleSocialSignUp(user);
         }
       })
       .catch((err) => {
@@ -83,9 +81,9 @@ export default function Register() {
       isValid: hasLength && hasLetter && hasNumber && hasSpecialChar,
       errors: [
         !hasLength && 'Password must be at least 6 characters.',
-        !hasLetter && 'Password must include at least one letter.',
-        !hasNumber && 'Password must include at least one number.',
-        !hasSpecialChar && 'Password must include at least one special character (e.g., _, @, !, +, =).',
+        !hasLetter && 'Password must be include at least one letter.',
+        !hasNumber && 'Password must be include at least one number.',
+        !hasSpecialChar && 'Password must be include at least one special character (e.g., _, @, !, +, =).',
       ].filter(Boolean),
     };
   };
@@ -96,11 +94,11 @@ export default function Register() {
     return phoneRegex.test(phoneNumber);
   };
 
-  const  handleNavigation = () => {
-    navigate('/login', { replace: true });
-  };
+  // const handleNavigation = () => {
+  //   navigate('/login', { replace: true });
+  // };
 
-  const handleSocialSignIn = async (user) => {
+  const handleSocialSignUp = async (user) => {
     try {
       const fullName = user.displayName || user.email.split('@')[0];
       const [firstNameFromSocial, ...rest] = fullName.split(' ');
@@ -200,9 +198,36 @@ export default function Register() {
 
     try {
       await setPersistence(auth, browserSessionPersistence);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Check if user exists in Firestore
+      const userDoc = doc(db, 'users', email); // Using email as ID for simplicity
+      const userSnapshot = await getDoc(userDoc);
 
+      if (userSnapshot.exists()) {
+        setEmailError('This email is already in use. Please log in instead.');
+        setLoadingEmail(false);
+        setSignupAttempts(prev => prev + 1);
+        return;
+      }
+
+      // Attempt to create user in Firebase Auth
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (authError) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // Email exists in Auth but not Firestore, send password reset
+          await sendPasswordResetEmail(auth, email);
+          setSuccessMessage(`A password reset email has been sent to ${email}. Please reset your password and try signing up again.`);
+          setLoadingEmail(false);
+          setTimeout(() => {
+            navigate('/login');
+          }, 5000);
+          return;
+        }
+        throw authError;
+      }
+
+      const user = userCredential.user;
       const username = generateUsername(firstName, lastName);
       await updateProfile(user, { displayName: username });
 
@@ -393,6 +418,7 @@ export default function Register() {
                   phoneNumberError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
                 }`}
                 autoComplete="tel"
+                placeholder="+1234567890 (optional)"
               />
               <label
                 htmlFor="phoneNumber"

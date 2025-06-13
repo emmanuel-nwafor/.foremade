@@ -82,6 +82,16 @@ export default function AdminSidebar() {
             </li>
             <li>
               <Link
+                to="/admin/edit/categories"
+                onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
+                className="flex items-center p-3 hover:bg-gray-700 transition-colors"
+              >
+                <i className="bx bx-cog text-xl mr-3"></i>
+                <span className="text-sm font-medium">Categories</span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 to="/admin/edit/fees"
                 onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
                 className="flex items-center p-3 hover:bg-gray-700 transition-colors"

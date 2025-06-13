@@ -40,11 +40,13 @@ export default function Register() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [phoneNumberError, setPhoneNumberError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -88,10 +90,15 @@ export default function Register() {
     };
   };
 
-  const handleNavigation = () => {
+  const validatePhoneNumber = (phoneNumber) => {
+    if (!phoneNumber.trim()) return true; // Empty is valid since it's optional
+    const phoneRegex = /^\+\d{7,15}$/;
+    return phoneRegex.test(phoneNumber);
+  };
+
+  const  handleNavigation = () => {
     navigate('/login', { replace: true });
   };
-  {handleNavigation}
 
   const handleSocialSignIn = async (user) => {
     try {
@@ -115,6 +122,7 @@ export default function Register() {
           name: `${firstNameFromSocial} ${lastNameFromSocial}`,
           username: username,
           address: '',
+          phoneNumber: '',
           createdAt: new Date().toISOString(),
           uid: user.uid,
           profileImage: user.photoURL || null,
@@ -146,6 +154,7 @@ export default function Register() {
     setLastNameError('');
     setEmailError('');
     setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
     setLoadingEmail(true);
 
@@ -178,6 +187,10 @@ export default function Register() {
         hasError = true;
       }
     }
+    if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
+      setPhoneNumberError('Please enter a valid phone number (e.g., +1234567890).');
+      hasError = true;
+    }
 
     if (hasError) {
       setLoadingEmail(false);
@@ -201,6 +214,7 @@ export default function Register() {
         name: `${firstName} ${lastName}`,
         username: username,
         address: '',
+        phoneNumber: phoneNumber.trim() || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
         profileImage: null,
@@ -209,7 +223,7 @@ export default function Register() {
       localStorage.setItem('userData', JSON.stringify(userData));
 
       setSuccessMessage(`Welcome, ${firstName}! Registration successful! A verification email has been sent to ${email}. Please verify your email before logging in.`);
-      setSignupAttempts(0); // Reset attempts on success
+      setSignupAttempts(0);
       setTimeout(() => {
         setLoadingEmail(false);
         navigate('/login');
@@ -235,6 +249,7 @@ export default function Register() {
     setLastNameError('');
     setEmailError('');
     setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
     setLoadingGoogle(true);
 
@@ -253,6 +268,7 @@ export default function Register() {
     setLastNameError('');
     setEmailError('');
     setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
     setLoadingFacebook(true);
 
@@ -365,6 +381,28 @@ export default function Register() {
                   )}
                 </p>
               )}
+            </div>
+
+            <div className="relative">
+              <input
+                type="tel"
+                id="phoneNumber"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
+                  phoneNumberError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
+                }`}
+                autoComplete="tel"
+              />
+              <label
+                htmlFor="phoneNumber"
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                  phoneNumber ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                }`}
+              >
+                Phone Number
+              </label>
+              {phoneNumberError && <p className="text-red-600 text-[10px] mt-1">{phoneNumberError}</p>}
             </div>
 
             <div className="relative">

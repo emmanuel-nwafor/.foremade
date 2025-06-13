@@ -52,6 +52,9 @@ const Home = () => {
       
       {/* Quick shopping categories with transparent images */}
       <CategoryGrid />
+
+      {/* Recommendations */}
+      <RecommendedForYou />
       
       {/* Daily Deals - eBay inspired */}
       <DailyDeals />
@@ -70,9 +73,6 @@ const Home = () => {
       
       {/* Empowerment hub */}
       <EmpowermentHubPreview />
-      
-      {/* Recommendations */}
-      <RecommendedForYou />
       
       {/* Enhanced Buyer Banner - showing products to buy */}
       <BuyerBanner />

@@ -60,6 +60,7 @@ import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
 
 import OtherProductsPage from './pages/OtherProducts'; // Dynamic page
+import AdminCategoryEdit from './admin/AdminCategoryEdit';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -90,6 +91,7 @@ const Layout = ({ children }) => {
     '/admin/users',
     '/admin/admins',
     '/admin/edit/fees',
+    '/admin/edit/categories',
     '/admin/sellers/payouts',
     '/admin/products',
 
@@ -229,6 +231,7 @@ function App() {
             <Route path="/admin/products" element={<Admin />} />
             <Route path="/admin/sellers/payouts" element={<AdminPayoutMonitor />} />
             <Route path="/admin/edit/fees" element={<AdminEditFees />} />
+            <Route path="/admin/edit/categories" element={<AdminCategoryEdit />} />
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />

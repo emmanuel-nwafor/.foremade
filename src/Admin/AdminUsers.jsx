@@ -78,11 +78,9 @@ export default function AdminUsers() {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!userDoc.exists() || userDoc.data().role !== 'admin') {
           addAlert('Unauthorized access.', 'error');
-          // navigate('/login');
         }
       } else {
         addAlert('Please log in as an admin.', 'error');
-        // navigate('/login');
       }
     });
 
@@ -236,11 +234,24 @@ export default function AdminUsers() {
 
     setLoading(true);
     try {
+      // Delete Firestore document
       await deleteDoc(doc(db, 'users', userId));
+
+      // Call Cloud Function to delete Firebase Auth user
+      const response = await fetch('https://your-region-your-project-id.cloudfunctions.net/deleteUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete Firebase Auth user.');
+      }
+
       addAlert(`User ${email} deleted successfully! 🗑️`, 'success');
     } catch (err) {
       console.error('Error deleting user:', err);
-      addAlert('Failed to delete user.', 'error');
+      addAlert('Failed to delete user. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

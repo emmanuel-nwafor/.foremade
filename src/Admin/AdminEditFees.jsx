@@ -44,19 +44,25 @@ function useAlerts() {
 export default function AdminEditFees() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [feeConfig, setFeeConfig] = useState(null);
+  const [feeConfig, setFeeConfig] = useState({});
   const [categories, setCategories] = useState([]);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        setUser(currentUser);
+        const userDoc = await getDoc(doc(db, 'users', currentUser.email));
+        if (!userDoc.exists() || userDoc.data().role !== 'admin') {
+          addAlert('Unauthorized access.', 'error');
+          // navigate('/login');
+        } else {
+          setUser(currentUser);
+        }
       } else {
         addAlert('Please log in as an admin.', 'error');
-        navigate('/login');
+        // navigate('/login');
       }
     });
     return () => unsubscribe();
@@ -72,33 +78,34 @@ export default function AdminEditFees() {
 
         const docRef = doc(db, 'feeConfigurations', 'categoryFees');
         const docSnap = await getDoc(docRef);
-        let feeData;
+        let feeData = {};
         if (docSnap.exists()) {
           feeData = docSnap.data();
-          setFeeConfig(feeData);
         } else {
-          const defaultFees = catList.reduce((acc, cat) => ({
+          // Initialize default fees for all categories
+          feeData = catList.reduce((acc, cat) => ({
             ...acc,
             [cat]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20 },
           }), {});
-          await setDoc(docRef, defaultFees);
-          feeData = defaultFees;
-          setFeeConfig(defaultFees);
+          await setDoc(docRef, feeData);
         }
 
+        // Ensure all categories have fee configs
         const updatedFees = { ...feeData };
         catList.forEach((cat) => {
           if (!updatedFees[cat]) {
             updatedFees[cat] = { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20 };
           }
         });
+        // Remove configs for non-existent categories
         Object.keys(updatedFees).forEach((cat) => {
           if (!catList.includes(cat)) delete updatedFees[cat];
         });
-        if (Object.keys(updatedFees).length !== Object.keys(feeData).length) {
+
+        if (JSON.stringify(updatedFees) !== JSON.stringify(feeData)) {
           await setDoc(docRef, updatedFees);
-          setFeeConfig(updatedFees);
         }
+        setFeeConfig(updatedFees);
       } catch (err) {
         console.error('Error fetching data:', err);
         addAlert('Failed to load data.', 'error');
@@ -128,12 +135,12 @@ export default function AdminEditFees() {
   const validateFeeForm = () => {
     const newErrors = {};
     categories.forEach((category) => {
-      const config = feeConfig[category];
+      const config = feeConfig[category] || {};
       if (config.minPrice < 0) {
-        newErrors[`${category}_minPrice`] = 'Invalid price.';
+        newErrors[`${category}_minPrice`] = 'Minimum price cannot be negative.';
       }
       if (config.maxPrice !== Infinity && config.maxPrice < config.minPrice) {
-        newErrors[`${category}_maxPrice`] = errors;
+        newErrors[`${category}_maxPrice`] = 'Maximum price must be greater than minimum price.';
       }
       if (config.buyerProtectionRate < 0 || config.buyerProtectionRate > 1) {
         newErrors[`${category}_buyerProtectionRate`] = 'Rate must be between 0 and 100%.';
@@ -170,40 +177,40 @@ export default function AdminEditFees() {
     }
   };
 
-  if (!user || !feeConfig) {
+  if (!user || loading || Object.keys(feeConfig).length === 0) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
         <AdminSidebar />
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-start">
-        <div className="w-full max-w-4xl bg-white p-6 md:p-8 rounded-lg shadow-lg">
-          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
-            Edit Category Fees
+        <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-lg">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6 border-b pb-3">
+            Edit Category Fees 💰
           </h2>
           <form onSubmit={handleFeeSubmit} className="space-y-8">
             {categories.map((category) => (
-              <div key={category} className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-700 mb-4">{category}</h3>
+              <div key={category} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4">{category}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Minimum Price (₦)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Price (₦)</label>
                     <input
                       type="number"
-                      value={feeConfig[category].minPrice === Infinity ? '' : feeConfig[category].minPrice}
+                      value={feeConfig[category]?.minPrice === Infinity ? '' : feeConfig[category]?.minPrice || ''}
                       onChange={(e) => handleFeeChange(category, 'minPrice', e.target.value)}
                       min="0"
                       step="0.01"
                       className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors[`${category}_minPrice`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        errors[`${category}_minPrice`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       }`}
                       disabled={loading}
                     />
@@ -212,16 +219,16 @@ export default function AdminEditFees() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Maximum Price (₦)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Price (₦)</label>
                     <input
                       type="number"
-                      value={feeConfig[category].maxPrice === Infinity ? '' : feeConfig[category].maxPrice}
+                      value={feeConfig[category]?.maxPrice === Infinity ? '' : feeConfig[category]?.maxPrice || ''}
                       onChange={(e) => handleFeeChange(category, 'maxPrice', e.target.value)}
                       min="0"
                       step="0.01"
                       placeholder="Leave blank for no maximum"
                       className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors[`${category}_maxPrice`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        errors[`${category}_maxPrice`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       }`}
                       disabled={loading}
                     />
@@ -230,16 +237,16 @@ export default function AdminEditFees() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Buyer Protection Rate (%)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Buyer Protection Rate (%)</label>
                     <input
                       type="number"
-                      value={feeConfig[category].buyerProtectionRate * 100}
+                      value={(feeConfig[category]?.buyerProtectionRate * 100) || ''}
                       onChange={(e) => handleFeeChange(category, 'buyerProtectionRate', e.target.value)}
                       min="0"
                       max="100"
                       step="0.01"
                       className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors[`${category}_buyerProtectionRate`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        errors[`${category}_buyerProtectionRate`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       }`}
                       disabled={loading}
                     />
@@ -248,16 +255,16 @@ export default function AdminEditFees() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Handling Rate (%)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Handling Rate (%)</label>
                     <input
                       type="number"
-                      value={feeConfig[category].handlingRate * 100}
+                      value={(feeConfig[category]?.handlingRate * 100) || ''}
                       onChange={(e) => handleFeeChange(category, 'handlingRate', e.target.value)}
                       min="0"
                       max="100"
                       step="0.01"
                       className={`mt-1 w-full py-2 px-3 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors[`${category}_handlingRate`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        errors[`${category}_handlingRate`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       }`}
                       disabled={loading}
                     />
@@ -276,7 +283,7 @@ export default function AdminEditFees() {
                   loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {loading ? 'Saving...' : 'Save Fees'}
+                {loading ? 'Saving...' : 'Save Fees 💾'}
               </button>
             </div>
           </form>

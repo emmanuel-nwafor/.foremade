@@ -64,7 +64,7 @@ export default function AdminCategoryEdit() {
         setUser(currentUser);
       } else {
         addAlert('Please log in as an admin.', 'error');
-        navigate('/login');
+        // navigate('/login');
       }
     });
     return () => unsubscribe();

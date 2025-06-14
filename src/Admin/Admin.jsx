@@ -251,7 +251,7 @@ function Admin() {
                 onClick={() => handleCardClick(product)}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 truncate">{product.name || 'Unnamed Product'}</h2>
+                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{product.name || 'Unnamed Product'}</h2>
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
                       product.status === 'pending' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :

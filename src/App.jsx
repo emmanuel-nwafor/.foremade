@@ -36,6 +36,7 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
+import AdminNotifications from '/src/admin/AdminNotifications';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
@@ -94,6 +95,7 @@ const Layout = ({ children }) => {
     '/admin/edit/categories',
     '/admin/sellers/payouts',
     '/admin/products',
+    '/admin/notifications',
 
     '/sellers/orders',
     '/sellers/products',
@@ -232,6 +234,7 @@ function App() {
             <Route path="/admin/sellers/payouts" element={<AdminPayoutMonitor />} />
             <Route path="/admin/edit/fees" element={<AdminEditFees />} />
             <Route path="/admin/edit/categories" element={<AdminCategoryEdit />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
 
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />

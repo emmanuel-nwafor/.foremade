@@ -32,7 +32,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.country ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            placeholder="e.g., Nigeria"
+            // placeholder="e.g., Nigeria"
           />
           {errors.country && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -59,7 +59,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            placeholder="e.g., Lagos"
+            // placeholder="e.g., Lagos"
           />
           {errors.state && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -86,7 +86,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            placeholder="e.g., Ikeja"
+            // placeholder="e.g., Ikeja"
           />
           {errors.city && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -113,7 +113,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            placeholder="e.g., 123 Main Street"
+            // placeholder="e.g., 123 Main Street"
           />
           {errors.address && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">

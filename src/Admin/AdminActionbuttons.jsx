@@ -31,8 +31,7 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
         className="py-2 px-4 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm"
         title="Delete product permanently"
       >
-        {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-trash"></i>}
-        Delete
+        {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-trash text-lg"></i>}
       </button>
     </div>
   );

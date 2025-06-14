@@ -19,7 +19,8 @@ export default function SellerProductUploadPopup({ isOpen, onClose }) {
             Product Uploaded Successfully!
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm">
-            Your product is awaiting admin approval before going live.
+            Your product is awaiting admin approval before going live. 
+            Would take around 24hours.
           </p>
           <button
             onClick={onClose}

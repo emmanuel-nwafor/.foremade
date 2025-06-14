@@ -264,7 +264,7 @@ const Header = () => {
                 Login
               </Link>
               |
-              <Link to="/signup" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
+              <Link to="/register" className="m-2 hover:text-gray-300 text-xs sm:text-sm">
                 Sign Up
               </Link>
             </div>

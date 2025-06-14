@@ -5,6 +5,8 @@ import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore'
 import axios from 'axios';
 import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
+import SellerLocationForm from './SellerLocationForm';
+import SellerProductUploadPopup from './SellerProductUploadPopup';
 
 // Set global Axios timeout
 axios.defaults.timeout = 60000; // 60 seconds
@@ -77,6 +79,23 @@ export default function SellerProductUpload() {
     };
   });
 
+  // State for location data
+  const [locationData, setLocationData] = useState(() => {
+    const savedLocation = localStorage.getItem('sellerLocationForm');
+    return savedLocation ? JSON.parse(savedLocation) : {
+      country: '',
+      state: '',
+      city: '',
+      address: '',
+    };
+  });
+
+  // State for location errors
+  const [locationErrors, setLocationErrors] = useState({});
+
+  // State for popup visibility
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
   // State for media files and previews
   const [imageFiles, setImageFiles] = useState(() => {
     const savedImages = localStorage.getItem('sellerProductImages');
@@ -123,7 +142,7 @@ export default function SellerProductUpload() {
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
 
-  console.log(showSizeWarning)
+  console.log(showSizeWarning);
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -162,13 +181,16 @@ export default function SellerProductUpload() {
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
 
+  // Persist location data to localStorage
+  useEffect(() => {
+    localStorage.setItem('sellerLocationForm', JSON.stringify(locationData));
+  }, [locationData]);
+
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
   useEffect(() => {
-    // Categories
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
       const categoryList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setCategories(categoryList.map((cat) => cat.name));
-      // Reset form if selected category was deleted
       if (formData.category && !categoryList.some((cat) => cat.name === formData.category)) {
         setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '', sizes: [] }));
         addAlert('Selected category was removed by admin.', 'error');
@@ -178,14 +200,12 @@ export default function SellerProductUpload() {
       addAlert('Failed to load categories.', 'error');
     });
 
-    // Subcategories
     const unsubscribeSubcategories = onSnapshot(collection(db, 'customSubcategories'), (snapshot) => {
       const subcatData = {};
       snapshot.forEach((doc) => {
         subcatData[doc.id] = doc.data().subcategories || [];
       });
       setCustomSubcategories(subcatData);
-      // Reset subcategory if deleted
       if (formData.category && formData.subcategory && !subcatData[formData.category]?.includes(formData.subcategory)) {
         setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '', sizes: [] }));
         addAlert('Selected subcategory was removed by admin.', 'error');
@@ -195,22 +215,19 @@ export default function SellerProductUpload() {
       addAlert('Failed to load subcategories.', 'error');
     });
 
-    console.log(authenticityTags)
+    console.log(authenticityTags);
 
-    // Sub-subcategories
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
       snapshot.forEach((doc) => {
         const category = doc.id;
         const subSubcats = doc.data();
-        // Ensure subSubcategories is an object with subcategory keys
         subSubcatData[category] = {};
         Object.entries(subSubcats).forEach(([subcat, subSubcatList]) => {
           subSubcatData[category][subcat] = Array.isArray(subSubcatList) ? subSubcatList : [];
         });
       });
       setCustomSubSubcategories(subSubcatData);
-      // Reset sub-subcategory if deleted
       if (
         formData.category &&
         formData.subcategory &&
@@ -225,7 +242,6 @@ export default function SellerProductUpload() {
       addAlert('Failed to load sub-subcategories.', 'error');
     });
 
-    // Fees
     const fetchFeeConfig = async () => {
       try {
         const docRef = doc(db, 'feeConfigurations', 'categoryFees');
@@ -645,6 +661,13 @@ export default function SellerProductUpload() {
     return newErrors;
   };
 
+  const validateLocationForm = () => {
+    const newLocationErrors = {};
+    if (!locationData.country.trim()) newLocationErrors.country = 'Country is required.';
+    if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
+    return newLocationErrors;
+  };
+
   const uploadFile = async (file, isVideo = false) => {
     const uploadData = new FormData();
     uploadData.append('file', file);
@@ -684,6 +707,7 @@ export default function SellerProductUpload() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
+    setLocationErrors({});
     setLoading(true);
     if (!user) {
       addAlert('You must be logged in to add products.', 'error');
@@ -692,8 +716,10 @@ export default function SellerProductUpload() {
       return;
     }
     const newErrors = validateForm();
-    if (Object.keys(newErrors).length > 0) {
+    const newLocationErrors = validateLocationForm();
+    if (Object.keys(newErrors).length > 0 || Object.keys(newLocationErrors).length > 0) {
       setErrors(newErrors);
+      setLocationErrors(newLocationErrors);
       setLoading(false);
       addAlert('Please fix the form errors.', 'error');
       return;
@@ -731,10 +757,16 @@ export default function SellerProductUpload() {
         totalEstimatedPrice: fees.totalEstimatedPrice,
         sellerEarnings: fees.sellerEarnings,
         manualSize: formData.manualSize,
+        location: {
+          country: locationData.country,
+          state: locationData.state,
+          city: locationData.city || '',
+          address: locationData.address || '',
+        },
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
-      docRef
-      addAlert('Product uploaded successfully! 🎉', 'success');
+      console.log('Product uploaded with ID:', docRef.id);
+      setIsPopupOpen(true);
       setFormData({
         sellerName: '',
         name: '',
@@ -753,11 +785,18 @@ export default function SellerProductUpload() {
         tags: [],
         manualSize: '',
       });
+      setLocationData({
+        country: '',
+        state: '',
+        city: '',
+        address: '',
+      });
       setImageFiles([]);
       setImagePreviews([]);
       setVideoFiles([]);
       setVideoPreviews([]);
       localStorage.removeItem('sellerProductForm');
+      localStorage.removeItem('sellerLocationForm');
       localStorage.removeItem('sellerProductImages');
       localStorage.removeItem('sellerProductPreviews');
       localStorage.removeItem('sellerProductVideos');
@@ -1547,7 +1586,7 @@ export default function SellerProductUpload() {
                         disabled={loading}
                       >
                         <span
-                          className="w-4h-4 rounded-full mr-2"
+                          className="w-4 h-4 rounded-full mr-2"
                           style={{ backgroundColor: color.hex }}
                         />
                         {color.name}
@@ -1607,94 +1646,88 @@ export default function SellerProductUpload() {
                     e.target.value = '';
                   }
                 }}
-                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                className={`mt-1 w-full py-4 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                 disabled={loading}
               />
               {suggestedTags.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Suggested Tags:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedTags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleTagToggle(tag)}
-                        className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs shadow-sm"
-                        disabled={loading}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Suggested:</span>
+                  {suggestedTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleTagToggle(tag)}
+                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm"
+                      disabled={loading}
+                    >
+                      {tag}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Condition Section */}
+            {/* Condition & Product URL Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-shield text-blue-500"></i>
-                Condition
+                <i className="bx bx-check-circle text-blue-500"></i>
+                Condition & Product URL
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product Condition <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
-              </label>
-              <select
-                name="condition"
-                value={formData.condition}
-                onChange={handleChange}
-                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                  errors.condition ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                disabled={loading}
-              >
-                <option value="New">New</option>
-                <option value="Used">Used</option>
-                <option value="Refurbished">Refurbished</option>
-              </select>
-              {errors.condition && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.condition}
-                </p>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="relative group">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    Condition
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
+                  </label>
+                  <select
+                    name="condition"
+                    value={formData.condition}
+                    onChange={handleChange}
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    disabled={loading}
+                  >
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Refurbished">Refurbished</option>
+                  </select>
+                </div>
+                <div className="relative group">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    Product URL (Optional)
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (if any)"></i>
+                  </label>
+                  <input
+                    type="url"
+                    name="productUrl"
+                    value={formData.productUrl}
+                    onChange={handleChange}
+                    placeholder="e.g., https://example.com/product"
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Product URL Section */}
+            {/* Location Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-link text-blue-500"></i>
-                Product URL
+                <i className="bx bx-map text-blue-500"></i>
+                Location
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product URL (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (e.g., your website)"></i>
-              </label>
-              <input
-                type="url"
-                name="productUrl"
-                value={formData.productUrl}
-                onChange={handleChange}
-                placeholder="e.g., https://yourwebsite.com/product"
-                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                  errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+              <SellerLocationForm
+                locationData={locationData}
+                setLocationData={setLocationData}
+                errors={locationErrors}
                 disabled={loading}
               />
-              {errors.productUrl && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.productUrl}
-                </p>
-              )}
             </div>
 
             {/* Submit Button */}
             <div className="flex justify-end mt-8">
               <button
                 type="submit"
-                className={`py-2 px-6 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 shadow-md transition-all duration-200 ${
+                className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
                   loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 disabled={loading}
@@ -1713,36 +1746,52 @@ export default function SellerProductUpload() {
               </button>
             </div>
           </form>
+
+          {/* Custom Alerts */}
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+          {/* Success Popup */}
+          <SellerProductUploadPopup
+            isOpen={isPopupOpen}
+            onClose={() => setIsPopupOpen(false)}
+            onViewListings={() => {
+              setIsPopupOpen(false);
+              navigate('/seller/listings');
+            }}
+            onAddAnother={() => setIsPopupOpen(false)}
+          />
+
+          {/* Zoomed Media Modal */}
+          {zoomedMedia && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+              onClick={() => setZoomedMedia(null)}
+            >
+              <div className="relative max-w-4xl max-h-[90vh] p-4">
+                {zoomedMedia.type === 'image' ? (
+                  <img
+                    src={zoomedMedia.src}
+                    alt="Zoomed"
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={zoomedMedia.src}
+                    controls
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                  />
+                )}
+                <button
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                  onClick={() => setZoomedMedia(null)}
+                >
+                  <i className="bx bx-x text-lg"></i>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Zoomed Media Modal */}
-      {zoomedMedia && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50" onClick={() => setZoomedMedia(null)}>
-          <div className="relative max-w-4xl max-h-[90vh] p-4">
-            {zoomedMedia.type === 'image' ? (
-              <img src={zoomedMedia.src} alt="Zoomed" className="max-w-full max-h-[80vh] rounded-lg shadow-lg" />
-            ) : (
-              <video
-                src={zoomedMedia.src}
-                controls
-                className="max-w-full max-h-[80vh] rounded-lg shadow-lg"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => setZoomedMedia(null)}
-              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-sm"
-              title="Close"
-            >
-              <i className="bx bx-x text-lg"></i>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Alerts */}
-      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import {
   signInWithEmailAndPassword,
@@ -15,20 +16,13 @@ import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
-    case 'auth/invalid-credential':
-      return 'Invalid email or password.';
-    case 'auth/wrong-password':
-      return 'Incorrect password. Please try again.';
-    case 'auth/user-not-found':
-      return 'No account found with this email. Contact your admin.';
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.';
-    case 'auth/user-disabled':
-      return 'This account has been disabled. Contact your admin.';
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Please try again later.';
-    default:
-      return 'An unexpected error occurred. Please try again.';
+    case 'auth/invalid-credential': return 'Invalid email or password.';
+    case 'auth/wrong-password': return 'Incorrect password. Please try again.';
+    case 'auth/user-not-found': return 'No account found with this email. Contact your admin.';
+    case 'auth/invalid-email': return 'Please enter a valid email address.';
+    case 'auth/user-disabled': return 'This account has been disabled. Contact your admin.';
+    case 'auth/too-many-requests': return 'Too many attempts. Please try again later.';
+    default: return 'An unexpected error occurred. Please try again.';
   }
 };
 
@@ -43,11 +37,21 @@ export default function Login() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
+  const { state } = useLocation();
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
+
+  useEffect(() => {
+    // Auto-fill email from Google sign-in
+    const socialEmail = localStorage.getItem('socialEmail') || state?.email || '';
+    if (socialEmail) {
+      setEmail(socialEmail);
+      setPasswordError('Use Google Sign-In for this account.');
+    }
+  }, [state]);
 
   useEffect(() => {
     getRedirectResult(auth)
@@ -71,6 +75,7 @@ export default function Login() {
       if (userSnapshot.exists()) {
         const userData = userSnapshot.data();
         localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.removeItem('socialEmail'); // Cleanup
         const firstName = userData.name.split(' ')[0];
         setSuccessMessage(`Welcome back, ${firstName}!`);
         setTimeout(() => {
@@ -106,7 +111,7 @@ export default function Login() {
       setEmailError('Please enter a valid email address.');
       hasError = true;
     }
-    if (!trimmedPassword) {
+    if (!trimmedPassword && !passwordError.includes('Google Sign-In')) {
       setPasswordError('Password is required.');
       hasError = true;
     }
@@ -126,6 +131,7 @@ export default function Login() {
       if (userSnapshot.exists()) {
         const userData = userSnapshot.data();
         localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.removeItem('socialEmail'); // Cleanup
         const firstName = userData.name.split(' ')[0];
         setSuccessMessage(`Welcome, ${firstName}!`);
         setTimeout(() => {
@@ -187,13 +193,12 @@ export default function Login() {
           style={{ backgroundImage: "url('https://images.pexels.com/photos/7621356/pexels-photo-7621356.jpeg?auto=compress&cs=tinysrgb&w=600')" }}
         >
           <div className="w-full h-full bg-black bg-opacity-40 flex flex-col justify-center items-center text-white p-8">
-            <h1 className="text-3xl font-bold mb-4 flex-col items-center">
-              Welcome to <img src={logo} alt="Logo" className="h-20" />
+            <h1 className="text-3xl font-bold mb-4 flex items-center">
+              Welcome to <img src={logo} alt="Logo" className="h-20 ml-2" />
             </h1>
             <p className="text-lg text-center">Where quality meets NEEDS!</p>
           </div>
         </div>
-
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Sign In</h2>
           <p className="text-gray-600 mb-6">
@@ -202,7 +207,6 @@ export default function Login() {
               Sign Up
             </Link>
           </p>
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <input
@@ -218,7 +222,7 @@ export default function Login() {
               />
               <label
                 htmlFor="email"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${
                   email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
@@ -226,7 +230,6 @@ export default function Login() {
               </label>
               {emailError && <p className="text-red-600 text-xs mt-1">{emailError}</p>}
             </div>
-
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -238,11 +241,12 @@ export default function Login() {
                 }`}
                 autoComplete="current-password"
                 required
+                disabled={passwordError.includes('Google Sign-In')}
               />
               <label
                 htmlFor="password"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${
+                  password || passwordError.includes('Google Sign-In') ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
                 }`}
               >
                 Password
@@ -250,29 +254,26 @@ export default function Login() {
               <span
                 className="absolute right-3 top-3 text-gray-500 cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}
+                style={{ display: passwordError.includes('Google Sign-In') ? 'none' : 'block' }}
               >
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
               {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             </div>
-
             {successMessage && <p className="text-green-600 text-xs mt-1">{successMessage}</p>}
-
             <button
               type="submit"
               className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
-              disabled={loadingEmail}
+              disabled={loadingEmail || passwordError.includes('Google Sign-In')}
             >
               {loadingEmail ? 'Logging in...' : 'Sign In'}
             </button>
           </form>
-
           <p className="text-gray-600 mt-2">
             <Link to="/recover-password" className="hover:underline hover:text-blue-700">
-              Forgot Password ?
+              Forgot Password?
             </Link>
           </p>
-
           <div className="mt-6 text-center">
             <p className="text-gray-600 mb-4">Or continue with</p>
             <div className="flex justify-center space-x-4">

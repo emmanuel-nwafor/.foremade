@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { auth, db } from '../firebase';
@@ -8,29 +9,21 @@ import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
-    case 'auth/network-request-failed':
-      return 'Check your network connection and try again.';
-    case 'auth/email-already-in-use':
-      return 'This email is already in use. Please log in instead.';
-    case 'auth/weak-password':
-      return 'Password is too weak.';
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.';
-    case 'auth/popup-closed-by-user':
-      return 'Sign-in was cancelled. Please try again.';
-    case 'auth/cancelled-popup-request':
-      return 'Sign-in popup was closed. Please try again.';
-    case 'auth/account-exists-with-different-credential':
-      return 'An account already exists with this email. Try logging in.';
-    default:
-      return 'An unexpected error occurred. Please try again later.';
+    case 'auth/network-request-failed': return 'Check your network.';
+    case 'auth/email-already-in-use': return 'Email already in use. Log in instead.';
+    case 'auth/weak-password': return 'Password too weak.';
+    case 'auth/invalid-email': return 'Invalid email.';
+    case 'auth/popup-closed-by-user': return 'Sign-in cancelled.';
+    case 'auth/cancelled-popup-request': return 'Sign-in popup closed.';
+    case 'auth/account-exists-with-different-credential': return 'Account exists. Try logging in.';
+    default: return 'Unexpected error.';
   }
 };
 
 const generateUsername = (firstName, lastName) => {
-  const nameParts = [firstName, lastName].filter(part => part && part.trim());
-  const firstPart = nameParts[0] ? nameParts[0].slice(0, 4).toLowerCase() : 'user';
-  const secondPart = nameParts[1] ? nameParts[1].slice(0, 3).toLowerCase() : '';
+  const nameParts = [firstName, lastName].filter(part => part?.trim());
+  const firstPart = nameParts[0]?.slice(0, 4).toLowerCase() || 'user';
+  const secondPart = nameParts[1]?.slice(0, 3).toLowerCase() || '';
   const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
   const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
   return usernameBase + randomNum;
@@ -56,50 +49,68 @@ export default function Register() {
   const [recaptchaToken, setRecaptchaToken] = useState(null);
   const navigate = useNavigate();
 
-  // Load reCAPTCHA script
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`;
-    script.async = true;
-    document.body.appendChild(script);
+    if (!import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
+      console.error('Missing VITE_RECAPTCHA_SITE_KEY');
+      setEmailError('reCAPTCHA config error');
+      return;
+    }
 
-    script.onload = () => {
-      window.grecaptcha.ready(() => {
-        window.grecaptcha
-          .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'signup' })
-          .then((token) => setRecaptchaToken(token))
-          .catch((err) => setEmailError('reCAPTCHA failed to load. Try again.'));
-          console.log(err)
-      });
+    const loadRecaptcha = async (attempt = 1) => {
+      const scriptId = 'recaptcha-script';
+      if (document.getElementById(scriptId)) return;
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`;
+      script.async = true;
+      script.onerror = () => {
+        console.error('reCAPTCHA script failed');
+        if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
+        else setEmailError('Failed to load reCAPTCHA. Check network.');
+      };
+      document.body.appendChild(script);
+
+      script.onload = () => {
+        console.log('reCAPTCHA script loaded');
+        window.grecaptcha.ready(() => {
+          console.log('reCAPTCHA ready');
+          window.grecaptcha.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'signup' })
+            .then(token => {
+              console.log('reCAPTCHA token:', token);
+              setRecaptchaToken(token);
+            })
+            .catch(err => {
+              console.error('reCAPTCHA execute error:', err);
+              if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
+              else setEmailError('reCAPTCHA token failed. Try again.');
+            });
+        });
+      };
+
+      return () => {
+        const existingScript = document.getElementById(scriptId);
+        if (existingScript) document.body.removeChild(existingScript);
+      };
     };
 
-    return () => {
-      document.body.removeChild(script);
-    };
+    loadRecaptcha();
   }, []);
 
-  // Handle social login redirect result
   useEffect(() => {
     getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          const user = result.user;
-          handleSocialSignIn(user);
-        }
+      .then(result => {
+        if (result) handleSocialSignIn(result.user);
       })
-      .catch((err) => {
+      .catch(err => {
         setEmailError(getFriendlyErrorMessage(err));
         setLoadingGoogle(false);
         setLoadingFacebook(false);
       });
   }, []);
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const validatePassword = (password) => {
+  const validatePassword = password => {
     const hasLength = password.length >= 6;
     const hasLetter = /[a-zA-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
@@ -107,21 +118,20 @@ export default function Register() {
     return {
       isValid: hasLength && hasLetter && hasNumber && hasSpecialChar,
       errors: [
-        !hasLength && 'Password must be at least 6 characters.',
-        !hasLetter && 'Password must include at least one letter.',
-        !hasNumber && 'Password must include at least one number.',
-        !hasSpecialChar && 'Password must include at least one special character (e.g., _, @, !, +, =).',
+        !hasLength && 'Password needs 6+ chars.',
+        !hasLetter && 'Password needs a letter.',
+        !hasNumber && 'Password needs a number.',
+        !hasSpecialChar && 'Password needs a special char (e.g., _, @, !).',
       ].filter(Boolean),
     };
   };
 
-  const validatePhoneNumber = (phoneNumber) => {
-    if (!phoneNumber.trim()) return true; // Empty is valid since it's optional
-    const phoneRegex = /^\+\d{7,15}$/;
-    return phoneRegex.test(phoneNumber);
+  const validatePhoneNumber = phoneNumber => {
+    if (!phoneNumber.trim()) return true;
+    return /^\+\d{7,15}$/.test(phoneNumber);
   };
 
-  const handleSocialSignIn = async (user) => {
+  const handleSocialSignIn = async user => {
     try {
       const fullName = user.displayName || user.email.split('@')[0];
       const [firstNameFromSocial, ...rest] = fullName.split(' ');
@@ -133,11 +143,10 @@ export default function Register() {
 
       let userData;
       if (!userSnapshot.exists()) {
-        // New user: Create Firestore document
         userData = {
           email: user.email,
           name: `${firstNameFromSocial} ${lastNameFromSocial}`,
-          username: username,
+          username,
           address: '',
           phoneNumber: '',
           createdAt: new Date().toISOString(),
@@ -146,24 +155,22 @@ export default function Register() {
         };
         await setDoc(userDocRef, userData);
         await updateProfile(user, { displayName: username });
-
         if (!user.emailVerified) {
           await sendEmailVerification(user);
-          console.log('Verification email sent to:', user.email);
+          console.log('Verification email sent:', user.email);
         }
       } else {
-        // Existing user: Retrieve data
         userData = userSnapshot.data();
       }
 
       localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('socialEmail', user.email);
       const firstName = firstNameFromSocial || userData.name.split(' ')[0];
-      setSuccessMessage(`Welcome, ${firstName}! ${!user.emailVerified && !userSnapshot.exists() ? 'A verification email has been sent. Please verify before logging in.' : 'You are now signed in!'}`);
-      
+      setSuccessMessage(`Welcome, ${firstName}! Please log in with Google.`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate('/profile');
+        navigate('/login', { state: { email: user.email } });
       }, 3000);
     } catch (err) {
       console.error('Social sign-in error:', err);
@@ -173,7 +180,7 @@ export default function Register() {
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = async e => {
     e.preventDefault();
     setFirstNameError('');
     setLastNameError('');
@@ -184,26 +191,26 @@ export default function Register() {
     setLoadingEmail(true);
 
     if (signupAttempts >= 9) {
-      setEmailError('Too many signup attempts. Try again later.');
+      setEmailError('Too many attempts. Try later.');
       setLoadingEmail(false);
       return;
     }
 
     let hasError = false;
     if (!firstName.trim()) {
-      setFirstNameError('First name is required.');
+      setFirstNameError('First name required.');
       hasError = true;
     }
     if (!lastName.trim()) {
-      setLastNameError('Last name is required.');
+      setLastNameError('Last name required.');
       hasError = true;
     }
     if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address.');
+      setEmailError('Invalid email.');
       hasError = true;
     }
     if (!password) {
-      setPasswordError('Password is required.');
+      setPasswordError('Password required.');
       hasError = true;
     } else {
       const passwordValidation = validatePassword(password);
@@ -213,11 +220,11 @@ export default function Register() {
       }
     }
     if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
-      setPhoneNumberError('Please enter a valid phone number (e.g., +1234567890).');
+      setPhoneNumberError('Invalid phone (e.g., +1234567890).');
       hasError = true;
     }
     if (!recaptchaToken) {
-      setEmailError('reCAPTCHA verification failed. Please try again.');
+      setEmailError('reCAPTCHA failed. Try again.');
       hasError = true;
     }
 
@@ -228,18 +235,21 @@ export default function Register() {
     }
 
     try {
-      // Verify reCAPTCHA token
+      console.log('Sending reCAPTCHA token:', recaptchaToken);
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verify-recaptcha`, {
         token: recaptchaToken,
+      }, {
+        headers: { 'Content-Type': 'application/json' },
       });
+      console.log('reCAPTCHA response:', response.data);
+
       if (!response.data.success || response.data.score < 0.5) {
-        setEmailError('reCAPTCHA verification failed. Are you a bot?');
+        setEmailError('reCAPTCHA failed. Are you a bot?');
         setLoadingEmail(false);
         setSignupAttempts(prev => prev + 1);
         return;
       }
 
-      // Proceed with email signup
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -248,12 +258,12 @@ export default function Register() {
       await updateProfile(user, { displayName: username });
 
       await sendEmailVerification(user);
-      console.log('Verification email sent to:', user.email);
+      console.log('Verification email sent:', user.email);
 
       const userData = {
         email: user.email,
         name: `${firstName} ${lastName}`,
-        username: username,
+        username,
         address: '',
         phoneNumber: phoneNumber.trim() || '',
         createdAt: new Date().toISOString(),
@@ -263,7 +273,7 @@ export default function Register() {
       await setDoc(doc(db, 'users', user.uid), userData);
       localStorage.setItem('userData', JSON.stringify(userData));
 
-      setSuccessMessage(`Welcome, ${firstName}! Registration successful! A verification email has been sent to ${email}. Please verify your email before logging in.`);
+      setSuccessMessage(`Welcome, ${firstName}! Verify your email at ${email}.`);
       setSignupAttempts(0);
       setTimeout(() => {
         setLoadingEmail(false);
@@ -272,12 +282,10 @@ export default function Register() {
     } catch (err) {
       console.error('Registration error:', err);
       setLoadingEmail(false);
-      const errorMessage = getFriendlyErrorMessage(err);
-      if (errorMessage.includes('email')) {
-        setEmailError(errorMessage);
-      } else if (errorMessage.includes('password')) {
-        setPasswordError(errorMessage);
-      } else {
+      const errorMessage = err.response?.data?.error || getFriendlyErrorMessage(err);
+      if (errorMessage.includes('email')) setEmailError(errorMessage);
+      else if (errorMessage.includes('password')) setPasswordError(errorMessage);
+      else {
         setFirstNameError(errorMessage);
         setLastNameError(errorMessage);
       }
@@ -293,7 +301,6 @@ export default function Register() {
     setPhoneNumberError('');
     setSuccessMessage('');
     setLoadingGoogle(true);
-
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
@@ -312,7 +319,6 @@ export default function Register() {
     setPhoneNumberError('');
     setSuccessMessage('');
     setLoadingFacebook(true);
-
     const provider = new FacebookAuthProvider();
     provider.setCustomParameters({ display: 'popup' });
     try {
@@ -328,22 +334,17 @@ export default function Register() {
       <div className="w-full h-screen flex">
         <div className="hidden md:block md:w-1/2 h-full bg-cover bg-center" style={{ backgroundImage: "url('https://i.pinimg.com/736x/f2/8c/a4/f28ca4118a46e68b6871946e65ab5665.jpg')" }}>
           <div className="w-full h-full bg-black bg-opacity-40 flex flex-col justify-center items-center text-white p-8">
-            <h1 className="text-3xl font-bold mb-4 flex-col items-center">
-              Join <img src={logo} alt="Formade logo" className="h-20" />
+            <h1 className="text-3xl font-bold mb-4 flex items-center">
+              Join <img src={logo} alt="Formade logo" className="h-20 ml-2" />
             </h1>
-            <p className="text-lg text-center">Where quality meet NEEDS!</p>
+            <p className="text-lg text-center">Where quality meets NEEDS!</p>
           </div>
         </div>
-
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Sign Up</h2>
           <p className="text-gray-600 mb-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Sign In
-            </Link>
+            Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Sign In</Link>
           </p>
-
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="flex space-x-4 mb-4">
               <div className="relative w-1/2">
@@ -351,118 +352,93 @@ export default function Register() {
                   type="text"
                   id="firstName"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                    firstNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                  }`}
+                  onChange={e => setFirstName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${firstNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                   autoComplete="given-name"
                   required
                 />
                 <label
                   htmlFor="firstName"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                    firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                  }`}
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
                 >
                   First Name
                 </label>
-                {firstNameError && <p className="text-red-600 text-[10px] mt-1">{firstNameError}</p>}
+                {firstNameError && <p className="text-red-600 text-xs mt-1">{firstNameError}</p>}
               </div>
               <div className="relative w-1/2">
                 <input
                   type="text"
                   id="lastName"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                    lastNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                  }`}
+                  onChange={e => setLastName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${lastNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                   autoComplete="family-name"
                   required
                 />
                 <label
                   htmlFor="lastName"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                    lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                  }`}
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
                 >
                   Last Name
                 </label>
-                {lastNameError && <p className="text-red-600 text-[10px] mt-1">{lastNameError}</p>}
+                {lastNameError && <p className="text-red-600 text-xs mt-1">{lastNameError}</p>}
               </div>
             </div>
-
             <div className="relative">
               <input
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                  emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                }`}
+                onChange={e => setEmail(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="email"
                 required
               />
               <label
                 htmlFor="email"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                }`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Email
               </label>
               {emailError && (
-                <p className="text-red-600 text-[10px] mt-1">
+                <p className="text-red-600 text-xs mt-1">
                   {emailError}{' '}
                   {emailError.includes('already in use') && (
-                    <Link to="/login" className="text-blue-600 hover:underline">
-                      Click here to login
-                    </Link>
+                    <Link to="/login" className="text-blue-600 hover:underline">Click here to login</Link>
                   )}
                 </p>
               )}
             </div>
-
             <div className="relative">
               <input
                 type="tel"
                 id="phoneNumber"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                  phoneNumberError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                }`}
+                onChange={e => setPhoneNumber(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${phoneNumberError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="tel"
               />
               <label
                 htmlFor="phoneNumber"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  phoneNumber ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                }`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${phoneNumber ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Phone Number
               </label>
-              {phoneNumberError && <p className="text-red-600 text-[10px] mt-1">{phoneNumberError}</p>}
+              {phoneNumberError && <p className="text-red-600 text-xs mt-1">{phoneNumberError}</p>}
             </div>
-
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${
-                  passwordError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'
-                }`}
+                onChange={e => setPassword(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${passwordError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="new-password"
                 required
               />
               <label
                 htmlFor="password"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-blue-500 peer-focus:bg-white peer-focus:px-1 ${
-                  password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''
-                }`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Password
               </label>
@@ -472,11 +448,9 @@ export default function Register() {
               >
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
-              {passwordError && <p className="text-red-600 text-[10px] mt-1">{passwordError}</p>}
+              {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             </div>
-
-            {successMessage && <p className="text-green-600 text-[10px] mb-4">{successMessage}</p>}
-
+            {successMessage && <p className="text-green-600 text-xs mb-4">{successMessage}</p>}
             <button
               type="submit"
               className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
@@ -485,13 +459,12 @@ export default function Register() {
               {loadingEmail ? 'Registering...' : 'Sign Up'}
             </button>
           </form>
-
           <div className="mt-6 text-center">
             <p className="text-gray-600 mb-4">Or continue with</p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleGoogleSignIn}
-                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                className="bg-white border border-gray-300 p-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
                 disabled={loadingGoogle}
               >
                 <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
@@ -499,7 +472,7 @@ export default function Register() {
               </button>
               <button
                 onClick={handleFacebookSignIn}
-                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
+                className="bg-white border border-gray-300 p-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
                 disabled={loadingFacebook}
               >
                 <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
@@ -508,13 +481,9 @@ export default function Register() {
             </div>
             <p className="text-gray-500 text-xs mt-4">
               This site is protected by reCAPTCHA and the Google{' '}
-              <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">
-                Privacy Policy
-              </a>{' '}
+              <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>{' '}
               and{' '}
-              <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">
-                Terms of Service
-              </a>{' '}
+              <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">Terms of Service</a>{' '}
               apply.
             </p>
           </div>

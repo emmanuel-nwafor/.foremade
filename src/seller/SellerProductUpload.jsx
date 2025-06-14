@@ -195,11 +195,19 @@ export default function SellerProductUpload() {
       addAlert('Failed to load subcategories.', 'error');
     });
 
+    console.log(authenticityTags)
+
     // Sub-subcategories
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
       snapshot.forEach((doc) => {
-        subSubcatData[doc.id] = doc.data().subSubcategories || {};
+        const category = doc.id;
+        const subSubcats = doc.data();
+        // Ensure subSubcategories is an object with subcategory keys
+        subSubcatData[category] = {};
+        Object.entries(subSubcats).forEach(([subcat, subSubcatList]) => {
+          subSubcatData[category][subcat] = Array.isArray(subSubcatList) ? subSubcatList : [];
+        });
       });
       setCustomSubSubcategories(subSubcatData);
       // Reset sub-subcategory if deleted
@@ -1611,29 +1619,7 @@ export default function SellerProductUpload() {
                         key={tag}
                         type="button"
                         onClick={() => handleTagToggle(tag)}
-                        className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs shadow-sm transition-colors"
-                        disabled={loading}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {authenticityTags.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Authenticity Tags:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {authenticityTags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleTagToggle(tag)}
-                        className={`px-2 py-1 rounded-lg border text-xs transition-colors shadow-sm ${
-                          formData.tags.includes(tag)
-                            ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs shadow-sm"
                         disabled={loading}
                       >
                         {tag}
@@ -1647,7 +1633,7 @@ export default function SellerProductUpload() {
             {/* Condition Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-square text-blue-500"></i>
+                <i className="bx bx-check-shield text-blue-500"></i>
                 Condition
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -1683,14 +1669,14 @@ export default function SellerProductUpload() {
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product URL (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Link to external product page"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (e.g., your website)"></i>
               </label>
               <input
                 type="url"
                 name="productUrl"
                 value={formData.productUrl}
                 onChange={handleChange}
-                placeholder="e.g., https://example.com/product"
+                placeholder="e.g., https://yourwebsite.com/product"
                 className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                   errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                 } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
@@ -1704,65 +1690,11 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Submit & Reset Buttons */}
-            <div className="flex justify-end gap-4 mt-8">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({
-                    sellerName: formData.sellerName,
-                    name: '',
-                    description: '',
-                    price: '',
-                    stock: '',
-                    category: '',
-                    subcategory: '',
-                    subSubcategory: '',
-                    colors: [],
-                    sizes: [],
-                    condition: 'New',
-                    productUrl: '',
-                    images: [],
-                    videos: [],
-                    tags: [],
-                    manualSize: '',
-                  });
-                  setImageFiles([]);
-                  setImagePreviews([]);
-                  setVideoFiles([]);
-                  setVideoPreviews([]);
-                  setCustomColor('');
-                  setColorSuggestions([]);
-                  setShowColorDropdown(false);
-                  setShowCategoryDropdown(false);
-                  setShowSubcategoryDropdown(false);
-                  setShowSubSubcategoryDropdown(false);
-                  setFees({
-                    productSize: '',
-                    buyerProtectionFee: 0,
-                    handlingFee: 0,
-                    totalEstimatedPrice: 0,
-                    sellerEarnings: 0,
-                  });
-                  localStorage.removeItem('sellerProductForm');
-                  localStorage.removeItem('sellerProductImages');
-                  localStorage.removeItem('sellerProductPreviews');
-                  localStorage.removeItem('sellerProductVideos');
-                  localStorage.removeItem('sellerProductVideoPreviews');
-                  if (fileInputRef.current) fileInputRef.current.value = '';
-                  if (singleImageInputRef.current) singleImageInputRef.current.value = '';
-                  if (videoInputRef.current) videoInputRef.current.value = '';
-                  addAlert('Form reset successfully.', 'success');
-                }}
-                className="px-6 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 shadow-sm transition-colors flex items-center gap-2"
-                disabled={loading}
-              >
-                <i className="bx bx-reset"></i>
-                Reset
-              </button>
+            {/* Submit Button */}
+            <div className="flex justify-end mt-8">
               <button
                 type="submit"
-                className={`px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-colors flex items-center gap-2 ${
+                className={`py-2 px-6 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 shadow-md transition-all duration-200 ${
                   loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 disabled={loading}
@@ -1786,32 +1718,30 @@ export default function SellerProductUpload() {
 
       {/* Zoomed Media Modal */}
       {zoomedMedia && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in">
-          <div className="relative max-w-4xl w-full">
-            <button
-              onClick={() => setZoomedMedia(null)}
-              className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-sm"
-              title="Close"
-            >
-              <i className="bx bx-x text-xl"></i>
-            </button>
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50" onClick={() => setZoomedMedia(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] p-4">
             {zoomedMedia.type === 'image' ? (
-              <img
-                src={zoomedMedia.src}
-                alt="Zoomed preview"
-                className="w-full h-auto max-h-[80vh] object-contain rounded-lg shadow-md"
-              />
+              <img src={zoomedMedia.src} alt="Zoomed" className="max-w-full max-h-[80vh] rounded-lg shadow-lg" />
             ) : (
               <video
                 src={zoomedMedia.src}
                 controls
-                className="w-full h-auto max-h-[80vh] object-contain rounded-lg shadow-md"
+                className="max-w-full max-h-[80vh] rounded-lg shadow-lg"
               />
             )}
+            <button
+              type="button"
+              onClick={() => setZoomedMedia(null)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-sm"
+              title="Close"
+            >
+              <i className="bx bx-x text-lg"></i>
+            </button>
           </div>
         </div>
       )}
 
+      {/* Custom Alerts */}
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );

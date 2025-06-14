@@ -3,6 +3,7 @@ import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedire
 import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
@@ -20,7 +21,7 @@ const getFriendlyErrorMessage = (error) => {
     case 'auth/cancelled-popup-request':
       return 'Sign-in popup was closed. Please try again.';
     case 'auth/account-exists-with-different-credential':
-      return 'An account already exists with this email.';
+      return 'An account already exists with this email. Try logging in.';
     default:
       return 'An unexpected error occurred. Please try again later.';
   }
@@ -52,8 +53,32 @@ export default function Register() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const [signupAttempts, setSignupAttempts] = useState(0);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const navigate = useNavigate();
 
+  // Load reCAPTCHA script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`;
+    script.async = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      window.grecaptcha.ready(() => {
+        window.grecaptcha
+          .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'signup' })
+          .then((token) => setRecaptchaToken(token))
+          .catch((err) => setEmailError('reCAPTCHA failed to load. Try again.'));
+          console.log(err)
+      });
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  // Handle social login redirect result
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
@@ -96,28 +121,19 @@ export default function Register() {
     return phoneRegex.test(phoneNumber);
   };
 
-  // const  handleNavigation = () => {
-  //   navigate('/login', { replace: true });
-  // };
-  
-
   const handleSocialSignIn = async (user) => {
     try {
       const fullName = user.displayName || user.email.split('@')[0];
       const [firstNameFromSocial, ...rest] = fullName.split(' ');
       const lastNameFromSocial = rest.join(' ');
       const username = generateUsername(firstNameFromSocial, lastNameFromSocial);
-      await updateProfile(user, { displayName: username });
 
-      if (!user.emailVerified) {
-        await sendEmailVerification(user);
-        console.log('Verification email sent to:', user.email);
-      }
+      const userDocRef = doc(db, 'users', user.uid);
+      const userSnapshot = await getDoc(userDocRef);
 
-      const userDoc = doc(db, 'users', user.uid);
-      const userSnapshot = await getDoc(userDoc);
       let userData;
       if (!userSnapshot.exists()) {
+        // New user: Create Firestore document
         userData = {
           email: user.email,
           name: `${firstNameFromSocial} ${lastNameFromSocial}`,
@@ -128,21 +144,29 @@ export default function Register() {
           uid: user.uid,
           profileImage: user.photoURL || null,
         };
-        await setDoc(userDoc, userData);
-        localStorage.setItem('userData', JSON.stringify(userData));
+        await setDoc(userDocRef, userData);
+        await updateProfile(user, { displayName: username });
+
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+          console.log('Verification email sent to:', user.email);
+        }
       } else {
+        // Existing user: Retrieve data
         userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
       }
 
+      localStorage.setItem('userData', JSON.stringify(userData));
       const firstName = firstNameFromSocial || userData.name.split(' ')[0];
-      setSuccessMessage(`Welcome, ${firstName}! ${!user.emailVerified ? 'A verification email has been sent. Please verify before logging in.' : 'You are now signed up!'}`);
+      setSuccessMessage(`Welcome, ${firstName}! ${!user.emailVerified && !userSnapshot.exists() ? 'A verification email has been sent. Please verify before logging in.' : 'You are now signed in!'}`);
+      
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
         navigate('/profile');
       }, 3000);
     } catch (err) {
+      console.error('Social sign-in error:', err);
       setEmailError(getFriendlyErrorMessage(err));
       setLoadingGoogle(false);
       setLoadingFacebook(false);
@@ -192,6 +216,10 @@ export default function Register() {
       setPhoneNumberError('Please enter a valid phone number (e.g., +1234567890).');
       hasError = true;
     }
+    if (!recaptchaToken) {
+      setEmailError('reCAPTCHA verification failed. Please try again.');
+      hasError = true;
+    }
 
     if (hasError) {
       setLoadingEmail(false);
@@ -200,6 +228,18 @@ export default function Register() {
     }
 
     try {
+      // Verify reCAPTCHA token
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verify-recaptcha`, {
+        token: recaptchaToken,
+      });
+      if (!response.data.success || response.data.score < 0.5) {
+        setEmailError('reCAPTCHA verification failed. Are you a bot?');
+        setLoadingEmail(false);
+        setSignupAttempts(prev => prev + 1);
+        return;
+      }
+
+      // Proceed with email signup
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -466,6 +506,17 @@ export default function Register() {
                 {loadingFacebook ? 'Processing...' : 'Facebook'}
               </button>
             </div>
+            <p className="text-gray-500 text-xs mt-4">
+              This site is protected by reCAPTCHA and the Google{' '}
+              <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">
+                Privacy Policy
+              </a>{' '}
+              and{' '}
+              <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">
+                Terms of Service
+              </a>{' '}
+              apply.
+            </p>
           </div>
         </div>
       </div>

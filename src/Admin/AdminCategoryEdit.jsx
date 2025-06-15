@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, collection, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '/src/firebase';
+import { doc, getDoc, setDoc, collection, deleteDoc, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import 'boxicons/css/boxicons.min.css';
 
@@ -45,8 +45,7 @@ function useAlerts() {
 
 export default function AdminCategoryEdit() {
   const { alerts, addAlert, removeAlert } = useAlerts();
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState({});
   const [subSubcategories, setSubSubcategories] = useState({});
@@ -65,62 +64,69 @@ export default function AdminCategoryEdit() {
   const [expandedCategories, setExpandedCategories] = useState({});
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        addAlert('Please log in to access this page.', 'error');
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+    let isMounted = true;
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
+    const fetchData = async () => {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Data fetch timed out')), 20000) // 20s timeout
+      );
+
       try {
         setLoading(true);
-        const catList = snapshot.docs.map((doc) => doc.id).sort();
-        setCategories(catList);
 
-        const fetchSubcategories = async () => {
-          const subcatData = {};
-          const subSubcatData = {};
-          for (const cat of catList) {
-            const subcatRef = doc(db, 'customSubcategories', cat);
-            const subcatSnap = await getDoc(subcatRef);
-            subcatData[cat] = subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [];
+        // Fetch categories
+        const catSnapshot = await Promise.race([
+          getDocs(collection(db, 'categories')),
+          timeoutPromise,
+        ]);
+        const catList = catSnapshot.docs.map((doc) => doc.id).sort();
+        if (isMounted) setCategories(catList);
 
-            const subSubcatRef = doc(db, 'customSubSubcategories', cat);
-            const subSubcatSnap = await getDoc(subSubcatRef);
-            subSubcatData[cat] = subSubcatSnap.exists() ? subSubcatSnap.data() || {} : {};
-          }
-          console.log('Subcategories fetched:', subcatData);
-          console.log('Sub-subcategories fetched:', subSubcatData);
+        // Fetch subcategories
+        const subcatData = {};
+        const subSubcatData = {};
+        for (const cat of catList) {
+          const subcatRef = doc(db, 'customSubcategories', cat);
+          const subcatSnap = await Promise.race([getDoc(subcatRef), timeoutPromise]);
+          subcatData[cat] = subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [];
+
+          const subSubcatRef = doc(db, 'customSubSubcategories', cat);
+          const subSubcatSnap = await Promise.race([getDoc(subSubcatRef), timeoutPromise]);
+          subSubcatData[cat] = subSubcatSnap.exists() ? subSubcatSnap.data() || {} : {};
+        }
+        console.log('Subcategories fetched:', subcatData);
+        console.log('Sub-subcategories fetched:', subSubcatData);
+        if (isMounted) {
           setSubcategories(subcatData);
           setSubSubcategories(subSubcatData);
-        };
+        }
 
-        const fetchFees = async () => {
-          const docRef = doc(db, 'feeConfigurations', 'categoryFees');
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setFeeConfig(docSnap.data());
-          } else {
-            const defaultFees = {};
-            await setDoc(docRef, defaultFees);
-            setFeeConfig(defaultFees);
-          }
-        };
-
-        Promise.all([fetchSubcategories(), fetchFees()]);
+        // Fetch fees
+        const docRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const docSnap = await Promise.race([getDoc(docRef), timeoutPromise]);
+        if (docSnap.exists()) {
+          if (isMounted) setFeeConfig(docSnap.data());
+        } else {
+          const defaultFees = {};
+          await setDoc(docRef, defaultFees);
+          if (isMounted) setFeeConfig(defaultFees);
+        }
       } catch (err) {
-        console.error('Error fetching data:', err);
-        addAlert('Failed to load data.', 'error');
+        if (isMounted) {
+          console.error('Error fetching data:', err);
+          addAlert('Failed to load data. Please try again.', 'error');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
-    });
-    return () => unsubscribe();
-  }, [user]);
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) {
@@ -360,7 +366,7 @@ export default function AdminCategoryEdit() {
     setErrors({});
   };
 
-  if (!user || !feeConfig) {
+  if (loading || !feeConfig) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />

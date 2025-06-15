@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auth, db } from '/src/firebase';
+import { db } from '/src/firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import 'boxicons/css/boxicons.min.css';
@@ -46,21 +46,10 @@ function useAlerts() {
 export default function AdminEditFees() {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [feeConfig, setFeeConfig] = useState({});
   const [categories, setCategories] = useState([]);
   const [errors, setErrors] = useState({});
   const [expandedCategories, setExpandedCategories] = useState({});
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        addAlert('Please log in to access this page.', 'error');
-      }
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,8 +93,8 @@ export default function AdminEditFees() {
         console.log('Loading set to false');
       }
     };
-    if (user) fetchData();
-  }, [user]);
+    fetchData();
+  }, []);
 
   const handleFeeChange = (category, field, value) => {
     setFeeConfig((prev) => ({
@@ -218,9 +207,7 @@ export default function AdminEditFees() {
             <i className="bx bx-money text-blue-500"></i>
             Edit Category Fees
           </h2>
-          {!user ? (
-            <p className="text-gray-600 dark:text-gray-300 italic">Please log in to edit fees.</p>
-          ) : categories.length === 0 ? (
+          {categories.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-300 italic">
               No categories found. Add categories in Firestore to set fees.
             </p>

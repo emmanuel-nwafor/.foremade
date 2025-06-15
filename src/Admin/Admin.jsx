@@ -53,6 +53,10 @@ function Admin() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sortOption, setSortOption] = useState('default');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [productToReject, setProductToReject] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,15 +78,22 @@ function Admin() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && selectedProduct) {
+      if (e.key === 'Escape' && (selectedProduct || isRejectionModalOpen)) {
         closeModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedProduct]);
+  }, [selectedProduct, isRejectionModalOpen]);
 
   const handleProductStatus = async (productId, newStatus) => {
+    const product = data.products.find((p) => p.id === productId);
+    if (newStatus === 'rejected') {
+      setProductToReject(product);
+      setIsRejectionModalOpen(true);
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to ${newStatus === 'approved' ? 'approve' : 'reject'} this product?`)) return;
     setLoading(true);
     try {
@@ -97,7 +108,6 @@ function Admin() {
       addAlert(`Product ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully! 🎉`, 'success');
 
       // Send email notification based on status
-      const product = data.products.find((p) => p.id === productId);
       const endpoint = newStatus === 'approved' ? '/send-product-approved-email' : '/send-product-rejected-email';
       try {
         await axios.post(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
@@ -105,6 +115,7 @@ function Admin() {
           productName: product.name,
           sellerId: product.sellerId,
           sellerEmail: product.sellerEmail || (await getSellerEmail(product.sellerId)),
+          ...(newStatus === 'rejected' && { reason: rejectionReason || customReason }),
         });
         addAlert(`${newStatus === 'approved' ? 'Approval' : 'Rejection'} email sent to seller! 📧`, 'success');
       } catch (emailError) {
@@ -116,6 +127,56 @@ function Admin() {
       addAlert('Failed to update product status.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectionReason && !customReason) {
+      addAlert('Please select or enter a rejection reason.', 'error');
+      return;
+    }
+
+    const finalReason = rejectionReason === 'Other' ? customReason : rejectionReason;
+    if (!finalReason) {
+      addAlert('Please enter a custom reason.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const productId = productToReject.id;
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { status: 'rejected' });
+      setData((prev) => ({
+        ...prev,
+        products: prev.products.map((item) =>
+          item.id === productId ? { ...item, status: 'rejected' } : item
+        ),
+      }));
+      addAlert('Product rejected successfully! 🎉', 'success');
+
+      try {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/send-product-rejected-email`, {
+          productId,
+          productName: productToReject.name,
+          sellerId: productToReject.sellerId,
+          sellerEmail: productToReject.sellerEmail || (await getSellerEmail(productToReject.sellerId)),
+          reason: finalReason,
+        });
+        addAlert('Rejection email sent to seller! 📧', 'success');
+      } catch (emailError) {
+        console.error('Error sending rejection email:', emailError);
+        addAlert('Failed to send rejection email.', 'error');
+      }
+    } catch (err) {
+      console.error('Error rejecting product:', err);
+      addAlert('Failed to reject product.', 'error');
+    } finally {
+      setLoading(false);
+      setIsRejectionModalOpen(false);
+      setRejectionReason('');
+      setCustomReason('');
+      setProductToReject(null);
     }
   };
 
@@ -156,6 +217,10 @@ function Admin() {
 
   const closeModal = () => {
     setSelectedProduct(null);
+    setIsRejectionModalOpen(false);
+    setRejectionReason('');
+    setCustomReason('');
+    setProductToReject(null);
   };
 
   const sortProducts = (products) => {
@@ -430,6 +495,68 @@ function Admin() {
           </div>
         </div>
       )}
+
+      {isRejectionModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Reject Product</h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                title="Close"
+              >
+                <i className="bx bx-x"></i>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason for Rejection</label>
+                <select
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Missing product image">Missing product image</option>
+                  <option value="Incomplete product description">Incomplete product description</option>
+                  <option value="Invalid price">Invalid price</option>
+                  <option value="Product violates guidelines">Product violates guidelines</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              {rejectionReason === 'Other' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Custom Reason</label>
+                  <textarea
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    placeholder="Enter custom reason..."
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    rows="4"
+                  />
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={closeModal}
+                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg text-sm hover:bg-gray-400 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectSubmit}
+                  className="py-2 px-4 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-all duration-200"
+                  disabled={loading}
+                >
+                  {loading ? 'Rejecting...' : 'Reject Product'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );

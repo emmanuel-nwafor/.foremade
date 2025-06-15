@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import AdminSidebar from '/src/admin/AdminSidebar';
 import MediaPreview from '/src/admin/MediaPreview';
 import AdminActionButtons from '/src/admin/AdminActionbuttons';
+import axios from 'axios';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -94,11 +95,40 @@ function Admin() {
         ),
       }));
       addAlert(`Product ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully! 🎉`, 'success');
+
+      // Send email notification based on status
+      const product = data.products.find((p) => p.id === productId);
+      const endpoint = newStatus === 'approved' ? '/send-product-approved-email' : '/send-product-rejected-email';
+      try {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, {
+          productId,
+          productName: product.name,
+          sellerId: product.sellerId,
+          sellerEmail: product.sellerEmail || (await getSellerEmail(product.sellerId)),
+        });
+        addAlert(`${newStatus === 'approved' ? 'Approval' : 'Rejection'} email sent to seller! 📧`, 'success');
+      } catch (emailError) {
+        console.error(`Error sending ${newStatus} email:`, emailError);
+        addAlert(`Failed to send ${newStatus} email.`, 'error');
+      }
     } catch (err) {
       console.error('Error updating product status:', err);
       addAlert('Failed to update product status.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getSellerEmail = async (sellerId) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', sellerId));
+      if (userDoc.exists()) {
+        return userDoc.data().email;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching seller email:', err);
+      return null;
     }
   };
 

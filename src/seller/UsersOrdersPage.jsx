@@ -166,7 +166,7 @@ export default function UsersOrdersPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <SellerSidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6 font-serif">
+      <main className="flex-1 ml-0 md:ml-64 p-4">
         <div className="max-w-5xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800">Your Orders</h1>

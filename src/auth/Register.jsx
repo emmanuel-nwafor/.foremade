@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import logo from '../assets/logi.png';
@@ -154,6 +153,13 @@ export default function Register() {
           profileImage: user.photoURL || null,
         };
         await setDoc(userDocRef, userData);
+        
+        await addDoc(collection(db, 'notifications'), {
+          type: 'user_signup',
+          message: `New user signed up: ${user.email}`,
+          createdAt: new Date(),
+          details: { user_id: user.uid, email: user.email },
+        });
         await updateProfile(user, { displayName: username });
         if (!user.emailVerified) {
           await sendEmailVerification(user);
@@ -271,8 +277,16 @@ export default function Register() {
         profileImage: null,
       };
       await setDoc(doc(db, 'users', user.uid), userData);
-      localStorage.setItem('userData', JSON.stringify(userData));
 
+      // Add notification for user sign-up
+      await addDoc(collection(db, 'notifications'), {
+        type: 'user_signup',
+        message: `New user signed up: ${user.email}`,
+        createdAt: new Date(),
+        details: { user_id: user.uid, email: user.email },
+      });
+
+      localStorage.setItem('userData', JSON.stringify(userData));
       setSuccessMessage(`Welcome, ${firstName}! Verify your email at ${email}.`);
       setSignupAttempts(0);
       setTimeout(() => {

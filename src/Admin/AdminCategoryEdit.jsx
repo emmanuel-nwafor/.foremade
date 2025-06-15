@@ -57,6 +57,7 @@ export default function AdminCategoryEdit() {
     maxPrice: '',
     buyerProtectionRate: '',
     handlingRate: '',
+    taxRate: '',
   });
   const [newSubcategory, setNewSubcategory] = useState({});
   const [newSubSubcategory, setNewSubSubcategory] = useState({});
@@ -144,11 +145,14 @@ export default function AdminCategoryEdit() {
     if (newFees.maxPrice && parseFloat(newFees.maxPrice) < (parseFloat(newFees.minPrice) || 0)) {
       newErrors.maxPrice = 'Maximum price must be greater than minimum price.';
     }
-    if (newFees.buyerProtectionRate && parseFloat(newFees.buyerProtectionRate) < 0) {
-      newErrors.buyerProtectionRate = 'Buyer protection rate cannot be negative.';
+    if (newFees.buyerProtectionRate && (parseFloat(newFees.buyerProtectionRate) < 0 || parseFloat(newFees.buyerProtectionRate) > 100)) {
+      newErrors.buyerProtectionRate = 'Rate must be between 0 and 100%.';
     }
-    if (newFees.handlingRate && parseFloat(newFees.handlingRate) < 0) {
-      newErrors.handlingRate = 'Handling rate cannot be negative.';
+    if (newFees.handlingRate && (parseFloat(newFees.handlingRate) < 0 || parseFloat(newFees.handlingRate) > 100)) {
+      newErrors.handlingRate = 'Rate must be between 0 and 100%.';
+    }
+    if (newFees.taxRate && (parseFloat(newFees.taxRate) < 0 || parseFloat(newFees.taxRate) > 100)) {
+      newErrors.taxRate = 'Tax rate must be between 0 and 100%.';
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -166,13 +170,14 @@ export default function AdminCategoryEdit() {
         [newCategory.trim()]: {
           minPrice: parseFloat(newFees.minPrice) || 1000,
           maxPrice: newFees.maxPrice ? parseFloat(newFees.maxPrice) : Infinity,
-          buyerProtectionRate: parseFloat(newFees.buyerProtectionRate) || 8,
-          handlingRate: parseFloat(newFees.handlingRate) || 20,
+          buyerProtectionRate: (parseFloat(newFees.buyerProtectionRate) || 8) / 100,
+          handlingRate: (parseFloat(newFees.handlingRate) || 20) / 100,
+          taxRate: (parseFloat(newFees.taxRate) || 7.5) / 100,
         },
       };
       await setDoc(feeRef, updatedFees);
       setNewCategory('');
-      setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '' });
+      setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setErrors({});
       addAlert('Category added successfully! 🎉', 'success');
     } catch (err) {
@@ -199,11 +204,14 @@ export default function AdminCategoryEdit() {
     if (newFees.maxPrice && parseFloat(newFees.maxPrice) < (parseFloat(newFees.minPrice) || 0)) {
       newErrors.maxPrice = 'Maximum price must be greater than minimum price.';
     }
-    if (newFees.buyerProtectionRate && parseFloat(newFees.buyerProtectionRate) < 0) {
-      newErrors.buyerProtectionRate = 'Buyer protection rate cannot be negative.';
+    if (newFees.buyerProtectionRate && (parseFloat(newFees.buyerProtectionRate) < 0 || parseFloat(newFees.buyerProtectionRate) > 100)) {
+      newErrors.buyerProtectionRate = 'Rate must be between 0 and 100%.';
     }
-    if (newFees.handlingRate && parseFloat(newFees.handlingRate) < 0) {
-      newErrors.handlingRate = 'Handling rate cannot be negative.';
+    if (newFees.handlingRate && (parseFloat(newFees.handlingRate) < 0 || parseFloat(newFees.handlingRate) > 100)) {
+      newErrors.handlingRate = 'Rate must be between 0 and 100%.';
+    }
+    if (newFees.taxRate && (parseFloat(newFees.taxRate) < 0 || parseFloat(newFees.taxRate) > 100)) {
+      newErrors.taxRate = 'Tax rate must be between 0 and 100%.';
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -222,8 +230,9 @@ export default function AdminCategoryEdit() {
       updatedFees[newCategory.trim()] = {
         minPrice: parseFloat(newFees.minPrice) || updatedFees[oldName].minPrice,
         maxPrice: newFees.maxPrice ? parseFloat(newFees.maxPrice) : updatedFees[oldName].maxPrice,
-        buyerProtectionRate: parseFloat(newFees.buyerProtectionRate) || updatedFees[oldName].buyerProtectionRate,
-        handlingRate: parseFloat(newFees.handlingRate) || updatedFees[oldName].handlingRate,
+        buyerProtectionRate: (parseFloat(newFees.buyerProtectionRate) || updatedFees[oldName].buyerProtectionRate * 100) / 100,
+        handlingRate: (parseFloat(newFees.handlingRate) || updatedFees[oldName].handlingRate * 100) / 100,
+        taxRate: (parseFloat(newFees.taxRate) || (updatedFees[oldName].taxRate || 7.5)) / 100,
       };
       delete updatedFees[oldName];
       const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
@@ -246,7 +255,7 @@ export default function AdminCategoryEdit() {
       }
 
       setNewCategory('');
-      setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '' });
+      setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setEditCategory(null);
       setErrors({});
       addAlert('Category updated successfully! 🎉', 'success');
@@ -361,7 +370,7 @@ export default function AdminCategoryEdit() {
 
   const resetForm = () => {
     setNewCategory('');
-    setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '' });
+    setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
     setEditCategory(null);
     setErrors({});
   };
@@ -526,6 +535,33 @@ export default function AdminCategoryEdit() {
                     </p>
                   )}
                 </div>
+                <div className="relative group">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    Tax Rate (%)
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Tax percentage for this category"></i>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={newFees.taxRate}
+                      onChange={(e) => handleFeeChange('taxRate', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      placeholder="7.5"
+                      className={`mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.taxRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      disabled={loading}
+                    />
+                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span>
+                  </div>
+                  {errors.taxRate && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.taxRate}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="flex gap-4 mt-6">
                 {editCategory ? (
@@ -600,8 +636,9 @@ export default function AdminCategoryEdit() {
                               setNewFees({
                                 minPrice: feeConfig[cat].minPrice === Infinity ? '' : feeConfig[cat].minPrice,
                                 maxPrice: feeConfig[cat].maxPrice === Infinity ? '' : feeConfig[cat].maxPrice,
-                                buyerProtectionRate: feeConfig[cat].buyerProtectionRate,
-                                handlingRate: feeConfig[cat].handlingRate,
+                                buyerProtectionRate: feeConfig[cat].buyerProtectionRate * 100,
+                                handlingRate: feeConfig[cat].handlingRate * 100,
+                                taxRate: feeConfig[cat].taxRate ? feeConfig[cat].taxRate * 100 : 7.5,
                               });
                             }}
                             disabled={loading}

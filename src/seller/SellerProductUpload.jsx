@@ -176,7 +176,7 @@ export default function SellerProductUpload() {
   const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
   const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
-  const MAX_IMAGES = 4;
+  const MAX_IMAGES = 8;
   const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds

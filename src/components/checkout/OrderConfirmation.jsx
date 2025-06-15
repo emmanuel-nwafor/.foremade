@@ -1,180 +1,174 @@
-import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { db } from '/src/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import 'boxicons/css/boxicons.min.css';
 
-const OrderConfirmation = () => {
-  const { state } = useLocation();
-  const navigate = useNavigate();
-  const order = state?.order;
-  const [orderItemsWithImages, setOrderItemsWithImages] = useState([]);
+function CustomAlert({ alerts, removeAlert }) {
+  useEffect(() => {
+    if (alerts.length === 0) return;
+    const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
+    return () => clearTimeout(timer);
+  }, [alerts, removeAlert]);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className={`p-4 rounded-lg shadow-md transform transition-all duration-300 ease-in-out animate-slide-in ${
+            alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+          } flex items-center gap-2`}
+        >
+          <i className={`bx ${alert.type === 'error' ? 'bx-error-circle' : 'bx-check-circle'} text-xl`}></i>
+          <span>{alert.message}</span>
+          <button onClick={() => removeAlert(alert.id)} className="ml-auto text-gray-200 hover:text-white">
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function useAlerts() {
+  const [alerts, setAlerts] = useState([]);
+  const addAlert = (message, type = 'info') => {
+    const id = Date.now();
+    setAlerts((prev) => [...prev, { id, message, type }]);
+  };
+  const removeAlert = (id) => {
+    setAlerts((prev) => prev.filter((alert => alert.id !== id)));
+  }
+  return { alerts, addAlert, removeAlert };
+}
+
+export default function OrderConfirmation() {
+  const { alerts, addAlert, removeAlert } = useAlerts();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
-    if (!order) {
-      toast.error('No order details found. Redirecting to homepage.', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
-    } else {
-      const fetchItemImages = async () => {
-        try {
-          const itemsWithImages = await Promise.all(
-            order.items.map(async (item) => {
-              const productRef = doc(db, 'products', item.productId);
-              const productSnap = await getDoc(productRef);
-              let mainImage = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
-              if (productSnap.exists()) {
-                const productData = productSnap.data();
-                console.log('Product data for', item.name, ':', productData);
-                const imageUrls = Array.isArray(productData.imageUrls)
-                  ? productData.imageUrls.filter(
-                      (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-                    )
-                  : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
-                  ? [productData.imageUrl]
-                  : [];
-                mainImage = imageUrls.length > 0 ? imageUrls[0] : mainImage;
-                console.log('Selected main image for', item.name, ':', mainImage);
-              } else {
-                console.warn(`Product ${item.productId} not found for ${item.name}.`);
-              }
-              return {
-                ...item,
-                mainImage,
-              };
-            })
-          );
-          setOrderItemsWithImages(itemsWithImages);
-        } catch (err) {
-          console.error('Image fetch error:', err);
-          toast.error('Failed to load item images.', { position: 'top-right', autoClose: 3000 });
-          setOrderItemsWithImages(
-            order.items.map((item) => ({
-              ...item,
-              mainImage: 'https://res.cloudinary.com/demo/image/upload/v1/sample',
-            }))
-          );
+    const fetchOrder = async () => {
+      try {
+        const orderId = new URLSearchParams(location.search).get('orderId') || location.state?.order?.id;
+        if (!orderId) {
+          addAlert('Order not found.', 'error');
+          setLoading(false);
+          return;
         }
-      };
 
-      fetchItemImages();
-    }
-  }, [order, navigate]);
+        const orderRef = doc(db, 'orders', orderId);
+        const orderSnap = await getDoc(orderRef);
+        if (!orderSnap.exists()) {
+          addAlert('Order not found.', 'error');
+          setLoading(false);
+          return;
+        }
 
-  if (!order) {
+        setOrder({ id: orderSnap.id, ...orderSnap.data() });
+      } catch (err) {
+        console.error('Error fetching order:', err);
+        addAlert('Failed to load order.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrder();
+  }, [location, addAlert]);
+
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-gray-600">Loading order details...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <div className="flex gap-2 text-gray-600 dark:text-gray-300">
+          <i className="bx bx-loader bx-spin text-2xl"></i>
+          <span>Loading...</span>
+        </div>
       </div>
     );
   }
 
-  const { totalAmount, date, shippingDetails, paymentGateway, paymentId, currency } = order;
-  const taxRate = 0.075;
-  const handlingFeeRate = 0.05;
-  const buyerProtectionRate = 0.02;
-  // Calculate subtotal by reversing the fees and tax from totalAmount
-  const totalNgn = currency === 'GBP' ? totalAmount / 0.00048 : totalAmount; // Convert back to NGN if in GBP
-  const totalNgnBeforeFees = totalNgn / (1 + handlingFeeRate + buyerProtectionRate);
-  const taxNgn = totalNgnBeforeFees * taxRate;
-  const subtotalNgn = totalNgnBeforeFees - taxNgn;
-  const subtotal = currency === 'GBP' ? subtotalNgn * 0.00048 : subtotalNgn;
-  const tax = currency === 'GBP' ? taxNgn * 0.00048 : taxNgn;
-
-  console.log('Currency:', currency);
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <div className="text-center text-gray-600 dark:text-gray-300">
+          <i className="bx bx-error-circle text-4xl text-red-500 mb-2"></i>
+          <p>Order not found.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 text-gray-800">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Thank You!</h1>
-      <p className="text-xl text-gray-600 mb-4">
-        Your order #{paymentId} has been placed!
-      </p>
-      <p className="text-sm text-gray-600 mb-4">
-        We sent an email to {shippingDetails.email} with your order confirmation and receipt. If the email hasn’t arrived within two minutes, please check your spam folder to see if the email was routed there.
-      </p>
-      <p className="text-sm text-gray-600 mb-4">Time Placed: {new Date(date).toLocaleString('en-US', { timeZone: 'America/New_York' })} EST</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Shipping</h3>
-          <p className="text-sm">
-            <strong>{shippingDetails.name}</strong>
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
+          <i className="bx bx-check-circle text-green-500"></i>
+          Order Confirmation
+        </h2>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Order #{order.id}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Thank you for your purchase! Your order has been successfully placed.
           </p>
-          <p className="text-sm">{shippingDetails.address}, {shippingDetails.city}, {shippingDetails.postalCode}</p>
-          <p className="text-sm">{shippingDetails.country}</p>
-          <p className="text-sm">{shippingDetails.phone}</p>
-        </div>
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Billing Details</h3>
-          <p className="text-sm">
-            <strong>{shippingDetails.name}</strong>
-          </p>
-          <p className="text-sm">{shippingDetails.address}, {shippingDetails.city}, {shippingDetails.postalCode}</p>
-          <p className="text-sm">{shippingDetails.country}</p>
-          <p className="text-sm">{shippingDetails.phone}</p>
-        </div>
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Shipping Method</h3>
-          <p className="text-sm">Standard Method</p>
-          <p className="text-sm">(normally 4-5 business days, unless otherwise noted)</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Order List</h3>
-          {orderItemsWithImages.map((item) => (
-            <div key={item.productId} className="flex items-center justify-between text-sm mb-2">
-              <div className="flex items-center gap-3">
+          <div className="space-y-4">
+            {order.items.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg"
+              >
                 <img
-                  src={item.mainImage}
+                  src={item.imageUrls[0] || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'}
                   alt={item.name}
-                  className="w-12 h-12 object-cover rounded"
+                  className="w-16 h-16 object-cover rounded"
                   onError={(e) => {
-                    console.error('Image failed to load, using default:', {
-                      productId: item.productId,
-                      failedUrl: e.target.src,
-                      name: item.name,
-                    });
-                    e.target.src = 'https://res.cloudinary.com/demo/image/upload/v1/sample';
-                  }}
-                  onLoad={() => {
-                    console.log('Image loaded for', item.name, 'at URL:', item.mainImage);
+                    e.target.src = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
                   }}
                 />
-                <span>{item.name} (x{item.quantity})</span>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100">{item.name}</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Quantity: {item.quantity}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Price: {order.currency === 'gbp' ? '£' : '₦'}
+                    {(item.price * item.quantity).toLocaleString('en-NG', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+          <div className="mt-6 border-t border-gray-200 dark:border-gray-600 pt-4">
+            <div className="flex justify-between text-gray-600 dark:text-gray-300">
+              <span>Subtotal</span>
               <span>
-                {currency} {(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                {order.currency === 'gbp' ? '£' : '₦'}
+                {order.total.toLocaleString('en-NG', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             </div>
-          ))}
-        </div>
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
-          <p className="text-sm">Subtotal: {currency} {subtotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
-          <p className="text-sm">Tax (7.5%): {currency} {tax.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
-          <p className="text-sm font-bold">Total: {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+            <div className="flex justify-between font-semibold text-gray-800 dark:text-gray-100 mt-2">
+              <span>Total</span>
+              <span>
+                {order.currency === 'gbp' ? '£' : '₦'}
+                {order.total.toLocaleString('en-NG', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="mt-6 flex gap-4">
-        <Link
-          to="/products"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
-        >
-          Continue Shopping
-        </Link>
-        <Link
-          to="/"
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm"
-        >
-          Back to Home
-        </Link>
-      </div>
+      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );
-};
-
-export default OrderConfirmation;
+}

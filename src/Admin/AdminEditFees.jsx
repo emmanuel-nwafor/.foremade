@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
@@ -71,7 +71,7 @@ export default function AdminEditFees() {
         } else {
           feeData = catList.reduce((acc, cat) => ({
             ...acc,
-            [cat]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20 },
+            [cat]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20, taxRate: 0.075 },
           }), {});
           console.log('No fee data, setting defaults:', feeData);
           await setDoc(docRef, feeData);
@@ -80,7 +80,7 @@ export default function AdminEditFees() {
         const updatedFees = { ...feeData };
         catList.forEach((cat) => {
           if (!updatedFees[cat]) {
-            updatedFees[cat] = { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20 };
+            updatedFees[cat] = { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20, taxRate: 0.075 };
           }
         });
         setFeeConfig(updatedFees);
@@ -128,6 +128,9 @@ export default function AdminEditFees() {
       if (config.handlingRate < 0 || config.handlingRate > 1) {
         newErrors[`${category}_handlingRate`] = 'Rate must be between 0 and 100%.';
       }
+      if (config.taxRate < 0 || config.taxRate > 1) {
+        newErrors[`${category}_taxRate`] = 'Tax rate must be between 0 and 100%.';
+      }
     });
     return newErrors;
   };
@@ -166,6 +169,7 @@ export default function AdminEditFees() {
         maxPrice: Infinity,
         buyerProtectionRate: 0.08,
         handlingRate: 0.20,
+        taxRate: 0.075,
       },
     }));
     setErrors((prev) => ({
@@ -174,6 +178,7 @@ export default function AdminEditFees() {
       [`${category}_maxPrice`]: '',
       [`${category}_buyerProtectionRate`]: '',
       [`${category}_handlingRate`]: '',
+      [`${category}_taxRate`]: '',
     }));
   };
 
@@ -349,6 +354,34 @@ export default function AdminEditFees() {
                             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                               <i className="bx bx-error-circle"></i>
                               {errors[`${category}_handlingRate`]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="relative group">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                            Tax Rate (%)
+                            <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Tax percentage for this category"></i>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={(feeConfig[category]?.taxRate * 100) || ''}
+                              onChange={(e) => handleFeeChange(category, 'taxRate', e.target.value)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              placeholder="7.5"
+                              className={`mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                                errors[`${category}_taxRate`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                              } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                              disabled={loading}
+                            />
+                            <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span>
+                          </div>
+                          {errors[`${category}_taxRate`] && (
+                            <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                              <i className="bx bx-error-circle"></i>
+                              {errors[`${category}_taxRate`]}
                             </p>
                           )}
                         </div>

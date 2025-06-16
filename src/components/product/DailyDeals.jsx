@@ -1,41 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-export default function DailyDeals() {
+const DailyDeals = () => {
   const [dealProducts, setDealProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
-  
-  // Calculate time remaining for deals
-  const [timeRemaining, setTimeRemaining] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
+  const [timeRemaining, setTimeRemaining] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
-  // Set end time for deals (end of current day)
   useEffect(() => {
     const calculateTimeRemaining = () => {
       const now = new Date();
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
-      
       const diff = endOfDay - now;
-      
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
       setTimeRemaining({ hours, minutes, seconds });
     };
-    
     calculateTimeRemaining();
     const timer = setInterval(calculateTimeRemaining, 1000);
-    
     return () => clearInterval(timer);
   }, []);
 
@@ -44,43 +32,36 @@ export default function DailyDeals() {
       try {
         setLoading(true);
         setError(null);
-        
-        // In a real application, you would have a 'deal' or 'discount' field to query
-        // For now, we'll just get products with price lower than a threshold
-        const q = query(
-          collection(db, 'products'),
-          where('status', '==', 'approved'),
-          orderBy('price', 'asc'),
-          limit(10)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const allProducts = querySnapshot.docs.map((doc) => ({
+        const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const dealData = dealSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-          // Add a fake discount percentage for demo purposes
-          discountPercent: Math.floor(Math.random() * 30) + 10, // Random discount between 10% and 40%
-          originalPrice: doc.data().price * (1 + (Math.floor(Math.random() * 30) + 10)/100)
         }));
-        
-        console.log('Daily Deals products:', allProducts);
-        
-        if (allProducts.length === 0) {
-          console.warn('No deal products found.');
-        }
-        
-        setDealProducts(allProducts);
+        const validDeals = dealData.filter((deal) => new Date(deal.endTime) > new Date());
+
+        // Fetch seller names
+        const dealsWithSellers = await Promise.all(
+          validDeals.map(async (deal) => {
+            const productDoc = await getDoc(doc(db, 'products', deal.productId));
+            const productData = productDoc.exists() ? productDoc.data() : {};
+            const sellerDoc = await getDoc(doc(db, 'users', productData.sellerId || 'unknown'));
+            const sellerName = sellerDoc.exists() ? sellerDoc.data().name || 'Unknown Seller' : 'Unknown Seller';
+            return {
+              ...deal,
+              imageUrls: productData.imageUrls?.length ? productData.imageUrls : ['https://via.placeholder.com/200'],
+              sellerName,
+            };
+          })
+        );
+
+        setDealProducts(dealsWithSellers);
       } catch (err) {
-        console.error('Error loading daily deals:', {
-          message: err.message,
-          code: err.code,
-        });
+        console.error('Error loading daily deals:', err);
         setError('Failed to load daily deals.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchDailyDeals();
   }, []);
 
@@ -103,9 +84,7 @@ export default function DailyDeals() {
           <div className="flex justify-between items-center mb-4 xs:mb-5 sm:mb-6">
             <div className="flex items-center space-x-2 xs:space-x-3">
               <i className="bx bx-time text-yellow-600 text-xl xs:text-2xl"></i>
-              <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">
-                Daily Deals
-              </h2>
+              <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">Daily Deals</h2>
               <div className="flex ml-2 xs:ml-3 space-x-1 xs:space-x-2">
                 <div className="h-5 xs:h-6 bg-gray-200 rounded w-8 xs:w-10 animate-pulse"></div>
                 <span>:</span>
@@ -138,9 +117,7 @@ export default function DailyDeals() {
         <div className="flex justify-between items-center mb-4 xs:mb-5 sm:mb-6">
           <div className="flex items-center space-x-2 xs:space-x-3">
             <i className="bx bx-time text-yellow-600 text-xl xs:text-2xl"></i>
-            <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">
-              Daily Deals
-            </h2>
+            <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">Daily Deals</h2>
             <div className="ml-2 xs:ml-3 flex items-center space-x-1">
               <span className="bg-yellow-100 text-yellow-800 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded text-xs xs:text-sm font-mono">
                 {String(timeRemaining.hours).padStart(2, '0')}
@@ -182,19 +159,27 @@ export default function DailyDeals() {
           {dealProducts.length === 0 ? (
             <p className="text-gray-600 text-sm xs:text-base p-3 xs:p-4">No deals available at the moment.</p>
           ) : (
-            dealProducts.map((product) => (
+            dealProducts.map((deal) => (
               <div
-                key={product.id}
+                key={deal.id}
                 className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[200px] md:w-[220px] snap-start"
               >
                 <div className="relative">
-                  <ProductCard product={product} />
+                  <ProductCard
+                    product={{
+                      id: deal.productId,
+                      name: deal.productName,
+                      price: deal.originalPrice * (1 - deal.discountPercent / 100),
+                      imageUrls: deal.imageUrls,
+                      sellerName: deal.sellerName,
+                    }}
+                  />
                   <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
-                    {product.discountPercent}% OFF
+                    {deal.discountPercent}% OFF
                   </div>
                   <div className="mt-1">
                     <span className="text-gray-500 line-through text-[10px] xs:text-xs">
-                      ₦{(product.originalPrice || 0).toLocaleString('en-NG')}
+                      ₦{deal.originalPrice.toLocaleString('en-NG')}
                     </span>
                   </div>
                 </div>
@@ -205,4 +190,6 @@ export default function DailyDeals() {
       </div>
     </section>
   );
-}
+};
+
+export default DailyDeals;

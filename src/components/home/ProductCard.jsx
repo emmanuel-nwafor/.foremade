@@ -32,8 +32,11 @@ const ProductCard = ({ product }) => {
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
-          const validImage = Array.isArray(data.imageUrls) && data.imageUrls.length > 0 && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://') 
-            ? data.imageUrls[0] 
+          // Use product.imageUrls if available (from DailyDeals), else fetch from Firestore
+          const validImage = Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')
+            ? product.imageUrls[0]
+            : Array.isArray(data.imageUrls) && data.imageUrls.length > 0 && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
+            ? data.imageUrls[0]
             : '/images/placeholder.jpg';
           console.log('Setting imageUrl to:', validImage);
           setImageUrl(validImage);
@@ -49,7 +52,7 @@ const ProductCard = ({ product }) => {
       }
     };
     fetchImageAndFavorites();
-  }, [product?.id]);
+  }, [product?.id, product?.imageUrls]);
 
   const truncateName = (name) => {
     if (!name) return '';
@@ -109,7 +112,7 @@ const ProductCard = ({ product }) => {
     Array.isArray(product.sizes) &&
     product.sizes.length > 0;
 
-    console.log(showSizes)
+  console.log(showSizes)
 
   // Handle tracking product views for "Recently Viewed" functionality
   const trackProductView = () => {
@@ -187,4 +190,3 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
-

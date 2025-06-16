@@ -34,12 +34,16 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
+
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminNotifications from '/src/admin/AdminNotifications';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
+import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
+import AdminEditDeals from '/src/admin/AdminEditDeals';
+
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
@@ -96,6 +100,8 @@ const Layout = ({ children }) => {
     '/admin/sellers/payouts',
     '/admin/products',
     '/admin/notifications',
+    '/admin/edit/banners',
+    '/admin/edit/daily-deals',
 
     '/sellers/orders',
     '/sellers/products',
@@ -235,7 +241,8 @@ function App() {
             <Route path="/admin/edit/fees" element={<AdminEditFees />} />
             <Route path="/admin/edit/categories" element={<AdminCategoryEdit />} />
             <Route path="/admin/notifications" element={<AdminNotifications />} />
-
+            <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
+            <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />

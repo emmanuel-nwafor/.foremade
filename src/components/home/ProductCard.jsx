@@ -60,6 +60,11 @@ const ProductCard = ({ product }) => {
     setImageFailed(false);
   }, [product.id, product.imageUrl, product.imageUrls]);
 
+  const truncateName = (name) => {
+    if (!name || typeof name !== 'string') return 'Unnamed Product';
+    return name.length > 15 ? name.slice(0, 12) + '...' : name;
+  };
+
   const handleFavorite = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -156,7 +161,7 @@ const ProductCard = ({ product }) => {
         {/* Product info */}
         <div>
           <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
-            {product.name}
+            {truncateName(product.name)}
           </h3>
           <div className="flex items-center text-sm text-gray-600 mb-2">
             <i className="bx bx-store text-blue-600 mr-1"></i>

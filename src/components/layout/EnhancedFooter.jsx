@@ -37,7 +37,8 @@ const Footer = () => {
     about: [
       { name: 'About Us', url: '/about' },
       { name: 'Careers', url: '/careers' },
-      { name: 'Store Locations', url: '/stores' }
+      { name: 'Store Locations', url: '/stores' },
+      { name: 'Support', url: '/support' }
     ]
   };
 
@@ -247,28 +248,6 @@ const Footer = () => {
                       </Link>
                     </motion.li>
                   ))}
-                  
-                  {/* Support link */}
-                  <motion.li 
-                    whileHover={{ x: 3 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                  >
-                    <Link 
-                      to="/support" 
-                      className={`hover:text-blue-400 relative inline-block ${hoveredLink === 'support' ? 'text-blue-500' : 'text-gray-600'}`}
-                      onMouseEnter={() => setHoveredLink('support')}
-                      onMouseLeave={() => setHoveredLink(null)}
-                    >
-                      Support
-                      <motion.span 
-                        className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
-                        animate={{ 
-                          width: hoveredLink === 'support' ? '100%' : '0%'
-                        }}
-                        transition={{ duration: 0.3 }}
-                      ></motion.span>
-                    </Link>
-                  </motion.li>
                 </ul>
               </div>
             </div>

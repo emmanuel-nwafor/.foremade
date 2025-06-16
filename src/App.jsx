@@ -48,6 +48,7 @@ import AllPolicies from './pages/AllPolicies';
 import EmpowermentHub from './pages/EmpowermentHub';
 import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
 import YouthEmpowermentTerms from './pages/YouthEmpowermentTerms';
+import GDPRAccess from './pages/GDPRAccess';
 
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
@@ -62,6 +63,7 @@ import ForgetPassword from './auth/ForgetPassword';
 
 import OtherProductsPage from './pages/OtherProducts'; // Dynamic page
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
+import AboutUs from './pages/AboutUs';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -75,16 +77,6 @@ const Layout = ({ children }) => {
     '/settings',
     '/products-gallery',
     '/products-upload',
-
-    '/privacy-policy',
-    '/privacy-policy/cookies',
-    '/privacy-policy',
-    '/privacy-policy/contact',
-    '/privacy-policy/us',
-    '/privacy-policy/nigeria',
-    '/privacy-policy/asia',
-    '/privacy-policy/eu',
-    '/privacy-policy/australia',
 
     '/admin',
     '/admin/payouts',
@@ -103,8 +95,8 @@ const Layout = ({ children }) => {
     '/dashboard',
   ].includes(location.pathname);
 
-  // Only show footer on profile page
-  const showFooter = location.pathname === '/profile';
+  // Show footer on profile page and About Us page
+  const showFooter = ['/profile', '/about'].includes(location.pathname);
 
   return (
     <>
@@ -256,11 +248,13 @@ function App() {
             <Route path="/computers-accessories" element={<ComputerAccessories />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/privacy-policy/:type" element={<AllPolicies />} />
+            <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
             <Route path="/pages/Shoes" element={<OtherProductsPage category="Shoes" />} />
             <Route path="/pages/Fashion" element={<OtherProductsPage category="Fashion" />} />
             <Route path="/pages/GamesAndFun" element={<GamesFun />} />
             <Route path="/pages/HomeAndKitchen" element={<HomeKitchen />} />
             <Route path="/pages/OtherProducts/:category" element={<OtherProductsPage />} />
+            
 
             {/* === Previously Protected User Routes (Now Open) === */}
             <Route path="/cart" element={<Cart />} />
@@ -274,6 +268,7 @@ function App() {
 
             {/* === Fallback Route === */}
             <Route path="*" element={<NotFound />} />
+            <Route path="/about" element={<AboutUs />} />
           </Routes>
         </Layout>
       </AuthProvider>

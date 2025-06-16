@@ -87,7 +87,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
     setIsProcessing(true);
     try {
       const amountInCents = Math.round(totalPrice * 100);
-      const backendUrl = import.meta.env.VITE_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       let attempts = 3;
       let lastError = null;
 
@@ -444,7 +444,7 @@ const Checkout = () => {
     const startSessionTimeout = () => {
       clearTimeout(sessionTimeout);
       const timeout = setTimeout(() => {
-        toast.warn('Session inactive. Please refresh or log in again.', { position: 'top-right', autoClose: 5000 });
+        toast.warn('Session inactive. Please refresh or log in again.', { timeout: 5000 });
         navigate('/login');
       }, 30 * 60 * 1000);
       setSessionTimeout(timeout);
@@ -454,7 +454,7 @@ const Checkout = () => {
     window.addEventListener('mousemove', startSessionTimeout);
     window.addEventListener('keydown', startSessionTimeout);
 
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged', (user) => {
       setIsAuthenticated(!!user);
       loadCartAndUserData();
       startSessionTimeout();
@@ -474,38 +474,37 @@ const Checkout = () => {
       const user = auth.currentUser;
       const updatedCart = cart.map((item) =>
         item.productId === productId
-          ? { ...item, quantity: Math.max(1, Math.min(newQuantity, item.product.stock || 10)) }
-          : item
+          ? { ...item, quantity: Math.max(1, Math.min(newQuantity, item.quantity.quantity || 1)))
+          : item.quantity
       );
-      await updateCart(user?.uid, updatedCart);
+      await updateCart(user?.uid || 'anonymous', updatedCart);
       setCart(updatedCart);
-      toast.info('Quantity updated.', { position: 'top-right', autoClose: 2000 });
+      toast.info('Item quantity updated!', { position: 'top-right', autoClose: 2000 });
     } catch (err) {
       console.error('Error updating quantity:', err);
-      console.log('Logging to Sentry:', err);
-      toast.error('Failed to update quantity.', { position: 'top-right', autoClose: 3000 });
+      toast.error('Failed to update item quantity.', { position: 'top-right', autoClose: 3000 });
     }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const subtotalNgn = cart.reduce(
-    (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
+    (total, item) => total + ((item.quantity || 0) * (item.quantity?.totalPrice || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < 12000;
+  const isBelowMinimumPrice = subtotalNgn < 12000;
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048;
   const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleInputChange = (event) => {
+    const { name, value, label, checked } = event.target;
     setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      ...prevFormData,
+      [formData.name]: type === 'checkbox' ? checked : undefined,
     }));
-    setFormErrors((prev) => ({ ...prev, [name]: '' }));
+    setFormErrors((prevErrors) => ({ ...prevErrors, [formErrors.name]: '' }));
     if (name === 'country' && value !== formData.country) {
-      toast.info(`Currency will change to ${value === 'United Kingdom' ? 'GBP' : 'NGN'}.`, {
+      toast.info(`Currency changed to ${value === 'United Kingdom' ? 'GBP' : 'NGN'}.`, {
         position: 'top-right',
         autoClose: 3000,
       });
@@ -516,26 +515,30 @@ const Checkout = () => {
     const errors = {};
     const { name, email, address, city, postalCode, country, phone } = formData;
     if (!name) errors.name = 'Full name is required.';
-    if (!email) errors.email = 'Email is required.';
+    if (!email) errors.email = 'Email address is required.';
     else if (!/\S+@\S+\.\S+/.test(email)) errors.email = 'Invalid email address.';
     if (!phone) errors.phone = 'Phone number is required.';
     if (!address) errors.address = 'Address is required.';
     if (!city) errors.city = 'City is required.';
     if (!postalCode) errors.postalCode = 'Postal code is required.';
-    if (!['Nigeria', 'United Kingdom'].includes(country)) errors.country = 'Select Nigeria or United Kingdom.';
-    return { isValid: Object.keys(errors).length === 0, errors };
+    if (!['Nigeria', 'United Kingdom'].includes(country)) errors.country = 'Select a valid country: Nigeria or United Kingdom.';
+    return { isValid: Object.keys(errorsFormErrors).length === 0, errors };
   };
 
-  const formValidity = useMemo(() => validateForm(), [formData]);
+  const formValidity = useMemo(() => validateFormErrors(), [formData]);
 
   const sendOrderConfirmationEmail = async (order) => {
     try {
       setIsEmailSending(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      console.log('Attempting to call backend at:', backendUrl);
+      addDebugLog({ type: 'email_attempt', backendUrl });
+
       const payload = {
-        orderId: order.paymentId || `fallback-${Date.now()}`,
-        email: order.shippingDetails?.email || formData.email,
+        orderId: 'order.paymentId || `fallback-${Date.now()}`,
+        email: order.shippingDetails?.email || formData.email || '',
         items: (order.items || []).map((item) => ({
+          productId: item.productId || 'unknown',
           name: item.name || 'Unknown Product',
           quantity: Number(item.quantity) || 1,
           price: Number(item.price) || 0,
@@ -545,18 +548,21 @@ const Checkout = () => {
         currency: (order.currency || currency).toLowerCase(),
       };
 
-      // Validate payload
+      // Validate payload before sending
+      if (!payload.orderId) {
+        throw new Error('Order ID is missing');
+      }
       if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
         throw new Error('Invalid or missing email address');
       }
       if (!payload.items.length) {
-        throw new Error('No items provided');
+        throw new Error('No items provided in the order');
       }
-      if (!payload.orderId) {
-        throw new Error('Missing order ID');
+      if (!payload.total || payload.total <= 0) {
+        throw new Error('Invalid or missing total amount');
       }
-      if (!payload.total) {
-        throw new Error('Missing total amount');
+      if (!['ngn', 'gbp'].includes(payload.currency)) {
+        throw new Error('Invalid currency');
       }
 
       console.log('Sending order confirmation email with payload:', JSON.stringify(payload, null, 2));
@@ -572,14 +578,26 @@ const Checkout = () => {
           });
           console.log('Order confirmation email sent successfully:', response.data);
           addDebugLog({ type: 'email_success', data: response.data });
+          toast.success('Order confirmation email sent successfully!', {
+            position: 'top-right',
+            autoClose: 3000,
+          });
           return;
         } catch (err) {
           lastError = err;
           attempts--;
-          if (attempts === 0 || err.response?.status !== 400) {
+          console.warn(`Email send attempt failed (${attempts} attempts left):`, err.message);
+          addDebugLog({ type: 'email_retry', error: err.message, attempts });
+          if (err.response?.status === 404) {
+            throw new Error('Order confirmation endpoint not found. Please check server URL or deployment.');
+          }
+          if (attempts === 0 || err.code !== 'ECONNABORTED') {
             throw err;
           }
-          console.warn(`Retrying email send (${attempts} attempts left)...`);
+          toast.warn(`Retrying email send (${attempts} attempts left)...`, {
+            position: 'top-right',
+            autoClose: 2000,
+          });
           await new Promise((resolve) => setTimeout(resolve, 2000 * (3 - attempts)));
         }
       }
@@ -603,7 +621,7 @@ const Checkout = () => {
       );
       if (debugMode) {
         toast.error(
-          `Debug: Email send failed - ${err.message} (${errorDetails.response_data})`,
+          `Debug: Email send failed - ${err.message} (${errorDetails.status}: ${errorDetails.response_data})`,
           {
             position: 'bottom-right',
             autoClose: 7000,

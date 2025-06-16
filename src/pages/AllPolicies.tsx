@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 
 type PolicyParams = {
   type: string;
@@ -101,15 +101,55 @@ const AllPolicies = () => {
               <p className="text-gray-700">
                 This policy complies with GDPR requirements for EU residents.
               </p>
-              <h3>Key GDPR Rights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                <li>Right to access your personal data</li>
-                <li>Right to rectification</li>
-                <li>Right to erasure ("right to be forgotten")</li>
-                <li>Right to restrict processing</li>
-                <li>Right to data portability</li>
-                <li>Right to object to processing</li>
-              </ul>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key GDPR Rights</h3>
+              <div className="grid gap-4">
+                {[
+                  {
+                    title: 'Right to Access',
+                    description: 'Individuals can request access to their personal data and obtain information about how it\'s processed.',
+                    link: 'https://gdpr-info.eu/art-15-gdpr/'
+                  },
+                  {
+                    title: 'Right to Rectification',
+                    description: 'Allows individuals to have inaccurate personal data corrected.',
+                    link: 'https://gdpr-info.eu/art-16-gdpr/'
+                  },
+                  {
+                    title: 'Right to Erasure ("Right to be Forgotten")',
+                    description: 'Enables individuals to request the deletion of their personal data under certain circumstances.',
+                    link: 'https://gdpr-info.eu/art-17-gdpr/'
+                  },
+                  {
+                    title: 'Right to Restrict Processing',
+                    description: 'Individuals can request the limitation of their data processing under specific conditions.',
+                    link: 'https://gdpr-info.eu/art-18-gdpr/'
+                  },
+                  {
+                    title: 'Right to Data Portability',
+                    description: 'Allows individuals to receive their personal data in a structured format and transfer it to another controller.',
+                    link: 'https://gdpr-info.eu/art-20-gdpr/'
+                  },
+                  {
+                    title: 'Right to Object to Processing',
+                    description: 'Grants individuals the right to object to the processing of their personal data in certain situations.',
+                    link: 'https://gdpr-info.eu/art-21-gdpr/'
+                  }
+                ].map((right, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{right.title}</h4>
+                    <p className="text-gray-600 mb-3">{right.description}</p>
+                    <a 
+                      href={right.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+                    >
+                      Learn More
+                      <i className="bx bx-external-link text-lg"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -125,14 +165,50 @@ const AllPolicies = () => {
               <p className="text-gray-700">
                 This policy complies with NDPR requirements for Nigerian residents.
               </p>
-              <h3>Key NDPR Rights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                <li>Right to data access</li>
-                <li>Right to data correction</li>
-                <li>Right to data deletion</li>
-                <li>Right to restrict data processing</li>
-                <li>Right to data portability</li>
-              </ul>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key NDPR Rights</h3>
+              <div className="grid gap-4">
+                {[
+                  {
+                    title: 'Right to Access Personal Data',
+                    description: 'Individuals can request access to their personal data held by an organization and obtain information about how it\'s processed.',
+                    link: 'https://ndpc.gov.ng/'
+                  },
+                  {
+                    title: 'Right to Data Correction',
+                    description: 'Allows individuals to have inaccurate or incomplete personal data corrected.',
+                    link: 'https://ndpc.gov.ng/'
+                  },
+                  {
+                    title: 'Right to Data Deletion',
+                    description: 'Enables individuals to request the deletion of their personal data under certain circumstances.',
+                    link: 'https://ndpc.gov.ng/'
+                  },
+                  {
+                    title: 'Right to Restrict Data Processing',
+                    description: 'Individuals can request the limitation of their data processing under specific conditions.',
+                    link: 'https://ndpc.gov.ng/'
+                  },
+                  {
+                    title: 'Right to Data Portability',
+                    description: 'Allows individuals to receive their personal data in a structured format and transfer it to another controller.',
+                    link: 'https://ndpc.gov.ng/'
+                  }
+                ].map((right, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{right.title}</h4>
+                    <p className="text-gray-600 mb-3">{right.description}</p>
+                    <a 
+                      href={right.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"
+                    >
+                      Learn More
+                      <i className="bx bx-external-link text-lg"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -148,13 +224,45 @@ const AllPolicies = () => {
               <p className="text-gray-700">
                 This policy complies with CCPA and other US privacy requirements.
               </p>
-              <h3>Key CCPA Rights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                <li>Right to know what personal information is collected</li>
-                <li>Right to delete personal information</li>
-                <li>Right to opt-out of the sale of personal information</li>
-                <li>Right to non-discrimination for exercising CCPA rights</li>
-              </ul>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key CCPA Rights</h3>
+              <div className="grid gap-4">
+                {[
+                  {
+                    title: 'Right to Know',
+                    description: 'Consumers can request disclosure of categories and specific pieces of personal information collected, sources, purposes, and third parties with whom it\'s shared.',
+                    link: 'https://oag.ca.gov/privacy/ccpa'
+                  },
+                  {
+                    title: 'Right to Delete',
+                    description: 'Consumers can request the deletion of personal information collected by the business, subject to certain exceptions.',
+                    link: 'https://oag.ca.gov/privacy/ccpa'
+                  },
+                  {
+                    title: 'Right to Opt-Out of Sale or Sharing',
+                    description: 'Consumers can direct businesses to stop selling or sharing their personal information with third parties.',
+                    link: 'https://cppa.ca.gov/'
+                  },
+                  {
+                    title: 'Right to Non-Discrimination',
+                    description: 'Businesses cannot discriminate against consumers for exercising their CCPA rights.',
+                    link: 'https://cppa.ca.gov/'
+                  }
+                ].map((right, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{right.title}</h4>
+                    <p className="text-gray-600 mb-3">{right.description}</p>
+                    <a 
+                      href={right.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                    >
+                      Learn More
+                      <i className="bx bx-external-link text-lg"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -170,14 +278,45 @@ const AllPolicies = () => {
               <p className="text-gray-700">
                 This policy complies with APEC and Asian privacy requirements.
               </p>
-              <h3>Key Privacy Rights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                <li>Right to access personal information</li>
-                <li>Right to correct personal information</li>
-                <li>Right to delete personal information</li>
-                <li>Right to withdraw consent</li>
-                <li>Right to data portability</li>
-              </ul>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key Privacy Resources</h3>
+              <div className="grid gap-4">
+                {[
+                  {
+                    title: 'APEC Privacy Framework',
+                    description: 'Comprehensive framework for privacy protection across APEC member economies.',
+                    link: 'https://www.apec.org/docs/default-source/Publications/2005/12/APEC-Privacy-Framework/05_ecsg_privacyframewk.pdf'
+                  },
+                  {
+                    title: 'APEC Secretariat Privacy Policy',
+                    description: 'Official privacy policy and procedures of the APEC Secretariat.',
+                    link: 'https://www.apec.org/docs/default-source/aboutus/policiesandprocedures/1a-apec-secretariat—personal-data-protection-policy-v2-1-%28approved-by-cmg-on-22-july-2022%29.pdf'
+                  },
+                  {
+                    title: 'CBPR System Guidelines',
+                    description: 'Cross-Border Privacy Rules system policies and guidelines.',
+                    link: 'https://cbprs.org/wp-content/uploads/2019/11/4.-CBPR-Policies-Rules-and-Guidelines-Revised-For-Posting-3-16-updated-1709-2019.pdf'
+                  },
+                  {
+                    title: 'Hong Kong Privacy Guidelines',
+                    description: 'Privacy protection guidelines from the Office of the Privacy Commissioner for Personal Data.',
+                    link: 'https://www.pcpd.org.hk/english/files/infocentre/1tonylam1_ppt.pdf'
+                  }
+                ].map((resource, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{resource.title}</h4>
+                    <p className="text-gray-600 mb-3">{resource.description}</p>
+                    <a 
+                      href={resource.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-600 rounded-full hover:bg-yellow-100 transition-colors"
+                    >
+                      View Document
+                      <i className="bx bx-external-link text-lg"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -193,14 +332,50 @@ const AllPolicies = () => {
               <p className="text-gray-700">
                 This policy complies with Australian Privacy Principles (APPs).
               </p>
-              <h3>Key APP Rights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                <li>Right to access personal information</li>
-                <li>Right to correct personal information</li>
-                <li>Right to make a privacy complaint</li>
-                <li>Right to anonymity and pseudonymity</li>
-                <li>Right to be informed about data collection</li>
-              </ul>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key Privacy Resources</h3>
+              <div className="grid gap-4">
+                {[
+                  {
+                    title: 'Australian Privacy Principles',
+                    description: 'The 13 APPs that form the basis of privacy protection in Australia.',
+                    link: 'https://www.oaic.gov.au/privacy/australian-privacy-principles'
+                  },
+                  {
+                    title: 'Privacy Rights for Individuals',
+                    description: 'Comprehensive guide to privacy rights and protections for individuals.',
+                    link: 'https://www.oaic.gov.au/privacy/privacy-rights-for-individuals'
+                  },
+                  {
+                    title: 'Privacy Complaints',
+                    description: 'Information about making privacy complaints and the complaint process.',
+                    link: 'https://www.oaic.gov.au/privacy/privacy-complaints'
+                  },
+                  {
+                    title: 'Anonymity and Pseudonymity',
+                    description: 'Guidelines on anonymity and pseudonymity in data collection.',
+                    link: 'https://www.oaic.gov.au/privacy/privacy-fact-sheets/individuals/anonymity-and-pseudonymity'
+                  },
+                  {
+                    title: 'Data Collection and Use',
+                    description: 'Information about how personal data is collected and used.',
+                    link: 'https://www.oaic.gov.au/privacy/your-privacy-rights/knowing-how-your-data-is-collected-and-used'
+                  }
+                ].map((resource, index) => (
+                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{resource.title}</h4>
+                    <p className="text-gray-600 mb-3">{resource.description}</p>
+                    <a 
+                      href={resource.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors"
+                    >
+                      Learn More
+                      <i className="bx bx-external-link text-lg"></i>
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );

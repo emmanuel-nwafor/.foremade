@@ -173,6 +173,19 @@ const ProductCard = ({ product }) => {
               {product.seller?.name || 'Unknown Seller'}
             </span>
           </div>
+          {/* Add sizes display */}
+          {product.sizes && product.sizes.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {product.sizes.map((size, index) => (
+                <span
+                  key={index}
+                  className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
+                >
+                  {size}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Price and cart section - always at bottom */}

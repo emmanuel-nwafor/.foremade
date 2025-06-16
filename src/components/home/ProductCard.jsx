@@ -11,7 +11,7 @@ const ProductCard = ({ product }) => {
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState('/images/placeholder.jpg');
   const [imageFailed, setImageFailed] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  // const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const fetchImageAndFavorites = async () => {
@@ -130,13 +130,13 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="bg-white rounded-lg shadow-sm hover:shadow-sm transition duration-300 h-[350px] flex flex-col"
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 h-[350px] flex flex-col"
       onClick={trackProductView}
       tabIndex={0}
       aria-label={product.name}
     >
       {/* Image Container with fixed height */}
-      <div className="relative h-[300px] overflow-hidden rounded-t-lg">
+      <div className="relative h-[350px] overflow-hidden rounded-t-lg">
         <img
           src={imageUrl}
           alt={product.name}

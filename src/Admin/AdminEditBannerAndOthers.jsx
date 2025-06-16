@@ -77,21 +77,38 @@ export default function AdminEditBannerAndOthers() {
     setNewSlide((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = async (e, type) => {
+  const handleMediaUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/gif', 'video/mp4', 'video/webm', 'image/jpeg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      addAlert(`Invalid file type for ${type}. Use GIF, MP4, WebM, JPEG, or PNG.`, 'error');
+      return;
+    }
+
+    // Validate file size
+    const maxSize = file.type.startsWith('video') ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for videos, 10MB for images/GIFs
+    if (file.size > maxSize) {
+      addAlert(
+        `File too large for ${type}. Max size is ${file.type.startsWith('video') ? '50MB' : '10MB'}.`,
+        'error'
+      );
+      return;
+    }
 
     setUploading((prev) => ({ ...prev, [type]: true }));
     setUploadProgress((prev) => ({ ...prev, [type]: 0 }));
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('isVideo', 'false');
+      formData.append('isVideo', file.type.startsWith('video').toString());
 
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const response = await axios.post(`${backendUrl}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
+        timeout: 120000, // 2 minutes for larger files
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress((prev) => ({ ...prev, [type]: percentCompleted }));
@@ -99,23 +116,23 @@ export default function AdminEditBannerAndOthers() {
       });
 
       if (response.status !== 200 || !response.data.url) {
-        throw new Error('Failed to upload image to Cloudinary.');
+        throw new Error('Failed to upload media to Cloudinary.');
       }
 
       setNewSlide((prev) => ({ ...prev, [type]: response.data.url }));
-      addAlert(`${type} image uploaded!`, 'success');
+      addAlert(`${type} media uploaded!`, 'success');
     } catch (err) {
-      console.error('Image upload error:', {
+      console.error('Media upload error:', {
         message: err.message,
         code: err.code,
         response: err.response?.data,
       });
       addAlert(
         err.code === 'ECONNABORTED'
-          ? 'Request timed out. Please check your network.'
+          ? 'Upload timed out. Please check your network.'
           : err.code === 'ERR_NETWORK'
           ? 'Cannot connect to server. Please check your network.'
-          : `Failed to upload ${type} image.`,
+          : `Failed to upload ${type} media.`,
         'error'
       );
     } finally {
@@ -124,10 +141,26 @@ export default function AdminEditBannerAndOthers() {
     }
   };
 
+  const renderMediaPreview = (url) => {
+    if (!url) return null;
+    const isVideo = url.match(/\.(mp4|webm)$/i);
+    if (isVideo) {
+      return (
+        <video
+          src={url}
+          controls
+          className="mt-2 h-20 w-auto rounded shadow-sm"
+          title="Video preview"
+        />
+      );
+    }
+    return <img src={url} alt="Media preview" className="mt-2 h-20 w-auto rounded shadow-sm" />;
+  };
+
   const handleSaveSlide = async (e) => {
     e.preventDefault();
     if (!newSlide.desktop || !newSlide.tablet || !newSlide.mobile) {
-      addAlert('All image fields are required.', 'error');
+      addAlert('All media fields are required.', 'error');
       return;
     }
 
@@ -237,10 +270,10 @@ export default function AdminEditBannerAndOthers() {
                   {['desktop', 'tablet', 'mobile'].map((type) => (
                     <div key={type} className="relative group">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                        {`${type.charAt(0).toUpperCase() + type.slice(1)} Image`}
+                        {`${type.charAt(0).toUpperCase() + type.slice(1)} Media`}
                         <i
                           className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help"
-                          title={`Upload an image optimized for ${type} devices`}
+                          title={`Upload an image, GIF, or short video optimized for ${type} devices (GIF ≤10MB, Videos ≤50MB)`}
                         ></i>
                       </label>
                       <div className="relative">
@@ -249,15 +282,15 @@ export default function AdminEditBannerAndOthers() {
                           name={type}
                           value={newSlide[type]}
                           onChange={handleInputChange}
-                          placeholder="Enter image URL or upload below"
+                          placeholder="Enter media URL or upload below"
                           className="mt-1 w-full py-2 pl-3 pr-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                           disabled={uploading[type]}
                         />
                       </div>
                       <input
                         type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, type)}
+                        accept="image/*,video/mp4,video/webm"
+                        onChange={(e) => handleMediaUpload(e, type)}
                         className="mt-2 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         disabled={uploading[type]}
                       />
@@ -272,13 +305,7 @@ export default function AdminEditBannerAndOthers() {
                           </div>
                         </div>
                       )}
-                      {newSlide[type] && (
-                        <img
-                          src={newSlide[type]}
-                          alt={`${type} preview`}
-                          className="mt-2 h-20 w-auto rounded shadow-sm"
-                        />
-                      )}
+                      {renderMediaPreview(newSlide[type])}
                     </div>
                   ))}
                 </div>
@@ -309,11 +336,7 @@ export default function AdminEditBannerAndOthers() {
                     key={slide.id}
                     className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200"
                   >
-                    <img
-                      src={slide.desktop}
-                      alt="Slide preview"
-                      className="h-32 w-full object-cover rounded-lg mb-2"
-                    />
+                    {renderMediaPreview(slide.desktop)}
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-300">
                         Slide {slide.id.split('-')[1]}

@@ -4,6 +4,21 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
+const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.warn(`Retry ${attempt}/${maxRetries} after ${delay}ms due to: ${err.message}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+};
+
+const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
+
 const DailyDeals = () => {
   const [dealProducts, setDealProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,32 +47,62 @@ const DailyDeals = () => {
       try {
         setLoading(true);
         setError(null);
-        const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
+
+        const dealSnapshot = await retryWithBackoff(() =>
+          getDocs(collection(db, 'dailyDeals'))
+        );
         const dealData = dealSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        const validDeals = dealData.filter((deal) => new Date(deal.endTime) > new Date());
+        console.log('Raw deals:', dealData);
 
-        // Fetch seller names
-        const dealsWithSellers = await Promise.all(
+        const validDeals = dealData.filter((deal) => new Date(deal.endDate) > new Date());
+        console.log('Valid deals:', validDeals);
+
+        const dealsWithDetails = await Promise.all(
           validDeals.map(async (deal) => {
-            const productDoc = await getDoc(doc(db, 'products', deal.productId));
+            const productDoc = await retryWithBackoff(() =>
+              getDoc(doc(db, 'products', deal.productId))
+            );
             const productData = productDoc.exists() ? productDoc.data() : {};
-            const sellerDoc = await getDoc(doc(db, 'users', productData.sellerId || 'unknown'));
-            const sellerName = sellerDoc.exists() ? sellerDoc.data().name || 'Unknown Seller' : 'Unknown Seller';
+            console.log(`Product for deal ${deal.id}:`, productData);
+
+            let sellerName = 'Unknown Seller';
+            if (productData.sellerId) {
+              const sellerDoc = await retryWithBackoff(() =>
+                getDoc(doc(db, 'users', productData.sellerId))
+              );
+              sellerName = sellerDoc.exists() ? sellerDoc.data().name || 'Unknown Seller' : 'Unknown Seller';
+            }
+
+            const imageUrl = Array.isArray(productData.imageUrls) && productData.imageUrls.length > 0
+              ? productData.imageUrls[0]
+              : FALLBACK_IMAGE;
+            console.log(`Image for deal ${deal.id}:`, imageUrl);
+
             return {
-              ...deal,
-              imageUrls: productData.imageUrls?.length ? productData.imageUrls : ['https://via.placeholder.com/200'],
+              id: deal.id,
+              productId: deal.productId,
+              productName: productData.name || 'Unnamed Product',
+              originalPrice: productData.price || 0,
+              discountPercent: (deal.discount * 100).toFixed(2),
+              imageUrl,
               sellerName,
+              startDate: deal.startDate,
+              endDate: deal.endDate,
             };
           })
         );
 
-        setDealProducts(dealsWithSellers);
+        console.log('Final deal products:', dealsWithDetails);
+        setDealProducts(dealsWithDetails);
       } catch (err) {
-        console.error('Error loading daily deals:', err);
-        setError('Failed to load daily deals.');
+        console.error('Error loading daily deals:', {
+          message: err.message,
+          stack: err.stack,
+        });
+        setError('Failed to load daily deals. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -111,6 +156,25 @@ const DailyDeals = () => {
     );
   }
 
+  if (error) {
+    return (
+      <section className="py-4 xs:py-6 sm:py-8 bg-yellow-50">
+        <div className="container mx-auto px-3 xs:px-4">
+          <div className="flex justify-between items-center mb-4 xs:mb-5 sm:mb-6">
+            <div className="flex items-center space-x-2 xs:space-x-3">
+              <i className="bx bx-time text-yellow-600 text-xl xs:text-2xl"></i>
+              <h2 className="text-base xs:text-lg sm:text-xl font-bold text-gray-800">Daily Deals</h2>
+            </div>
+          </div>
+          <p className="text-red-600 text-sm xs:text-base p-3 xs:p-4 flex items-center gap-2">
+            <i className="bx bx-error-circle"></i>
+            {error}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-4 xs:py-6 sm:py-8 bg-yellow-50">
       <div className="container mx-auto px-3 xs:px-4">
@@ -157,7 +221,10 @@ const DailyDeals = () => {
           className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory gap-3 xs:gap-4"
         >
           {dealProducts.length === 0 ? (
-            <p className="text-gray-600 text-sm xs:text-base p-3 xs:p-4">No deals available at the moment.</p>
+            <p className="text-gray-600 text-sm xs:text-base p-3 xs:p-4 flex items-center gap-2">
+              <i className="bx bx-info-circle"></i>
+              No deals available right now. Check back later for hot offers! 🔥
+            </p>
           ) : (
             dealProducts.map((deal) => (
               <div
@@ -170,7 +237,7 @@ const DailyDeals = () => {
                       id: deal.productId,
                       name: deal.productName,
                       price: deal.originalPrice * (1 - deal.discountPercent / 100),
-                      imageUrls: deal.imageUrls,
+                      imageUrl: deal.imageUrl,
                       sellerName: deal.sellerName,
                     }}
                   />

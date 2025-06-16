@@ -5,21 +5,21 @@ import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firest
 import { toast } from 'react-toastify';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
+const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
+
 const ProductCard = ({ product }) => {
   console.log('ProductCard received product:', product);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [imageUrl, setImageUrl] = useState('/images/placeholder.jpg');
+  const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
-  // const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    const fetchImageAndFavorites = async () => {
-      if (!product || typeof product !== 'object' || !product.id || product.status !== 'approved') {
-        console.log('Product not approved, invalid, or missing ID:', { productId: product?.id, status: product?.status });
+    const fetchFavorites = async () => {
+      if (!product || typeof product !== 'object' || !product.id) {
+        console.log('Invalid or missing product ID:', product);
         setIsFavorited(false);
         setFavoriteCount(0);
-        setImageUrl('/images/placeholder.jpg');
         return;
       }
 
@@ -28,36 +28,37 @@ const ProductCard = ({ product }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Firestore product data:', { id: product.id, status: data.status, imageUrls: data.imageUrls, favoritedBy: data.favoritedBy, favoriteCount: data.favoriteCount });
+          console.log('Firestore favorite data:', {
+            id: product.id,
+            favoritedBy: data.favoritedBy,
+            favoriteCount: data.favoriteCount,
+          });
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
-          // Use product.imageUrls if available (from DailyDeals), else fetch from Firestore
-          const validImage = Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')
-            ? product.imageUrls[0]
-            : Array.isArray(data.imageUrls) && data.imageUrls.length > 0 && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://')
-            ? data.imageUrls[0]
-            : '/images/placeholder.jpg';
-          console.log('Setting imageUrl to:', validImage);
-          setImageUrl(validImage);
-          setImageFailed(false);
         } else {
           console.warn('Product not found in Firestore:', product.id);
-          setImageUrl('/images/placeholder.jpg');
+          setIsFavorited(false);
+          setFavoriteCount(0);
         }
       } catch (err) {
-        console.error('Error fetching product data:', err);
-        toast.error('Failed to load product data.');
-        setImageUrl('/images/placeholder.jpg');
+        console.error('Error fetching favorite data:', err);
+        toast.error('Failed to load favorite data.');
       }
     };
-    fetchImageAndFavorites();
-  }, [product?.id, product?.imageUrls]);
+    fetchFavorites();
 
-  const truncateName = (name) => {
-    if (!name) return '';
-    return name.length > 17 ? name.slice(0, 12) + '...' : name;
-  };
+    // Set imageUrl from props (handle both imageUrl and imageUrls)
+    let validImage = FALLBACK_IMAGE;
+    if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
+      validImage = product.imageUrl; // DailyDeals uses imageUrl
+    } else if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')) {
+      validImage = product.imageUrls[0]; // Other pages use imageUrls
+    }
+    console.log('Setting imageUrl to:', validImage);
+    setImageUrl(validImage);
+    setImageFailed(false);
+  }, [product.id, product.imageUrl, product.imageUrls]);
 
   const handleFavorite = async (e) => {
     e.preventDefault();
@@ -107,21 +108,10 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const showSizes =
-    product?.category?.toLowerCase() === 'foremade fashion' &&
-    Array.isArray(product.sizes) &&
-    product.sizes.length > 0;
-
-  console.log(showSizes)
-
   // Handle tracking product views for "Recently Viewed" functionality
   const trackProductView = () => {
-    // Get existing recently viewed products from localStorage
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-
-    // Add current product to the front if it's not already there
     if (product.id && !recentlyViewed.includes(product.id)) {
-      // Add to front of array and limit to 10 items
       const updatedRecentlyViewed = [product.id, ...recentlyViewed].slice(0, 10);
       localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecentlyViewed));
     }
@@ -130,37 +120,38 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 h-[350px] flex flex-col"
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col"
       onClick={trackProductView}
       tabIndex={0}
       aria-label={product.name}
     >
       {/* Image Container with fixed height */}
-      <div className="relative h-[350px] overflow-hidden rounded-t-lg">
+      <div className="relative h-[200px] overflow-hidden rounded-t-lg">
         <img
           src={imageUrl}
           alt={product.name}
           className="w-full h-full object-cover"
           onError={(e) => {
-            console.warn('Image load error, falling back to shimmer:', e, { productId: product.id, imageUrl, name: product.name });
+            console.warn('Image load error:', { productId: product.id, imageUrl, name: product.name });
             setImageFailed(true);
+            setImageUrl(FALLBACK_IMAGE);
           }}
+          loading="lazy"
+          fetchpriority="low"
         />
         {/* Favorite button overlay */}
         <button
           onClick={handleFavorite}
-          className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+          className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
           onMouseDown={e => e.stopPropagation()}
           onClickCapture={e => e.preventDefault()}
         >
-          <i className={`bx ${isFavorited ? 'bxs-heart text-gray-500' : 'bx-heart'} text-xl`}></i>
-          <p className="mx-1">
-            {favoriteCount}
-          </p>
+          <i className={`bx ${isFavorited ? 'bxs-heart text-gray-600' : 'bx-heart'} text-xl`}></i>
+          <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
 
-      {/* Content area with fixed height and flex layout */}
+      {/* Content area with flex layout */}
       <div className="flex flex-col justify-between flex-grow p-3">
         {/* Product info */}
         <div>
@@ -169,23 +160,10 @@ const ProductCard = ({ product }) => {
           </h3>
           <div className="flex items-center text-sm text-gray-600 mb-2">
             <i className="bx bx-store text-blue-600 mr-1"></i>
-            <span className="line-clamp-1" title={product.seller?.name || 'Unknown Seller'}>
-              {product.seller?.name || 'Unknown Seller'}
+            <span className="line-clamp-1" title={product.sellerName || product.seller?.name || 'Unknown Seller'}>
+              {product.sellerName || product.seller?.name || 'Unknown Seller'}
             </span>
           </div>
-          {/* Add sizes display */}
-          {product.sizes && product.sizes.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {product.sizes.map((size, index) => (
-                <span
-                  key={index}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
-                >
-                  {size}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Price and cart section - always at bottom */}

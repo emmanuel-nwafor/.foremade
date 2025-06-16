@@ -43,6 +43,19 @@ function useAlerts() {
   return { alerts, addAlert, removeAlert };
 }
 
+const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.warn(`Retry ${attempt}/${maxRetries} after ${delay}ms due to: ${err.message}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+};
+
 export default function AdminCategoryEdit() {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const [loading, setLoading] = useState(true);
@@ -68,33 +81,54 @@ export default function AdminCategoryEdit() {
     let isMounted = true;
 
     const fetchData = async () => {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Data fetch timed out')), 20000) // 20s timeout
-      );
+      const timeoutPromise = (timeoutMs) =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Data fetch timed out after ${timeoutMs}ms`)), timeoutMs)
+        );
 
       try {
         setLoading(true);
 
         // Fetch categories
-        const catSnapshot = await Promise.race([
-          getDocs(collection(db, 'categories')),
-          timeoutPromise,
-        ]);
+        const catSnapshot = await retryWithBackoff(() =>
+          Promise.race([getDocs(collection(db, 'categories')), timeoutPromise(30000)])
+        );
         const catList = catSnapshot.docs.map((doc) => doc.id).sort();
         if (isMounted) setCategories(catList);
 
-        // Fetch subcategories
-        const subcatData = {};
-        const subSubcatData = {};
-        for (const cat of catList) {
-          const subcatRef = doc(db, 'customSubcategories', cat);
-          const subcatSnap = await Promise.race([getDoc(subcatRef), timeoutPromise]);
-          subcatData[cat] = subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [];
+        // Fetch subcategories and sub-subcategories in parallel
+        const subcatPromises = catList.map((cat) =>
+          retryWithBackoff(() =>
+            Promise.race([getDoc(doc(db, 'customSubcategories', cat)), timeoutPromise(30000)])
+          ).then((subcatSnap) => ({
+            cat,
+            subcats: subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [],
+          }))
+        );
 
-          const subSubcatRef = doc(db, 'customSubSubcategories', cat);
-          const subSubcatSnap = await Promise.race([getDoc(subSubcatRef), timeoutPromise]);
-          subSubcatData[cat] = subSubcatSnap.exists() ? subSubcatSnap.data() || {} : {};
-        }
+        const subSubcatPromises = catList.map((cat) =>
+          retryWithBackoff(() =>
+            Promise.race([getDoc(doc(db, 'customSubSubcategories', cat)), timeoutPromise(30000)])
+          ).then((subSubcatSnap) => ({
+            cat,
+            subSubcats: subSubcatSnap.exists() ? subSubcatSnap.data() || {} : {},
+          }))
+        );
+
+        const [subcatResults, subSubcatResults] = await Promise.all([
+          Promise.all(subcatPromises),
+          Promise.all(subSubcatPromises),
+        ]);
+
+        const subcatData = subcatResults.reduce((acc, { cat, subcats }) => {
+          acc[cat] = subcats;
+          return acc;
+        }, {});
+        const subSubcatData = subSubcatResults.reduce((acc, { cat, subSubcats }) => {
+          acc[cat] = subSubcats;
+          return acc;
+        }, {});
+
         console.log('Subcategories fetched:', subcatData);
         console.log('Sub-subcategories fetched:', subSubcatData);
         if (isMounted) {
@@ -104,7 +138,9 @@ export default function AdminCategoryEdit() {
 
         // Fetch fees
         const docRef = doc(db, 'feeConfigurations', 'categoryFees');
-        const docSnap = await Promise.race([getDoc(docRef), timeoutPromise]);
+        const docSnap = await retryWithBackoff(() =>
+          Promise.race([getDoc(docRef), timeoutPromise(30000)])
+        );
         if (docSnap.exists()) {
           if (isMounted) setFeeConfig(docSnap.data());
         } else {
@@ -114,8 +150,11 @@ export default function AdminCategoryEdit() {
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Error fetching data:', err);
-          addAlert('Failed to load data. Please try again.', 'error');
+          console.error('Error fetching data:', {
+            message: err.message,
+            stack: err.stack,
+          });
+          addAlert(`Failed to load data: ${err.message}`, 'error');
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -176,6 +215,8 @@ export default function AdminCategoryEdit() {
         },
       };
       await setDoc(feeRef, updatedFees);
+      setCategories((prev) => [...prev, newCategory.trim()].sort());
+      setFeeConfig(updatedFees);
       setNewCategory('');
       setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setErrors({});
@@ -254,6 +295,18 @@ export default function AdminCategoryEdit() {
         await deleteDoc(subSubcatRef);
       }
 
+      setCategories((prev) => prev.map((c) => (c === oldName ? newCategory.trim() : c)).sort());
+      setFeeConfig(updatedFees);
+      setSubcategories((prev) => {
+        const newSubcats = { ...prev, [newCategory.trim()]: prev[oldName] || [] };
+        delete newSubcats[oldName];
+        return newSubcats;
+      });
+      setSubSubcategories((prev) => {
+        const newSubSubcats = { ...prev, [newCategory.trim()]: prev[oldName] || {} };
+        delete newSubSubcats[oldName];
+        return newSubSubcats;
+      });
       setNewCategory('');
       setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setEditCategory(null);
@@ -280,6 +333,17 @@ export default function AdminCategoryEdit() {
       setFeeConfig(updatedFees);
       await deleteDoc(doc(db, 'customSubcategories', category));
       await deleteDoc(doc(db, 'customSubSubcategories', category));
+      setCategories((prev) => prev.filter((c) => c !== category));
+      setSubcategories((prev) => {
+        const newSubcats = { ...prev };
+        delete newSubcats[category];
+        return newSubcats;
+      });
+      setSubSubcategories((prev) => {
+        const newSubSubcats = { ...prev };
+        delete newSubSubcats[category];
+        return newSubSubcats;
+      });
       addAlert('Category deleted successfully! 🎉', 'success');
     } catch (err) {
       console.error('Error deleting category:', err);
@@ -494,9 +558,7 @@ export default function AdminCategoryEdit() {
                       min="0"
                       step="0.01"
                       placeholder="8"
-                      className={`mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors.buyerProtectionRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      className="mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${errors.buyerProtectionRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                       disabled={loading}
                     />
                     <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span>
@@ -521,9 +583,7 @@ export default function AdminCategoryEdit() {
                       min="0"
                       step="0.01"
                       placeholder="20"
-                      className={`mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors.handlingRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      className="mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${errors.handlingRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                       disabled={loading}
                     />
                     <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span>
@@ -548,9 +608,7 @@ export default function AdminCategoryEdit() {
                       min="0"
                       step="0.01"
                       placeholder="7.5"
-                      className={`mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors.taxRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      className="mt-1 w-full py-2 pl-3 pr-8 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${errors.taxRate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                       disabled={loading}
                     />
                     <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span>

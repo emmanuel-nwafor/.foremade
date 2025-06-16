@@ -110,6 +110,16 @@ export default function AdminSidebar() {
                 <span className="text-sm font-medium">Notifications</span>
               </Link>
             </li>
+            <li>
+              <Link
+                to="/admin/edit/banners"
+                onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
+                className="flex items-center p-3 hover:bg-gray-700 transition-colors"
+              >
+                <i className="bx bx-bell text-xl mr-3"></i>
+                <span className="text-sm font-medium">Edit Banners & Others</span>
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>

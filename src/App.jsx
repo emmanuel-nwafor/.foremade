@@ -68,6 +68,8 @@ import ForgetPassword from './auth/ForgetPassword';
 import OtherProductsPage from './pages/OtherProducts'; // Dynamic page
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AboutUs from './pages/AboutUs';
+import Search from './pages/Search';
+import Notifications from './profile/Notifications';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -272,6 +274,8 @@ function App() {
             <Route path="/orders" element={<Orders />} />
             <Route path="/address" element={<Address />} />
             <Route path="/setting" element={<Setting />} />
+            <Route path="/search" element={<Search />} /> 
+            <Route path="/notifications" element={<Notifications />} />
 
             {/* === Fallback Route === */}
             <Route path="*" element={<NotFound />} />

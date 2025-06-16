@@ -276,6 +276,13 @@ const Header = () => {
                 {notificationCount}
               </span>
             )}
+            <span className="p-[4px] absolute -translate-x-4 bg-red-500 animate-pulse rounded-full"></span>
+          </Link>
+          <Link
+            to="/search"
+            className={`flex flex-col items-center ${location.pathname === '/search' ? 'text-white' : 'text-white'}`}
+          >
+            <i className="bx bx-search text-xl"></i>
           </Link>
           <Link to="/cart" className="relative">
             <i className="bx bx-cart-alt text-[22px] sm:text-xl text-white"></i>
@@ -307,7 +314,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="block sm:hidden pt-16">
+      <div className="block sm:hidden pt-7">
         <FreeShipping />
       </div>
 

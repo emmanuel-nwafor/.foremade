@@ -4,6 +4,7 @@ import { db } from '/src/firebase';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar';
 import 'boxicons/css/boxicons.min.css';
+import AdminEditTrendings from './AdminEditTrendings';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -365,6 +366,7 @@ export default function AdminEditBannerAndOthers() {
               </ul>
             )}
           </div>
+          <AdminEditTrendings />
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import { toast } from 'react-toastify';
 
 export default function TrendingFashion() {
   const [trendingProducts, setTrendingProducts] = useState([]);
@@ -21,14 +22,41 @@ export default function TrendingFashion() {
     'bags & wallets',
   ];
 
-  const fetchTrendingProducts = async (categories) => {
+  const fetchTrendingProducts = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Fetch admin-selected trending items for Fashion
+      const trendingQuery = query(
+        collection(db, 'trendingItems'),
+        where('category', '==', category)
+      );
+      const trendingSnapshot = await getDocs(trendingQuery);
+      const trendingItems = trendingSnapshot.docs.map((doc) => doc.data());
+
+      if (trendingItems.length > 0) {
+        // Fetch product details for trending items
+        const productPromises = trendingItems.map(async (item) => {
+          const productDoc = await getDoc(doc(db, 'products', item.productId));
+          if (productDoc.exists()) {
+            return { id: productDoc.id, ...productDoc.data() };
+          }
+          return null;
+        });
+        const products = (await Promise.all(productPromises))
+          .filter((p) => p && p.status === 'approved')
+          .slice(0, 10);
+        console.log('Admin-selected trending Fashion products:', products);
+        return products;
+      }
+
+      // Fallback to original logic if no trending items
+      console.warn('No admin-selected trending items for Fashion. Using fallback...');
       const q = query(
         collection(db, 'products'),
         where('status', '==', 'approved'),
-        where('category', 'in', categories)
+        where('category', 'in', fashionCategories)
       );
       const querySnapshot = await getDocs(q);
       const allProducts = querySnapshot.docs.map((doc) => ({
@@ -37,19 +65,8 @@ export default function TrendingFashion() {
       }));
       console.log('All fetched products (Trending Fashion):', allProducts);
 
-      // Filter products with valid stock and sort by rating
       const filteredProducts = allProducts
-        .filter((product) => {
-          if ((product.stock || 0) < 10) {
-            console.warn('Filtered out product with low stock:', {
-              id: product.id,
-              name: product.name,
-              stock: product.stock,
-            });
-            return false;
-          }
-          return true;
-        })
+        .filter((product) => (product.stock || 0) >= 10)
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 10);
 
@@ -68,6 +85,7 @@ export default function TrendingFashion() {
         code: err.code,
       });
       setError(`Failed to load products.`);
+      toast.error('Failed to load trending products.');
       return [];
     } finally {
       setLoading(false);
@@ -75,11 +93,7 @@ export default function TrendingFashion() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const products = await fetchTrendingProducts(fashionCategories);
-      setTrendingProducts(products);
-    };
-    fetchData();
+    fetchTrendingProducts().then(setTrendingProducts);
   }, []);
 
   const scrollLeft = () => {
@@ -161,7 +175,6 @@ export default function TrendingFashion() {
               </div>
             ))
           )}
-          {console.log(error)}
         </div>
       </div>
     </section>

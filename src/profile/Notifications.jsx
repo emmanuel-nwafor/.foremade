@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { auth, db } from '/src/firebase';
 import { toast } from 'react-toastify';
 
@@ -9,20 +9,17 @@ const Notifications = () => {
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        setNotifications([]);
-        setLoading(false);
-        toast.info('Please sign in to view notifications.');
-        return;
-      }
-
+      setLoading(true);
       try {
-        const q = query(
-          collection(db, 'notifications'),
-          where('userId', '==', userId),
-          orderBy('createdAt', 'desc')
-        );
+        // Fetch from 'notifications' collection
+        let q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        
+        // If user is authenticated, filter by userId if it exists in schema
+        const userId = auth.currentUser?.uid;
+        if (userId) {
+          q = query(q, where('userId', '==', userId));
+        }
+
         const snapshot = await getDocs(q);
         const notifs = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -41,6 +38,8 @@ const Notifications = () => {
 
   const getIcon = (type) => {
     switch (type) {
+      case 'signup':
+        return 'bx bx-user-check';
       case 'order_placed':
         return 'bx bx-package';
       case 'order_status':
@@ -53,8 +52,8 @@ const Notifications = () => {
   };
 
   const formatDate = (timestamp) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate();
+    if (!timestamp) return 'Unknown time';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleString('en-NG', {
       day: 'numeric',
       month: 'short',
@@ -91,13 +90,17 @@ const Notifications = () => {
               <div
                 key={notif.id}
                 className={`bg-white rounded-lg shadow-sm p-4 flex items-start gap-3 xs:gap-4 ${
-                  !notif.read ? 'border-l-4 border-blue-500' : ''
+                  notif.read === false ? 'border-l-4 border-blue-500' : ''
                 }`}
               >
                 <i className={`${getIcon(notif.type)} text-blue-600 text-xl xs:text-2xl`}></i>
                 <div className="flex-1">
-                  <p className="text-sm xs:text-base text-gray-800">{notif.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">{formatDate(notif.createdAt)}</p>
+                  <p className="text-sm xs:text-base text-gray-800">
+                    {notif.message || 'No message available'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatDate(notif.createdAt)}
+                  </p>
                 </div>
               </div>
             ))}

@@ -31,10 +31,16 @@ const Carousel = () => {
     return () => clearInterval(timer);
   }, [current, slides.length]);
 
-  const getResponsiveImage = (slide) => {
+  const getResponsiveMedia = (slide) => {
     if (width < 640) return slide.mobile;
     if (width < 1024) return slide.tablet;
     return slide.desktop;
+  };
+
+  const isVideo = (slide) => {
+    if (slide.mediaType === 'video') return true;
+    const url = getResponsiveMedia(slide);
+    return url && (url.endsWith('.mp4') || url.endsWith('.webm'));
   };
 
   if (slides.length === 0) {
@@ -60,12 +66,36 @@ const Carousel = () => {
               : 'opacity-0 transform translate-x-10'
           }`}
         >
-          <img
-            src={getResponsiveImage(slide)}
-            alt={`Slide ${slide.id}`}
-            className="w-full h-full object-cover object-center sm:object-[50%_50%]"
-            style={{ objectPosition: 'center 35%' }}
-          />
+          {isVideo(slide) ? (
+            <video
+              src={getResponsiveMedia(slide)}
+              alt={slide.alt || `Slide ${slide.id}`}
+              className="w-full h-full object-cover object-center sm:object-[50%_50%]"
+              style={{ objectPosition: 'center 35%' }}
+              autoPlay
+              loop
+              muted
+              playsInline
+              onError={(e) => {
+                console.warn('Video load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                console.log(e)
+
+              }}
+            />
+          ) : (
+            <img
+              src={getResponsiveMedia(slide)}
+              alt={slide.alt || `Slide ${slide.id}`}
+              className="w-full h-full object-cover object-center sm:object-[50%_50%]"
+              style={{ objectPosition: 'center 35%' }}
+              loading="lazy"
+              onError={(e) => {
+                console.warn('Image load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                console.log(e)
+
+              }}
+            />
+          )}
         </div>
       ))}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">

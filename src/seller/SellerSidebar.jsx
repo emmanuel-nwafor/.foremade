@@ -35,14 +35,65 @@ export default function SellerSidebar() {
 
   // Menu items for filtering
   const menuItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: 'bx-home' },
-    { to: '/sellers/orders', label: 'Orders', icon: 'bx-cart', category: 'Order Management' },
-    { to: '/sellers/products', label: 'Products List', icon: 'bx-list-ul', category: 'Product Management', dropdown: 'products' },
-    { to: '/products-gallery', label: 'Products Gallery', icon: 'bx-image-alt', category: 'Product Management', dropdown: 'products' },
-    { to: '/products-upload', label: 'Upload Products', icon: 'bx-upload', category: 'Product Management', dropdown: 'products' },
-    { to: '/sellers-guide', label: 'Pro Seller', icon: 'bxl-product-hunt', category: 'Registering with us', dropdown: 'register' },
-    { to: '/products-gallery', label: 'Seller', icon: 'bx-select-multiple', category: 'Registering with us', dropdown: 'register' },
-    { to: '/smile', label: 'Wallet', icon: 'bx-wallet', category: 'Your wallet' },
+    { 
+      to: '/dashboard',
+      label: 'Dashboard',
+      icon: 'bx-home' 
+    },
+    { 
+      to: '/sellers/orders', 
+      label: 'Orders', 
+      icon: 'bx-cart', 
+      category: 'Order Management' 
+    },
+    { 
+      to: '/sellers/products', 
+      label: 'Products List', 
+      icon: 'bx-list-ul', 
+      category: 'Product Management', 
+      dropdown: 'products' 
+    },
+    { 
+      to: '/products-gallery', 
+      label: 'Products Gallery', 
+      icon: 'bx-image-alt', 
+      category: 'Product Management', 
+      dropdown: 'products' 
+    },
+    { 
+      to: '/products-upload', 
+      label: 'Upload Products', 
+      icon: 'bx-upload', 
+      category: 'Product Management', 
+      dropdown: 'products' 
+    },
+    { 
+      to: '/product-edit', 
+      label: 'Edit Products', 
+      icon: 'bx bx-cog', 
+      category: 'Product Management', 
+      dropdown: 'products' 
+    },
+    { 
+      to: '/sellers-guide', 
+      label: 'Pro Seller', 
+      icon: 'bxl-product-hunt', 
+      category: 'Registering with us', 
+      dropdown: 'register' 
+    },
+    { 
+      to: '/products-gallery', 
+      label: 'Seller', 
+      icon: 'bx-select-multiple', 
+      category: 'Registering with us',
+      dropdown: 'register' 
+    },
+    { 
+      to: '/smile', 
+      label: 'Wallet', 
+      icon: 'bx-wallet', 
+      category: 'Your wallet' 
+    },
   ];
 
   // Filter menu items based on search query

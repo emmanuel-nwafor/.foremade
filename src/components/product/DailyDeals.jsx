@@ -114,11 +114,6 @@ const DailyDeals = () => {
     }
   };
 
-  const truncateDescription = (text) => {
-    if (!text || typeof text !== 'string') return 'No description available';
-    return text.length > 50 ? text.slice(0, 47) + '...' : text;
-  };
-
   if (loading) {
     return (
       <section className="py-4 xs:py-6 sm:py-8 bg-yellow-50">
@@ -245,9 +240,6 @@ const DailyDeals = () => {
                       ₦{deal.originalPrice.toLocaleString('en-NG')}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1 line-clamp-2" title={deal.description}>
-                    {truncateDescription(deal.description)}
-                  </p>
                 </div>
               </div>
             ))

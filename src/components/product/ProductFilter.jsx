@@ -89,7 +89,7 @@ const ProductFilter = ({ onFilterChange }) => {
         />
       </div>
       {/* Categories */}
-      <div className="mb-4">
+      <div className="mb-4 text-sm">
         <h4 className="font-medium mb-2">Categories</h4>
         {loading ? (
           <p>Loading categories...</p>

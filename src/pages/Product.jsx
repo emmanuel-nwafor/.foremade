@@ -497,7 +497,7 @@ const Product = () => {
   const totalPrice = calculateTotalPrice(product.price, quantity);
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8">
+    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8">
       <style>
         {`
           @keyframes fadeIn {
@@ -757,7 +757,7 @@ const Product = () => {
               </div>
             </div>
           </div>
-          <div className="mt-8 bg-white rounded-lg shadow-sm p-6 animate-fadeIn">
+          <div className="mt-8 bg-gray-50 rounded-lg shadow-sm p-6 animate-fadeIn">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Product Description</h2>
             <div
               className="text-sm text-gray-700 leading-relaxed formatted-description"
@@ -773,7 +773,7 @@ const Product = () => {
               </button>
             )}
           </div>
-          <div className="mt-8 bg-white rounded-lg shadow-sm p-6 animate-fadeIn">
+          <div className="mt-8 bg-gray-50 rounded-lg shadow-sm p-6 animate-fadeIn">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Customer Reviews</h2>
             {auth.currentUser && (
               <div className="mb-6">

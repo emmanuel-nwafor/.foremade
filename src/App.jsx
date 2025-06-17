@@ -70,6 +70,7 @@ import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AboutUs from './pages/AboutUs';
 import Search from './pages/Search';
 import Notifications from './profile/Notifications';
+import Store from './components/store/Store';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -83,6 +84,7 @@ const Layout = ({ children }) => {
     '/settings',
     '/products-gallery',
     '/products-upload',
+    // '/stores',
 
     '/admin',
     '/admin/payouts',
@@ -237,6 +239,7 @@ function App() {
             <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
             <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
+
             {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
@@ -263,8 +266,8 @@ function App() {
             <Route path="/pages/GamesAndFun" element={<GamesFun />} />
             <Route path="/pages/HomeAndKitchen" element={<HomeKitchen />} />
             <Route path="/pages/OtherProducts/:category" element={<OtherProductsPage />} />
+            <Route path="/stores" element={<Store />} />
             
-
             {/* === Previously Protected User Routes (Now Open) === */}
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />

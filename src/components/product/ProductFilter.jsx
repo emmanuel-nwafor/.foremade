@@ -57,7 +57,7 @@ const ProductFilter = ({ onFilterChange }) => {
 
   return (
     <div className="p-4">
-      <h3 className="text-lg font-semibold mb-4">Filters</h3>
+      <h3 className="text-sm font-semibold mb-4">Filters</h3>
       {/* Search Input */}
       <div className="mb-4">
         <input

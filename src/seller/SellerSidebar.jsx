@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logi.png';
+import debounce from 'lodash.debounce';
 
 export default function SellerSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,15 +18,45 @@ export default function SellerSidebar() {
   };
 
   const toggleRegisterDropdown = () => {
-    setIsRegisterDropdownOpen(!isRegisterDropdownOpen)
-  }
+    setIsRegisterDropdownOpen(!isRegisterDropdownOpen);
+  };
+
+  // Debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchQuery(value);
+    }, 300),
+    []
+  );
+
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
+
+  // Menu items for filtering
+  const menuItems = [
+    { to: '/dashboard', label: 'Dashboard', icon: 'bx-home' },
+    { to: '/sellers/orders', label: 'Orders', icon: 'bx-cart', category: 'Order Management' },
+    { to: '/sellers/products', label: 'Products List', icon: 'bx-list-ul', category: 'Product Management', dropdown: 'products' },
+    { to: '/products-gallery', label: 'Products Gallery', icon: 'bx-image-alt', category: 'Product Management', dropdown: 'products' },
+    { to: '/products-upload', label: 'Upload Products', icon: 'bx-upload', category: 'Product Management', dropdown: 'products' },
+    { to: '/sellers-guide', label: 'Pro Seller', icon: 'bxl-product-hunt', category: 'Registering with us', dropdown: 'register' },
+    { to: '/products-gallery', label: 'Seller', icon: 'bx-select-multiple', category: 'Registering with us', dropdown: 'register' },
+    { to: '/smile', label: 'Wallet', icon: 'bx-wallet', category: 'Your wallet' },
+  ];
+
+  // Filter menu items based on search query
+  const filteredMenuItems = menuItems.filter((item) =>
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
+        aria-label="Open sidebar"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -34,96 +65,177 @@ export default function SellerSidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-gray-800 text-black flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
+        className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
+        } md:translate-x-0 max-h-[calc(100vh)] overflow-y-auto`}
       >
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <Link to="/">
-            <img src={logo} alt="Foremade logo" className="w-40" />
+        {/* Logo and Close Button */}
+        <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+          <Link to="/" onClick={() => setIsOpen(false)} aria-label="Foremade homepage">
+            <img src={logo} alt="Foremade logo" className="w-32" />
           </Link>
-          {/* Close Button (Mobile Only) */}
-          <button className="md:hidden p-2" onClick={toggleSidebar}>
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button
+            className="md:hidden p-2 text-gray-300 hover:text-white"
+            onClick={toggleSidebar}
+            aria-label="Close sidebar"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="p-4">
+
+        {/* Search Input */}
+        <div className="p-4 sticky top-0 bg-gray-800 z-10">
           <input
             type="text"
             placeholder="Search menu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 rounded-lg bg-slate-400 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+            onChange={handleSearchChange}
+            className="w-full p-2 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            aria-label="Search menu items"
           />
         </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <Link to="/dashboard" onClick={() => setIsOpen(false)} className="block p-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-slate-700">
-            <i className="bx bx-home text-lg mr-2"></i>Dashboard
-          </Link>
-          <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Order Management</h3>
-            <Link to="/sellers/orders" onClick={() => setIsOpen(false)} className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-slate-700">
-              <i className="bx bx-cart text-lg mr-2"></i>Orders
-            </Link>
-          </div>
-          <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Product Management</h3>
-            <div>
-              <button
-                onClick={toggleProductsDropdown}
-                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700"
-              >
-                <i className="bx bx-box text-lg mr-2"></i>Products
-                <i className={`bx ${isProductsDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm`}></i>
-              </button>
-              {isProductsDropdownOpen && (
-                <div className="ml-6 space-y-1 mt-1">
-                  <Link to="/sellers/products" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-list-ul text-lg mr-2"></i>Products List
-                  </Link>
-                  <Link to="/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-image-alt text-lg mr-2"></i>Products Gallery
-                  </Link>
-                  <Link to="/products-upload" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-upload text-lg mr-2"></i>Upload Products
-                  </Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-3">
+          {searchQuery && filteredMenuItems.length === 0 ? (
+            <p className="text-gray-400 text-sm px-2">No menu items found</p>
+          ) : (
+            <>
+              {/* Dashboard */}
+              {filteredMenuItems.some((item) => item.to === '/dashboard') && (
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center p-2 rounded-lg bg-gray-700 text-white font-semibold hover:bg-blue-600 transition"
+                  aria-label="Dashboard"
+                >
+                  <i className="bx bx-home text-lg mr-2"></i>
+                  Dashboard
+                </Link>
+              )}
+
+              {/* Order Management */}
+              {filteredMenuItems.some((item) => item.category === 'Order Management') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Order Management</h3>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Order Management')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        {item.label}
+                      </Link>
+                    ))}
                 </div>
               )}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Registering with us</h3>
-            <div>
-              <button
-                onClick={toggleRegisterDropdown}
-                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700"
-              >
-                <i className="bx bx-registered text-lg mr-2"></i>Register
-                <i className={`bx ${isRegisterDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm`}></i>
-              </button>
-              {isRegisterDropdownOpen && (
-                <div className="ml-6 space-y-1 mt-1">
-                  <Link to="/sellers-guide" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bxl-product-hunt text-lg mr-2"></i>Pro Seller
-                  </Link>
-                  <Link to="/products-gallery" onClick={() => setIsOpen(false)} className="block p-1 rounded-lg text-gray-200 hover:bg-slate-600">
-                    <i className="bx bx-select-multiple text-lg mr-2"></i>Seller
-                  </Link>
+
+              {/* Product Management */}
+              {filteredMenuItems.some((item) => item.category === 'Product Management') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Product Management</h3>
+                  <button
+                    onClick={toggleProductsDropdown}
+                    className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-gray-700 transition"
+                    aria-expanded={isProductsDropdownOpen}
+                    aria-label="Toggle Products menu"
+                  >
+                    <i className="bx bx-box text-lg mr-2"></i>
+                    Products
+                    <i
+                      className={`bx ${isProductsDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm transition-transform duration-200`}
+                    ></i>
+                  </button>
+                  <div
+                    className={`ml-6 space-y-1 mt-1 overflow-hidden transition-all duration-200 ${
+                      isProductsDropdownOpen ? 'max-h-40' : 'max-h-0'
+                    }`}
+                  >
+                    {filteredMenuItems
+                      .filter((item) => item.dropdown === 'products')
+                      .map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-1 rounded-lg text-gray-200 hover:bg-gray-600 transition"
+                          aria-label={item.label}
+                        >
+                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                          {item.label}
+                        </Link>
+                      ))}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-xs uppercase text-gray-400 px-2 mb-1">Your wallet</h3>
-            <div>
-              <Link to="/smile"
-                className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-slate-700">
-                <i className="bx bx-wallet text-lg mr-2"></i>Wallet
-              </Link>
-            </div>
-          </div>
+
+              {/* Registering with us */}
+              {filteredMenuItems.some((item) => item.category === 'Registering with us') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
+                  <button
+                    onClick={toggleRegisterDropdown}
+                    className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-gray-700 transition"
+                    aria-expanded={isRegisterDropdownOpen}
+                    aria-label="Toggle Register menu"
+                  >
+                    <i className="bx bx-registered text-lg mr-2"></i>
+                    Register
+                    <i
+                      className={`bx ${isRegisterDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm transition-transform duration-200`}
+                    ></i>
+                  </button>
+                  <div
+                    className={`ml-6 space-y-1 mt-1 overflow-hidden transition-all duration-200 ${
+                      isRegisterDropdownOpen ? 'max-h-40' : 'max-h-0'
+                    }`}
+                  >
+                    {filteredMenuItems
+                      .filter((item) => item.dropdown === 'register')
+                      .map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-1 rounded-lg text-gray-200 hover:bg-gray-600 transition"
+                          aria-label={item.label}
+                        >
+                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                          {item.label}
+                        </Link>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Your wallet */}
+              {filteredMenuItems.some((item) => item.category === 'Your wallet') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Your wallet</h3>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Your wallet')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        {item.label}
+                      </Link>
+                    ))}
+                </div>
+              )}
+            </>
+          )}
         </nav>
       </div>
 
@@ -132,33 +244,9 @@ export default function SellerSidebar() {
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
           onClick={toggleSidebar}
+          aria-hidden="true"
         ></div>
       )}
-
-      {/* Custom Styles for Fancy Scrollbar */}
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #4b5563; /* Slate gray track */
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #93c5fd; /* Light blue thumb */
-            border-radius: 3px;
-            transition: background 0.3s;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #60a5fa; /* Brighter blue on hover */
-          }
-          .custom-scrollbar {
-            scrollbar-width: thin; /* Firefox */
-            scrollbar-color: #93c5fd #4b5563; /* Thumb and track for Firefox */
-          }
-        `}
-      </style>
     </>
   );
 }

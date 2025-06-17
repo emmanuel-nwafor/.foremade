@@ -14,7 +14,7 @@ const ProductCard = ({ product }) => {
   const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
 
-  // Calculate total price with fees
+  // Calculate total price with fees (from Product.jsx)
   const calculateTotalPrice = (basePrice, qty = 1) => {
     const buyerProtectionFee = basePrice * 0.02; // 2%
     const handlingFee = 500; // ₦500 per item
@@ -70,9 +70,9 @@ const ProductCard = ({ product }) => {
     setImageFailed(false);
   }, [product.id, product.imageUrl, product.imageUrls]);
 
-  const truncateText = (text, maxLength = 15) => {
-    if (!text || typeof text !== 'string') return 'No text available';
-    return text.length > maxLength ? text.slice(0, maxLength - 3) + '...' : text;
+  const truncateName = (name) => {
+    if (!name || typeof name !== 'string') return 'Unnamed Product';
+    return name.length > 15 ? name.slice(0, 12) + '...' : name;
   };
 
   const handleFavorite = async (e) => {
@@ -173,8 +173,14 @@ const ProductCard = ({ product }) => {
         {/* Product info */}
         <div>
           <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
-            {truncateText(product.name)}
+            {truncateName(product.name)}
           </h3>
+          <div className="flex items-center text-sm text-gray-600 mb-2">
+            <i className="bx bx-store text-blue-600 mr-1"></i>
+            <span className="line-clamp-1" title={product.sellerName || product.seller?.name || 'Unknown Seller'}>
+              {product.sellerName || product.seller?.name || 'Unknown Seller'}
+            </span>
+          </div>
         </div>
 
         {/* Price and cart section - always at bottom */}

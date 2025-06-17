@@ -11,6 +11,7 @@ const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [sellerLocation, setSellerLocation] = useState('');
   const [similarProducts, setSimilarProducts] = useState([]);
   const [recentSearches, setRecentSearches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,21 +31,68 @@ const Product = () => {
 
   const colorMap = {
     red: '#ff0000',
-    blue: '#0000FF',
+    blue: '#0000ff',
     brown: '#8b4513',
     green: '#008000',
     black: '#000000',
     gold: '#ff9a1d',
-    white: '#FFFFFF',
-    yellow: '#FFFF00',
+    white: '#ffffff',
+    yellow: '#ffff00',
     gray: '#808080',
     purple: '#800080',
-    pink: '#FFC1CC',
-    orange: '#FFA500',
+    pink: '#ffc1cc',
+    orange: '#ffa500',
     silver: '#e2f2ec',
   };
 
+  const tagStyles = {
+    new: 'bg-blue-100 text-blue-700 border-blue-200',
+    sale: 'bg-red-100 text-red-700 border-red-200',
+    trending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    default: 'bg-gray-100 text-gray-700 border-gray-200',
+  };
+
   const SIZE_RELEVANT_CATEGORIES = ['foremade fashion', 'clothing', 'shoes', 'accessories'];
+
+  const calculateTotalPrice = (basePrice, qty) => {
+    const buyerProtectionFee = basePrice * 0.02; // 2%
+    const handlingFee = 500; // ₦500 per item
+    const subtotal = basePrice + handlingFee;
+    const tax = subtotal * 0.075; // 7.5% VAT
+    const total = (basePrice + buyerProtectionFee + handlingFee + tax) * qty;
+    return total;
+  };
+
+  const formatDescription = (text) => {
+    if (!text || typeof text !== 'string') return '';
+    const sanitized = text.replace(/<[^>]+>/g, '');
+    const lines = sanitized.split('\n');
+    let isList = false;
+    let output = lines
+      .map((line) => {
+        line = line.trim();
+        if (!line) return null;
+        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        line = line.replace(/__(.*?)__/g, '<strong>$1</strong>');
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+          const content = line.substring(2).trim();
+          if (!isList) {
+            isList = true;
+            return `<li class="ml-4 list-disc">${content}</li>`;
+          }
+          return `<li class="ml-4 list-disc">${content}</li>`;
+        }
+        if (isList) {
+          isList = false;
+          return `</ul><p class="mb-2">${line}</p>`;
+        }
+        return `<p class="mb-2">${line}</p>`;
+      })
+      .filter(Boolean)
+      .join('');
+    if (isList) output += '</ul>';
+    return output;
+  };
 
   const fetchFavorites = useCallback(async () => {
     if (!auth.currentUser) {
@@ -73,14 +121,13 @@ const Product = () => {
         setFavorites([]);
       }
     });
-
     return () => unsubscribe();
   }, [fetchFavorites]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        console.log('Starting fetchProduct for ID:', id);
+        console.log('Fetching product ID:', id);
         if (!id || typeof id !== 'string' || id.trim() === '' || id.includes('/')) {
           throw new Error('Invalid product ID');
         }
@@ -93,28 +140,34 @@ const Product = () => {
         if (data.status !== 'approved') {
           throw new Error('Product not approved');
         }
+        let location = '';
+        if (data.sellerId) {
+          const sellerRef = doc(db, 'users', data.sellerId);
+          const sellerSnap = await getDoc(sellerRef);
+          if (sellerSnap.exists()) {
+            const sellerData = sellerSnap.data();
+            location = sellerData.location
+              ? `${sellerData.location.city || ''}, ${sellerData.location.state || ''}, ${sellerData.location.country || ''}`
+                  .trim()
+                  .replace(/, ,/g, ',')
+              : '';
+          }
+        }
+        setSellerLocation(location);
+
         let imageUrls = Array.isArray(data.imageUrls)
-          ? data.imageUrls.filter(
-              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-            )
-          : data.imageUrl &&
-            typeof data.imageUrl === 'string' &&
-            data.imageUrl.startsWith('https://res.cloudinary.com/')
+          ? data.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
+          : data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
           ? [data.imageUrl]
-          : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+          : ['https://via.placeholder.com/600'];
         let videoUrls = Array.isArray(data.videoUrls)
-          ? data.videoUrls.filter(
-              (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-            )
+          ? data.videoUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
           : [];
         if (imageUrls.length === 0) {
-          imageUrls = ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+          imageUrls = ['https://via.placeholder.com/600'];
         }
-        console.log('Product imageUrls:', imageUrls);
-        console.log('Product videoUrls:', videoUrls);
         const category = data.category?.trim().toLowerCase() || 'uncategorized';
         const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-        console.log('Category:', category, 'Requires sizes:', requiresSizes, 'Sizes:', data.sizes || []);
         const reviewsSnapshot = await getDocs(collection(db, `products/${id}/reviews`));
         const reviews = reviewsSnapshot.docs.map((reviewDoc) => {
           const reviewData = reviewDoc.data();
@@ -143,6 +196,7 @@ const Product = () => {
           imageUrl: imageUrls[0],
           tags: data.tags || [],
           seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
+          sellerId: data.sellerId || '',
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
           status: data.status || 'pending',
@@ -151,7 +205,6 @@ const Product = () => {
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
-        console.log('Main media set:', productData.imageUrls[0]);
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -174,20 +227,17 @@ const Product = () => {
             const data = doc.data();
             if (data.status !== 'approved') return null;
             let imageUrl =
-              data.imageUrl &&
-              typeof data.imageUrl === 'string' &&
-              data.imageUrl.startsWith('https://res.cloudinary.com/')
+              data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
                 ? data.imageUrl
                 : Array.isArray(data.imageUrls) &&
                   data.imageUrls[0] &&
                   typeof data.imageUrls[0] === 'string' &&
                   data.imageUrls[0].startsWith('https://res.cloudinary.com/')
                 ? data.imageUrls[0]
-                : 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
+                : 'https://via.placeholder.com/600';
             if (doc.id === id) return null;
             const similarCategory = data.category?.trim().toLowerCase() || 'uncategorized';
             const requiresSizesForSimilar = SIZE_RELEVANT_CATEGORIES.includes(similarCategory);
-            console.log('Similar product category:', similarCategory, 'Requires sizes:', requiresSizesForSimilar, 'Sizes:', data.sizes || []);
             return {
               id: doc.id,
               name: data.name || 'Unnamed Product',
@@ -205,7 +255,6 @@ const Product = () => {
             };
           })
           .filter((product) => product && product.imageUrl);
-        console.log('Fetched similar products:', similar);
         setSimilarProducts(similar.slice(0, 4));
       } catch (err) {
         console.error('Error loading product:', err);
@@ -220,7 +269,6 @@ const Product = () => {
 
     const fetchRecentSearches = async () => {
       try {
-        console.log('Starting fetchRecentSearches...');
         const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
         if (recent.length === 0) {
           setRecentSearches([]);
@@ -235,19 +283,16 @@ const Product = () => {
             const data = productSnap.data();
             if (data.status !== 'approved') continue;
             let imageUrl =
-              data.imageUrl &&
-              typeof data.imageUrl === 'string' &&
-              data.imageUrl.startsWith('https://res.cloudinary.com/')
+              data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
                 ? data.imageUrl
                 : Array.isArray(data.imageUrls) &&
                   data.imageUrls[0] &&
                   typeof data.imageUrls[0] === 'string' &&
                   data.imageUrls[0].startsWith('https://res.cloudinary.com/')
                 ? data.imageUrls[0]
-                : 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
+                : 'https://via.placeholder.com/600';
             const category = data.category?.trim().toLowerCase() || 'uncategorized';
             const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-            console.log('Recent search category:', category, 'Requires sizes:', requiresSizes, 'Sizes:', data.sizes || []);
             products.push({
               id: productSnap.id,
               name: data.name || 'Unnamed Product',
@@ -265,7 +310,6 @@ const Product = () => {
             });
           }
         }
-        console.log('Fetched recent searches:', products);
         setRecentSearches(products);
       } catch (err) {
         console.error('Error fetching recent searches:', err);
@@ -277,13 +321,10 @@ const Product = () => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        console.log('Starting fetchAllData...');
         await Promise.all([fetchProduct(), fetchRecentSearches()]);
-        console.log('All data fetched successfully.');
       } catch (err) {
         console.error('Error in fetchAllData:', err);
       } finally {
-        console.log('Setting loading to false...');
         setLoading(false);
       }
     };
@@ -293,18 +334,15 @@ const Product = () => {
 
   useEffect(() => {
     if (!product || product.imageUrls.length <= 1 || isVideoPlaying) return;
-
     const interval = setInterval(() => {
       setCurrentMediaIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % product.imageUrls.length;
         setSlideDirection('right');
         setMainMedia(product.imageUrls[nextIndex]);
         setIsVideoPlaying(false);
-        console.log('Auto-slid to media:', product.imageUrls[nextIndex], 'Index:', nextIndex);
         return nextIndex;
       });
     }, 5000);
-
     return () => clearInterval(interval);
   }, [product, isVideoPlaying]);
 
@@ -412,7 +450,6 @@ const Product = () => {
           userName,
         };
       });
-      console.log('Updated reviews:', reviews);
       setProduct((prev) => ({ ...prev, reviews }));
     } catch (err) {
       console.error('Error submitting review:', err);
@@ -426,7 +463,6 @@ const Product = () => {
       setMainMedia(media);
       setCurrentMediaIndex(index);
       setIsVideoPlaying(media.includes('.mp4'));
-      console.log('Main media updated:', media, 'Is video:', media.includes('.mp4'), 'Direction:', index > currentMediaIndex ? 'right' : 'left');
     }
   };
 
@@ -451,20 +487,24 @@ const Product = () => {
     );
   }
 
-  const DESCRIPTION_LIMIT = 100;
+  const DESCRIPTION_LIMIT = 150;
   const REVIEW_LIMIT = 5;
   const truncatedDescription =
-    product.description.length > DESCRIPTION_LIMIT
-      ? `${product.description.substring(0, DESCRIPTION_LIMIT)}...`
-      : product.description;
+    product.description.length > DESCRIPTION_LIMIT ? `${product.description.substring(0, DESCRIPTION_LIMIT)}...` : product.description;
   const shouldShowDescriptionToggle = product.description.length > DESCRIPTION_LIMIT;
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
   const imageMedia = product.imageUrls;
+  const totalPrice = calculateTotalPrice(product.price, quantity);
 
   return (
-    <div className="relative container mx-auto p-5">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <style>
         {`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
           @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -473,56 +513,73 @@ const Product = () => {
             from { transform: translateX(-100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
           }
-          .slide-in-right {
-            animation: slideInRight 0.5s ease-in-out forwards;
-          }
-          .slide-in-left {
-            animation: slideInLeft 0.5s ease-in-out forwards;
-          }
-          .main-image-container {
+          .slide-in-right { animation: slideInRight 0.3s ease-out; }
+          .slide-in-left { animation: slideInLeft 0.3s ease-out; }
+          .main-media-container {
             position: relative;
             width: 100%;
-            height: 0;
-            padding-top: 100%; /* Creates a perfect square (100% of width) */
+            padding-top: 100%;
             overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           }
-          .main-image-container img, .main-image-container video {
+          .main-media-container img, .main-media-container video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s ease-in-out;
-            border-radius: 0.5rem;
+            transition: transform 0.3s ease;
           }
-          .main-image-container:hover img, .main-image-container:hover video {
-            transform: scale(1.5);
+          .main-media-container:hover img, .main-media-container:hover video {
+            transform: scale(1.05);
           }
-          .thumbnail-video {
-            width: 3.5rem;
-            height: 3.5rem;
-            object-fit: cover;
-            border-radius: 0.5rem;
+          .thumbnail {
+            transition: all 0.2s ease;
+          }
+          .thumbnail:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          }
+          .sticky-cart {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+          }
+          .formatted-description strong {
+            font-weight: 600;
+          }
+          .formatted-description ul {
+            list-style: disc;
+            margin-left: 1.5rem;
+            margin-bottom: 0.5rem;
+          }
+          .formatted-description li {
+            margin-bottom: 0.25rem;
           }
         `}
       </style>
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-full md:w-3/4">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/2">
-              <div className="main-image-container">
-                {typeof mainMedia === 'string' && mainMedia.includes('.mp4') ? (
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+            <div>
+              <div className="main-media-container">
+                {mainMedia.includes('.mp4') ? (
                   <video
                     src={mainMedia}
                     controls
+                    autoPlay={isVideoPlaying}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
                     onError={(e) => {
-                      console.error('Video load error:', { productId: product.id, videoUrl: e.target.src, name: product.name });
                       e.target.style.display = 'none';
                       e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Video N/A</span></div>';
                     }}
-                    onLoadedData={() => console.log('Video loaded:', { productId: product.id, videoUrl: mainMedia, name: product.name })}
                   />
                 ) : (
                   <img
@@ -530,116 +587,108 @@ const Product = () => {
                     alt={product.name}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
                     onError={(e) => {
-                      console.error('Image load error:', { productId: product.id, imageUrl: e.target.src, name: product.name });
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Image N/A</span></div>';
-                    }}
-                    onLoad={(e) => {
-                      console.log('Image loaded:', { productId: product.id, imageUrl: mainMedia, name: product.name });
-                      e.target.style.opacity = '1';
+                      e.target.src = 'https://via.placeholder.com/600';
                     }}
                   />
                 )}
               </div>
               {(imageMedia.length > 1 || product.videoUrls.length > 0) && (
-                <div className="flex items-center justify-center gap-2 mt-2 overflow-x-auto">
+                <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide">
                   {imageMedia.map((media, index) => (
-                    <div
+                    <img
                       key={index}
-                      className="relative"
+                      src={media}
+                      alt={`${product.name} ${index + 1}`}
+                      className={`w-16 h-16 object-cover rounded-lg border cursor-pointer thumbnail ${
+                        mainMedia === media ? 'border-blue-500 border-2' : 'border-gray-200'
+                      }`}
                       onClick={() => handleMediaClick(media, index)}
-                    >
-                      <img
-                        src={media}
-                        alt={`${product.name} ${index + 1}`}
-                        className={`w-14 h-14 object-cover rounded-lg border cursor-pointer ${
-                          mainMedia === media ? 'border-blue-500 border-2' : 'border-gray-300'
-                        }`}
-                        onError={(e) => {
-                          console.error('Thumbnail image error:', { productId: product.id, imageUrl: e.target.src, name: product.name });
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML += '<div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Image N/A</span></div>';
-                        }}
-                        onLoad={() => console.log('Thumbnail image loaded:', { productId: product.id, imageUrl: media, name: product.name })}
-                      />
-                    </div>
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/64';
+                      }}
+                    />
                   ))}
                   {product.videoUrls.map((video, index) => (
-                    <div
+                    <video
                       key={`video-${index}`}
-                      className="relative"
+                      src={video}
+                      className={`w-16 h-16 object-cover rounded-lg border cursor-pointer thumbnail ${
+                        mainMedia === video ? 'border-blue-500 border-2' : 'border-gray-200'
+                      }`}
+                      muted
+                      loop
+                      autoPlay
                       onClick={() => handleMediaClick(video, imageMedia.length + index)}
-                    >
-                      <video
-                        src={video}
-                        className="thumbnail-video border cursor-pointer"
-                        muted
-                        loop
-                        autoPlay
-                        onError={(e) => {
-                          console.error('Thumbnail video error:', { productId: product.id, videoUrl: e.target.src, name: product.name });
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML += '<div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Video N/A</span></div>';
-                        }}
-                        onLoadedData={() => console.log('Thumbnail video loaded:', { productId: product.id, videoUrl: video, name: product.name })}
-                      />
-                    </div>
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML += '<div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs">Video N/A</span></div>';
+                      }}
+                    />
                   ))}
                 </div>
               )}
             </div>
-            <div className="md:w-1/2">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
-              <p className="text-sm text-gray-600 mb-2">
-                Seller: <span className="font-medium">{product.seller.name}</span>
-              </p>
-              <p className="text-sm text-gray-600 mb-2">
-                Category: <span className="font-medium">{product.category}</span>
-              </p>
-              {product.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {product.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded"
-                    >
-                      {tag}
+            <div className="flex flex-col gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{product.name}</h1>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>
+                  Seller: <strong>{product.seller.name}</strong>
+                </span>
+                {sellerLocation && (
+                  <>
+                    <span>|</span>
+                    <span className="flex items-center">
+                      <i className="bx bx-map text-blue-600 mr-1" />
+                      <strong>{sellerLocation}</strong>
                     </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex items-center mb-3">
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 {[...Array(5)].map((_, i) => (
                   <i
                     key={i}
-                    className={`bx bxs-star text-amber-400 text-base sm:text-lg md:text-xl ${
-                      i < Math.floor(product.rating) ? 'bx-star-filled' : ''
-                    }`}
-                  ></i>
+                    className={`bx ${i < Math.floor(product.rating) ? 'bxs-star' : 'bx-star'} text-lg text-amber-400`}
+                  />
                 ))}
-                <span className="text-sm text-gray-600 ml-2">
-                  ({product.reviews?.length || 0} reviews)
-                </span>
+                <span className="text-sm text-gray-600">({product.reviews?.length || 0} reviews)</span>
               </div>
-              <p className="text-2xl font-bold text-gray-800 mb-4">
-                ₦{product.price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-gray-600 mb-4">
-                Stock:{' '}
-                <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
-                  {product.stock > 0 ? `${product.stock} units available` : 'Out of stock'}
-                </span>
-              </p>
+              {product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {product.tags.map((tag, index) => {
+                    const tagKey = tag.toLowerCase();
+                    const style = tagStyles[tagKey] || tagStyles.default;
+                    return (
+                      <span
+                        key={index}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border ${style} transform hover:scale-105 transition-transform shadow-sm`}
+                      >
+                        {tag}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="text-sm text-gray-600">
+                Category: <span className="font-medium">{product.category}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Condition: <span className="font-medium">{product.condition}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Stock: <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>{product.stock > 0 ? `${product.stock} available` : 'Out of stock'}</span>
+              </div>
               {product.colors.length > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm text-gray-600 mb-1">Colors:</label>
-                  <div className="flex gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Colors:</label>
+                  <div className="flex gap-2 flex-wrap">
                     {product.colors.map((color, index) => (
                       <div key={index} className="relative group">
                         <span
-                          className="w-6 h-6 rounded-full inline-block border border-gray-300"
+                          className="w-8 h-8 rounded-full inline-block border border-gray-300 cursor-pointer transform hover:scale-110 transition-transform"
                           style={{ backgroundColor: colorMap[color.toLowerCase()] || '#000000' }}
-                        ></span>
+                          aria-label={color}
+                        />
                         <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 -top-8 left-1/2 transform -translate-x-1/2">
                           {color}
                         </span>
@@ -649,113 +698,120 @@ const Product = () => {
                 </div>
               )}
               {product.sizes.length > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm text-gray-600 mb-1">Sizes:</label>
-                  <div className="flex gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sizes:</label>
+                  <div className="flex gap-2 flex-wrap">
                     {product.sizes.map((size, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 text-xs bg-gray-100 rounded"
+                        className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full border border-gray-200 hover:bg-gray-200 transition-colors"
                       >
-                        {size}
+                        {product.category === 'shoes' ? `${size}"` : size}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="flex items-center mb-4">
-                <label className="mr-2 text-sm text-gray-600">Quantity:</label>
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Price:</h3>
+                <p className="text-2xl font-bold text-blue-600">₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs text-gray-500">Total for {quantity} item(s)</p>
+              </div>
+              <div className="flex items-center gap-4 mt-4">
+                <label className="text-sm font-medium text-gray-700">Quantity:</label>
                 <input
                   type="number"
                   min="1"
                   max={product.stock}
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 p-1 border border-gray-300 rounded"
+                  className="w-20 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   disabled={product.stock === 0}
+                  aria-label="Quantity"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-4 mt-4">
                 <button
                   onClick={handleAddToCart}
-                  className={`w-full px-2 py-1 text-xs rounded-lg transition ${
+                  className={`flex-1 py-3 px-6 rounded-lg text-sm font-medium transition-transform transform hover:scale-105 ${
                     product.stock > 0
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-300 text-gray-600 cursor-not-allowed'
                   }`}
                   disabled={product.stock <= 0}
+                  aria-label={product.stock > 0 ? 'Add to cart' : 'Out of stock'}
                 >
                   {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
                 </button>
                 <button
                   onClick={toggleFavorite}
-                  className={`flex items-center justify-center gap-2 px-2 py-1 text-xs border rounded-lg transition ${
+                  className={`p-3 rounded-lg border transition-transform transform hover:scale-105 ${
                     favorites.includes(product.id)
                       ? 'border-red-500 text-red-500 hover:bg-red-50'
                       : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                   }`}
+                  aria-label={favorites.includes(product.id) ? 'Remove from favorites' : 'Add to favorites'}
                 >
-                  <i
-                    className={`bx bxs-heart text-xl ${
-                      favorites.includes(product.id) ? 'text-red-500' : 'text-gray-400'
-                    }`}
-                  ></i>
+                  <i className={`bx bxs-heart text-xl ${favorites.includes(product.id) ? 'text-red-500' : 'text-gray-400'}`} />
                 </button>
               </div>
             </div>
           </div>
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">Product Description</h2>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {showFullDescription ? product.description : truncatedDescription}
-            </p>
+          <div className="mt-8 bg-white rounded-lg shadow-sm p-6 animate-fadeIn">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Product Description</h2>
+            <div
+              className="text-sm text-gray-700 leading-relaxed formatted-description"
+              dangerouslySetInnerHTML={{ __html: showFullDescription ? formatDescription(product.description) : formatDescription(truncatedDescription) }}
+            />
             {shouldShowDescriptionToggle && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
                 className="mt-2 text-blue-600 hover:underline text-sm"
+                aria-label={showFullDescription ? 'Show less description' : 'Show more description'}
               >
-                {showFullDescription ? 'Show Less' : 'See More'}
+                {showFullDescription ? 'Show Less' : 'Show More'}
               </button>
             )}
           </div>
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">Customer Reviews</h2>
+          <div className="mt-8 bg-white rounded-lg shadow-sm p-6 animate-fadeIn">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Customer Reviews</h2>
             {auth.currentUser && (
-              <div className="mb-4">
+              <div className="mb-6">
                 <button
-                  onClick={() => {
-                    setShowReviewForm(!showReviewForm);
-                    console.log('Toggled review form:', !showReviewForm);
-                  }}
+                  onClick={() => setShowReviewForm(!showReviewForm)}
                   className="text-blue-600 hover:underline text-sm"
+                  aria-label={showReviewForm ? 'Hide review form' : 'Write a review'}
                 >
                   {showReviewForm ? 'Hide Review Form' : 'Write a Review'}
                 </button>
                 {showReviewForm && (
-                  <form onSubmit={handleSubmitReview} className="mt-4">
-                    <h3 className="text-lg font-medium mb-2">Write a Review</h3>
-                    <div className="flex items-center mb-2">
-                      <label className="mr-2 text-sm text-gray-600">Rating:</label>
+                  <form onSubmit={handleSubmitReview} className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="text-lg font-medium text-gray-800 mb-3">Write a Review</h3>
+                    <div className="flex items-center mb-3">
+                      <label className="mr-2 text-sm font-medium text-gray-700">Rating:</label>
                       {[...Array(5)].map((_, i) => (
                         <i
                           key={i}
-                          className={`bx bxs-star text-base cursor-pointer ${
-                            i < reviewRating ? 'text-amber-400' : 'text-gray-400'
+                          className={`bx bxs-star text-lg cursor-pointer transition-colors ${
+                            i < reviewRating ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'
                           }`}
                           onClick={() => setReviewRating(i + 1)}
-                        ></i>
+                          aria-label={`Rate ${i + 1} stars`}
+                        />
                       ))}
                     </div>
                     <textarea
                       value={reviewComment}
                       onChange={(e) => setReviewComment(e.target.value)}
                       placeholder="Write your review..."
-                      className="w-full p-2 border border-gray-300 rounded mb-2"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                       rows="4"
-                    ></textarea>
+                      aria-label="Review comment"
+                    />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-transform transform hover:scale-105"
+                      aria-label="Submit review"
                     >
                       Submit Review
                     </button>
@@ -766,87 +822,106 @@ const Product = () => {
             {product.reviews && product.reviews.length > 0 ? (
               <>
                 {displayedReviews.map((review) => (
-                  <div key={review.id} className="border-b border-gray-200 py-3">
+                  <div key={review.id} className="border-b border-gray-200 py-4 last:border-b-0">
                     <div className="flex items-center mb-2">
                       {[...Array(5)].map((_, i) => (
                         <i
                           key={i}
-                          className={`bx bxs-star text-sm ${
-                            i < Math.floor(review.rating) ? 'text-amber-400' : 'text-gray-400'
-                          }`}
-                        ></i>
+                          className={`bx ${i < Math.floor(review.rating) ? 'bxs-star' : 'bx-star'} text-sm text-amber-400`}
+                        />
                       ))}
                       <span className="text-sm text-gray-600 ml-2">({review.rating})</span>
                     </div>
                     <p className="text-sm text-gray-700 mb-1">{review.comment}</p>
                     <p className="text-xs text-gray-500">
                       By {review.userName || 'Anonymous'} on{' '}
-                      {review.date?.toDate().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      }) || 'Unknown Date'}
+                      {review.date?.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) || 'Unknown Date'}
                     </p>
                   </div>
                 ))}
                 {product.reviews.length > REVIEW_LIMIT && (
                   <button
-                    onClick={() => {
-                      setShowAllReviews(!showAllReviews);
-                      console.log('Toggled show all reviews:', !showAllReviews);
-                    }}
-                    className="mt-2 text-blue-600 hover:underline text-sm"
+                    onClick={() => setShowAllReviews(!showAllReviews)}
+                    className="mt-4 text-blue-600 hover:underline text-sm"
+                    aria-label={showAllReviews ? 'Show fewer reviews' : 'Show more reviews'}
                   >
-                    {showAllReviews
-                      ? 'Show Less'
-                      : `Show More (${product.reviews.length - REVIEW_LIMIT} more)`}
+                    {showAllReviews ? 'Show Less' : `Show More (${product.reviews.length - REVIEW_LIMIT} more)`}
                   </button>
                 )}
               </>
             ) : (
-              <p className="text-sm text-gray-600">No reviews yet. Be the first to review this product!</p>
+              <p className="text-sm text-gray-600 flex items-center">
+                <i className="bx bx-message-square-detail mr-1 text-gray-400" />
+                No reviews yet. Be the first to review this product!
+              </p>
             )}
           </div>
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Searches</h2>
             {recentSearches.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {recentSearches.map((recentProduct) => (
+                {recentSearches.slice(0, 4).map((recentProduct) => (
                   <ProductCard key={recentProduct.id} product={recentProduct} />
-                )).slice(0, 4)}
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-600">No recent searches found.</p>
+              <p className="text-sm text-gray-600 flex items-center">
+                <i className="bx bx-search-alt-2 mr-1 text-gray-400" />
+                No recent searches found.
+              </p>
             )}
           </div>
         </div>
-        <div className="w-full md:w-1/4 max-md:hidden overflow-auto">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Recommended for you</h2>
-          <div className="flex flex-col gap-4 md:border-l md:pl-4">
-            {similarProducts.length > 0 ? (
-              similarProducts.map((similarProduct) => (
-                <div key={similarProduct.id} className="md:w-full">
-                  <ProductCard product={similarProduct} />
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-600">No similar products found.</p>
-            )}
+        <div className="hidden lg:block lg:col-span-1">
+          <div className="sticky top-4">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recommended for You</h2>
+            <div className="flex flex-col gap-4">
+              {similarProducts.length > 0 ? (
+                similarProducts.map((similarProduct) => (
+                  <ProductCard key={similarProduct.id} product={similarProduct} />
+                ))
+              ) : (
+                <p className="text-sm text-gray-600 flex items-center">
+                  <i className="bx bx-list-ul mr-1 text-gray-400" />
+                  No similar products found.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
-      <div className="md:hidden lg:hidden xl:hidden mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Recommended for you</h2>
-        <div className="grid grid-cols-2 gap-4 overflow-auto">
+      <div className="lg:hidden mt-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Recommended for You</h2>
+        <div className="grid grid-cols-2 gap-4">
           {similarProducts.length > 0 ? (
             similarProducts.map((similarProduct) => (
               <ProductCard key={similarProduct.id} product={similarProduct} />
             ))
           ) : (
-            <p className="text-sm text-gray-600 col-span-2">No similar products found.</p>
+            <p className="text-sm text-gray-600 col-span-2 flex items-center">
+              <i className="bx bx-list-ul mr-1 text-gray-400" />
+              No similar products found.
+            </p>
           )}
         </div>
       </div>
+      {product.stock > 0 && (
+        <div className="lg:hidden sticky-cart">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-lg font-bold text-blue-600">₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-gray-500">Total for {quantity} item(s)</p>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-transform transform hover:scale-105"
+              aria-label="Add to cart"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      )}
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );

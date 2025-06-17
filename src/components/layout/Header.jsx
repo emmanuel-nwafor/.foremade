@@ -207,7 +207,7 @@ const Header = () => {
 
           <div className="flex ml-5 items-center space-x-4 mt-2">
             <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">Shop</Link>
-            <Link to="/dashboard" className="m-2 hover:text-gray-100 hover:underline transition-all">Sell</Link>
+            <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">Sell</Link>
             <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">Smile</Link>
             <div className="relative group">
               <button

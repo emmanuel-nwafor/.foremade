@@ -7,13 +7,12 @@ import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
 
-const ProductCard = ({ product, isDailyDeal = false }) => {
-  console.log('ProductCard received product:', product, 'isDailyDeal:', isDailyDeal);
+const ProductCard = ({ product }) => {
+  console.log('ProductCard received product:', product);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
-  const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
 
   // Calculate total price with fees
   const calculateTotalPrice = (basePrice, qty = 1) => {
@@ -57,26 +56,7 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
         toast.error('Failed to load favorite data.');
       }
     };
-
-    const fetchSellerUsername = async () => {
-      if (isDailyDeal || !product.sellerId) {
-        setSellerUsername('');
-        return;
-      }
-      try {
-        const sellerRef = doc(db, 'users', product.sellerId);
-        const sellerSnap = await getDoc(sellerRef);
-        if (sellerSnap.exists()) {
-          setSellerUsername(sellerSnap.data().username || 'Unknown Seller');
-        }
-      } catch (err) {
-        console.error('Error fetching seller username:', err);
-        setSellerUsername('Unknown Seller');
-      }
-    };
-
     fetchFavorites();
-    fetchSellerUsername();
 
     // Set imageUrl from props
     let validImage = FALLBACK_IMAGE;
@@ -88,7 +68,7 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
     console.log('Setting imageUrl to:', validImage);
     setImageUrl(validImage);
     setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, isDailyDeal]);
+  }, [product.id, product.imageUrl, product.imageUrls]);
 
   const truncateText = (text, maxLength = 15) => {
     if (!text || typeof text !== 'string') return 'No text available';
@@ -195,14 +175,6 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
           <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
             {truncateText(product.name)}
           </h3>
-          {!isDailyDeal && sellerUsername && (
-            <div className="flex items-center text-sm text-gray-600 mb-2">
-              <i className="bx bx-user text-blue-600 mr-1"></i>
-              <span className="line-clamp-1" title={sellerUsername}>
-                {truncateText(sellerUsername, 20)}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Price and cart section - always at bottom */}

@@ -35,7 +35,7 @@ import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 
-import Admin from '/src/admin/Admin';
+import Admin from '/src/Admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminNotifications from '/src/admin/AdminNotifications';
 import AdminUsers from '/src/admin/AdminUsers';

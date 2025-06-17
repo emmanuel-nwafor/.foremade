@@ -11,15 +11,18 @@ const Notifications = () => {
     const fetchNotifications = async () => {
       setLoading(true);
       try {
-        // Fetch from 'notifications' collection
-        let q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-        
-        // If user is authenticated, filter by userId if it exists in schema
         const userId = auth.currentUser?.uid;
-        if (userId) {
-          q = query(q, where('userId', '==', userId));
+        if (!userId) {
+          setNotifications([]);
+          setLoading(false);
+          return;
         }
 
+        const q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', userId),
+          orderBy('createdAt', 'desc')
+        );
         const snapshot = await getDocs(q);
         const notifs = snapshot.docs.map((doc) => ({
           id: doc.id,

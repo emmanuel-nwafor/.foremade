@@ -1,11 +1,34 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../firebase';
 
-export default function SellerLocationForm({ locationData, setLocationData, errors }) {
+export default function SellerLocationForm({ locationData, setLocationData, errors, saveLocation }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setLocationData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleSave = async () => {
+    if (saveLocation) {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        try {
+          await setDoc(doc(db, 'sellerLocations', userId), locationData, { merge: true });
+          console.log('Location saved to Firestore:', locationData);
+        } catch (err) {
+          console.error('Error saving location:', err);
+        }
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    if (saveLocation && Object.values(locationData).some(val => val)) {
+      handleSave();
+    }
+  }, [locationData, saveLocation]);
 
   return (
     <div className="mt-6">
@@ -27,12 +50,11 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             type="text"
             id="country"
             name="country"
-            value={locationData.country}
+            value={locationData.country || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.country ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            // placeholder="e.g., Nigeria"
           />
           {errors.country && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -54,12 +76,11 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             type="text"
             id="state"
             name="state"
-            value={locationData.state}
+            value={locationData.state || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            // placeholder="e.g., Lagos"
           />
           {errors.state && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -81,12 +102,11 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             type="text"
             id="city"
             name="city"
-            value={locationData.city}
+            value={locationData.city || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            // placeholder="e.g., Ikeja"
           />
           {errors.city && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -108,12 +128,11 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
             type="text"
             id="address"
             name="address"
-            value={locationData.address}
+            value={locationData.address || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
               errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-            // placeholder="e.g., 123 Main Street"
           />
           {errors.address && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
@@ -136,4 +155,9 @@ SellerLocationForm.propTypes = {
   }).isRequired,
   setLocationData: PropTypes.func.isRequired,
   errors: PropTypes.object.isRequired,
+  saveLocation: PropTypes.func,
+};
+
+SellerLocationForm.defaultProps = {
+  saveLocation: null,
 };

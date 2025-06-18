@@ -298,7 +298,7 @@ export default function AdminUsers() {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-6">
-        <div className="w-full max-w-6xl mx-auto">
+        <div className="w-full max-w-5xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-user text-blue-500"></i>
             Manage Users

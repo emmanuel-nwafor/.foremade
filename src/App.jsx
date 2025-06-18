@@ -1,10 +1,4 @@
-import { 
-  BrowserRouter, 
-  Routes, 
-  Route, 
-  Navigate, 
-  useLocation 
-} from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Header from './components/layout/Header';
@@ -34,12 +28,16 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
+
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminNotifications from '/src/admin/AdminNotifications';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
+import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
+import AdminEditDeals from '/src/admin/AdminEditDeals';
+
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
@@ -61,9 +59,13 @@ import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
 
-import OtherProductsPage from './pages/OtherProducts'; // Dynamic page
+import OtherProductsPage from './pages/OtherProducts';
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AboutUs from './pages/AboutUs';
+import Search from './pages/Search';
+import Notifications from './profile/Notifications';
+import Store from './components/store/Store';
+import SellerEditProduct from './seller/SellerEditProduct';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -77,7 +79,8 @@ const Layout = ({ children }) => {
     '/settings',
     '/products-gallery',
     '/products-upload',
-
+    '/seller/edit-product/:productId',
+    
     '/admin',
     '/admin/payouts',
     '/admin/dashboard',
@@ -88,6 +91,8 @@ const Layout = ({ children }) => {
     '/admin/sellers/payouts',
     '/admin/products',
     '/admin/notifications',
+    '/admin/edit/banners',
+    '/admin/edit/daily-deals',
 
     '/sellers/orders',
     '/sellers/products',
@@ -95,7 +100,6 @@ const Layout = ({ children }) => {
     '/dashboard',
   ].includes(location.pathname);
 
-  // Show footer on profile page and About Us page
   const showFooter = ['/profile', '/about'].includes(location.pathname);
 
   return (
@@ -121,7 +125,6 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-
   return children;
 };
 
@@ -131,13 +134,11 @@ function App() {
       <AuthProvider>
         <Layout>
           <Routes>
-            {/* === Authentication Routes === */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/add-phone" element={<AddPhone />} />
             <Route path="/sellers-guide" element={<HowItWorks />} />
 
-            {/* === Protected Seller Routes === */}
             <Route
               path="/smile"
               element={
@@ -175,6 +176,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SellerProductGallery />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/seller/edit-product/:productId"
+              element={
+                <ProtectedRoute>
+                  <SellerEditProduct />
                 </ProtectedRoute>
               }
             />
@@ -218,8 +227,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
-            {/* === Previously Protected Admin Routes (Now Open) === */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/products" element={<Admin />} />
@@ -227,8 +234,9 @@ function App() {
             <Route path="/admin/edit/fees" element={<AdminEditFees />} />
             <Route path="/admin/edit/categories" element={<AdminCategoryEdit />} />
             <Route path="/admin/notifications" element={<AdminNotifications />} />
+            <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
+            <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
 
-            {/* === Public Routes === */}
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />
@@ -254,9 +262,7 @@ function App() {
             <Route path="/pages/GamesAndFun" element={<GamesFun />} />
             <Route path="/pages/HomeAndKitchen" element={<HomeKitchen />} />
             <Route path="/pages/OtherProducts/:category" element={<OtherProductsPage />} />
-            
-
-            {/* === Previously Protected User Routes (Now Open) === */}
+            <Route path="/stores" element={<Store />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/favorites" element={<Favorites />} />
@@ -265,8 +271,9 @@ function App() {
             <Route path="/orders" element={<Orders />} />
             <Route path="/address" element={<Address />} />
             <Route path="/setting" element={<Setting />} />
+            <Route path="/search" element={<Search />} /> 
+            <Route path="/notifications" element={<Notifications />} />
 
-            {/* === Fallback Route === */}
             <Route path="*" element={<NotFound />} />
             <Route path="/about" element={<AboutUs />} />
           </Routes>

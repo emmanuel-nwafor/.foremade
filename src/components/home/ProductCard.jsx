@@ -5,21 +5,36 @@ import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firest
 import { toast } from 'react-toastify';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
 
-const ProductCard = ({ product }) => {
-  console.log('ProductCard received product:', product);
+const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
+
+const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [imageUrl, setImageUrl] = useState('/images/placeholder.jpg');
+  const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
+  const [isDailyDeal, setIsDailyDeal] = useState(propIsDailyDeal);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+
+  const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
+    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
+    const discountedPrice = basePrice - discount;
+    const buyerProtectionFee = discountedPrice * 0.02; // 2%
+    const handlingFee = 500; // ₦500 per item
+    const subtotal = discountedPrice + handlingFee;
+    const tax = subtotal * 0.075; // 7.5% VAT
+    const total = (discountedPrice + buyerProtectionFee + handlingFee + tax) * qty;
+    return total;
+  };
 
   useEffect(() => {
-    const fetchImageAndFavorites = async () => {
-      if (!product || typeof product !== 'object' || !product.id || product.status !== 'approved') {
-        console.log('Product not approved, invalid, or missing ID:', { productId: product?.id, status: product?.status });
+    const fetchProductData = async () => {
+      if (!product || typeof product !== 'object' || !product.id) {
+        console.log('Invalid or missing product ID:', product);
         setIsFavorited(false);
         setFavoriteCount(0);
-        setImageUrl('/images/placeholder.jpg');
+        setIsDailyDeal(propIsDailyDeal);
+        setDiscountPercentage(0);
         return;
       }
 
@@ -28,32 +43,65 @@ const ProductCard = ({ product }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Firestore product data:', { id: product.id, status: data.status, imageUrls: data.imageUrls, favoritedBy: data.favoritedBy, favoriteCount: data.favoriteCount });
+          console.log('Firestore data:', {
+            id: product.id,
+            favoritedBy: data.favoritedBy,
+            favoriteCount: data.favoriteCount,
+            isDailyDeal: data.isDailyDeal,
+            discountPercentage: data.discountPercentage,
+          });
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
-          const validImage = Array.isArray(data.imageUrls) && data.imageUrls.length > 0 && typeof data.imageUrls[0] === 'string' && data.imageUrls[0].startsWith('https://') 
-            ? data.imageUrls[0] 
-            : '/images/placeholder.jpg';
-          console.log('Setting imageUrl to:', validImage);
-          setImageUrl(validImage);
-          setImageFailed(false);
+          setIsDailyDeal(data.isDailyDeal || propIsDailyDeal);
+          setDiscountPercentage(data.discountPercentage || 0);
         } else {
           console.warn('Product not found in Firestore:', product.id);
-          setImageUrl('/images/placeholder.jpg');
+          setIsFavorited(false);
+          setFavoriteCount(0);
+          setIsDailyDeal(propIsDailyDeal);
+          setDiscountPercentage(0);
         }
       } catch (err) {
         console.error('Error fetching product data:', err);
         toast.error('Failed to load product data.');
-        setImageUrl('/images/placeholder.jpg');
       }
     };
-    fetchImageAndFavorites();
-  }, [product?.id]);
 
-  const truncateName = (name) => {
-    if (!name) return '';
-    return name.length > 17 ? name.slice(0, 12) + '...' : name;
+    const fetchSellerUsername = async () => {
+      if (isDailyDeal || !product.sellerId) {
+        setSellerUsername('');
+        return;
+      }
+      try {
+        const sellerRef = doc(db, 'users', product.sellerId);
+        const sellerSnap = await getDoc(sellerRef);
+        if (sellerSnap.exists()) {
+          setSellerUsername(sellerSnap.data().username || 'Unknown Seller');
+        }
+      } catch (err) {
+        console.error('Error fetching seller username:', err);
+        setSellerUsername('Unknown Seller');
+      }
+    };
+
+    fetchProductData();
+    fetchSellerUsername();
+
+    let validImage = FALLBACK_IMAGE;
+    if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
+      validImage = product.imageUrl;
+    } else if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')) {
+      validImage = product.imageUrls[0];
+    }
+    console.log('Setting imageUrl to:', validImage);
+    setImageUrl(validImage);
+    setImageFailed(false);
+  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, propIsDailyDeal]);
+
+  const truncateText = (text, maxLength = 15) => {
+    if (!text || typeof text !== 'string') return 'No text available';
+    return text.length > maxLength ? text.slice(0, maxLength - 3) + '...' : text;
   };
 
   const handleFavorite = async (e) => {
@@ -104,92 +152,71 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const showSizes =
-    product?.category?.toLowerCase() === 'foremade fashion' &&
-    Array.isArray(product.sizes) &&
-    product.sizes.length > 0;
-
-    console.log(showSizes)
-
-  // Handle tracking product views for "Recently Viewed" functionality
   const trackProductView = () => {
-    // Get existing recently viewed products from localStorage
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-
-    // Add current product to the front if it's not already there
     if (product.id && !recentlyViewed.includes(product.id)) {
-      // Add to front of array and limit to 10 items
       const updatedRecentlyViewed = [product.id, ...recentlyViewed].slice(0, 10);
       localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecentlyViewed));
     }
   };
 
+  const totalPrice = calculateTotalPrice(product.price || 0, 1, isDailyDeal ? discountPercentage : 0);
+
   return (
     <Link
       to={`/product/${product.id}`}
-      className="bg-white rounded-lg shadow-sm hover:shadow-sm transition duration-300 h-[350px] flex flex-col"
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col"
       onClick={trackProductView}
       tabIndex={0}
       aria-label={product.name}
     >
-      {/* Image Container with fixed height */}
-      <div className="relative h-[300px] overflow-hidden rounded-t-lg">
+      {isDailyDeal && (
+        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+          Deal! -{discountPercentage}%
+        </span>
+      )}
+      <div className="relative h-[200px] overflow-hidden rounded-t-lg">
         <img
-          src={imageUrl}
+          src={imageFailed ? FALLBACK_IMAGE : imageUrl}
           alt={product.name}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            console.warn('Image load error, falling back to shimmer:', e, { productId: product.id, imageUrl, name: product.name });
-            setImageFailed(true);
+          onError={() => {
+            if (!imageFailed) {
+              console.warn('Image load error:', { productId: product.id, imageUrl, name: product.name });
+              setImageFailed(true);
+              setImageUrl(FALLBACK_IMAGE);
+            }
           }}
+          loading="lazy"
+          fetchpriority="low"
         />
-        {/* Favorite button overlay */}
         <button
           onClick={handleFavorite}
-          className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
-          onMouseDown={e => e.stopPropagation()}
-          onClickCapture={e => e.preventDefault()}
+          className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
+          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
         >
-          <i className={`bx ${isFavorited ? 'bxs-heart text-gray-500' : 'bx-heart'} text-xl`}></i>
-          <p className="mx-1">
-            {favoriteCount}
-          </p>
+          <i className={`bx ${isFavorited ? 'bxs-heart' : 'bx-heart'} text-xl ${isFavorited ? 'text-gray-600' : ''}`} />
+          <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
-
-      {/* Content area with fixed height and flex layout */}
       <div className="flex flex-col justify-between flex-grow p-3">
-        {/* Product info */}
         <div>
           <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
-            {product.name}
+            {truncateText(product.name)}
           </h3>
-          <div className="flex items-center text-sm text-gray-600 mb-2">
-            <i className="bx bx-store text-blue-600 mr-1"></i>
-            <span className="line-clamp-1" title={product.seller?.name || 'Unknown Seller'}>
-              {product.seller?.name || 'Unknown Seller'}
-            </span>
-          </div>
-          {/* Add sizes display */}
-          {product.sizes && product.sizes.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {product.sizes.map((size, index) => (
-                <span
-                  key={index}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
-                >
-                  {size}
-                </span>
-              ))}
+          {!isDailyDeal && sellerUsername && (
+            <div className="flex items-center text-sm text-gray-600 mb-2">
+              <i className="bx bx-user text-blue-600 mr-1"></i>
+              <span className="line-clamp-1" title={sellerUsername}>
+                {truncateText(sellerUsername, 20)}
+              </span>
             </div>
           )}
         </div>
-
-        {/* Price and cart section - always at bottom */}
         <div className="mt-auto">
           <div className="flex items-center justify-between">
             <span className="font-bold text-blue-600">
-              ₦{product.price?.toLocaleString('en-NG') || '0'}
+              ₦{totalPrice.toLocaleString('en-NG')}
             </span>
             <AddToCartButton productId={product.id} isIconOnly={true} />
           </div>
@@ -200,4 +227,3 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
-

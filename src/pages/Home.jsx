@@ -7,7 +7,6 @@ import SellerBanner from '../components/home/EnhancedSellerBanner';
 import RecommendedForYou from '../components/product/RecommendedForYou';
 import TrendingFashion from '../components/product/TrendingFashion';
 import TrendingGadgets from '../components/product/TrendingGadgets';
-import TopStores from '../components/store/TopStore';
 import EmpowermentHubPreview from '../components/home/EmpowermentHubPreview';
 import DailyDeals from '../components/product/DailyDeals';
 import RecentlyViewed from '../components/product/RecentlyViewed';
@@ -80,9 +79,6 @@ const Home = () => {
       
       {/* Enhanced Seller Banner - encouraging selling */}
       <SellerBanner />
-      
-      {/* Top stores */}
-      <TopStores />
       
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />

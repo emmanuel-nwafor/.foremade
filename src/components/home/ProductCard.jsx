@@ -7,30 +7,34 @@ import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
 
-const ProductCard = ({ product, isDailyDeal = false }) => {
-  console.log('ProductCard received product:', product, 'isDailyDeal:', isDailyDeal);
+const ProductCard = ({ product }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
   const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
+  const [isDailyDeal, setIsDailyDeal] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
-  // Calculate total price with fees
-  const calculateTotalPrice = (basePrice, qty = 1) => {
-    const buyerProtectionFee = basePrice * 0.02; // 2%
+  const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
+    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
+    const discountedPrice = basePrice - discount;
+    const buyerProtectionFee = discountedPrice * 0.02; // 2%
     const handlingFee = 500; // ₦500 per item
-    const subtotal = basePrice + handlingFee;
+    const subtotal = discountedPrice + handlingFee;
     const tax = subtotal * 0.075; // 7.5% VAT
-    const total = (basePrice + buyerProtectionFee + handlingFee + tax) * qty;
+    const total = (discountedPrice + buyerProtectionFee + handlingFee + tax) * qty;
     return total;
   };
 
   useEffect(() => {
-    const fetchFavorites = async () => {
+    const fetchProductData = async () => {
       if (!product || typeof product !== 'object' || !product.id) {
         console.log('Invalid or missing product ID:', product);
         setIsFavorited(false);
         setFavoriteCount(0);
+        setIsDailyDeal(false);
+        setDiscountPercentage(0);
         return;
       }
 
@@ -39,22 +43,28 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Firestore favorite data:', {
+          console.log('Firestore data:', {
             id: product.id,
             favoritedBy: data.favoritedBy,
             favoriteCount: data.favoriteCount,
+            isDailyDeal: data.isDailyDeal,
+            discountPercentage: data.discountPercentage,
           });
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
+          setIsDailyDeal(data.isDailyDeal || false);
+          setDiscountPercentage(data.discountPercentage || 0);
         } else {
           console.warn('Product not found in Firestore:', product.id);
           setIsFavorited(false);
           setFavoriteCount(0);
+          setIsDailyDeal(false);
+          setDiscountPercentage(0);
         }
       } catch (err) {
-        console.error('Error fetching favorite data:', err);
-        toast.error('Failed to load favorite data.');
+        console.error('Error fetching product data:', err);
+        toast.error('Failed to load product data.');
       }
     };
 
@@ -75,10 +85,9 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
       }
     };
 
-    fetchFavorites();
+    fetchProductData();
     fetchSellerUsername();
 
-    // Set imageUrl from props
     let validImage = FALLBACK_IMAGE;
     if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
       validImage = product.imageUrl;
@@ -88,7 +97,7 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
     console.log('Setting imageUrl to:', validImage);
     setImageUrl(validImage);
     setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, isDailyDeal]);
+  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId]);
 
   const truncateText = (text, maxLength = 15) => {
     if (!text || typeof text !== 'string') return 'No text available';
@@ -151,7 +160,7 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
     }
   };
 
-  const totalPrice = calculateTotalPrice(product.price || 0);
+  const totalPrice = calculateTotalPrice(product.price || 0, 1, isDailyDeal ? discountPercentage : 0);
 
   return (
     <Link
@@ -161,7 +170,11 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
       tabIndex={0}
       aria-label={product.name}
     >
-      {/* Image Container with fixed height */}
+      {isDailyDeal && (
+        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+          Deal! -{discountPercentage}%
+        </span>
+      )}
       <div className="relative h-[200px] overflow-hidden rounded-t-lg">
         <img
           src={imageFailed ? FALLBACK_IMAGE : imageUrl}
@@ -177,7 +190,6 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
           loading="lazy"
           fetchpriority="low"
         />
-        {/* Favorite button overlay */}
         <button
           onClick={handleFavorite}
           className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
@@ -187,10 +199,7 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
           <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
-
-      {/* Content area with flex layout */}
       <div className="flex flex-col justify-between flex-grow p-3">
-        {/* Product info */}
         <div>
           <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
             {truncateText(product.name)}
@@ -204,8 +213,6 @@ const ProductCard = ({ product, isDailyDeal = false }) => {
             </div>
           )}
         </div>
-
-        {/* Price and cart section - always at bottom */}
         <div className="mt-auto">
           <div className="flex items-center justify-between">
             <span className="font-bold text-blue-600">

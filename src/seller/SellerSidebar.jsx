@@ -68,13 +68,6 @@ export default function SellerSidebar() {
       dropdown: 'products' 
     },
     { 
-      to: '/product-edit', 
-      label: 'Edit Products', 
-      icon: 'bx bx-cog', 
-      category: 'Product Management', 
-      dropdown: 'products' 
-    },
-    { 
       to: '/sellers-guide', 
       label: 'Pro Seller', 
       icon: 'bxl-product-hunt', 

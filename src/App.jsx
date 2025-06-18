@@ -37,6 +37,7 @@ import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
 import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
 import AdminEditDeals from '/src/admin/AdminEditDeals';
+import AdminCategoryEdit from './admin/AdminCategoryEdit';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -51,7 +52,6 @@ import GDPRAccess from './pages/GDPRAccess';
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
 import Electronics from './pages/Electronics';
-import BabyProducts from './pages/BabyProducts';
 import ComputerAccessories from './pages/ComputerAccessories';
 import GamesFun from './pages/GamesFun';
 import Drinks from './pages/Drinks';
@@ -60,7 +60,6 @@ import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
 
 import OtherProductsPage from './pages/OtherProducts';
-import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AboutUs from './pages/AboutUs';
 import Search from './pages/Search';
 import Notifications from './profile/Notifications';
@@ -245,23 +244,32 @@ function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/best-selling" element={<BestSelling />} />
-            <Route path="/games-fun" element={<GamesFun />} />
+            <Route path="/camera-photography" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/clothing" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/coffee-tea-bag" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/computers-laptops" element={<ComputerAccessories />} />
+            <Route path="/drinks-beverages" element={<Drinks />} />
+            <Route path="/footwear" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/game-console" element={<GamesFun />} />
+            <Route path="/grills-outdoor-cooking" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/hair-nails-accessories" element={<HealthBeauty />} /> {/* Placeholder, update if component exists */}
+            <Route path="/home-living" element={<HomeKitchen />} />
+            <Route path="/jewellery-accessories" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/perfumes-fragrances" element={<HealthBeauty />} /> {/* Placeholder, update if component exists */}
+            <Route path="/sneakers-joggers" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/sound-audio" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/sports-outdoors" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/television-accessories" element={<Electronics />} /> {/* Placeholder, update if component exists */}
+            <Route path="/vehicles-transport" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/pregnancy-mother-care" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
+            <Route path="/health-wellness" element={<HealthBeauty />} />
             <Route path="/electronics" element={<Electronics />} />
-            <Route path="/baby-products" element={<BabyProducts />} />
-            <Route path="/drinks-categories" element={<Drinks />} />
-            <Route path="/home-kitchen" element={<HomeKitchen />} />
             <Route path="/tablet-phones" element={<TabletsPhones />} />
-            <Route path="/health-beauty" element={<HealthBeauty />} />
             <Route path="/smart-watches" element={<SmartWatches />} />
-            <Route path="/computers-accessories" element={<ComputerAccessories />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/privacy-policy/:type" element={<AllPolicies />} />
             <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
-            <Route path="/pages/Shoes" element={<OtherProductsPage category="Shoes" />} />
-            <Route path="/pages/Fashion" element={<OtherProductsPage category="Fashion" />} />
-            <Route path="/pages/GamesAndFun" element={<GamesFun />} />
-            <Route path="/pages/HomeAndKitchen" element={<HomeKitchen />} />
-            <Route path="/pages/OtherProducts/:category" element={<OtherProductsPage />} />
+            <Route path="/pages/other-products/:category" element={<OtherProductsPage />} />
             <Route path="/stores" element={<Store />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
@@ -273,9 +281,8 @@ function App() {
             <Route path="/setting" element={<Setting />} />
             <Route path="/search" element={<Search />} /> 
             <Route path="/notifications" element={<Notifications />} />
-
-            <Route path="*" element={<NotFound />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
       </AuthProvider>

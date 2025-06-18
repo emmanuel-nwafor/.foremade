@@ -5,8 +5,27 @@ import { doc, getDoc } from 'firebase/firestore';
 
 const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const [mainImage, setMainImage] = useState('https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+
+  const calculateTotalPrice = (basePrice, qty = 1) => {
+    return basePrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+  };
 
   useEffect(() => {
+    const fetchFeeConfig = async () => {
+      try {
+        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const feeSnap = await getDoc(feeRef);
+        if (feeSnap.exists()) {
+          const data = feeSnap.data();
+          const category = item?.product?.category || 'default';
+          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+        }
+      } catch (err) {
+        console.error('Error fetching fee config:', err);
+      }
+    };
+
     const fetchImage = async () => {
       if (item && item.productId) {
         try {
@@ -15,16 +34,12 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
           let imageUrl = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
           if (productSnap.exists()) {
             const productData = productSnap.data();
-            console.log('Product data for cart item:', item.productId, ':', productData);
             const imageUrls = Array.isArray(productData.imageUrls)
-              ? productData.imageUrls.filter(
-                  (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
-                )
+              ? productData.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
               : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
               ? [productData.imageUrl]
               : [];
             imageUrl = imageUrls.length > 0 ? imageUrls[0] : imageUrl;
-            console.log('Selected main image for cart item:', item.productId, ':', imageUrl);
           } else {
             console.warn(`Product ${item.productId} not found in Firestore.`);
           }
@@ -36,6 +51,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
       }
     };
 
+    fetchFeeConfig();
     fetchImage();
   }, [item]);
 
@@ -71,6 +87,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
     stock: item.product.stock || 0,
   };
   const isOutOfStock = product.stock === 0;
+  const totalPrice = calculateTotalPrice(product.price, item.quantity);
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
@@ -80,21 +97,13 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
           alt={product.name}
           className="w-16 h-16 object-cover rounded"
           onError={(e) => {
-            console.error('CartItem image load error:', {
-              productId: item.productId,
-              failedUrl: e.target.src,
-              name: product.name,
-            });
+            console.error('CartItem image load error:', { productId: item.productId, failedUrl: e.target.src, name: product.name });
             e.target.style.display = 'none';
             e.target.parentElement.innerHTML =
               '<div class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center"><span class="text-gray-500 text-xs">Image N/A</span></div>';
           }}
           onLoad={() => {
-            console.log('CartItem image loaded successfully:', {
-              productId: item.productId,
-              imageUrl: mainImage,
-              name: product.name,
-            });
+            console.log('CartItem image loaded successfully:', { productId: item.productId, imageUrl: mainImage, name: product.name });
           }}
         />
       </Link>
@@ -103,10 +112,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
           <h3 className="text-sm font-bold text-gray-800">{product.name}</h3>
         </Link>
         <p className="text-xs text-gray-600">
-          ₦{(product.price * item.quantity).toLocaleString('en-NG', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <p className="text-xs text-gray-600">
           Stock:{' '}

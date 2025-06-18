@@ -59,12 +59,7 @@ const Product = () => {
   const calculateTotalPrice = (basePrice, qty, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
-    const buyerProtectionFee = discountedPrice * 0.02; // 2%
-    const handlingFee = 500; // ₦500 per item
-    const subtotal = discountedPrice + handlingFee;
-    const tax = subtotal * 0.075; // 7.5% VAT
-    const total = (discountedPrice + buyerProtectionFee + handlingFee + tax) * qty;
-    return total;
+    return discountedPrice * (1 + 0.075 + 0.02 + 0.05) * qty; // Match Checkout.js
   };
 
   const formatDescription = (text) => {

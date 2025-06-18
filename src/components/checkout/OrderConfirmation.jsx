@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { db } from '/src/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import 'boxicons/css/boxicons.min.css';
 
 function CustomAlert({ alerts, removeAlert }) {
@@ -38,8 +38,8 @@ function useAlerts() {
     setAlerts((prev) => [...prev, { id, message, type }]);
   };
   const removeAlert = (id) => {
-    setAlerts((prev) => prev.filter((alert => alert.id !== id)));
-  }
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
+  };
   return { alerts, addAlert, removeAlert };
 }
 
@@ -52,25 +52,92 @@ export default function OrderConfirmation() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const orderId = new URLSearchParams(location.search).get('orderId') || location.state?.order?.id;
+        // Get orderId from query param first, then state
+        const searchParams = new URLSearchParams(location.search);
+        let orderId = searchParams.get('orderId') || location.state?.order?.id;
+        console.log('Attempting to fetch order with ID:', orderId);
+
         if (!orderId) {
-          addAlert('Order not found.', 'error');
+          console.warn('No orderId provided in query params or state');
+          addAlert('Order not found. Please check your link or contact support.', 'error');
           setLoading(false);
           return;
         }
 
-        const orderRef = doc(db, 'orders', orderId);
-        const orderSnap = await getDoc(orderRef);
-        if (!orderSnap.exists()) {
-          addAlert('Order not found.', 'error');
+        // Validate orderId format
+        if (!orderId.startsWith('order-')) {
+          console.warn('Invalid orderId format:', orderId);
+          addAlert('Invalid order ID. Please contact support.', 'error');
           setLoading(false);
           return;
         }
 
-        setOrder({ id: orderSnap.id, ...orderSnap.data() });
+        // Try fetching the order with retries
+        let orderData = null;
+        let attempts = 3;
+        while (attempts > 0) {
+          try {
+            const orderRef = doc(db, 'orders', orderId);
+            const orderSnap = await getDoc(orderRef);
+            if (orderSnap.exists()) {
+              orderData = { id: orderSnap.id, ...orderSnap.data() };
+              console.log('Order found:', orderData);
+              break;
+            }
+            console.warn(`Order ${orderId} not found on attempt ${4 - attempts}`);
+            attempts--;
+            if (attempts > 0) {
+              await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1s before retry
+            }
+          } catch (err) {
+            console.error('Firestore fetch error:', err);
+            attempts--;
+            if (attempts === 0) {
+              throw err;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+
+        // If order not found, try base orderId (without seller suffix)
+        if (!orderData && orderId.includes('-')) {
+          const baseOrderId = orderId.split('-').slice(0, 2).join('-'); // e.g., order-1234567890
+          console.log('Trying base orderId:', baseOrderId);
+          const ordersQuery = query(
+            collection(db, 'orders'),
+            where('id', '==', baseOrderId)
+          );
+          const querySnap = await getDocs(ordersQuery);
+          if (!querySnap.empty) {
+            // Use the first matching order
+            const firstOrder = querySnap.docs[0];
+            orderData = { id: firstOrder.id, ...firstOrder.data() };
+            console.log('Found order with base ID:', orderData);
+            orderId = firstOrder.id; // Update orderId to full ID
+          }
+        }
+
+        // Fallback to location.state.order if Firestore fetch fails
+        if (!orderData && location.state?.order) {
+          console.log('Using state.order as fallback:', location.state.order);
+          orderData = { ...location.state.order, id: orderId };
+          addAlert('Order loaded from session. Some details may be incomplete.', 'info');
+        }
+
+        if (!orderData) {
+          console.error('No order data found for ID:', orderId);
+          addAlert('Order not found. Please contact support at support@foremade.com.', 'error');
+          setLoading(false);
+          return;
+        }
+
+        setOrder(orderData);
       } catch (err) {
-        console.error('Error fetching order:', err);
-        addAlert('Failed to load order.', 'error');
+        console.error('Error fetching order:', {
+          message: err.message,
+          stack: err.stack,
+        });
+        addAlert('Failed to load order. Please try again or contact support.', 'error');
       } finally {
         setLoading(false);
       }
@@ -94,7 +161,7 @@ export default function OrderConfirmation() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <div className="text-center text-gray-600 dark:text-gray-300">
           <i className="bx bx-error-circle text-4xl text-red-500 mb-2"></i>
-          <p>Order not found.</p>
+          <p>Order not found. Please contact <a href="mailto:support@foremade.com" className="text-blue-600 hover:underline">support@foremade.com</a>.</p>
         </div>
       </div>
     );
@@ -121,21 +188,21 @@ export default function OrderConfirmation() {
                 className="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg"
               >
                 <img
-                  src={item.imageUrls[0] || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'}
-                  alt={item.name}
+                  src={item.imageUrls?.[0] || 'https://via.placeholder.com/150'}
+                  alt={item.name || 'Product'}
                   className="w-16 h-16 object-cover rounded"
                   onError={(e) => {
-                    e.target.src = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
+                    e.target.src = 'https://via.placeholder.com/150';
                   }}
                 />
                 <div className="flex-1">
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100">{item.name}</h4>
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-100">{item.name || 'Unknown Product'}</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Quantity: {item.quantity}
+                    Quantity: {item.quantity || 1}
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     Price: {order.currency === 'gbp' ? '£' : '₦'}
-                    {(item.price * item.quantity).toLocaleString('en-NG', {
+                    {((item.price || 0) * (item.quantity || 1)).toLocaleString('en-NG', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -149,7 +216,7 @@ export default function OrderConfirmation() {
               <span>Subtotal</span>
               <span>
                 {order.currency === 'gbp' ? '£' : '₦'}
-                {order.total.toLocaleString('en-NG', {
+                {(order.totalAmount || order.total || 0).toLocaleString('en-NG', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -159,12 +226,23 @@ export default function OrderConfirmation() {
               <span>Total</span>
               <span>
                 {order.currency === 'gbp' ? '£' : '₦'}
-                {order.total.toLocaleString('en-NG', {
+                {(order.totalAmount || order.total || 0).toLocaleString('en-NG', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
             </div>
+          </div>
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Shipping Details</h4>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              {order.shippingDetails?.name || 'Not provided'}<br />
+              {order.shippingDetails?.address || 'Not provided'}<br />
+              {order.shippingDetails?.city || ''}{order.shippingDetails?.city && order.shippingDetails?.postalCode ? ', ' : ''}{order.shippingDetails?.postalCode || ''}<br />
+              {order.shippingDetails?.country || 'Not provided'}<br />
+              <strong>Email:</strong> {order.shippingDetails?.email || 'Not provided'}<br />
+              <strong>Phone:</strong> {order.shippingDetails?.phone || 'Not provided'}
+            </p>
           </div>
         </div>
       </div>

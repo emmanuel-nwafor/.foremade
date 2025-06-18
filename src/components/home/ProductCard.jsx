@@ -15,19 +15,30 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
   const [isDailyDeal, setIsDailyDeal] = useState(propIsDailyDeal);
   const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
 
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
-    const buyerProtectionFee = discountedPrice * 0.02; // 2%
-    const handlingFee = 500; // ₦500 per item
-    const subtotal = discountedPrice + handlingFee;
-    const tax = subtotal * 0.075; // 7.5% VAT
-    const total = (discountedPrice + buyerProtectionFee + handlingFee + tax) * qty;
-    return total;
+    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
   };
 
   useEffect(() => {
+    const fetchFeeConfig = async () => {
+      try {
+        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const feeSnap = await getDoc(feeRef);
+        if (feeSnap.exists()) {
+          const data = feeSnap.data();
+          const category = product?.category || 'default';
+          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+        }
+      } catch (err) {
+        console.error('Error fetching fee config:', err);
+        toast.error('Failed to load fee settings.');
+      }
+    };
+
     const fetchProductData = async () => {
       if (!product || typeof product !== 'object' || !product.id) {
         console.log('Invalid or missing product ID:', product);
@@ -85,6 +96,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
       }
     };
 
+    fetchFeeConfig();
     fetchProductData();
     fetchSellerUsername();
 
@@ -97,7 +109,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
     console.log('Setting imageUrl to:', validImage);
     setImageUrl(validImage);
     setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, propIsDailyDeal]);
+  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, product.category, propIsDailyDeal]);
 
   const truncateText = (text, maxLength = 15) => {
     if (!text || typeof text !== 'string') return 'No text available';
@@ -216,7 +228,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         <div className="mt-auto">
           <div className="flex items-center justify-between">
             <span className="font-bold text-blue-600">
-              ₦{totalPrice.toLocaleString('en-NG')}
+              ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
             </span>
             <AddToCartButton productId={product.id} isIconOnly={true} />
           </div>

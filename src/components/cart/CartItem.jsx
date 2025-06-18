@@ -39,7 +39,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
               : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
               ? [productData.imageUrl]
               : [];
-            imageUrl = imageUrls.length > 0 ? imageUrls[0] : imageUrl;
+            imageUrl = imageUrl.length > 0 ? imageUrls[0] : imageUrl;
           } else {
             console.warn(`Product ${item.productId} not found in Firestore.`);
           }

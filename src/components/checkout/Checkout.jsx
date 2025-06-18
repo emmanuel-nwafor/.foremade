@@ -899,7 +899,7 @@ const Checkout = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 relative">
+    <div className="container mx-auto px-4 py-8 relative mb-20">
       {(isProcessing || isEmailSending) && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
           <Spinner />

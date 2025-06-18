@@ -33,7 +33,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  const belowMinimumPrice = totalPrice < 12000; // Aligned with Checkout.js
+  const belowMinimumPrice = totalPrice < 25000; // Aligned with Checkout.js
 
   // Shipping is free within Nigeria
   const shipping = 0;
@@ -74,7 +74,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
       {/* Error Messages */}
       {belowMinimumPrice && (
         <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-          ❌ Minimum purchase amount is ₦12,000 to checkout.
+          ❌ Minimum purchase amount is ₦25,000 to checkout.
         </p>
       )}
       {totalItems > 20 && (

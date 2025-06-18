@@ -26,6 +26,8 @@ const Product = () => {
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState('right');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isDailyDeal, setIsDailyDeal] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -54,12 +56,14 @@ const Product = () => {
 
   const SIZE_RELEVANT_CATEGORIES = ['foremade fashion', 'clothing', 'shoes', 'accessories'];
 
-  const calculateTotalPrice = (basePrice, qty) => {
-    const buyerProtectionFee = basePrice * 0.02; // 2%
+  const calculateTotalPrice = (basePrice, qty, discountPercentage = 0) => {
+    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
+    const discountedPrice = basePrice - discount;
+    const buyerProtectionFee = discountedPrice * 0.02; // 2%
     const handlingFee = 500; // ₦500 per item
-    const subtotal = basePrice + handlingFee;
+    const subtotal = discountedPrice + handlingFee;
     const tax = subtotal * 0.075; // 7.5% VAT
-    const total = (basePrice + buyerProtectionFee + handlingFee + tax) * qty;
+    const total = (discountedPrice + buyerProtectionFee + handlingFee + tax) * qty;
     return total;
   };
 
@@ -200,11 +204,15 @@ const Product = () => {
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
           status: data.status || 'pending',
+          isDailyDeal: data.isDailyDeal || false,
+          discountPercentage: data.discountPercentage || 0,
         };
         console.log('Fetched product:', productData);
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
+        setIsDailyDeal(productData.isDailyDeal);
+        setDiscountPercentage(productData.discountPercentage);
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -252,6 +260,8 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
+              isDailyDeal: data.isDailyDeal || false,
+              discountPercentage: data.discountPercentage || 0,
             };
           })
           .filter((product) => product && product.imageUrl);
@@ -307,6 +317,8 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
+              isDailyDeal: data.isDailyDeal || false,
+              discountPercentage: data.discountPercentage || 0,
             });
           }
         }
@@ -494,7 +506,7 @@ const Product = () => {
   const shouldShowDescriptionToggle = product.description.length > DESCRIPTION_LIMIT;
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
   const imageMedia = product.imageUrls;
-  const totalPrice = calculateTotalPrice(product.price, quantity);
+  const totalPrice = calculateTotalPrice(product.price, quantity, isDailyDeal ? discountPercentage : 0);
 
   return (
     <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8">
@@ -630,6 +642,11 @@ const Product = () => {
             </div>
             <div className="flex flex-col gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{product.name}</h1>
+              {isDailyDeal && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  Daily Deal! -{discountPercentage}%
+                </span>
+              )}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>
                   Seller: <strong>{product.seller.name}</strong>
@@ -878,7 +895,7 @@ const Product = () => {
             <div className="flex flex-col gap-4">
               {similarProducts.length > 0 ? (
                 similarProducts.map((similarProduct) => (
-                  <ProductCard key={similarProduct.id} product={similarProduct} />
+                  <ProductCard key={similarProduct.id} product={similarProduct} isDailyDeal={similarProduct.isDailyDeal} />
                 ))
               ) : (
                 <p className="text-sm text-gray-600 flex items-center">
@@ -895,7 +912,7 @@ const Product = () => {
         <div className="grid grid-cols-2 gap-4">
           {similarProducts.length > 0 ? (
             similarProducts.map((similarProduct) => (
-              <ProductCard key={similarProduct.id} product={similarProduct} />
+              <ProductCard key={similarProduct.id} product={similarProduct} isDailyDeal={similarProduct.isDailyDeal} />
             ))
           ) : (
             <p className="text-sm text-gray-600 col-span-2 flex items-center">

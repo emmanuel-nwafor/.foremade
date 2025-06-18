@@ -19,6 +19,8 @@ export default function SellerEditProduct() {
     colors: [],
     status: 'pending',
     locationData: { country: '', state: '', city: '', address: '' },
+    isDailyDeal: false,
+    discountPercentage: 0,
   });
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({});
@@ -45,6 +47,8 @@ export default function SellerEditProduct() {
             colors: Array.isArray(data.colors) ? data.colors : [],
             status: data.status || 'pending',
             locationData: data.locationData || { country: '', state: '', city: '', address: '' },
+            isDailyDeal: data.isDailyDeal || false,
+            discountPercentage: data.discountPercentage || 0,
           });
         } else {
           throw new Error('Product not found or unauthorized');
@@ -65,12 +69,18 @@ export default function SellerEditProduct() {
     if (product.quantity < 0) newErrors.quantity = 'Quantity cannot be negative';
     if (!product.locationData.country) newErrors.country = 'Country is required';
     if (!product.locationData.state) newErrors.state = 'State is required';
+    if (product.isDailyDeal && (!product.discountPercentage || product.discountPercentage < 0 || product.discountPercentage > 100)) {
+      newErrors.discountPercentage = 'Discount must be between 0 and 100%';
+    }
     return newErrors;
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProduct((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setProduct((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleQuantityChange = (e) => {
@@ -302,6 +312,42 @@ export default function SellerEditProduct() {
                 </div>
               </div>
             </div>
+            <div className="relative group">
+              <label className="block text-sm font-medium text-gray-700">Daily Deal</label>
+              <input
+                type="checkbox"
+                id="isDailyDeal"
+                name="isDailyDeal"
+                checked={product.isDailyDeal}
+                onChange={handleChange}
+                className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              {product.isDailyDeal && (
+                <div className="mt-2">
+                  <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700">
+                    Discount Percentage (%) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="discountPercentage"
+                    name="discountPercentage"
+                    value={product.discountPercentage}
+                    onChange={handleChange}
+                    min="0"
+                    max="100"
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+                      errors.discountPercentage ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                  />
+                  {errors.discountPercentage && <p className="text-red-600 text-xs mt-1">{errors.discountPercentage}</p>}
+                </div>
+              )}
+            </div>
+            {/* <SellerLocationForm
+              locationData={product.locationData}
+              setLocationData={handleLocationChange}
+              errors={errors}
+            /> */}
             <div className="flex justify-end">
               <button
                 type="button"

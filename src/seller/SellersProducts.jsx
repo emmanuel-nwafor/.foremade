@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import SellerSidebar from './SellerSidebar';
 
@@ -50,42 +50,6 @@ export default function SellersProducts() {
     );
     setFilteredProducts(filtered);
   }, [searchQuery, products]);
-
-  const handleToggleActive = async (productId, currentActive) => {
-    try {
-      const productRef = doc(db, 'products', productId);
-      await updateDoc(productRef, { active: !currentActive });
-      setProducts(products.map(p => p.id === productId ? { ...p, active: !currentActive } : p));
-      setFilteredProducts(filteredProducts.map(p => p.id === productId ? { ...p, active: !currentActive } : p));
-    } catch (err) {
-      console.error('Error toggling active status:', err);
-      setError('Failed to toggle active status: ' + err.message);
-    }
-  };
-
-  const handleToggleVisibility = async (productId, currentHidden) => {
-    try {
-      const productRef = doc(db, 'products', productId);
-      await updateDoc(productRef, { isHidden: !currentHidden });
-      setProducts(products.map(p => p.id === productId ? { ...p, isHidden: !currentHidden } : p));
-      setFilteredProducts(filteredProducts.map(p => p.id === productId ? { ...p, isHidden: !currentHidden } : p));
-    } catch (err) {
-      console.error('Error toggling visibility:', err);
-      setError('Failed to toggle visibility: ' + err.message);
-    }
-  };
-
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    try {
-      await deleteDoc(doc(db, 'products', productId));
-      setProducts(products.filter(p => p.id !== productId));
-      setFilteredProducts(filteredProducts.filter(p => p.id !== productId));
-    } catch (err) {
-      console.error('Error deleting product:', err);
-      setError('Failed to delete product: ' + err.message);
-    }
-  };
 
   if (loading) {
     return (
@@ -178,34 +142,6 @@ export default function SellersProducts() {
                        product.status === 'approved' ? 'Approved' : 'Not Approved'}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-gray-700">Active:</span>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={product.active || false}
-                        onChange={() => handleToggleActive(product.id, product.active)}
-                        className="hidden peer"
-                      />
-                      <div className="w-10 h-5 rounded-full transition-colors peer-checked:bg-green-500 bg-gray-300">
-                        <div className="w-4 h-4 bg-white rounded-full shadow-md transform transition-transform peer-checked:translate-x-6"></div>
-                      </div>
-                    </label>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Actions:</span>
-                    <div className="flex space-x-4">
-                      <Link to={`/seller/edit-product/${product.id}`} className={`text-blue-600 hover:bg-blue-100 p-2 rounded-full transition duration-300 ${product.status === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`} title="Edit">
-                        <i className="bx bx-edit text-3xl"></i>
-                      </Link>
-                      <button onClick={() => handleToggleVisibility(product.id, product.isHidden)} className="text-green-600 hover:bg-green-100 p-2 rounded-full transition duration-300" title={product.isHidden ? 'Show' : 'Hide'}>
-                        <i className={`bx ${product.isHidden ? 'bx-show' : 'bx-hide'} text-3xl`}></i>
-                      </button>
-                      <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:bg-red-100 p-2 rounded-full transition duration-300" title="Delete">
-                        <i className="bx bx-trash text-3xl"></i>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>
@@ -217,8 +153,6 @@ export default function SellersProducts() {
                     <th className="p-2 text-left text-gray-700 font-semibold">Name</th>
                     <th className="p-2 text-left text-gray-700 font-semibold">Price</th>
                     <th className="p-2 text-left text-gray-700 font-semibold">Verify</th>
-                    <th className="p-2 text-left text-gray-700 font-semibold">Active</th>
-                    <th className="p-2 text-left text-gray-700 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,30 +167,6 @@ export default function SellersProducts() {
                       }`}>
                         {product.status === 'pending' ? 'Pending' : 
                          product.status === 'approved' ? 'Approved' : 'Not Approved'}
-                      </td>
-                      <td className="p-2">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={product.active || false}
-                            onChange={() => handleToggleActive(product.id, product.active)}
-                            className="hidden peer"
-                          />
-                          <div className="w-10 h-5 rounded-full transition-colors peer-checked:bg-green-500 bg-gray-300">
-                            <div className="w-4 h-4 bg-white rounded-full shadow-md transform transition-transform peer-checked:translate-x-6"></div>
-                          </div>
-                        </label>
-                      </td>
-                      <td className="p-2 flex space-x-4">
-                        <Link to={`/seller/edit-product/${product.id}`} className={`text-blue-600 hover:bg-blue-100 p-2 rounded-full transition duration-300 ${product.status === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`} title="Edit">
-                          <i className="bx bx-edit text-3xl"></i>
-                        </Link>
-                        <button onClick={() => handleToggleVisibility(product.id, product.isHidden)} className="text-green-600 hover:bg-green-100 p-2 rounded-full transition duration-300" title={product.isHidden ? 'Show' : 'Hide'}>
-                          <i className={`bx ${product.isHidden ? 'bx-show' : 'bx-hide'} text-3xl`}></i>
-                        </button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:bg-red-100 p-2 rounded-full transition duration-300" title="Delete">
-                          <i className="bx bx-trash text-3xl"></i>
-                        </button>
                       </td>
                     </tr>
                   ))}

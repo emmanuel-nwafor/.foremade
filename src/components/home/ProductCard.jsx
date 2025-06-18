@@ -7,13 +7,13 @@ import AddToCartButton from '/src/components/cart/AddToCartButton';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
   const [imageFailed, setImageFailed] = useState(false);
   const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
-  const [isDailyDeal, setIsDailyDeal] = useState(false);
+  const [isDailyDeal, setIsDailyDeal] = useState(propIsDailyDeal);
   const [discountPercentage, setDiscountPercentage] = useState(0);
 
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
@@ -33,7 +33,7 @@ const ProductCard = ({ product }) => {
         console.log('Invalid or missing product ID:', product);
         setIsFavorited(false);
         setFavoriteCount(0);
-        setIsDailyDeal(false);
+        setIsDailyDeal(propIsDailyDeal);
         setDiscountPercentage(0);
         return;
       }
@@ -53,13 +53,13 @@ const ProductCard = ({ product }) => {
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
-          setIsDailyDeal(data.isDailyDeal || false);
+          setIsDailyDeal(data.isDailyDeal || propIsDailyDeal);
           setDiscountPercentage(data.discountPercentage || 0);
         } else {
           console.warn('Product not found in Firestore:', product.id);
           setIsFavorited(false);
           setFavoriteCount(0);
-          setIsDailyDeal(false);
+          setIsDailyDeal(propIsDailyDeal);
           setDiscountPercentage(0);
         }
       } catch (err) {
@@ -97,7 +97,7 @@ const ProductCard = ({ product }) => {
     console.log('Setting imageUrl to:', validImage);
     setImageUrl(validImage);
     setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId]);
+  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, propIsDailyDeal]);
 
   const truncateText = (text, maxLength = 15) => {
     if (!text || typeof text !== 'string') return 'No text available';

@@ -287,8 +287,14 @@ export default function Wallet() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <SellerSidebar />
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
+          </div>
+        </div>
       </div>
     );
   }

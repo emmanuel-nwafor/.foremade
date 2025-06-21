@@ -484,10 +484,15 @@ const Checkout = () => {
     (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < 12000;
+  const belowMinimumPrice = subtotalNgn < 25000;
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048;
   const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
+
+  useEffect(() => {
+    console.log('Subtotal NGN:', subtotalNgn.toLocaleString('en-NG', { minimumFractionDigits: 2 }));
+    console.log('Total Amount:', totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), '(', currency, ')');
+  }, [subtotalNgn, totalAmount, currency]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -524,6 +529,7 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      console.log('Backend URL:', backendUrl);
       console.log('Sending order confirmation email with payload:', {
         orderId: order.paymentId || 'unknown',
         email: order.shippingDetails?.email || 'unknown',
@@ -622,7 +628,7 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error('Total amount must be at least ₦12,000 to proceed.', { position: 'top-right', autoClose: 3000 });
+          toast.error('Total amount must be at least ₦25,000 to proceed.', { position: 'top-right', autoClose: 3000 });
           return;
         }
 
@@ -650,6 +656,7 @@ const Checkout = () => {
 
         let lastOrder = null;
         const walletUpdates = [];
+        const sellerOrderIds = []; // Store seller-specific order IDs
 
         await runTransaction(db, async (transaction) => {
           const productRefs = cart.map((item) => doc(db, 'products', item.productId));
@@ -721,7 +728,9 @@ const Checkout = () => {
               paymentId,
               currency,
             };
-            orders.push({ order, orderId: `${orderId}-${sellerId}` });
+            const sellerOrderId = `${orderId}-${sellerId}`;
+            orders.push({ order, orderId: sellerOrderId });
+            sellerOrderIds.push(sellerOrderId); // Store for email
 
             const pendingBalance = (exists ? data?.pendingBalance || 0 : 0) + sellerShare;
             walletUpdates.push({ sellerId, amount: sellerShare });
@@ -744,7 +753,12 @@ const Checkout = () => {
 
           orders.forEach(({ order, orderId }) => {
             const orderRef = doc(db, 'orders', orderId);
-            transaction.set(orderRef, order);
+            try {
+              transaction.set(orderRef, order);
+            } catch (err) {
+              console.error(`Error saving order ${orderId}:`, err);
+              throw err;
+            }
             lastOrder = order;
           });
 
@@ -785,9 +799,11 @@ const Checkout = () => {
           await setDoc(userDocRef, formData, { merge: true });
         }
 
-        if (lastOrder) {
+        if (lastOrder && sellerOrderIds.length > 0) {
+          // Use the first seller's orderId for the email
           await sendOrderConfirmationEmail({
             ...lastOrder,
+            paymentId: sellerOrderIds[0], // Use seller-specific orderId
             items: cart.map((item) => ({
               productId: item.productId || 'unknown',
               quantity: item.quantity || 0,
@@ -883,7 +899,7 @@ const Checkout = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 relative">
+    <div className="container mx-auto px-4 py-8 relative mb-20">
       {(isProcessing || isEmailSending) && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
           <Spinner />
@@ -1270,13 +1286,13 @@ const Checkout = () => {
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {currency} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is ₦12,000 to checkout.
+                  ❌ Minimum purchase amount is ₦25,000 to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -1317,7 +1333,7 @@ const Checkout = () => {
                   {formData.country === 'United Kingdom' ? (
                     <Elements stripe={stripePromise}>
                       <StripeCheckoutForm
-                        totalPrice={totalAmount}
+                        totalPrice={subtotalNgn * conversionRateNgnToGbp}
                         formData={formData}
                         onSuccess={(paymentIntent) => setShowConfirmModal(true)}
                         onCancel={handleCancel}
@@ -1328,7 +1344,7 @@ const Checkout = () => {
                   ) : formData.country === 'Nigeria' ? (
                     <PaystackCheckout
                       email={formData.email}
-                      amount={totalAmount * 100}
+                      amount={subtotalNgn * 100}
                       onSuccess={(paymentData) => setShowConfirmModal(true)}
                       onClose={handleCancel}
                       disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}
@@ -1367,7 +1383,7 @@ const Checkout = () => {
         </div>
       )}
     </div>
-    );
+  );
 };
 
 export default Checkout;

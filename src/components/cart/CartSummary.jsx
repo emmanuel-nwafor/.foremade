@@ -1,32 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '/src/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
-const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
+const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const navigate = useNavigate();
+  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+
+  useEffect(() => {
+    const fetchFeeConfig = async () => {
+      try {
+        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const feeSnap = await getDoc(feeRef);
+        if (feeSnap.exists()) {
+          const data = feeSnap.data();
+          const category = cartItems[0]?.product?.category || 'default';
+          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+        }
+      } catch (err) {
+        console.error('Error fetching fee config:', err);
+      }
+    };
+
+    fetchFeeConfig();
+  }, [cartItems]);
+
+  const calculateTotalPrice = (basePrice, qty = 1) => {
+    return basePrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+  };
+
+  const totalPrice = cartItems.reduce((sum, item) => sum + calculateTotalPrice(item.product.price || 0, item.quantity || 1), 0);
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const belowMinimumPrice = totalPrice < 15000; // Minimum order is ₦15,000 from PDF
+  const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const belowMinimumPrice = totalPrice < 25000; // Aligned with Checkout.js
 
   // Shipping is free within Nigeria
   const shipping = 0;
 
-  // Discount Logic
-  let discount = 0;
-  if (totalItems >= 10 && totalItems < 15) {
-    discount = 0.12; // 12% discount
-  } else if (totalItems >= 15 && totalItems < 20) {
-    discount = 0.22; // 12% + 10% = 22% discount
-  } else if (totalItems === 20) {
-    discount = 0.30; // 12% + 10% + 8% = 30% discount
-  }
-  const discountAmount = totalPrice * discount;
-  const subtotalAfterDiscount = totalPrice - discountAmount;
-  const grandTotal = subtotalAfterDiscount + shipping;
+  // Remove discount logic to match Checkout.js
+  const grandTotal = totalPrice + shipping;
 
   const handleCheckout = () => {
     if (belowMinimumPrice) {
-      alert('Minimum purchase amount is ₦15,000 to checkout.');
+      alert('Minimum purchase amount is ₦12,000 to checkout.');
       return;
     }
     if (totalItems > 20) {
@@ -44,14 +61,6 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
           <span>Subtotal</span>
           <span>₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
         </div>
-        {discount > 0 && (
-          <div className="flex justify-between">
-            <span>Discount ({(discount * 100).toFixed(0)}%)</span>
-            <span className="text-green-600 font-semibold">
-              -₦{discountAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        )}
         <div className="flex justify-between">
           <span>Shipping</span>
           <span className="text-green-600 font-semibold">FREE</span>
@@ -62,17 +71,10 @@ const CartSummary = ({ totalPrice, cartItems, clearCart }) => {
         </div>
       </div>
 
-      {/* Success Message (Discount applied) */}
-      {discount > 0 && !belowMinimumPrice && !hasStockIssues && (
-        <p className="text-green-600 text-xs mt-2 bg-green-50 p-2 rounded">
-          🎉 Congrats! You got a <strong>{(discount * 100).toFixed(0)}% discount</strong> for {totalItems} items!
-        </p>
-      )}
-
       {/* Error Messages */}
       {belowMinimumPrice && (
         <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-          ❌ Minimum purchase amount is ₦15,000 to checkout.
+          ❌ Minimum purchase amount is ₦25,000 to checkout.
         </p>
       )}
       {totalItems > 20 && (

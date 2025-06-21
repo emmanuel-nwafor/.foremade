@@ -10,9 +10,9 @@ export default function Drinks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const category = 'Drinks & Categories';
-  const categoryId = 7;
-  const firestoreCategory = 'drinks & categories';
+  const category = 'Drinks & Beverages';
+  const categoryId = 5;
+  const firestoreCategory = 'drinks & beverages';
 
   useEffect(() => {
     const fetchDrinks = async () => {
@@ -25,7 +25,7 @@ export default function Drinks() {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-        console.log('All fetched products (Drinks):', allProducts);
+        console.log('All fetched products (Drinks & Beverages):', allProducts);
 
         const productsData = allProducts
           .map((doc) => {
@@ -41,8 +41,8 @@ export default function Drinks() {
               description: data.description || '',
               price: data.price || 0,
               stock: data.stock || 0,
-              category: data.category || 'drinks & categories',
-              categoryId: data.category?.trim().toLowerCase() === firestoreCategory.toLowerCase() ? categoryId : 7,
+              category: data.category || 'drinks & beverages',
+              categoryId: data.category?.trim().toLowerCase() === firestoreCategory.toLowerCase() ? categoryId : 5,
               colors: data.colors || [],
               sizes: data.sizes || [],
               condition: data.condition || '',
@@ -53,7 +53,7 @@ export default function Drinks() {
           })
           .filter((product) => {
             if (product.stock < 10) {
-              console.warn('Filtered out product with low stock (Drinks):', {
+              console.warn('Filtered out product with low stock (Drinks & Beverages):', {
                 id: product.id,
                 name: product.name,
                 stock: product.stock,
@@ -62,7 +62,7 @@ export default function Drinks() {
             }
             const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
             if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-              console.warn('Filtered out product with invalid imageUrl (Drinks):', {
+              console.warn('Filtered out product with invalid imageUrl (Drinks & Beverages):', {
                 id: product.id,
                 name: product.name,
                 imageUrl: product.imageUrl,
@@ -75,7 +75,7 @@ export default function Drinks() {
 
         console.log(`Fetched ${category} products:`, productsData);
         if (productsData.length === 0) {
-          console.warn('No products passed the filters (Drinks). Relaxing stock filter to debug...');
+          console.warn('No products passed the filters (Drinks & Beverages). Relaxing stock filter to debug...');
           const relaxedProductsData = allProducts
             .map((doc) => {
               const data = doc;
@@ -90,8 +90,8 @@ export default function Drinks() {
                 description: data.description || '',
                 price: data.price || 0,
                 stock: data.stock || 0,
-                category: data.category || 'drinks & categories',
-                categoryId: data.category?.trim().toLowerCase() === firestoreCategory.toLowerCase() ? categoryId : 7,
+                category: data.category || 'drinks & beverages',
+                categoryId: data.category?.trim().toLowerCase() === firestoreCategory.toLowerCase() ? categoryId : 5,
                 colors: data.colors || [],
                 sizes: data.sizes || [],
                 condition: data.condition || '',
@@ -103,7 +103,7 @@ export default function Drinks() {
             .filter((product) => {
               const isValidImage = product.imageUrl && typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://');
               if (!isValidImage && product.imageUrl !== '/images/placeholder.jpg') {
-                console.warn('Filtered out product with invalid imageUrl (relaxed filter, Drinks):', {
+                console.warn('Filtered out product with invalid imageUrl (relaxed filter, Drinks & Beverages):', {
                   id: product.id,
                   name: product.name,
                   imageUrl: product.imageUrl,
@@ -112,7 +112,7 @@ export default function Drinks() {
               }
               return true;
             });
-          console.log('Products with relaxed stock filter (Drinks):', relaxedProductsData);
+          console.log('Products with relaxed stock filter (Drinks & Beverages):', relaxedProductsData);
           setProducts(relaxedProductsData.sort((a, b) => b.rating - a.rating));
         } else {
           setProducts(productsData);

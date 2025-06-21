@@ -21,22 +21,19 @@ const Header = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
-  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
 
   const categories = [
-    'Tablet & Phones',
-    'Health & Beauty',
-    'Electronics',
-    'Baby Products',
-    'Computers & Accessories',
-    'Games & Fun',
-    'Drinks & Categories',
-    'Home & Kitchen',
-    'Smart Watches',
+    'Camera & Photography',
+    'Clothing',
+    'Coffee & Tea Bag',
+    'Computers & Laptops',
+    'Drinks & Beverages',
+    'Footwear',
+    'Game & Console',
+    'Grills & Outdoor Cooking',
   ];
 
   const visibleCategories = categories.slice(0, 4);
-  const dropdownCategories = categories.slice(4);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -88,7 +85,7 @@ const Header = () => {
     }
   }, [user]);
 
-  console.log(favorites)
+  console.log(favorites);
 
   useEffect(() => {
     const loadFavorites = () => {
@@ -179,14 +176,6 @@ const Header = () => {
 
   const handleMoreDropdownBlur = () => {
     setTimeout(() => setMoreDropdownOpen(false), 200);
-  };
-
-  const toggleCategoriesDropdown = () => {
-    setCategoriesDropdownOpen(!categoriesDropdownOpen);
-  };
-
-  const handleCategoriesDropdownBlur = () => {
-    setTimeout(() => setCategoriesDropdownOpen(false), 200);
   };
 
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
@@ -434,11 +423,66 @@ const Header = () => {
           </div>
           <div className="hidden sm:flex justify-center gap-1 sm:gap-2 mt-2 sm:mt-4 text-xs sm:text-sm text-gray-700">
             <div className="flex items-center gap-1 sm:gap-2">
+              <div className="relative group">
+                <button
+                  onClick={toggleMoreDropdown}
+                  onBlur={handleMoreDropdownBlur}
+                  className="hover:text-gray-300 text-xs sm:text-sm focus:outline-none"
+                >
+                  More <i className="bx bx-chevron-down"></i>
+                </button>
+                {moreDropdownOpen && (
+                  <div className="absolute hidden group-hover:block top-full left-0 mt-1 w-[240px] bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                    <Link
+                      to="/hair-nails-accessories"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Hair Nails & Accessories
+                    </Link>
+                    <Link
+                      to="/home-living"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Home & Living
+                    </Link>
+                    <Link
+                      to="/jewellery-accessories"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Jewellery & Accessories
+                    </Link>
+                    <Link
+                      to="/perfumes-fragrances"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Perfumes & Fragrances
+                    </Link>
+                    <Link
+                      to="/sneakers-joggers"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Sneakers & Joggers
+                    </Link>
+                     <Link
+                      to="/health-wellness"
+                      className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                      onClick={() => setMoreDropdownOpen(false)}
+                    >
+                      Health & Wellness
+                    </Link>
+                  </div>
+                )}
+              </div>
               {categories.map((category, index) => (
                 <div key={category}>
                   <Link
                     to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
-                    className="hover:text-blue-600 whitespace-nowrap px-2 py-1 xl:block hidden"
+                    className="hover:text-blue-600 whitespace-nowrap px-1 py-1 xl:block hidden"
                   >
                     {category}
                   </Link>
@@ -452,29 +496,6 @@ const Header = () => {
                   ) : null}
                 </div>
               ))}
-              <div className="relative group hidden xl:hidden sm:block">
-                <button
-                  onClick={toggleCategoriesDropdown}
-                  onBlur={handleCategoriesDropdownBlur}
-                  className="hover:text-blue-600 flex items-center px-2 py-1"
-                >
-                  More <i className="bx bx-chevron-down ml-1"></i>
-                </button>
-                {categoriesDropdownOpen && (
-                  <div className="absolute hidden group-hover:block top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                    {dropdownCategories.map((category) => (
-                      <Link
-                        key={category}
-                        to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoriesDropdownOpen(false)}
-                      >
-                        {category}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

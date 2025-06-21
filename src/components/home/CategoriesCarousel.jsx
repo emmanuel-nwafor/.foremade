@@ -7,7 +7,7 @@ const CategoriesCarousel = ({ category }) => {
       "https://res.cloudinary.com/dvhogp27g/image/upload/v1749496510/photo_2025-06-09_20-11-21_vsojz8.jpg",
     "Health & Beauty":
       "https://res.cloudinary.com/dvhogp27g/image/upload/v1749496502/photo_2025-06-09_20-11-23_2_kwjqqr.jpg",
-    Electronics:
+    "Electronics":
       "https://res.cloudinary.com/dvhogp27g/image/upload/v1749496477/photo_2025-06-09_20-11-29_tzs0vs.jpg",
     "Computers & Accessories":
       "https://res.cloudinary.com/dvhogp27g/image/upload/v1749496469/photo_2025-06-09_20-11-31_xtfepw.jpg",

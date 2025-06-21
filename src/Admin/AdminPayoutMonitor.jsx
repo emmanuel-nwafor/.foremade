@@ -17,10 +17,10 @@ const AdminPayoutMonitor = () => {
   };
 
   useEffect(() => {
-    // Fetch pending withdrawal payouts
+    // Fetch pending WithdrawalEligible payouts
     const q = query(
       collection(db, 'transactions'),
-      where('type', '==', 'Withdrawal'),
+      where('type', '==', 'WithdrawalEligible'),
       where('status', '==', 'Pending')
     );
     const unsubscribePayouts = onSnapshot(q, (snapshot) => {
@@ -83,7 +83,7 @@ const AdminPayoutMonitor = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-        <SellerSidebar />
+        <AdminSidebar />
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
@@ -125,6 +125,7 @@ const AdminPayoutMonitor = () => {
                     <tr className="bg-gray-200 dark:bg-gray-700">
                       <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Seller ID</th>
                       <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Amount (₦)</th>
+                      <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Order ID</th>
                       <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Description</th>
                       <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Status</th>
                       <th className="py-2 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 border-b dark:border-gray-600">Actions</th>
@@ -135,6 +136,7 @@ const AdminPayoutMonitor = () => {
                       <tr key={payout.id} className="border-b dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="py-2 px-4 text-sm text-gray-600 dark:text-gray-400">{payout.userId}</td>
                         <td className="py-2 px-4 text-sm text-gray-600 dark:text-gray-400">{payout.amount.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</td>
+                        <td className="py-2 px-4 text-sm text-gray-600 dark:text-gray-400">{payout.orderId || 'N/A'}</td>
                         <td className="py-2 px-4 text-sm text-gray-600 dark:text-gray-400">{payout.description}</td>
                         <td className="py-2 px-4 text-sm text-gray-600 dark:text-gray-400">{payout.status}</td>
                         <td className="py-2 px-4 flex gap-2">
@@ -185,6 +187,10 @@ const AdminPayoutMonitor = () => {
                     <div className="flex justify-between mb-2">
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Amount:</span>
                       <span className="text-xs text-gray-600 dark:text-gray-400">{payout.amount.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' })}</span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Order ID:</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">{payout.orderId || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Description:</span>

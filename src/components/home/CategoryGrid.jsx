@@ -9,6 +9,18 @@ const slugify = (name) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+// Map grid categories to their main category
+const gridToMainCategory = {
+  "Shoes": "sneakers & joggers",
+  "Fashion": "Clothing",
+  "Phones": "Electronics",
+  "Laptops": "Electronics",
+  "Watches": "Electronics",
+  "Gaming": "Game & Console",
+  "Kitchen": "Home & Kitchen",
+  "Electronics": "Electronics"
+};
+
 const categories = [
   "Shoes",
   "Fashion",
@@ -60,48 +72,51 @@ const CategoryGrid = () => {
     <div className="container mx-auto px-4 py-6">
       <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Shop by Category</h2>
       <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-        {categories.map((name, index) => (
-          <Link
-            key={name}
-            to={`/category/${slugify(name)}`}
-            className="text-center group"
-            onMouseEnter={() => setHoveredIndex(index)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          >
-            <motion.div
-              className={`rounded-lg overflow-hidden relative bg-gradient-to-b ${categoryColors[index % categoryColors.length]} ${categoryHoverColors[index % categoryHoverColors.length]} transition-all duration-300 h-20 w-full flex items-center justify-center group-hover:shadow-md`}
-              initial={{ y: 0 }}
-              animate={{
-                y: hoveredIndex === index ? -5 : 0,
-                scale: hoveredIndex === index ? 1.05 : 1
-              }}
-              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+        {categories.map((name, index) => {
+          const mainCategory = gridToMainCategory[name] || name;
+          return (
+            <Link
+              key={name}
+              to={`/category/${slugify(mainCategory)}`}
+              className="text-center group"
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
             >
-              <motion.img
-                src={categoryImages[name] || "https://via.placeholder.com/48"}
-                alt={name}
-                className="w-12 h-12 object-contain"
+              <motion.div
+                className={`rounded-lg overflow-hidden relative bg-gradient-to-b ${categoryColors[index % categoryColors.length]} ${categoryHoverColors[index % categoryHoverColors.length]} transition-all duration-300 h-20 w-full flex items-center justify-center group-hover:shadow-md`}
+                initial={{ y: 0 }}
                 animate={{
-                  scale: hoveredIndex === index ? 1.1 : 1,
-                  rotate: hoveredIndex === index ? 5 : 0
+                  y: hoveredIndex === index ? -5 : 0,
+                  scale: hoveredIndex === index ? 1.05 : 1
                 }}
-                transition={{ type: "spring", stiffness: 200, damping: 10 }}
-              />
-              {/* Decorative circles */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
-            </motion.div>
-            <motion.p
-              className="text-xs md:text-sm text-gray-800 mt-2 font-medium"
-              animate={{
-                fontWeight: hoveredIndex === index ? 600 : 500,
-                color: hoveredIndex === index ? "#3B82F6" : "#1F2937"
-              }}
-            >
-              {name}
-            </motion.p>
-          </Link>
-        ))}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              >
+                <motion.img
+                  src={categoryImages[name] || "https://via.placeholder.com/48"}
+                  alt={name}
+                  className="w-12 h-12 object-contain"
+                  animate={{
+                    scale: hoveredIndex === index ? 1.1 : 1,
+                    rotate: hoveredIndex === index ? 5 : 0
+                  }}
+                  transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                />
+                {/* Decorative circles */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+              </motion.div>
+              <motion.p
+                className="text-xs md:text-sm text-gray-800 mt-2 font-medium"
+                animate={{
+                  fontWeight: hoveredIndex === index ? 600 : 500,
+                  color: hoveredIndex === index ? "#3B82F6" : "#1F2937"
+                }}
+              >
+                {name}
+              </motion.p>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

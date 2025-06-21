@@ -12,11 +12,13 @@ export default function CategoryBanner({ title, imageUrl }) {
       ) : (
         <div className="bg-gray-200 border-2 border-dashed w-full h-full" />
       )}
-      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-        <h1 className="text-3xl md:text-5xl font-bold text-white text-center">
-          {title}
-        </h1>
-      </div>
+      {title && (
+        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <h1 className="text-3xl md:text-5xl font-bold text-white text-center">
+            {title}
+          </h1>
+        </div>
+      )}
     </div>
   );
 }

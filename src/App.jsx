@@ -65,6 +65,7 @@ import Search from './pages/Search';
 import Notifications from './profile/Notifications';
 import Store from './components/store/Store';
 import SellerEditProduct from './seller/SellerEditProduct';
+import CategoryPage from './pages/CategoryPage';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -282,6 +283,7 @@ function App() {
             <Route path="/search" element={<Search />} /> 
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

@@ -23,15 +23,32 @@ const Header = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
 
   const categories = [
-    'Camera & Photography',
-    'Clothing',
-    'Coffee & Tea Bag',
-    'Computers & Laptops',
-    'Drinks & Beverages',
-    'Footwear',
-    'Game & Console',
-    'Grills & Outdoor Cooking',
+    "Camera & Photography",
+    "Clothing",
+    "Coffee & Tea",
+    "Computers & Laptops",
+    "Drinks & Beverages",
+    "Footwear",
+    "Game & Console",
+    "Grills & Outdoor Cooking",
+    "Hair, Nails & Accessories",
+    "Home & Living",
+    "Jewellery & Accessories",
+    "Perfumes & Fragrances",
+    "Sneakers & Joggers",
+    "Sound & Audio",
+    "Sports & Outdoors",
+    "Television & Accessories",
+    "Vehicles & Transport",
+    "🍼 Pregnancy & Mother Care",
+    "💊 Health & Wellness"
   ];
+
+  const slugify = (name) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
   const visibleCategories = categories.slice(0, 4);
 
@@ -359,7 +376,7 @@ const Header = () => {
           {categories.map((category) => (
             <Link
               key={category}
-              to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+              to={`/category/${slugify(category)}`}
               className="hover:text-blue-600 bg-gray-100 rounded-full px-3 py-1 whitespace-nowrap"
             >
               {category}
@@ -481,14 +498,14 @@ const Header = () => {
               {categories.map((category, index) => (
                 <div key={category}>
                   <Link
-                    to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                    to={`/category/${slugify(category)}`}
                     className="hover:text-blue-600 whitespace-nowrap px-1 py-1 xl:block hidden"
                   >
                     {category}
                   </Link>
                   {index < visibleCategories.length ? (
                     <Link
-                      to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                      to={`/category/${slugify(category)}`}
                       className="hover:text-blue-600 whitespace-nowrap px-2 py-1 hidden xl:hidden sm:block"
                     >
                       {category}
@@ -557,7 +574,7 @@ const Header = () => {
               {categories.map((category) => (
                 <Link
                   key={category}
-                  to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                  to={`/category/${slugify(category)}`}
                   className="text-[#112040] hover:text-amber-500 text-sm"
                   onClick={() => setSidebarOpen(false)}
                 >

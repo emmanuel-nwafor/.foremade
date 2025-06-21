@@ -22,17 +22,32 @@ const Header = () => {
   const [notificationCount, setNotificationCount] = useState(0);
 
   const categories = [
-    'All Categories',
-    'Tablet & Phones',
-    'Health & Beauty',
-    'Electronics',
-    'Baby Products',
-    'Computers & Accessories',
-    'Game & Fun',
-    'Drinks & Categories',
-    'Home & Kitchen',
-    'Smart Watches',
+    "Camera & Photography",
+    "Clothing",
+    "Coffee & Tea",
+    "Computers & Laptops",
+    "Drinks & Beverages",
+    "Footwear",
+    "Game & Console",
+    "Grills & Outdoor Cooking",
+    "Hair, Nails & Accessories",
+    "Home & Living",
+    "Jewellery & Accessories",
+    "Perfumes & Fragrances",
+    "Sneakers & Joggers",
+    "Sound & Audio",
+    "Sports & Outdoors",
+    "Television & Accessories",
+    "Vehicles & Transport",
+    "🍼 Pregnancy & Mother Care",
+    "💊 Health & Wellness"
   ];
+
+  const slugify = (name) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -460,7 +475,7 @@ const Header = () => {
           {categories.slice(1).map((category) => (
             <Link
               key={category}
-              to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+              to={`/category/${slugify(category)}`}
               className="flex items-center justify-center bg-white border border-gray-200 rounded-full px-4 py-1 text-base text-gray-600 hover:bg-gray-100 whitespace-nowrap"
             >
               <i className="bx bx-category mr-2 text-lg text-gray-500"></i>{category}
@@ -475,7 +490,7 @@ const Header = () => {
             {categories.slice(1).map((category) => (
               <Link
                 key={category}
-                to={`/${category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                to={`/category/${slugify(category)}`}
                 className="hover:text-blue-600"
               >
                 {category}

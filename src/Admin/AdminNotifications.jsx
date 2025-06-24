@@ -156,7 +156,7 @@ export default function AdminNotifications() {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
-        <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-sm">
+        <div className="w-full lg:max-w-5xl md:max-w-4xl sm:max-w-3xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
               <i className="bx bx-bell text-blue-500"></i>

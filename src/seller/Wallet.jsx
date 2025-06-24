@@ -43,7 +43,7 @@ const fetchBanksFromPaystack = async () => {
 export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0, payoutHoldBalance: 0, updatedAt: null });
+  const [wallet, setWallet] = useState({ availableBalance: 0, pendingBalance: 0, updatedAt: null });
   const [transactions, setTransactions] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState('');
@@ -59,7 +59,6 @@ export default function Wallet() {
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [country, setCountry] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isSeller, setIsSeller] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -90,12 +89,6 @@ export default function Wallet() {
           navigate('/login');
           return false;
         }
-
-        const sellerRef = doc(db, 'sellers', uid);
-        const sellerDoc = await getDoc(sellerRef);
-        setIsSeller(sellerDoc.exists());
-        console.log('Seller document exists:', sellerDoc.exists());
-
         return exists;
       } catch (err) {
         console.error('Error checking user status:', err);
@@ -135,7 +128,6 @@ export default function Wallet() {
         setWallet({
           availableBalance: data.availableBalance || 0,
           pendingBalance: data.pendingBalance || 0,
-          payoutHoldBalance: data.payoutHoldBalance || 0,
           updatedAt: data.updatedAt?.toDate() || null
         });
       } else {
@@ -172,10 +164,9 @@ export default function Wallet() {
       await setDoc(walletRef, {
         availableBalance: 0,
         pendingBalance: 0,
-        payoutHoldBalance: 0,
         updatedAt: serverTimestamp()
       });
-      setWallet({ availableBalance: 0, pendingBalance: 0, payoutHoldBalance: 0, updatedAt: new Date() });
+      setWallet({ availableBalance: 0, pendingBalance: 0, updatedAt: new Date() });
       setLoading(false);
     } catch (err) {
       setError('Error initializing wallet: ' + err.message);
@@ -233,15 +224,7 @@ export default function Wallet() {
     e.preventDefault();
     setIsProcessing(true);
     setMessage('');
-    setError('');
     const amount = parseFloat(withdrawAmount);
-
-    if (!isSeller) {
-      setError('You must complete seller setup before withdrawing.');
-      setIsProcessing(false);
-      navigate('/seller-setup');
-      return;
-    }
 
     if (!country) {
       setError('Please select a country.');
@@ -249,7 +232,7 @@ export default function Wallet() {
       return;
     }
 
-    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.pendingBalance && (country === 'United Kingdom' || isVerified)) {
+    if (amount && !isNaN(amount) && amount > 0 && amount <= wallet.availableBalance && (country === 'United Kingdom' || isVerified)) {
       try {
         const uid = auth.currentUser.uid;
         const transactionReference = `withdrawal-${uid}-${Date.now()}`;
@@ -269,9 +252,7 @@ export default function Wallet() {
         });
 
         const result = await response.json();
-        if (result.error) {
-          throw new Error(result.error);
-        }
+        if (result.error) throw new Error(result.error);
 
         if (result.status === 'redirect') {
           setMessage('Redirecting to Stripe for onboarding...');
@@ -284,17 +265,12 @@ export default function Wallet() {
         resetWithdrawForm();
       } catch (err) {
         console.error('Withdrawal error:', err);
-        if (err.message === 'Seller not found') {
-          setError('Seller account not found. Please complete seller setup.');
-          navigate('/seller-onboarding');
-        } else {
-          setError('Withdrawal failed: ' + err.message);
-        }
+        setError('Withdrawal failed: ' + err.message);
       } finally {
         setIsProcessing(false);
       }
     } else {
-      setError('Invalid amount, insufficient pending balance, or unverified account.');
+      setError('Invalid amount, insufficient balance, or unverified account.');
       setIsProcessing(false);
     }
   };
@@ -311,14 +287,8 @@ export default function Wallet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-        <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-            <i className="bx bx-loader bx-spin text-2xl"></i>
-            <span>Loading...</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -364,27 +334,16 @@ export default function Wallet() {
                   {error}
                 </div>
               )}
-              {!isSeller && (
-                <div className="mt-2 md:mt-4 p-2 sm:p-3 bg-yellow-100 text-yellow-700 rounded-lg text-sm">
-                  You need to complete seller setup to withdraw earnings.{' '}
-                  <Link to="/seller-onboarding" className="text-blue-600 hover:underline">
-                    Set up now
-                  </Link>
-                </div>
-              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 sm:p-6 text-white">
                 <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Earnings</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.availableBalance.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Last updated: {wallet.updatedAt?.toLocaleString()}</p>
                 <button
                   onClick={() => setShowWithdrawModal(true)}
-                  disabled={!isSeller}
-                  className={`mt-2 sm:mt-4 bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium ${
-                    isSeller ? 'hover:bg-blue-50' : 'opacity-50 cursor-not-allowed'
-                  } transition-colors`}
+                  className="mt-2 sm:mt-4 bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors"
                 >
                   Withdraw Earnings
                 </button>
@@ -395,17 +354,11 @@ export default function Wallet() {
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.pendingBalance.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Earnings from recent sales awaiting processing</p>
               </div>
-
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-8 sm:p-8 text-white">
-                <h3 className="text-base sm:text-lg font-semibold opacity-90">Payouts Awaiting Approval</h3>
-                <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{wallet.payoutHoldBalance.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Funds requested for withdrawal, pending admin approval</p>
-              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Transactions</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Sales Transactions</h2>
               </div>
               <div className="block sm:hidden">
                 {transactions.map((transaction, index) => (
@@ -436,12 +389,6 @@ export default function Wallet() {
                         {transaction.status}
                       </span>
                     </div>
-                    {transaction.orderId && (
-                      <div className="flex justify-between mt-1 max-md:text-sm">
-                        <span className="font-medium text-gray-700">Order ID:</span>
-                        <span className="text-gray-900">{transaction.orderId}</span>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -454,7 +401,6 @@ export default function Wallet() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -480,9 +426,6 @@ export default function Wallet() {
                           }`}>
                             {transaction.status}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {transaction.orderId || 'N/A'}
                         </td>
                       </tr>
                     ))}
@@ -521,9 +464,6 @@ export default function Wallet() {
                   className="mt-1 p-2 w-full border rounded"
                   required
                 />
-                <p className="text-xs text-gray-600 mt-1">
-                  Available for withdrawal: ₦{wallet.pendingBalance.toLocaleString()}
-                </p>
               </div>
               {country === 'Nigeria' && (
                 <>
@@ -612,9 +552,9 @@ export default function Wallet() {
                 </button>
                 <button
                   type="submit"
-                  disabled={(country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country || !isSeller}
+                  disabled={(country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country}
                   className={`px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg ${
-                    ((country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country || !isSeller) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                    ((country === 'Nigeria' && !isVerified) || isProcessing || !withdrawAmount || !country) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
                   } w-full sm:w-auto`}
                 >
                   {isProcessing ? 'Processing...' : 'Withdraw'}

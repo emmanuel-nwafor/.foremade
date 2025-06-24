@@ -20,11 +20,11 @@ const SellerOnboarding = () => {
       const user = auth.currentUser;
       if (!user) throw new Error('Not logged in');
 
-      const response = await fetch('http://localhost:5000/create-seller-account', {
+      const response = await fetch('https://foremade-backend.onrender.com/onboard-seller', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sellerId: user.uid,
+          userId: user.uid,
           email: user.email,
           country,
           bankCode: country === 'Nigeria' ? bankCode : undefined,
@@ -32,24 +32,40 @@ const SellerOnboarding = () => {
         }),
       });
 
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(`Server error: ${response.status}`);
+      }
+
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
-      if (result.status === 'redirect') {
+      if (result.redirectUrl) {
         window.location.href = result.redirectUrl;
         return;
       }
 
       await setDoc(doc(db, 'sellers', user.uid), {
         email: user.email,
-        paystackRecipientCode: result.paystackRecipientCode || null,
+        paystackRecipientCode: result.recipientCode || null,
         stripeAccountId: result.stripeAccountId || null,
         country,
+        bankCode: country === 'Nigeria' ? bankCode : null,
+        accountNumber: country === 'Nigeria' ? accountNumber : null,
         createdAt: new Date(),
+      });
+
+      await setDoc(doc(db, 'wallets', user.uid), {
+        availableBalance: 0,
+        pendingBalance: 0,
+        payoutHoldBalance: 0,
+        updatedAt: new Date(),
       });
 
       navigate('/wallet');
     } catch (err) {
+      console.error('Onboarding error:', err);
       setError('Setup failed: ' + err.message);
     } finally {
       setLoading(false);
@@ -104,9 +120,7 @@ const SellerOnboarding = () => {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full p-2 bg-blue-600 text-white rounded ${
-              loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-            }`}
+            className={`w-full p-2 bg-blue-600 text-white rounded ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
           >
             {loading ? 'Processing...' : 'Complete Setup'}
           </button>

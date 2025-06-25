@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, createRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore';
@@ -59,7 +59,7 @@ export default function SellerProductUpload() {
   // State for form data (persisted in localStorage)
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('sellerProductForm');
-    return savedData ? JSON.parse(savedData) : {
+    let initialData = {
       sellerName: '',
       name: '',
       description: '',
@@ -76,7 +76,26 @@ export default function SellerProductUpload() {
       videos: [],
       tags: [],
       manualSize: '',
+      variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
     };
+
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        initialData = {
+          ...initialData,
+          ...parsedData,
+          variants: Array.isArray(parsedData.variants)
+            ? parsedData.variants
+            : initialData.variants,
+        };
+      } catch (error) {
+        console.error('Error parsing saved form data:', error);
+        addAlert('Failed to load saved form data. Starting fresh.', 'error');
+      }
+    }
+
+    return initialData;
   });
 
   // State for location data
@@ -114,6 +133,16 @@ export default function SellerProductUpload() {
     return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
   });
 
+  // State for variant-specific image files and previews
+  const [variantImageFiles, setVariantImageFiles] = useState(() => {
+    const savedVariantImages = localStorage.getItem('sellerVariantImages');
+    return savedVariantImages ? JSON.parse(savedVariantImages) : formData.variants.map(() => []);
+  });
+  const [variantImagePreviews, setVariantImagePreviews] = useState(() => {
+    const savedVariantPreviews = localStorage.getItem('sellerVariantPreviews');
+    return savedVariantPreviews ? JSON.parse(savedVariantPreviews) : formData.variants.map(() => []);
+  });
+
   // Other states
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -142,14 +171,13 @@ export default function SellerProductUpload() {
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
 
-  console.log(showSizeWarning);
-
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const singleImageInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   const descriptionRef = useRef(null);
+  const variantImageInputRefs = useRef([]);
 
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
@@ -180,11 +208,25 @@ export default function SellerProductUpload() {
   const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
+  const MAX_VARIANT_IMAGES = 4;
 
   // Persist location data to localStorage
   useEffect(() => {
     localStorage.setItem('sellerLocationForm', JSON.stringify(locationData));
   }, [locationData]);
+
+  // Persist variant image files and previews to localStorage
+  useEffect(() => {
+    localStorage.setItem('sellerVariantImages', JSON.stringify(variantImageFiles));
+    localStorage.setItem('sellerVariantPreviews', JSON.stringify(variantImagePreviews));
+  }, [variantImageFiles, variantImagePreviews]);
+
+  // Sync variant image input refs with variants
+  useEffect(() => {
+    variantImageInputRefs.current = formData.variants.map((_, i) =>
+      variantImageInputRefs.current[i] || createRef()
+    );
+  }, [formData.variants]);
 
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
   useEffect(() => {
@@ -192,7 +234,7 @@ export default function SellerProductUpload() {
       const categoryList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setCategories(categoryList.map((cat) => cat.name));
       if (formData.category && !categoryList.some((cat) => cat.name === formData.category)) {
-        setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '', sizes: [] }));
+        setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] }));
         addAlert('Selected category was removed by admin.', 'error');
       }
     }, (error) => {
@@ -207,15 +249,13 @@ export default function SellerProductUpload() {
       });
       setCustomSubcategories(subcatData);
       if (formData.category && formData.subcategory && !subcatData[formData.category]?.includes(formData.subcategory)) {
-        setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '', sizes: [] }));
+        setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] }));
         addAlert('Selected subcategory was removed by admin.', 'error');
       }
     }, (error) => {
       console.error('Error fetching subcategories:', error);
       addAlert('Failed to load subcategories.', 'error');
     });
-
-    console.log(authenticityTags);
 
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
@@ -234,7 +274,7 @@ export default function SellerProductUpload() {
         formData.subSubcategory &&
         !subSubcatData[formData.category]?.[formData.subcategory]?.includes(formData.subSubcategory)
       ) {
-        setFormData((prev) => ({ ...prev, subSubcategory: '', sizes: [] }));
+        setFormData((prev) => ({ ...prev, subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] }));
         addAlert('Selected sub-subcategory was removed by admin.', 'error');
       }
     }, (error) => {
@@ -324,7 +364,6 @@ export default function SellerProductUpload() {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
   }, [formData.price, formData.category, feeConfig]);
 
-  // Persist form data and media to localStorage
   useEffect(() => {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
     localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
@@ -333,12 +372,11 @@ export default function SellerProductUpload() {
     localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
   }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews]);
 
-  // Update description preview
   useEffect(() => {
     setDescriptionPreview(marked(formData.description || '', { gfm: true, breaks: true }));
   }, [formData.description]);
 
-  // Auto-suggest tags
+
   useEffect(() => {
     const suggestTags = () => {
       const text = `${formData.name} ${formData.description} ${formData.subSubcategory}`.toLowerCase();
@@ -354,7 +392,6 @@ export default function SellerProductUpload() {
     suggestTags();
   }, [formData.name, formData.description, formData.subSubcategory]);
 
-  // Detect mobile
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const mobileRegex = /android|iphone|ipad|ipod|opera mini|mobile/i;
@@ -366,10 +403,80 @@ export default function SellerProductUpload() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === 'category' ? { subcategory: '', subSubcategory: '', sizes: [] } : {}),
-      ...(name === 'subcategory' ? { subSubcategory: '', sizes: [] } : {}),
+      ...(name === 'category' ? { subcategory: '', subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] } : {}),
+      ...(name === 'subcategory' ? { subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] } : {}),
     }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleVariantChange = (index, field, value) => {
+    setFormData((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = { ...newVariants[index], [field]: value };
+      return { ...prev, variants: newVariants };
+    });
+    setErrors((prev) => ({ ...prev, [`variant${index}_${field}`]: '' }));
+  };
+
+  const handleAddVariant = () => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { color: '', size: '', price: '', stock: '', images: [] }],
+    }));
+    setVariantImageFiles((prev) => [...prev, []]);
+    setVariantImagePreviews((prev) => [...prev, []]);
+  };
+
+  const handleRemoveVariant = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index),
+    }));
+    setVariantImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setVariantImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVariantImageChange = (index, files) => {
+    const newFiles = Array.from(files);
+    const validFiles = newFiles.filter(
+      (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
+    );
+    const totalImages = variantImageFiles[index].length + validFiles.length;
+    if (totalImages > MAX_VARIANT_IMAGES) {
+      addAlert(`You can upload a maximum of ${MAX_VARIANT_IMAGES} images per variant.`, 'error');
+      return;
+    }
+    setVariantImageFiles((prev) => {
+      const newFiles = [...prev];
+      newFiles[index] = [...newFiles[index], ...validFiles];
+      return newFiles;
+    });
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
+    setVariantImagePreviews((prev) => {
+      const newPreviews = [...prev];
+      newPreviews[index] = [...newPreviews[index], ...previews];
+      return newPreviews;
+    });
+    setErrors((prev) => ({ ...prev, [`variant${index}_images`]: '' }));
+    if (variantImageInputRefs.current[index]?.current) {
+      variantImageInputRefs.current[index].current.value = '';
+    }
+  };
+
+  const handleRemoveVariantImage = (variantIndex, imageIndex) => {
+    setVariantImageFiles((prev) => {
+      const newFiles = [...prev];
+      newFiles[variantIndex] = newFiles[variantIndex].filter((_, i) => i !== imageIndex);
+      return newFiles;
+    });
+    setVariantImagePreviews((prev) => {
+      const newPreviews = [...prev];
+      newPreviews[variantIndex] = newPreviews[variantIndex].filter((_, i) => i !== imageIndex);
+      return newPreviews;
+    });
+    if (variantImageFiles[variantIndex].length <= 1 && variantImageInputRefs.current[variantIndex]?.current) {
+      variantImageInputRefs.current[variantIndex].current.value = '';
+    }
   };
 
   const handleImageChange = (files, isSingleUpload = false) => {
@@ -619,10 +726,6 @@ export default function SellerProductUpload() {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
     if (!formData.name.trim()) newErrors.name = 'Product name is required.';
-    if (!formData.price || isNaN(formData.price) || formData.price <= 0)
-      newErrors.price = 'Enter a valid price greater than 0.';
-    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
-      newErrors.stock = 'Enter a valid stock quantity (0 or more).';
     if (!formData.category || !categories.includes(formData.category))
       newErrors.category = 'Select a valid category.';
     if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
@@ -658,6 +761,21 @@ export default function SellerProductUpload() {
       newErrors.sizes = 'Select or enter at least one size for perfume products.';
     }
     if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
+
+    // Validate variants
+    formData.variants.forEach((variant, index) => {
+      if (!variant.color) newErrors[`variant${index}_color`] = 'Color is required.';
+      if (!variant.size) newErrors[`variant${index}_size`] = 'Size is required.';
+      if (!variant.price || isNaN(variant.price) || variant.price <= 0)
+        newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
+      if (!variant.stock || isNaN(variant.stock) || variant.stock < 0)
+        newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity (0 or more).';
+      if (variant.images.length === 0 && variantImageFiles[index].length === 0)
+        newErrors[`variant${index}_images`] = 'At least one image is required for each variant.';
+      if (variantImageFiles[index].length > MAX_VARIANT_IMAGES)
+        newErrors[`variant${index}_images`] = `Maximum ${MAX_VARIANT_IMAGES} images allowed per variant.`;
+    });
+
     return newErrors;
   };
 
@@ -729,6 +847,9 @@ export default function SellerProductUpload() {
       const videoUrls = videoFiles.length > 0
         ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
         : [];
+      const variantImageUrls = await Promise.all(
+        variantImageFiles.map((files) => Promise.all(files.map((file) => uploadFile(file))))
+      );
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
       }
@@ -736,8 +857,6 @@ export default function SellerProductUpload() {
         sellerName: formData.sellerName,
         name: formData.name,
         description: formData.description || '',
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock, 10),
         category: formData.category.toLowerCase(),
         subcategory: formData.subcategory || '',
         subSubcategory: formData.subSubcategory || '',
@@ -763,6 +882,13 @@ export default function SellerProductUpload() {
           city: locationData.city || '',
           address: locationData.address || '',
         },
+        variants: formData.variants.map((variant, index) => ({
+          color: variant.color,
+          size: variant.size,
+          price: parseFloat(variant.price),
+          stock: parseInt(variant.stock, 10),
+          imageUrls: variantImageUrls[index] || [],
+        })),
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
       console.log('Product uploaded with ID:', docRef.id);
@@ -784,6 +910,7 @@ export default function SellerProductUpload() {
         videos: [],
         tags: [],
         manualSize: '',
+        variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
       });
       setLocationData({
         country: '',
@@ -795,15 +922,22 @@ export default function SellerProductUpload() {
       setImagePreviews([]);
       setVideoFiles([]);
       setVideoPreviews([]);
+      setVariantImageFiles([]);
+      setVariantImagePreviews([]);
       localStorage.removeItem('sellerProductForm');
       localStorage.removeItem('sellerLocationForm');
       localStorage.removeItem('sellerProductImages');
       localStorage.removeItem('sellerProductPreviews');
       localStorage.removeItem('sellerProductVideos');
       localStorage.removeItem('sellerProductVideoPreviews');
+      localStorage.removeItem('sellerVariantImages');
+      localStorage.removeItem('sellerVariantPreviews');
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
+      variantImageInputRefs.current.forEach((ref) => {
+        if (ref.current) ref.current.value = '';
+      });
       setColorSuggestions([]);
       setShowColorDropdown(false);
       setShowCategoryDropdown(false);
@@ -878,7 +1012,7 @@ export default function SellerProductUpload() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[200px] transition-colors ${
+                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[300px] transition-colors ${
                   errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
                 } ${loading ? 'opacity-50' : ''}`}
               >
@@ -959,7 +1093,7 @@ export default function SellerProductUpload() {
                 <input
                   ref={singleImageInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image"
                   onChange={handleSingleImageInputChange}
                   className="hidden"
                   disabled={loading}
@@ -1185,63 +1319,210 @@ export default function SellerProductUpload() {
               </div>
             </div>
 
-            {/* Pricing & Stock Section */}
+            {/* Variants Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-copy-alt text-blue-500"></i>
+                Product Variants
+              </h3>
+              {formData.variants.map((variant, index) => (
+                <div key={index} className="mb-6 p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Variant {index + 1}</h4>
+                    {formData.variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveVariant(index)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                        disabled={loading}
+                      >
+                        Remove Variant
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Color <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={variant.color}
+                        onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
+                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors[`variant${index}_color`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        disabled={loading}
+                      >
+                        <option value="">Select a color</option>
+                        {formData.colors.map((color) => (
+                          <option key={color} value={color}>
+                            {color}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`variant${index}_color`] && (
+                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                          <i className="bx bx-error-circle"></i>
+                          {errors[`variant${index}_color`]}
+                        </p>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Size <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={variant.size}
+                        onChange={(e) => handleVariantChange(index, 'size', e.target.value)}
+                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors[`variant${index}_size`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        disabled={loading}
+                      >
+                        <option value="">Select a size</option>
+                        {formData.sizes.map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`variant${index}_size`] && (
+                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                          <i className="bx bx-error-circle"></i>
+                          {errors[`variant${index}_size`]}
+                        </p>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Price (₦) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={variant.price}
+                        onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                        step="0.01"
+                        min="0"
+                        placeholder="e.g., 5000.00"
+                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors[`variant${index}_price`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        disabled={loading}
+                      />
+                      {errors[`variant${index}_price`] && (
+                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                          <i className="bx bx-error-circle"></i>
+                          {errors[`variant${index}_price`]}
+                        </p>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Stock Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={variant.stock}
+                        onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+                        min="0"
+                        placeholder="e.g., 10"
+                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          errors[`variant${index}_stock`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        disabled={loading}
+                      />
+                      {errors[`variant${index}_stock`] && (
+                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                          <i className="bx bx-error-circle"></i>
+                          {errors[`variant${index}_stock`]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Variant Images (up to {MAX_VARIANT_IMAGES}) <span className="text-red-500">*</span>
+                    </label>
+                    <div
+                      className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[150px] transition-colors ${
+                        errors[`variant${index}_images`] ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
+                      } ${loading ? 'opacity-50' : ''}`}
+                    >
+                      {variantImagePreviews[index].length === 0 ? (
+                        <div className="text-center">
+                          <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            <button
+                              type="button"
+                              onClick={() => variantImageInputRefs.current[index]?.current.click()}
+                              className="text-blue-600 hover:underline"
+                              disabled={loading}
+                            >
+                              Select images
+                            </button>
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+                          {variantImagePreviews[index].map((preview, imgIndex) => (
+                            <div key={imgIndex} className="relative">
+                              <img
+                                src={preview}
+                                alt={`Variant ${index + 1} Preview ${imgIndex + 1}`}
+                                className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
+                                onClick={() => setZoomedMedia({ type: 'image', src: preview })}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveVariantImage(index, imgIndex)}
+                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                                disabled={loading}
+                                title="Remove image"
+                              >
+                                <i className="bx bx-x text-sm"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <input
+                        ref={(el) => (variantImageInputRefs.current[index] = el)}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        onChange={(e) => handleVariantImageChange(index, e.target.files)}
+                        className="hidden"
+                        disabled={loading}
+                        multiple
+                      />
+                    </div>
+                    {errors[`variant${index}_images`] && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        {errors[`variant${index}_images`]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddVariant}
+                className="mt-2 text-blue-600 hover:underline text-sm"
+                disabled={loading}
+              >
+                Add Another Variant
+              </button>
+            </div>
+
+            {/* Product Size Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-money text-blue-500"></i>
-                Pricing & Stock
+                Pricing & Size
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Price (₦) <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Price in Naira"></i>
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g., 5000.00"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.price ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {errors.price && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Stock Quantity <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Available stock"></i>
-                  </label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="e.g., 10"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.stock ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {errors.stock && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.stock}
-                    </p>
-                  )}
-                </div>
-              </div>
               <div className="mt-6 relative group">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Product Size <span className="text-red-500">*</span>
@@ -1277,7 +1558,7 @@ export default function SellerProductUpload() {
                     Foremade Fees
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p> 
+                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
                     <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
@@ -1328,7 +1609,7 @@ export default function SellerProductUpload() {
                               key={cat}
                               type="button"
                               onClick={() => {
-                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', subSubcategory: '', sizes: [] }));
+                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] }));
                                 setShowCategoryDropdown(false);
                               }}
                               className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
@@ -1355,379 +1636,374 @@ export default function SellerProductUpload() {
                 </div>
                 {formData.category && (
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-sm font-medium text-gray-                    gray-300 flex items-center gap-1">
                       Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select a subcategory"></i>
                     </label>
                     <div className="relative mt-1">
-                      <input
-                        type="text"
-                        value={formData.subcategory}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, subcategory: e.target.value, subSubcategory: '', sizes: [] }))}
-                        onFocus={() => setShowSubcategoryDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
-                        placeholder="Select or type a subcategory"
+                      <button
+                        type="button"
+                        onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
                         className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                           errors.subcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading || !customSubcategories[formData.category]}
-                      />
-                      {showSubcategoryDropdown && customSubcategories[formData.category] && (
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
+                        disabled={loading || !formData.category}
+                      >
+                        <span>{formData.subcategory || 'Select a subcategory'}</span>
+                        <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
+                      </button>
+                      {showSubcategoryDropdown && customSubcategories[formData.category]?.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubcategories[formData.category]
-                            .filter((subcat) => subcat.toLowerCase().includes(formData.subcategory.toLowerCase()))
-                            .map((subcat) => (
-                              <button
-                                key={subcat}
-                                type="button"
-                                onClick={() => {
-                                  setFormData((prev) => ({ ...prev, subcategory: subcat, subSubcategory: '', sizes: [] }));
-                                  setShowSubcategoryDropdown(false);
-                                }}
-                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                              >
-                                {subcat}
-                              </button>
-                            ))}
+                          {customSubcategories[formData.category].map((subcat) => (
+                            <button
+                              key={subcat}
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  subcategory: subcat,
+                                  subSubcategory: '',
+                                  sizes: [],
+                                  variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
+                                }));
+                                setShowSubcategoryDropdown(false);
+                              }}
+                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                            >
+                              {subcat}
+                            </button>
+                          ))}
                         </div>
                       )}
-                      {!customSubcategories[formData.category] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="bx bx-error-circle"></i>
-                          Loading subcategories...
-                        </p>
-                      )}
-                      {errors.subcategory && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="bx bx-error-circle"></i>
-                          {errors.subcategory}
-                        </p>
-                      )}
                     </div>
+                    {errors.subcategory && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        {errors.subcategory}
+                      </p>
+                    )}
                   </div>
                 )}
-                {formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                {formData.category && formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 && (
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Sub-Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select a sub-subcategory"></i>
                     </label>
                     <div className="relative mt-1">
-                      <input
-                        type="text"
-                        value={formData.subSubcategory}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, subSubcategory: e.target.value, sizes: [] }))}
-                        onFocus={() => setShowSubSubcategoryDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowSubSubcategoryDropdown(false), 200)}
-                        placeholder="Select or type a sub-subcategory"
+                      <button
+                        type="button"
+                        onClick={() => setShowSubSubcategoryDropdown(!showSubSubcategoryDropdown)}
                         className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                           errors.subSubcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading || !customSubSubcategories[formData.category]?.[formData.subcategory]}
-                      />
-                      {showSubSubcategoryDropdown && customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
+                        disabled={loading}
+                      >
+                        <span>{formData.subSubcategory || 'Select a sub-subcategory'}</span>
+                        <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
+                      </button>
+                      {showSubSubcategoryDropdown && (
                         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubSubcategories[formData.category][formData.subcategory]
-                            .filter((subSubcat) => subSubcat.toLowerCase().includes(formData.subSubcategory.toLowerCase()))
-                            .map((subSubcat) => (
-                              <button
-                                key={subSubcat}
-                                type="button"
-                                onClick={() => {
-                                  setFormData((prev) => ({ ...prev, subSubcategory: subSubcat, sizes: [] }));
-                                  setShowSubSubcategoryDropdown(false);
-                                }}
-                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                              >
-                                {subSubcat}
-                              </button>
-                            ))}
+                          {customSubSubcategories[formData.category][formData.subcategory].map((subSubcat) => (
+                            <button
+                              key={subSubcat}
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  subSubcategory: subSubcat,
+                                  sizes: [],
+                                  variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
+                                }));
+                                setShowSubSubcategoryDropdown(false);
+                              }}
+                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                            >
+                              {subSubcat}
+                            </button>
+                          ))}
                         </div>
                       )}
-                      {errors.subSubcategory && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="bx bx-error-circle"></i>
-                          {errors.subSubcategory}
-                        </p>
-                      )}
                     </div>
+                    {errors.subSubcategory && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        {errors.subSubcategory}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Sizes Section */}
-            {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && formData.subcategory && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-ruler text-blue-500"></i>
-                  Sizes
-                </h3>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Sizes <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter sizes"></i>
-                </label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {getSizeOptions().map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => handleSizeToggle(size)}
-                      className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                        formData.sizes.includes(size)
-                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={loading}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative mt-2">
-                  <input
-                    type="text"
-                    placeholder="Enter custom size (e.g., Size 35) and press Enter"
-                    onKeyDown={handleCustomSizeAdd}
-                    className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.sizes ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.sizes.map((size) => (
-                    <div
-                      key={size}
-                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
-                    >
-                      <span>{size}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSize(size)}
-                        className="text-red-500 hover:text-red-700"
-                        disabled={loading}
-                        title="Remove size"
-                      >
-                        <i className="bx bx-x"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {errors.sizes && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.sizes}
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Colors Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-color-fill text-blue-500"></i>
-                Colors
-              </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <i className="bx bx-palette text-blue-500"></i>
                 Colors <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2 mb-2">
-                {formData.colors.map((color) => {
-                  const predefinedColor = availableColors.find(
-                    (c) => c.name.toLowerCase() === color.toLowerCase()
-                  );
-                  return (
-                    <div
-                      key={color}
-                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
-                    >
-                      <span
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: predefinedColor ? predefinedColor.hex : '#ccc' }}
-                      />
-                      <span>{color}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveColor(color)}
-                        className="text-red-500 hover:text-red-700"
-                        disabled={loading}
-                        title="Remove color"
-                      >
-                        <i className="bx bx-x"></i>
-                      </button>
+              </h3>
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Select or Add Colors
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type custom colors"></i>
+                </label>
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    value={customColor}
+                    onChange={handleColorInputChange}
+                    onKeyDown={handleCustomColorAdd}
+                    placeholder="Type a color or select below"
+                    className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.colors ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    disabled={loading}
+                  />
+                  {showColorDropdown && colorSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
+                      {colorSuggestions.map((color) => (
+                        <button
+                          key={color.name}
+                          type="button"
+                          onClick={() => handleColorToggle(color.name)}
+                          className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 flex items-center gap-2"
+                        >
+                          <span
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: color.hex }}
+                          ></span>
+                          {color.name}
+                        </button>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={customColor}
-                  onChange={handleColorInputChange}
-                  onKeyDown={handleCustomColorAdd}
-                  onFocus={() => customColor.trim() && setShowColorDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowColorDropdown(false), 200)}
-                  placeholder="Type a color and press Enter (e.g., Navy)"
-                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.colors ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                  disabled={loading}
-                />
-                {showColorDropdown && colorSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md z-10 max-h-40 overflow-y-auto">
-                    {colorSuggestions.map((color) => (
-                      <button
-                        key={color.name}
-                        type="button"
-                        onMouseDown={() => handleColorToggle(color.name)}
-                        className="flex items-center w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                        disabled={loading}
-                      >
-                        <span
-                          className="w-4 h-4 rounded-full mr-2"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        {color.name}
-                      </button>
-                    ))}
-                  </div>
+                  )}
+                </div>
+                {errors.colors && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.colors}
+                  </p>
                 )}
               </div>
-              {errors.colors && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.colors}
-                </p>
-              )}
-            </div>
-
-            {/* Tags Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-purchase-tag text-blue-500"></i>
-                Tags
-              </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Tags (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2 mb-2">
-                {formData.tags.map((tag) => (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {formData.colors.map((color) => (
                   <div
-                    key={tag}
-                    className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
+                    key={color}
+                    className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
                   >
-                    <span>{tag}</span>
+                    {color}
                     <button
                       type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="text-red-500 hover:text-red-700"
+                      onClick={() => handleRemoveColor(color)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
                       disabled={loading}
-                      title="Remove tag"
                     >
                       <i className="bx bx-x"></i>
                     </button>
                   </div>
                 ))}
               </div>
-              <input
-                type="text"
-                placeholder="Type a tag and press Enter (e.g., Fashion)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    const tag = e.target.value.trim();
-                    if (tag.length > 20) {
-                      addAlert('Tag must be 20 characters or less.', 'error');
-                      return;
-                    }
-                    handleTagToggle(tag);
-                    e.target.value = '';
-                  }
-                }}
-                className={`mt-1 w-full py-4 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                disabled={loading}
-              />
-              {suggestedTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Suggested:</span>
-                  {suggestedTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm"
-                      disabled={loading}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Condition & Product URL Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-circle text-blue-500"></i>
-                Condition & Product URL
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Sizes Section */}
+            {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-ruler text-blue-500"></i>
+                  Sizes <span className="text-red-500">*</span>
+                </h3>
                 <div className="relative group">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Condition
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
+                    Select or Add Sizes
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type custom sizes"></i>
                   </label>
-                  <select
-                    name="condition"
-                    value={formData.condition}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  >
-                    <option value="New">New</option>
-                    <option value="Used">Used</option>
-                    <option value="Refurbished">Refurbished</option>
-                  </select>
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Product URL (Optional)
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (if any)"></i>
-                  </label>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {getSizeOptions().map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => handleSizeToggle(size)}
+                        className={`px-3 py-1 rounded-full text-sm border ${
+                          formData.sizes.includes(size)
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        } transition-all duration-200`}
+                        disabled={loading}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                   <input
-                    type="url"
-                    name="productUrl"
-                    value={formData.productUrl}
-                    onChange={handleChange}
-                    placeholder="e.g., https://example.com/product"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    type="text"
+                    onKeyDown={handleCustomSizeAdd}
+                    placeholder="Type a custom size and press Enter"
+                    className={`mt-2 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.sizes ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                     disabled={loading}
                   />
+                  {errors.sizes && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.sizes}
+                    </p>
+                  )}
                 </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {formData.sizes.map((size) => (
+                    <div
+                      key={size}
+                      className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
+                    >
+                      {size}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSize(size)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
+                        disabled={loading}
+                      >
+                        <i className="bx bx-x"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Condition Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-check-square text-blue-500"></i>
+                Condition
+              </h3>
+              <div className="flex gap-4">
+                {['New', 'Used'].map((condition) => (
+                  <label key={condition} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="condition"
+                      value={condition}
+                      checked={formData.condition === condition}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                      disabled={loading}
+                    />
+                    {condition}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Product URL Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-link text-blue-500"></i>
+                Product URL (Optional)
+              </h3>
+              <div className="relative group">
+                <input
+                  type="url"
+                  name="productUrl"
+                  value={formData.productUrl}
+                  onChange={handleChange}
+                  placeholder="e.g., https://example.com/product"
+                  className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                  disabled={loading}
+                />
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help absolute right-3 top-3" title="Optional URL for additional product info"></i>
+              </div>
+            </div>
+
+            {/* Tags Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-tag text-blue-500"></i>
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {authenticityTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagToggle(tag)}
+                    className={`px-3 py-1 rounded-full text-sm border ${
+                      formData.tags.includes(tag)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    } transition-all duration-200`}
+                    disabled={loading}
+                  >
+                    {tag}
+                  </button>
+                ))}
+                {suggestedTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagToggle(tag)}
+                    className={`px-3 py-1 rounded-full text-sm border ${
+                      formData.tags.includes(tag)
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    } transition-all duration-200`}
+                    disabled={loading}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const tag = e.target.value.trim();
+                      setFormData((prev) => ({
+                        ...prev,
+                        tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
+                      }));
+                      e.target.value = '';
+                    }
+                  }}
+                  placeholder="Type a tag and press Enter"
+                  className="w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                  disabled={loading}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {formData.tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleTagToggle(tag)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
+                      disabled={loading}
+                    >
+                      <i className="bx bx-x"></i>
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
-                disabled={loading}
-              />
-            </div>
+            {/* <SellerLocationForm
+              locationData={locationData}
+              setLocationData={setLocationData}
+              locationErrors={locationErrors}
+              loading={loading}
+            /> */}
 
             {/* Submit Button */}
-            <div className="flex justify-end mt-8">
+            <div className="flex justify-end">
               <button
                 type="submit"
-                className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
+                className={`py-2 px-6 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 flex items-center gap-2 ${
                   loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 disabled={loading}
@@ -1746,52 +2022,49 @@ export default function SellerProductUpload() {
               </button>
             </div>
           </form>
-
-          {/* Custom Alerts */}
-          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-          {/* Success Popup */}
-          <SellerProductUploadPopup
-            isOpen={isPopupOpen}
-            onClose={() => setIsPopupOpen(false)}
-            onViewListings={() => {
-              setIsPopupOpen(false);
-              navigate('/seller/listings');
-            }}
-            onAddAnother={() => setIsPopupOpen(false)}
-          />
-
-          {/* Zoomed Media Modal */}
-          {zoomedMedia && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-              onClick={() => setZoomedMedia(null)}
-            >
-              <div className="relative max-w-4xl max-h-[90vh] p-4">
-                {zoomedMedia.type === 'image' ? (
-                  <img
-                    src={zoomedMedia.src}
-                    alt="Zoomed"
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                ) : (
-                  <video
-                    src={zoomedMedia.src}
-                    controls
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                )}
-                <button
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                  onClick={() => setZoomedMedia(null)}
-                >
-                  <i className="bx bx-x text-lg"></i>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Custom Alerts */}
+      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+      {/* Zoomed Media Modal */}
+      {zoomedMedia && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setZoomedMedia(null)}>
+          <div className="relative max-w-4xl w-full">
+            {zoomedMedia.type === 'image' ? (
+              <img
+                src={zoomedMedia.src}
+                alt="Zoomed"
+                className="w-full h-auto rounded-lg shadow-lg"
+              />
+            ) : (
+              <video
+                src={zoomedMedia.src}
+                controls
+                className="w-full h-auto rounded-lg shadow-lg"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setZoomedMedia(null)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+            >
+              <i className="bx bx-x text-xl"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Popup */}
+      {isPopupOpen && (
+        <SellerProductUploadPopup
+          onClose={() => {
+            setIsPopupOpen(false);
+            navigate('/seller-products');
+          }}
+        />
+      )}
     </div>
   );
 }

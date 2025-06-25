@@ -63,8 +63,6 @@ export default function SellerProductUpload() {
       sellerName: '',
       name: '',
       description: '',
-      price: '',
-      stock: '',
       category: '',
       subcategory: '',
       subSubcategory: '',
@@ -226,7 +224,7 @@ export default function SellerProductUpload() {
     variantImageInputRefs.current = formData.variants.map((_, i) =>
       variantImageInputRefs.current[i] || createRef()
     );
-  }, [formData.variants]);
+  }, [formData.variants.length]);
 
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
   useEffect(() => {
@@ -303,7 +301,7 @@ export default function SellerProductUpload() {
       unsubscribeSubcategories();
       unsubscribeSubSubcategories();
     };
-  }, [formData.category, formData.subcategory, formData.subSubcategory]);
+  }, [formData.category, formData.subcategory, formData.subSubcategory, addAlert]);
 
   // Handle user authentication
   useEffect(() => {
@@ -328,13 +326,11 @@ export default function SellerProductUpload() {
       }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, addAlert]);
 
-  // Calculate fees
+  // Calculate fees based on variant prices
   useEffect(() => {
-    if (!feeConfig || !formData.category) return;
-    const price = parseFloat(formData.price);
-    if (!price || isNaN(price)) {
+    if (!feeConfig || !formData.category || !formData.variants || formData.variants.length === 0) {
       setFees({
         productSize: '',
         buyerProtectionFee: 0,
@@ -344,16 +340,42 @@ export default function SellerProductUpload() {
       });
       return;
     }
+
+    // Use the minimum variant price for fee calculations to align with typical e-commerce practices
+    const validPrices = formData.variants
+      .map((variant) => parseFloat(variant.price))
+      .filter((price) => !isNaN(price) && price > 0);
+    
+    if (validPrices.length === 0) {
+      setFees({
+        productSize: formData.category,
+        buyerProtectionFee: 0,
+        handlingFee: 0,
+        totalEstimatedPrice: 0,
+        sellerEarnings: 0,
+      });
+      return;
+    }
+
+    const price = Math.min(...validPrices); // Use minimum price for consistency
     const config = feeConfig[formData.category] || {
       minPrice: 1000,
       maxPrice: Infinity,
       buyerProtectionRate: 0.08,
       handlingRate: 0.20,
     };
+
+    if (price < config.minPrice) {
+      setShowSizeWarning(true);
+    } else {
+      setShowSizeWarning(false);
+    }
+
     const buyerProtectionFee = price * config.buyerProtectionRate;
     const handlingFee = price * config.handlingRate;
     const totalEstimatedPrice = price + buyerProtectionFee + handlingFee;
-    const sellerEarnings = price;
+    const sellerEarnings = price; // Seller earns the base price
+
     setFees({
       productSize: formData.category,
       buyerProtectionFee,
@@ -361,9 +383,9 @@ export default function SellerProductUpload() {
       totalEstimatedPrice,
       sellerEarnings,
     });
-    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-  }, [formData.price, formData.category, feeConfig]);
+  }, [formData.variants, formData.category, feeConfig]);
 
+  // Persist form data and media to localStorage
   useEffect(() => {
     localStorage.setItem('sellerProductForm', JSON.stringify(formData));
     localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
@@ -372,11 +394,12 @@ export default function SellerProductUpload() {
     localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
   }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews]);
 
+  // Update description preview
   useEffect(() => {
     setDescriptionPreview(marked(formData.description || '', { gfm: true, breaks: true }));
   }, [formData.description]);
 
-
+  // Suggest tags based on product details
   useEffect(() => {
     const suggestTags = () => {
       const text = `${formData.name} ${formData.description} ${formData.subSubcategory}`.toLowerCase();
@@ -392,6 +415,7 @@ export default function SellerProductUpload() {
     suggestTags();
   }, [formData.name, formData.description, formData.subSubcategory]);
 
+  // Detect mobile device
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const mobileRegex = /android|iphone|ipad|ipod|opera mini|mobile/i;
@@ -434,6 +458,15 @@ export default function SellerProductUpload() {
     }));
     setVariantImageFiles((prev) => prev.filter((_, i) => i !== index));
     setVariantImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`variant${index}_`)) {
+          delete newErrors[key];
+        }
+      });
+      return newErrors;
+    });
   };
 
   const handleVariantImageChange = (index, files) => {
@@ -441,21 +474,29 @@ export default function SellerProductUpload() {
     const validFiles = newFiles.filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
-    const totalImages = variantImageFiles[index].length + validFiles.length;
+    const totalImages = variantImageFiles[index]?.length + validFiles.length;
     if (totalImages > MAX_VARIANT_IMAGES) {
       addAlert(`You can upload a maximum of ${MAX_VARIANT_IMAGES} images per variant.`, 'error');
       return;
     }
     setVariantImageFiles((prev) => {
-      const newFiles = [...prev];
-      newFiles[index] = [...newFiles[index], ...validFiles];
-      return newFiles;
+      const newFilesArray = [...prev];
+      newFilesArray[index] = [...(newFilesArray[index] || []), ...validFiles];
+      return newFilesArray;
     });
-    const previews = validFiles.map((file) => URL.createObjectURL(file));
     setVariantImagePreviews((prev) => {
       const newPreviews = [...prev];
-      newPreviews[index] = [...newPreviews[index], ...previews];
+      const previews = validFiles.map((file) => URL.createObjectURL(file));
+      newPreviews[index] = [...(newPreviews[index] || []), ...previews];
       return newPreviews;
+    });
+    setFormData((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = {
+        ...newVariants[index],
+        images: [...(newVariants[index].images || []), ...validFiles],
+      };
+      return { ...prev, variants: newVariants };
     });
     setErrors((prev) => ({ ...prev, [`variant${index}_images`]: '' }));
     if (variantImageInputRefs.current[index]?.current) {
@@ -473,6 +514,14 @@ export default function SellerProductUpload() {
       const newPreviews = [...prev];
       newPreviews[variantIndex] = newPreviews[variantIndex].filter((_, i) => i !== imageIndex);
       return newPreviews;
+    });
+    setFormData((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[variantIndex] = {
+        ...newVariants[variantIndex],
+        images: newVariants[variantIndex].images.filter((_, i) => i !== imageIndex),
+      };
+      return { ...prev, variants: newVariants };
     });
     if (variantImageFiles[variantIndex].length <= 1 && variantImageInputRefs.current[variantIndex]?.current) {
       variantImageInputRefs.current[variantIndex].current.value = '';
@@ -496,6 +545,10 @@ export default function SellerProductUpload() {
     setImageFiles((prev) => [...prev, ...validFiles]);
     const previews = validFiles.map((file) => URL.createObjectURL(file));
     setImagePreviews((prev) => [...prev, ...previews]);
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...validFiles],
+    }));
     setErrors((prev) => ({ ...prev, images: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (singleImageInputRef.current) singleImageInputRef.current.value = '';
@@ -534,6 +587,10 @@ export default function SellerProductUpload() {
         setVideoFiles((prev) => [...prev, ...validatedFiles]);
         const newPreviews = validatedFiles.map((file) => URL.createObjectURL(file));
         setVideoPreviews((prev) => [...prev, ...newPreviews]);
+        setFormData((prev) => ({
+          ...prev,
+          videos: [...prev.videos, ...validatedFiles],
+        }));
         setErrors((prev) => ({ ...prev, videos: '' }));
       })
       .catch((error) => {
@@ -567,6 +624,10 @@ export default function SellerProductUpload() {
   const handleRemoveImage = (index) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
     if (imageFiles.length <= 1) {
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
@@ -576,6 +637,10 @@ export default function SellerProductUpload() {
   const handleRemoveVideo = (index) => {
     setVideoFiles((prev) => prev.filter((_, i) => i !== index));
     setVideoPreviews((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index),
+    }));
     if (videoFiles.length <= 1 && videoInputRef.current) {
       videoInputRef.current.value = '';
     }
@@ -731,7 +796,7 @@ export default function SellerProductUpload() {
     if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
       newErrors.subcategory = 'Select a valid subcategory.';
     if (
-      customSubSubcategories[formData.category]?.[formData.subcategory] &&
+      customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 &&
       !formData.subSubcategory
     )
       newErrors.subSubcategory = 'Select a sub-subcategory.';
@@ -766,13 +831,13 @@ export default function SellerProductUpload() {
     formData.variants.forEach((variant, index) => {
       if (!variant.color) newErrors[`variant${index}_color`] = 'Color is required.';
       if (!variant.size) newErrors[`variant${index}_size`] = 'Size is required.';
-      if (!variant.price || isNaN(variant.price) || variant.price <= 0)
+      if (!variant.price || isNaN(variant.price) || parseFloat(variant.price) <= 0)
         newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
-      if (!variant.stock || isNaN(variant.stock) || variant.stock < 0)
+      if (!variant.stock || isNaN(variant.stock) || parseInt(variant.stock, 10) < 0)
         newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity (0 or more).';
-      if (variant.images.length === 0 && variantImageFiles[index].length === 0)
+      if (variant.images.length === 0)
         newErrors[`variant${index}_images`] = 'At least one image is required for each variant.';
-      if (variantImageFiles[index].length > MAX_VARIANT_IMAGES)
+      if (variant.images.length > MAX_VARIANT_IMAGES)
         newErrors[`variant${index}_images`] = `Maximum ${MAX_VARIANT_IMAGES} images allowed per variant.`;
     });
 
@@ -848,7 +913,9 @@ export default function SellerProductUpload() {
         ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
         : [];
       const variantImageUrls = await Promise.all(
-        variantImageFiles.map((files) => Promise.all(files.map((file) => uploadFile(file))))
+        formData.variants.map((variant, index) =>
+          Promise.all(variant.images.map((file) => uploadFile(file)))
+        )
       );
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
@@ -897,8 +964,6 @@ export default function SellerProductUpload() {
         sellerName: '',
         name: '',
         description: '',
-        price: '',
-        stock: '',
         category: '',
         subcategory: '',
         subSubcategory: '',
@@ -1005,7 +1070,7 @@ export default function SellerProductUpload() {
             <div className="relative group">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 4 images (JPEG, PNG, etc.)"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 8 images (JPEG, PNG, etc.)"></i>
               </label>
               <div
                 ref={dropZoneRef}
@@ -1093,7 +1158,7 @@ export default function SellerProductUpload() {
                 <input
                   ref={singleImageInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   onChange={handleSingleImageInputChange}
                   className="hidden"
                   disabled={loading}
@@ -1448,7 +1513,7 @@ export default function SellerProductUpload() {
                         errors[`variant${index}_images`] ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
                       } ${loading ? 'opacity-50' : ''}`}
                     >
-                      {variantImagePreviews[index].length === 0 ? (
+                      {variantImagePreviews[index]?.length === 0 ? (
                         <div className="text-center">
                           <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -1489,7 +1554,9 @@ export default function SellerProductUpload() {
                         </div>
                       )}
                       <input
-                        ref={(el) => (variantImageInputRefs.current[index] = el)}
+                        ref={(el) => {
+                          if (el) variantImageInputRefs.current[index] = el;
+                        }}
                         type="file"
                         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                         onChange={(e) => handleVariantImageChange(index, e.target.files)}
@@ -1559,8 +1626,8 @@ export default function SellerProductUpload() {
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
-                    <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
@@ -1570,6 +1637,12 @@ export default function SellerProductUpload() {
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                       Note: International shipping costs can be added separately.
                     </p>
+                    {showSizeWarning && (
+                      <p className="text-red-600 text-xs flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        Price is below the minimum for this category.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1578,46 +1651,48 @@ export default function SellerProductUpload() {
             {/* Category, Subcategory & Sub-Subcategory Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-category text-blue-500"></i>
+                <i className="bx bx-list-ul text-blue-500"></i>
                 Category & Subcategory
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Category <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product category"></i>
                   </label>
-                  <div className="relative mt-1">
+                  <div className="relative">
                     <button
                       type="button"
                       onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                      className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
                         errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                      disabled={loading || categories.length === 0}
+                      disabled={loading}
                     >
                       <span>{formData.category || 'Select a category'}</span>
-                      <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
+                      <i className={`bx bx-chevron-${showCategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
                     </button>
                     {showCategoryDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                        {categories.length === 0 ? (
-                          <div className="p-2 text-sm text-gray-500 dark:text-gray-400">No categories available</div>
-                        ) : (
-                          categories.map((cat) => (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev) => ({ ...prev, category: cat, subcategory: '', subSubcategory: '', sizes: [], variants: [{ color: '', size: '', price: '', stock: '', images: [] }] }));
-                                setShowCategoryDropdown(false);
-                              }}
-                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                            >
-                              {cat}
-                            </button>
-                          ))
-                        )}
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {categories.map((category) => (
+                          <div
+                            key={category}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                category,
+                                subcategory: '',
+                                subSubcategory: '',
+                                sizes: [],
+                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
+                              }));
+                              setShowCategoryDropdown(false);
+                              setErrors((prev) => ({ ...prev, category: '' }));
+                            }}
+                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
+                          >
+                            {category}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1627,112 +1702,100 @@ export default function SellerProductUpload() {
                       {errors.category}
                     </p>
                   )}
-                  {categories.length === 0 && (
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Subcategory <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
+                        errors.subcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
+                      disabled={loading || !formData.category}
+                    >
+                      <span>{formData.subcategory || 'Select a subcategory'}</span>
+                      <i className={`bx bx-chevron-${showSubcategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
+                    </button>
+                    {showSubcategoryDropdown && formData.category && customSubcategories[formData.category]?.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {customSubcategories[formData.category].map((subcat) => (
+                          <div
+                            key={subcat}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                subcategory: subcat,
+                                subSubcategory: '',
+                                sizes: [],
+                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
+                              }));
+                              setShowSubcategoryDropdown(false);
+                              setErrors((prev) => ({ ...prev, subcategory: '' }));
+                            }}
+                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
+                          >
+                            {subcat}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {errors.subcategory && (
                     <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
-                      Loading categories...
+                      {errors.subcategory}
                     </p>
                   )}
                 </div>
-                {formData.category && (
-                  <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-                    gray-300 flex items-center gap-1">
-                      Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select a subcategory"></i>
-                    </label>
-                    <div className="relative mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
-                        className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors.subcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                        disabled={loading || !formData.category}
-                      >
-                        <span>{formData.subcategory || 'Select a subcategory'}</span>
-                        <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
-                      </button>
-                      {showSubcategoryDropdown && customSubcategories[formData.category]?.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubcategories[formData.category].map((subcat) => (
-                            <button
-                              key={subcat}
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  subcategory: subcat,
-                                  subSubcategory: '',
-                                  sizes: [],
-                                  variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-                                }));
-                                setShowSubcategoryDropdown(false);
-                              }}
-                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                            >
-                              {subcat}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {errors.subcategory && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.subcategory}
-                      </p>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Sub-Subcategory
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowSubSubcategoryDropdown(!showSubSubcategoryDropdown)}
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
+                        errors.subSubcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
+                      disabled={loading || !formData.subcategory || !customSubSubcategories[formData.category]?.[formData.subcategory]?.length}
+                    >
+                      <span>{formData.subSubcategory || 'Select a sub-subcategory'}</span>
+                      <i className={`bx bx-chevron-${showSubSubcategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
+                    </button>
+                    {showSubSubcategoryDropdown && formData.category && formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {customSubSubcategories[formData.category][formData.subcategory].map((subSubcat) => (
+                          <div
+                            key={subSubcat}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                subSubcategory: subSubcat,
+                                sizes: [],
+                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
+                              }));
+                              setShowSubSubcategoryDropdown(false);
+                              setErrors((prev) => ({ ...prev, subSubcategory: '' }));
+                            }}
+                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
+                          >
+                            {subSubcat}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                )}
-                {formData.category && formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 && (
-                  <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Sub-Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select a sub-subcategory"></i>
-                    </label>
-                    <div className="relative mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSubSubcategoryDropdown(!showSubSubcategoryDropdown)}
-                        className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors.subSubcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                        disabled={loading}
-                      >
-                        <span>{formData.subSubcategory || 'Select a sub-subcategory'}</span>
-                        <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
-                      </button>
-                      {showSubSubcategoryDropdown && (
-                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubSubcategories[formData.category][formData.subcategory].map((subSubcat) => (
-                            <button
-                              key={subSubcat}
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  subSubcategory: subSubcat,
-                                  sizes: [],
-                                  variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-                                }));
-                                setShowSubSubcategoryDropdown(false);
-                              }}
-                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                            >
-                              {subSubcat}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {errors.subSubcategory && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.subSubcategory}
-                      </p>
-                    )}
-                  </div>
-                )}
+                  {errors.subSubcategory && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.subSubcategory}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1744,36 +1807,35 @@ export default function SellerProductUpload() {
               </h3>
               <div className="relative group">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Select or Add Colors
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type custom colors"></i>
+                  Select Colors
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or add custom colors for your product"></i>
                 </label>
-                <div className="relative mt-1">
+                <div className="relative">
                   <input
                     type="text"
                     value={customColor}
                     onChange={handleColorInputChange}
                     onKeyDown={handleCustomColorAdd}
                     placeholder="Type a color or select below"
-                    className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                       errors.colors ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                     } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                     disabled={loading}
                   />
                   {showColorDropdown && colorSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {colorSuggestions.map((color) => (
-                        <button
+                        <div
                           key={color.name}
-                          type="button"
                           onClick={() => handleColorToggle(color.name)}
-                          className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 flex items-center gap-2"
+                          className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
                         >
                           <span
-                            className="w-4 h-4 rounded-full"
+                            className="inline-block w-4 h-4 mr-2 rounded-full"
                             style={{ backgroundColor: color.hex }}
                           ></span>
                           {color.name}
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1785,82 +1847,18 @@ export default function SellerProductUpload() {
                   </p>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {formData.colors.map((color) => (
-                  <div
-                    key={color}
-                    className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
-                  >
-                    {color}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveColor(color)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
-                      disabled={loading}
-                    >
-                      <i className="bx bx-x"></i>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sizes Section */}
-            {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-ruler text-blue-500"></i>
-                  Sizes <span className="text-red-500">*</span>
-                </h3>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Select or Add Sizes
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type custom sizes"></i>
-                  </label>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {getSizeOptions().map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => handleSizeToggle(size)}
-                        className={`px-3 py-1 rounded-full text-sm border ${
-                          formData.sizes.includes(size)
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        } transition-all duration-200`}
-                        disabled={loading}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    onKeyDown={handleCustomSizeAdd}
-                    placeholder="Type a custom size and press Enter"
-                    className={`mt-2 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.sizes ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {errors.sizes && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.sizes}
-                    </p>
-                  )}
-                </div>
+              {formData.colors.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.sizes.map((size) => (
+                  {formData.colors.map((color) => (
                     <div
-                      key={size}
-                      className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
+                      key={color}
+                      className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
                     >
-                      {size}
+                      {color}
                       <button
                         type="button"
-                        onClick={() => handleRemoveSize(size)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
+                        onClick={() => handleRemoveColor(color)}
+                        className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
                         disabled={loading}
                       >
                         <i className="bx bx-x"></i>
@@ -1868,8 +1866,74 @@ export default function SellerProductUpload() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Sizes Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-ruler text-blue-500"></i>
+                Sizes {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && <span className="text-red-500">*</span>}
+              </h3>
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Select Sizes
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or add custom sizes for your product"></i>
+                </label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {getSizeOptions().map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => handleSizeToggle(size)}
+                      className={`px-3 py-1 text-sm rounded-lg border transition-all duration-200 ${
+                        formData.sizes.includes(size)
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={loading}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  onKeyDown={handleCustomSizeAdd}
+                  placeholder="Add custom size (press Enter)"
+                  className={`mt-2 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.sizes ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {errors.sizes && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.sizes}
+                  </p>
+                )}
               </div>
-            )}
+              {formData.sizes.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {formData.sizes.map((size) => (
+                    <div
+                      key={size}
+                      className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                    >
+                      {size}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSize(size)}
+                        className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
+                        disabled={loading}
+                      >
+                        <i className="bx bx-x"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Condition Section */}
             <div>
@@ -1877,21 +1941,31 @@ export default function SellerProductUpload() {
                 <i className="bx bx-check-square text-blue-500"></i>
                 Condition
               </h3>
-              <div className="flex gap-4">
-                {['New', 'Used'].map((condition) => (
-                  <label key={condition} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="radio"
-                      name="condition"
-                      value={condition}
-                      checked={formData.condition === condition}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
-                      disabled={loading}
-                    />
-                    {condition}
-                  </label>
-                ))}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product Condition
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of your product"></i>
+                </label>
+                <select
+                  name="condition"
+                  value={formData.condition}
+                  onChange={handleChange}
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.condition ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                >
+                  <option value="New">New</option>
+                  <option value="Used - Like New">Used - Like New</option>
+                  <option value="Used - Good">Used - Good</option>
+                  <option value="Refurbished">Refurbished</option>
+                </select>
+                {errors.condition && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.condition}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1902,105 +1976,97 @@ export default function SellerProductUpload() {
                 Product URL (Optional)
               </h3>
               <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product URL
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add a link to an external product page (optional)"></i>
+                </label>
                 <input
                   type="url"
                   name="productUrl"
                   value={formData.productUrl}
                   onChange={handleChange}
                   placeholder="e.g., https://example.com/product"
-                  className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                   disabled={loading}
                 />
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help absolute right-3 top-3" title="Optional URL for additional product info"></i>
+                {errors.productUrl && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.productUrl}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Tags Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-tag text-blue-500"></i>
+                <i className="bx bx-purchase-tag text-blue-500"></i>
                 Tags
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {authenticityTags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleTagToggle(tag)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      formData.tags.includes(tag)
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    } transition-all duration-200`}
-                    disabled={loading}
-                  >
-                    {tag}
-                  </button>
-                ))}
-                {suggestedTags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleTagToggle(tag)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      formData.tags.includes(tag)
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    } transition-all duration-200`}
-                    disabled={loading}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2">
-                <input
-                  type="text"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const tag = e.target.value.trim();
-                      setFormData((prev) => ({
-                        ...prev,
-                        tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
-                      }));
-                      e.target.value = '';
-                    }
-                  }}
-                  placeholder="Type a tag and press Enter"
-                  className="w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
-                  disabled={loading}
-                />
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {formData.tags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full"
-                  >
-                    {tag}
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Select Tags
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
+                </label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {[...authenticityTags, ...suggestedTags].map((tag) => (
                     <button
+                      key={tag}
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-500"
+                      className={`px-3 py-1 text-sm rounded-lg border transition-all duration-200 ${
+                        formData.tags.includes(tag)
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       disabled={loading}
                     >
-                      <i className="bx bx-x"></i>
+                      {tag}
                     </button>
+                  ))}
+                </div>
+                {formData.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.tags.map((tag) => (
+                      <div
+                        key={tag}
+                        className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleTagToggle(tag)}
+                          className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
+                          disabled={loading}
+                        >
+                          <i className="bx bx-x"></i>
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
-            {/* Location Section */}
-            {/* <SellerLocationForm
-              locationData={locationData}
-              setLocationData={setLocationData}
-              locationErrors={locationErrors}
-              loading={loading}
-            /> */}
+            {/* Location Form Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-map text-blue-500"></i>
+                Location
+              </h3>
+              <SellerLocationForm
+                locationData={locationData}
+                setLocationData={setLocationData}
+                errors={locationErrors}
+                disabled={loading}
+              />
+            </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-8">
               <button
                 type="submit"
                 className={`py-2 px-6 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 flex items-center gap-2 ${
@@ -2015,56 +2081,54 @@ export default function SellerProductUpload() {
                   </>
                 ) : (
                   <>
-                    <i className="bx bx-upload"></i>
-                    Upload Product
+                    <i className="bx bx-check-circle"></i>
+                    Add Product
                   </>
                 )}
               </button>
             </div>
           </form>
+
+          {/* Custom Alert */}
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+          {/* Popup for Successful Upload */}
+          {isPopupOpen && (
+            <SellerProductUploadPopup
+              onClose={() => setIsPopupOpen(false)}
+              onViewProducts={() => navigate('/seller/products')}
+              onAddAnother={() => setIsPopupOpen(false)}
+            />
+          )}
+
+          {/* Zoomed Media Modal */}
+          {zoomedMedia && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="relative max-w-4xl w-full p-4">
+                {zoomedMedia.type === 'image' ? (
+                  <img
+                    src={zoomedMedia.src}
+                    alt="Zoomed"
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={zoomedMedia.src}
+                    controls
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                )}
+                <button
+                  onClick={() => setZoomedMedia(null)}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                >
+                  <i className="bx bx-x text-lg"></i>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Custom Alerts */}
-      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-      {/* Zoomed Media Modal */}
-      {zoomedMedia && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setZoomedMedia(null)}>
-          <div className="relative max-w-4xl w-full">
-            {zoomedMedia.type === 'image' ? (
-              <img
-                src={zoomedMedia.src}
-                alt="Zoomed"
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
-            ) : (
-              <video
-                src={zoomedMedia.src}
-                controls
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => setZoomedMedia(null)}
-              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-            >
-              <i className="bx bx-x text-xl"></i>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Success Popup */}
-      {isPopupOpen && (
-        <SellerProductUploadPopup
-          onClose={() => {
-            setIsPopupOpen(false);
-            navigate('/seller-products');
-          }}
-        />
-      )}
     </div>
   );
 }

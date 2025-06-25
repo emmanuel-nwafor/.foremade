@@ -7,7 +7,7 @@ export default function FreeShipping() {
     // Check localStorage for dismissal state
     const isDismissed = localStorage.getItem('freeShippingDismissed');
     if (isDismissed === 'true') {
-      setIsVisible(false);
+      setIsVisible(true);
     }
   }, []);
 

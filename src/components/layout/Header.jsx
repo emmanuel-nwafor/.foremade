@@ -15,7 +15,7 @@ const Header = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
-  const [favorites, setFavorites] = useState([]); // Fixed: Corrected setFavorites
+  const [favorites, setFavorites] = useState([]);
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -71,7 +71,7 @@ const Header = () => {
         } else {
           setUserData(null);
           setNotificationCount(0);
-          setFavorites([]); // Clear favorites when logged out
+          setFavorites([]);
           localStorage.removeItem('userData');
         }
       } catch (err) {
@@ -198,8 +198,8 @@ const Header = () => {
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
 
   return (
-    <header className="">
-      <div className="bg-[#112D4E] hidden sm:flex text-white py-1 sm:py-2 justify-between items-center px-2 sm:px-4">
+    <header className="relative z-50">
+      <div className="bg-[#112D4E] hidden sm:flex text-white py-1 sm:py-2 justify-between items-center px-2 sm:px-4 relative z-50">
         <div className='flex justify-between items-center'>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link to="/">
@@ -301,7 +301,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+      <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
         <Link to="/">
           <img src={logo} className="h-10" alt="Foremade" />
         </Link>
@@ -320,11 +320,11 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="block sm:hidden pt-7">
+      <div className="block sm:hidden pt-7 relative z-40">
         <FreeShipping />
       </div>
 
-      <div className="block sm:hidden px-2 mt-2">
+      <div className="block sm:hidden px-2 mt-2 relative z-40">
         <div className="relative w-full">
           <input
             type="text"
@@ -385,11 +385,11 @@ const Header = () => {
         </div>
       </div>
 
-      <div className="hidden sm:block">
+      <div className="hidden sm:block relative z-40">
         <FreeShipping />
       </div>
 
-      <div className="container mx-auto px-2 sm:px-4 py-1 sm:py-4">
+      <div className="container mx-auto px-2 sm:px-4 py-1 sm:py-4 relative z-40">
         <div className="flex flex-col items-center">
           <div className="relative w-full hidden sm:block">
             <input
@@ -518,7 +518,7 @@ const Header = () => {
         </div>
       </div>
 
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-40">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-50">
         <Link
           to="/"
           className={`flex flex-col items-center ${location.pathname === '/' ? 'text-gray-600' : 'text-gray-600'} hover:text-amber-500`}
@@ -549,7 +549,7 @@ const Header = () => {
             <span className="absolute top-0 right-2 bg-red-600 text-white text-sm rounded-full h-5 w-5 flex items-center justify-center">
               {notificationCount}
             </span>
-          )}
+            )}
           <span className="text-sm">Inbox</span>
         </Link>
         <Link
@@ -563,7 +563,7 @@ const Header = () => {
 
       <div className="sm:hidden mb-3">
         <div
-          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
+          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-60"
           style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
         >
           <div className="p-4">

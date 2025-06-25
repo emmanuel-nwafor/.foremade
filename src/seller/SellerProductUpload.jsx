@@ -84,7 +84,7 @@ export default function SellerProductUpload() {
           ...initialData,
           ...parsedData,
           variants: Array.isArray(parsedData.variants)
-            ? parsedData.variants
+            ? parsedData.variants.map(v => ({ ...v, images: v.images || [] }))
             : initialData.variants,
         };
       } catch (error) {
@@ -175,7 +175,8 @@ export default function SellerProductUpload() {
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   const descriptionRef = useRef(null);
-  const variantImageInputRefs = useRef([]);
+  const variantDropZoneRefs = useRef([]);
+  const variantFileInputRefs = useRef([]);
 
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
@@ -219,11 +220,10 @@ export default function SellerProductUpload() {
     localStorage.setItem('sellerVariantPreviews', JSON.stringify(variantImagePreviews));
   }, [variantImageFiles, variantImagePreviews]);
 
-  // Sync variant image input refs with variants
+  // Sync variant refs with variants
   useEffect(() => {
-    variantImageInputRefs.current = formData.variants.map((_, i) =>
-      variantImageInputRefs.current[i] || createRef()
-    );
+    variantDropZoneRefs.current = formData.variants.map((_, i) => variantDropZoneRefs.current[i] || createRef());
+    variantFileInputRefs.current = formData.variants.map((_, i) => variantFileInputRefs.current[i] || createRef());
   }, [formData.variants.length]);
 
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
@@ -469,14 +469,18 @@ export default function SellerProductUpload() {
     });
   };
 
-  const handleVariantImageChange = (index, files) => {
+  const handleVariantImageChange = (index, files, isSingleUpload = false) => {
     const newFiles = Array.from(files);
     const validFiles = newFiles.filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
-    const totalImages = variantImageFiles[index]?.length + validFiles.length;
+    const totalImages = (variantImageFiles[index]?.length || 0) + validFiles.length;
     if (totalImages > MAX_VARIANT_IMAGES) {
       addAlert(`You can upload a maximum of ${MAX_VARIANT_IMAGES} images per variant.`, 'error');
+      return;
+    }
+    if (isSingleUpload && validFiles.length > 1) {
+      addAlert('Please upload one image at a time.', 'error');
       return;
     }
     setVariantImageFiles((prev) => {
@@ -499,8 +503,8 @@ export default function SellerProductUpload() {
       return { ...prev, variants: newVariants };
     });
     setErrors((prev) => ({ ...prev, [`variant${index}_images`]: '' }));
-    if (variantImageInputRefs.current[index]?.current) {
-      variantImageInputRefs.current[index].current.value = '';
+    if (variantFileInputRefs.current[index]?.current) {
+      variantFileInputRefs.current[index].current.value = '';
     }
   };
 
@@ -523,8 +527,33 @@ export default function SellerProductUpload() {
       };
       return { ...prev, variants: newVariants };
     });
-    if (variantImageFiles[variantIndex].length <= 1 && variantImageInputRefs.current[variantIndex]?.current) {
-      variantImageInputRefs.current[variantIndex].current.value = '';
+    if (variantImageFiles[variantIndex].length <= 1 && variantFileInputRefs.current[variantIndex]?.current) {
+      variantFileInputRefs.current[variantIndex].current.value = '';
+    }
+  };
+
+  const handleVariantDrop = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (variantDropZoneRefs.current[index]?.current) {
+      variantDropZoneRefs.current[index].current.classList.remove('border-blue-500');
+    }
+    handleVariantImageChange(index, e.dataTransfer.files);
+  };
+
+  const handleVariantDragOver = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (variantDropZoneRefs.current[index]?.current) {
+      variantDropZoneRefs.current[index].current.classList.add('border-blue-500');
+    }
+  };
+
+  const handleVariantDragLeave = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (variantDropZoneRefs.current[index]?.current) {
+      variantDropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
   };
 
@@ -800,8 +829,8 @@ export default function SellerProductUpload() {
       !formData.subSubcategory
     )
       newErrors.subSubcategory = 'Select a sub-subcategory.';
-    if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
-    if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
+    if (formData.images.length === 0) newErrors.images = 'At least one image is required.';
+    if (formData.images.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
     if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
     if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
     if (
@@ -847,14 +876,15 @@ export default function SellerProductUpload() {
   const validateLocationForm = () => {
     const newLocationErrors = {};
     if (!locationData.country.trim()) newLocationErrors.country = 'Country is required.';
-    if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
+    // if (!locationData.state.trim()) newLocationData.state = 'State is required.';
     return newLocationErrors;
   };
 
-  const uploadFile = async (file, isVideo = false) => {
+
+  const uploadFile = async (file, isVideo = false) => { // Fixed parameter name from isImage to isVideo
     const uploadData = new FormData();
     uploadData.append('file', file);
-    uploadData.append('isVideo', isVideo);
+    uploadData.append('isVideo', isVideo); // Correctly pass isVideo
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
@@ -913,9 +943,9 @@ export default function SellerProductUpload() {
         ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
         : [];
       const variantImageUrls = await Promise.all(
-        formData.variants.map((variant, index) =>
+        formData.variants.map((variant, index) => (
           Promise.all(variant.images.map((file) => uploadFile(file)))
-        )
+        ))
       );
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
@@ -1000,7 +1030,7 @@ export default function SellerProductUpload() {
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
-      variantImageInputRefs.current.forEach((ref) => {
+      variantFileInputRefs.current.forEach((ref) => {
         if (ref.current) ref.current.value = '';
       });
       setColorSuggestions([]);
@@ -1077,20 +1107,20 @@ export default function SellerProductUpload() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[300px] transition-colors ${
-                  errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
-                } ${loading ? 'opacity-50' : ''}`}
+                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[300px] transition-all duration-200 ${
+                  errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-600 dark:border-gray-600 dark:hover:border-blue-400' }
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {imagePreviews.length === 0 ? (
                   <div className="text-center">
-                    <i className="bx bx-cloud-upload text-5xl text-gray-600 dark:text-gray-400"></i>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <i className="bx bx-cloud-upload text-5xl text-blue-500 dark:text-blue-400"></i>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                       {isMobile ? (
                         <>
                           <button
                             type="button"
-                            onClick={() => singleImageInputRef.current.click()}
-                            className="text-blue-600 hover:underline"
+                            onClick={() => singleImageInputRef.current?.click()}
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                             disabled={loading}
                           >
                             Upload one image
@@ -1098,8 +1128,8 @@ export default function SellerProductUpload() {
                           {' or '}
                           <button
                             type="button"
-                            onClick={() => fileInputRef.current.click()}
-                            className="text-blue-600 hover:underline"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                             disabled={loading}
                           >
                             select up to {MAX_IMAGES} images
@@ -1110,8 +1140,8 @@ export default function SellerProductUpload() {
                           Drag and drop up to {MAX_IMAGES} images or{' '}
                           <button
                             type="button"
-                            onClick={() => fileInputRef.current.click()}
-                            className="text-blue-600 hover:underline"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                             disabled={loading}
                           >
                             select images
@@ -1124,19 +1154,19 @@ export default function SellerProductUpload() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full">
                     {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
+                          className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm group-hover:opacity-90 transition-opacity duration-200"
                           onClick={() => setZoomedMedia({ type: 'image', src: preview })}
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                           disabled={loading}
                           title="Remove image"
                         >
@@ -1165,7 +1195,7 @@ export default function SellerProductUpload() {
                 />
               </div>
               {errors.images && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-600 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
                   {errors.images}
                 </p>
@@ -1173,43 +1203,43 @@ export default function SellerProductUpload() {
               {isMobile && imagePreviews.length > 0 && imagePreviews.length < MAX_IMAGES && (
                 <button
                   type="button"
-                  onClick={() => singleImageInputRef.current.click()}
-                  className="mt-2 text-blue-600 hover:underline text-sm"
+                  onClick={() => singleImageInputRef.current?.click()}
+                  className="mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                   disabled={loading}
                 >
                   Add another image
                 </button>
               )}
               {uploadProgress > 0 && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                   <div
-                    className="bg-blue-600 h-2.5 rounded-full"
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
-                  ></div>
+                  />
                 </div>
               )}
             </div>
 
             {/* Video Upload Section */}
             <div className="relative group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product Video (1 video, Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload one video (MP4, MKV, WEBM, max 10MB, 30s, no audio)"></i>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Product Video (1 video, optional)
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-help" title="Upload one video (MP4, MKV, WEBM, max 10MB, 30s, no audio)" />
               </label>
               <div
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[200px] transition-colors ${
-                  errors.videos ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
-                } ${loading ? 'opacity-50' : ''}`}
+                className={`mt-2 w-full p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center min-h-[200px] transition-all duration-200 ${
+                  errors.videos ? 'border-red-500' : 'border-gray-300 hover:border-blue-600 dark:border-gray-600 dark:hover:border-blue-400'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {videoPreviews.length === 0 ? (
                   <div className="text-center">
-                    <i className="bx bx-video-plus text-5xl text-gray-600 dark:text-gray-400"></i>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <i className="bx bx-video-plus text-5xl text-blue-500 dark:text-blue-400"></i>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                       Drag and drop a video or{' '}
                       <button
                         type="button"
-                        onClick={() => videoInputRef.current.click()}
-                        className="text-blue-600 hover:underline"
+                        onClick={() => videoInputRef.current?.click()}
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                         disabled={loading}
                       >
                         select a video
@@ -1222,17 +1252,17 @@ export default function SellerProductUpload() {
                 ) : (
                   <div className="w-full">
                     {videoPreviews.map((preview, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <video
                           src={preview}
                           controls
-                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm md:w-full md:h-auto"
+                          className="w-full h-64 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm group-hover:opacity-90 transition-opacity duration-200"
                           onClick={() => setZoomedMedia({ type: 'video', src: preview })}
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveVideo(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                           disabled={loading}
                           title="Remove video"
                         >
@@ -1252,52 +1282,52 @@ export default function SellerProductUpload() {
                 />
               </div>
               {errors.videos && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-600 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
                   {errors.videos}
                 </p>
               )}
               {uploadProgress > 0 && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                   <div
-                    className="bg-blue-600 h-2.5 rounded-full"
+                    className="bg-green-600 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
-                  ></div>
+                  />
                 </div>
               )}
             </div>
 
             {/* Product Details Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-info-circle text-blue-500"></i>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <i className="bx bx-info-circle text-blue-600"></i>
                 Product Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                     Seller Name <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Your registered name"></i>
+                    <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Your registered name" />
                   </label>
                   <input
                     type="text"
                     name="sellerName"
                     value={formData.sellerName}
                     placeholder="Enter your full name"
-                    className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                    className="mt-2 w-full px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200"
                     disabled
                   />
                   {errors.sellerName && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       {errors.sellerName}
                     </p>
                   )}
                 </div>
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                     Product Name <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Name of the product"></i>
+                    <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Product name" />
                   </label>
                   <input
                     type="text"
@@ -1305,13 +1335,15 @@ export default function SellerProductUpload() {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="e.g., Men's Leather Jacket"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                      errors.name
+                        ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
                     disabled={loading}
                   />
                   {errors.name && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       {errors.name}
                     </p>
@@ -1319,38 +1351,38 @@ export default function SellerProductUpload() {
                 </div>
               </div>
               <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                   Description
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Describe your product with optional bold, italic, or code formatting"></i>
+                  <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Describe your product with optional bold, italic, or code formatting" />
                 </label>
-                <div className="mt-1">
-                  <div className="flex gap-2 mb-2">
+                <div className="mt-2">
+                  <div className="flex gap-2 mb-3">
                     <button
                       type="button"
                       onClick={() => applyFormatting('bold')}
-                      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm group"
+                      className="p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all duration-200"
                       disabled={loading}
                       title="Bold text (**text**)"
                     >
-                      <i className="bx bx-bold text-lg group-hover:text-blue-500"></i>
+                      <i className="bx bx-bold text-lg"></i>
                     </button>
                     <button
                       type="button"
                       onClick={() => applyFormatting('italic')}
-                      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm group"
+                      className="p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all duration-200"
                       disabled={loading}
                       title="Italic text (*text*)"
                     >
-                      <i className="bx bx-italic text-lg group-hover:text-blue-500"></i>
+                      <i className="bx bx-italic text-lg"></i>
                     </button>
                     <button
                       type="button"
                       onClick={() => applyFormatting('code')}
-                      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm group"
+                      className="p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all duration-200"
                       disabled={loading}
                       title="Code text (`text`)"
                     >
-                      <i className="bx bx-code text-lg group-hover:text-blue-500"></i>
+                      <i className="bx bx-code text-lg"></i>
                     </button>
                   </div>
                   <textarea
@@ -1359,24 +1391,26 @@ export default function SellerProductUpload() {
                     value={formData.description}
                     onChange={handleChange}
                     placeholder="e.g., **Premium leather** jacket with *stylish stitching*"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    rows="4"
+                    className={`w-full px-3 py-2 text-gray-800 dark:text-gray-200 border focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 rounded-lg transition-all duration-200 ${
+                      errors.description
+                        ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    rows="6"
                     disabled={loading}
                   />
                   {formData.description && (
-                    <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">
-                      <h4 className="font-medium mb-2">Preview</h4>
+                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Preview</h4>
                       <div
-                        className="prose prose-sm dark:prose-invert"
+                        className="prose prose-sm dark:prose-invert text-gray-600 dark:text-gray-300"
                         dangerouslySetInnerHTML={{ __html: descriptionPreview }}
                       />
                     </div>
                   )}
                 </div>
                 {errors.description && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                     <i className="bx bx-error-circle"></i>
                     {errors.description}
                   </p>
@@ -1386,36 +1420,38 @@ export default function SellerProductUpload() {
 
             {/* Variants Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-copy-alt text-blue-500"></i>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <i className="bx bx-copy-alt text-blue-600"></i>
                 Product Variants
               </h3>
               {formData.variants.map((variant, index) => (
-                <div key={index} className="mb-6 p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <div key={index} className="mb-6 p-5 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm">
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Variant {index + 1}</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200">Variant {index + 1}</h4>
                     {formData.variants.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveVariant(index)}
-                        className="text-red-500 hover:text-red-700 text-sm"
+                        className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm transition-colors duration-200"
                         disabled={loading}
                       >
                         Remove Variant
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                         Color <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={variant.color}
                         onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_color`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                          errors[`variant${index}_color`]
+                            ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
                         disabled={loading}
                       >
                         <option value="">Select a color</option>
@@ -1426,22 +1462,24 @@ export default function SellerProductUpload() {
                         ))}
                       </select>
                       {errors[`variant${index}_color`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors[`variant${index}_color`]}
                         </p>
                       )}
                     </div>
                     <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                         Size <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={variant.size}
                         onChange={(e) => handleVariantChange(index, 'size', e.target.value)}
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_size`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                          errors[`variant${index}_size`]
+                            ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
                         disabled={loading}
                       >
                         <option value="">Select a size</option>
@@ -1452,14 +1490,14 @@ export default function SellerProductUpload() {
                         ))}
                       </select>
                       {errors[`variant${index}_size`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors[`variant${index}_size`]}
                         </p>
                       )}
                     </div>
                     <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                         Price (₦) <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1469,20 +1507,22 @@ export default function SellerProductUpload() {
                         step="0.01"
                         min="0"
                         placeholder="e.g., 5000.00"
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_price`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                          errors[`variant${index}_price`]
+                            ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
                         disabled={loading}
                       />
                       {errors[`variant${index}_price`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors[`variant${index}_price`]}
                         </p>
                       )}
                     </div>
                     <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
                         Stock Quantity <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1491,59 +1531,93 @@ export default function SellerProductUpload() {
                         onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
                         min="0"
                         placeholder="e.g., 10"
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_stock`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                        className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                          errors[`variant${index}_stock`]
+                            ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
                         disabled={loading}
                       />
                       {errors[`variant${index}_stock`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-600 dark:text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors[`variant${index}_stock`]}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="mt-6 relative group">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                       Variant Images (up to {MAX_VARIANT_IMAGES}) <span className="text-red-500">*</span>
+                      <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title={`Upload up to ${MAX_VARIANT_IMAGES} images for this variant (JPEG, PNG, etc.)`} />
                     </label>
                     <div
-                      className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[150px] transition-colors ${
-                        errors[`variant${index}_images`] ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
-                      } ${loading ? 'opacity-50' : ''}`}
+                      ref={variantDropZoneRefs.current[index]}
+                      onDrop={(e) => handleVariantDrop(e, index)}
+                      onDragOver={(e) => handleVariantDragOver(e, index)}
+                      onDragLeave={(e) => handleVariantDragLeave(e, index)}
+                      className={`mt-2 w-full p-6 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[200px] transition-all duration-200 ${
+                        errors[`variantImages${index}`]
+                          ? 'border-red-500'
+                          : 'border-gray-300 hover:border-blue-600 dark:border-gray-600 dark:hover:border-blue-400'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {variantImagePreviews[index]?.length === 0 ? (
                         <div className="text-center">
-                          <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            <button
-                              type="button"
-                              onClick={() => variantImageInputRefs.current[index]?.current.click()}
-                              className="text-blue-600 hover:underline"
-                              disabled={loading}
-                            >
-                              Select images
-                            </button>
+                          <i className="bx bx-cloud-upload text-5xl text-blue-500 dark:text-blue-400"></i>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                            {isMobile ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => variantFileInputRefs.current[index]?.current.click()}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  disabled={loading}
+                                >
+                                  Upload one image
+                                </button>
+                                {' or '}
+                                <button
+                                  type="button"
+                                  onClick={() => variantFileInputRefs.current[index]?.current.click()}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  disabled={loading}
+                                >
+                                  select up to {MAX_VARIANT_IMAGES} images
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                Drag and drop up to {MAX_VARIANT_IMAGES} images or{' '}
+                                <button
+                                  type="button"
+                                  onClick={() => variantFileInputRefs.current[index]?.current.click()}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  disabled={loading}
+                                >
+                                  select images
+                                </button>
+                              </>
+                            )}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                             (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
                           </p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 w-full">
                           {variantImagePreviews[index].map((preview, imgIndex) => (
-                            <div key={imgIndex} className="relative">
+                            <div key={imgIndex} className="relative group">
                               <img
                                 src={preview}
                                 alt={`Variant ${index + 1} Preview ${imgIndex + 1}`}
-                                className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
+                                className="w-full h-24 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm group-hover:opacity-90 transition-opacity duration-200"
                                 onClick={() => setZoomedMedia({ type: 'image', src: preview })}
                               />
                               <button
                                 type="button"
                                 onClick={() => handleRemoveVariantImage(index, imgIndex)}
-                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                 disabled={loading}
                                 title="Remove image"
                               >
@@ -1554,22 +1628,37 @@ export default function SellerProductUpload() {
                         </div>
                       )}
                       <input
-                        ref={(el) => {
-                          if (el) variantImageInputRefs.current[index] = el;
-                        }}
+                        ref={variantFileInputRefs.current[index]}
                         type="file"
                         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                        onChange={(e) => handleVariantImageChange(index, e.target.files)}
+                        onChange={(e) => handleVariantImageChange(index, e.target.files, isMobile)}
                         className="hidden"
                         disabled={loading}
-                        multiple
+                        multiple={!isMobile}
                       />
                     </div>
-                    {errors[`variant${index}_images`] && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    {errors[`variantImages${index}`] && (
+                      <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
                         <i className="bx bx-error-circle"></i>
-                        {errors[`variant${index}_images`]}
+                        {errors[`variantImages${index}`]}
                       </p>
+                    )}
+                    {isMobile && variantImagePreviews[index]?.length > 0 && variantImagePreviews[index].length < MAX_VARIANT_IMAGES && (
+                      <button type="button"
+                        onClick={() => variantFileInputRefs.current[index]?.current.click()}
+                        className="mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                        disabled={loading}
+                      >
+                        Add another image
+                      </button>
+                    )}
+                    {uploadProgress > 0 && (
+                      <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1577,354 +1666,126 @@ export default function SellerProductUpload() {
               <button
                 type="button"
                 onClick={handleAddVariant}
-                className="mt-2 text-blue-600 hover:underline text-sm"
+                className="mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                 disabled={loading}
               >
+                <i className="bx bx-plus-circle"></i>
                 Add Another Variant
               </button>
             </div>
 
-            {/* Product Size Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-money text-blue-500"></i>
-                Pricing & Size
-              </h3>
-              <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Size <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
-                </label>
-                <select
-                  name="manualSize"
-                  value={formData.manualSize}
-                  onChange={handleChange}
-                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.manualSize ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+            {/* Colors Section */}
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Colors <span className="text-red-500">*</span>
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select or add custom colors" />
+              </label>
+              <div className="mt-2 relative">
+                <input
+                  type="text"
+                  value={customColor}
+                  onChange={handleColorInputChange}
+                  onKeyDown={handleCustomColorAdd}
+                  placeholder="Type a color or select below"
+                  className={`w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                    errors.colors
+                      ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
                   disabled={loading}
-                >
-                  <option value="">Select a size</option>
-                  {manualSizes.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                {errors.manualSize && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.manualSize}
-                  </p>
+                />
+                {showColorDropdown && colorSuggestions.length > 0 && (
+                  <ul className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {colorSuggestions.map((color) => (
+                      <li
+                        key={color.name}
+                        onClick={() => handleColorToggle(color.name)}
+                        className="flex items-center px-3 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200"
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full mr-2"
+                          style={{ backgroundColor: color.hex }}
+                        ></span>
+                        {color.name}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
-              {fees.productSize && feeConfig && (
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                    <i className="bx bx-calculator text-blue-500"></i>
-                    Foremade Fees
-                  </h4>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
-                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p className="font-bold">
-                      Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="font-bold text-green-600">
-                      Your Estimated Earnings: ₦{fees.sellerEarnings.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                      Note: International shipping costs can be added separately.
-                    </p>
-                    {showSizeWarning && (
-                      <p className="text-red-600 text-xs flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        Price is below the minimum for this category.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Category, Subcategory & Sub-Subcategory Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-list-ul text-blue-500"></i>
-                Category & Subcategory
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Category <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
+              <div className="mt-3 flex flex-wrap gap-2">
+                {formData.colors.map((color) => (
+                  <div
+                    key={color}
+                    className="flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                  >
+                    {color}
                     <button
                       type="button"
-                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
-                        errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
+                      onClick={() => handleRemoveColor(color)}
+                      className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                       disabled={loading}
                     >
-                      <span>{formData.category || 'Select a category'}</span>
-                      <i className={`bx bx-chevron-${showCategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
+                      <i className="bx bx-x"></i>
                     </button>
-                    {showCategoryDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {categories.map((category) => (
-                          <div
-                            key={category}
-                            onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                category,
-                                subcategory: '',
-                                subSubcategory: '',
-                                sizes: [],
-                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-                              }));
-                              setShowCategoryDropdown(false);
-                              setErrors((prev) => ({ ...prev, category: '' }));
-                            }}
-                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
-                          >
-                            {category}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  {errors.category && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.category}
-                    </p>
-                  )}
-                </div>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Subcategory <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
-                        errors.subcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                      disabled={loading || !formData.category}
-                    >
-                      <span>{formData.subcategory || 'Select a subcategory'}</span>
-                      <i className={`bx bx-chevron-${showSubcategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
-                    </button>
-                    {showSubcategoryDropdown && formData.category && customSubcategories[formData.category]?.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {customSubcategories[formData.category].map((subcat) => (
-                          <div
-                            key={subcat}
-                            onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                subcategory: subcat,
-                                subSubcategory: '',
-                                sizes: [],
-                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-                              }));
-                              setShowSubcategoryDropdown(false);
-                              setErrors((prev) => ({ ...prev, subcategory: '' }));
-                            }}
-                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
-                          >
-                            {subcat}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {errors.subcategory && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.subcategory}
-                    </p>
-                  )}
-                </div>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Sub-Subcategory
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowSubSubcategoryDropdown(!showSubSubcategoryDropdown)}
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm text-left focus:outline-none focus:ring-2 ${
-                        errors.subSubcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                      disabled={loading || !formData.subcategory || !customSubSubcategories[formData.category]?.[formData.subcategory]?.length}
-                    >
-                      <span>{formData.subSubcategory || 'Select a sub-subcategory'}</span>
-                      <i className={`bx bx-chevron-${showSubSubcategoryDropdown ? 'up' : 'down'} text-gray-500`}></i>
-                    </button>
-                    {showSubSubcategoryDropdown && formData.category && formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {customSubSubcategories[formData.category][formData.subcategory].map((subSubcat) => (
-                          <div
-                            key={subSubcat}
-                            onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                subSubcategory: subSubcat,
-                                sizes: [],
-                                variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-                              }));
-                              setShowSubSubcategoryDropdown(false);
-                              setErrors((prev) => ({ ...prev, subSubcategory: '' }));
-                            }}
-                            className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
-                          >
-                            {subSubcat}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {errors.subSubcategory && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.subSubcategory}
-                    </p>
-                  )}
-                </div>
+                ))}
               </div>
-            </div>
-
-            {/* Colors Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-palette text-blue-500"></i>
-                Colors <span className="text-red-500">*</span>
-              </h3>
-              <div className="relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Select Colors
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or add custom colors for your product"></i>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={customColor}
-                    onChange={handleColorInputChange}
-                    onKeyDown={handleCustomColorAdd}
-                    placeholder="Type a color or select below"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.colors ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {showColorDropdown && colorSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {colorSuggestions.map((color) => (
-                        <div
-                          key={color.name}
-                          onClick={() => handleColorToggle(color.name)}
-                          className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer"
-                        >
-                          <span
-                            className="inline-block w-4 h-4 mr-2 rounded-full"
-                            style={{ backgroundColor: color.hex }}
-                          ></span>
-                          {color.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {errors.colors && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.colors}
-                  </p>
-                )}
-              </div>
-              {formData.colors.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.colors.map((color) => (
-                    <div
-                      key={color}
-                      className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                    >
-                      {color}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveColor(color)}
-                        className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
-                        disabled={loading}
-                      >
-                        <i className="bx bx-x"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              {errors.colors && (
+                <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.colors}
+                </p>
               )}
             </div>
 
             {/* Sizes Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-ruler text-blue-500"></i>
-                Sizes {(formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') && <span className="text-red-500">*</span>}
-              </h3>
-              <div className="relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Select Sizes
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or add custom sizes for your product"></i>
-                </label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {getSizeOptions().map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => handleSizeToggle(size)}
-                      className={`px-3 py-1 text-sm rounded-lg border transition-all duration-200 ${
-                        formData.sizes.includes(size)
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900'
-                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={loading}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Sizes {['Clothing', 'Footwear', 'Perfumes'].includes(formData.category) && <span className="text-red-500">*</span>}
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select or add custom sizes" />
+              </label>
+              <div className="mt-2">
                 <input
                   type="text"
                   onKeyDown={handleCustomSizeAdd}
-                  placeholder="Add custom size (press Enter)"
-                  className={`mt-2 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.sizes ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  placeholder="Type a size and press Enter"
+                  className={`w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                    errors.sizes
+                      ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
                   disabled={loading}
                 />
-                {errors.sizes && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.sizes}
-                  </p>
+                {getSizeOptions().length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {getSizeOptions().map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => handleSizeToggle(size)}
+                        className={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${
+                          formData.sizes.includes(size)
+                            ? 'bg-blue-600 text-white dark:bg-blue-500'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        disabled={loading}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 )}
-              </div>
-              {formData.sizes.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {formData.sizes.map((size) => (
                     <div
                       key={size}
-                      className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                      className="flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
                     >
                       {size}
                       <button
                         type="button"
                         onClick={() => handleRemoveSize(size)}
-                        className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
+                        className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                         disabled={loading}
                       >
                         <i className="bx bx-x"></i>
@@ -1932,144 +1793,344 @@ export default function SellerProductUpload() {
                     </div>
                   ))}
                 </div>
+              </div>
+              {errors.sizes && (
+                <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.sizes}
+                </p>
               )}
             </div>
 
-            {/* Condition Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-square text-blue-500"></i>
-                Condition
-              </h3>
-              <div className="relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Condition
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of your product"></i>
-                </label>
-                <select
-                  name="condition"
-                  value={formData.condition}
-                  onChange={handleChange}
-                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.condition ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+            {/* Category Section */}
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Category <span className="text-red-500">*</span>
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select product category" />
+              </label>
+              <div className="mt-2 relative">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className={`w-full px-3 py-2 border rounded-md text-left text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                    errors.category
+                      ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
                   disabled={loading}
                 >
-                  <option value="New">New</option>
-                  <option value="Used - Like New">Used - Like New</option>
-                  <option value="Used - Good">Used - Good</option>
-                  <option value="Refurbished">Refurbished</option>
-                </select>
-                {errors.condition && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  {formData.category || 'Select a category'}
+                  <i className="bx bx-chevron-down float-right text-lg"></i>
+                </button>
+                {showCategoryDropdown && (
+                  <ul className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    {categories.map((category) => (
+                      <li
+                        key={category}
+                        onClick={() => {
+                          handleChange({ target: { name: 'category', value: category } });
+                          setShowCategoryDropdown(false);
+                        }}
+                        className="px-3 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200"
+                      >
+                        {category}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {errors.category && (
+                <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.category}
+                </p>
+              )}
+            </div>
+
+            {/* Subcategory Section */}
+            {formData.category && customSubcategories[formData.category]?.length > 0 && (
+              <div className="relative group">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  Subcategory <span className="text-red-500">*</span>
+                  <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select product subcategory" />
+                </label>
+                <div className="mt-2 relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubcategoryDropdown(!showSubcategoryDropdown)}
+                    className={`w-full px-3 py-2 border rounded-md text-left text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                      errors.subcategory
+                        ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    disabled={loading}
+                  >
+                    {formData.subcategory || 'Select a subcategory'}
+                    <i className="bx bx-chevron-down float-right text-lg"></i>
+                  </button>
+                  {showSubcategoryDropdown && (
+                    <ul className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                      {customSubcategories[formData.category].map((subcategory) => (
+                        <li
+                          key={subcategory}
+                          onClick={() => {
+                            handleChange({ target: { name: 'subcategory', value: subcategory } });
+                            setShowSubcategoryDropdown(false);
+                          }}
+                          className="px-3 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200"
+                        >
+                          {subcategory}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {errors.subcategory && (
+                  <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
                     <i className="bx bx-error-circle"></i>
-                    {errors.condition}
+                    {errors.subcategory}
                   </p>
                 )}
               </div>
+            )}
+
+            {/* Sub-Subcategory Section */}
+            {formData.category &&
+              formData.subcategory &&
+              customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 && (
+              <div className="relative group">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  Sub-Subcategory <span className="text-red-500">*</span>
+                  <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select product sub-subcategory" />
+                </label>
+                <div className="mt-2 relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubSubcategoryDropdown(!showSubSubcategoryDropdown)}
+                    className={`w-full px-3 py-2 border rounded-md text-left text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                      errors.subSubcategory
+                        ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    disabled={loading}
+                  >
+                    {formData.subSubcategory || 'Select a sub-subcategory'}
+                    <i className="bx bx-chevron-down float-right text-lg"></i>
+                  </button>
+                  {showSubSubcategoryDropdown && (
+                    <ul className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                      {customSubSubcategories[formData.category][formData.subcategory].map((subSubcategory) => (
+                        <li
+                          key={subSubcategory}
+                          onClick={() => {
+                            handleChange({ target: { name: 'subSubcategory', value: subSubcategory } });
+                            setShowSubSubcategoryDropdown(false);
+                          }}
+                          className="px-3 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200"
+                        >
+                          {subSubcategory}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {errors.subSubcategory && (
+                  <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.subSubcategory}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Condition Section */}
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Condition
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select product condition" />
+              </label>
+              <select
+                name="condition"
+                value={formData.condition}
+                onChange={handleChange}
+                className="mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 border-gray-200 dark:border-gray-700"
+                disabled={loading}
+              >
+                <option value="New">New</option>
+                <option value="Used - Like New">Used - Like New</option>
+                <option value="Used - Good">Used - Good</option>
+                <option value="Used - Fair">Used - Fair</option>
+              </select>
             </div>
 
             {/* Product URL Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-link text-blue-500"></i>
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                 Product URL (Optional)
-              </h3>
-              <div className="relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product URL
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add a link to an external product page (optional)"></i>
-                </label>
-                <input
-                  type="url"
-                  name="productUrl"
-                  value={formData.productUrl}
-                  onChange={handleChange}
-                  placeholder="e.g., https://example.com/product"
-                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                  disabled={loading}
-                />
-                {errors.productUrl && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.productUrl}
-                  </p>
-                )}
-              </div>
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Add a link to an external product page" />
+              </label>
+              <input
+                type="url"
+                name="productUrl"
+                value={formData.productUrl}
+                onChange={handleChange}
+                placeholder="e.g., https://example.com/product"
+                className="mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 border-gray-200 dark:border-gray-700"
+                disabled={loading}
+              />
             </div>
 
             {/* Tags Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-purchase-tag text-blue-500"></i>
-                Tags
-              </h3>
-              <div className="relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Select Tags
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
-                </label>
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {[...authenticityTags, ...suggestedTags].map((tag) => (
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Tags (Optional)
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Add tags to improve product discoverability" />
+              </label>
+              <div className="mt-2">
+                <div className="flex flex-wrap gap-2">
+                  {authenticityTags.map((tag) => (
                     <button
                       key={tag}
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className={`px-3 py-1 text-sm rounded-lg border transition-all duration-200 ${
+                      className={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${
                         formData.tags.includes(tag)
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900'
-                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          ? 'bg-blue-600 text-white dark:bg-blue-500'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
                       disabled={loading}
                     >
                       {tag}
                     </button>
                   ))}
                 </div>
-                {formData.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {formData.tags.map((tag) => (
-                      <div
-                        key={tag}
-                        className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                      >
-                        {tag}
+                {suggestedTags.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {suggestedTags.map((tag) => (
                         <button
+                          key={tag}
                           type="button"
                           onClick={() => handleTagToggle(tag)}
-                          className="ml-2 text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100"
+                          className={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${
+                            formData.tags.includes(tag)
+                              ? 'bg-blue-600 text-white dark:bg-blue-500'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          }`}
                           disabled={loading}
                         >
-                          <i className="bx bx-x"></i>
+                          {tag}
                         </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {formData.tags.map((tag) => (
+                    <div
+                      key={tag}
+                      className="flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleTagToggle(tag)}
+                        className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        disabled={loading}
+                      >
+                        <i className="bx bx-x"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Location Form Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
+            {/* Manual Size Section */}
+            <div className="relative group">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                Product Size <span className="text-red-500">*</span>
+                <i className="bx bx-info-circle text-blue-400 group-hover:text-blue-500 dark:text-blue-300 dark:group-hover:text-blue-400 cursor-pointer" title="Select estimated product size for shipping calculations" />
+              </label>
+              <select
+                name="manualSize"
+                value={formData.manualSize}
+                onChange={handleChange}
+                className={`mt-2 w-full px-3 py-2 border rounded-md text-gray-800 dark:text-gray-200 focus:ring-2 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-all duration-200 ${
+                  errors.manualSize
+                    ? 'border-red-500 focus:ring-red-500 dark:border-red-500 dark:focus:ring-red-500'
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
                 disabled={loading}
-              />
+              >
+                <option value="">Select a size</option>
+                {manualSizes.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              {errors.manualSize && (
+                <p className="text-red-600 dark:text-red-500 text-xs mt-2 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.manualSize}
+                </p>
+              )}
             </div>
 
+            {/* Location Form */}
+            {/* <SellerLocationForm
+              locationData={locationData}
+              setLocationData={setLocationData}
+              locationErrors={locationErrors}
+              setLocationErrors={setLocationErrors}
+              loading={loading}
+            /> */}
+
+            {/* Fee Summary */}
+            {fees.productSize && (
+              <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                  <i className="bx bx-calculator text-blue-600"></i>
+                  Fee Summary
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Product Category:</span>
+                    <span className="text-gray-800 dark:text-gray-200">{fees.productSize}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Buyer Protection Fee:</span>
+                    <span className="text-gray-800 dark:text-gray-200">₦{fees.buyerProtectionFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Handling Fee:</span>
+                    <span className="text-gray-800 dark:text-gray-200">₦{fees.handlingFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Total Estimated Price:</span>
+                    <span className="text-gray-800 dark:text-gray-200">₦{fees.totalEstimatedPrice.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Your Earnings:</span>
+                    <span className="text-green-600 dark:text-green-400">₦{fees.sellerEarnings.toFixed(2)}</span>
+                  </div>
+                </div>
+                {showSizeWarning && (
+                  <p className="text-yellow-600 dark:text-yellow-400 text-xs mt-4 flex items-center gap-1">
+                    <i className="bx bx-info-circle"></i>
+                    The price is below the minimum for this category, which may affect visibility.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Submit Button */}
-            <div className="flex justify-end mt-8">
+            <div className="mt-8 flex justify-end">
               <button
                 type="submit"
-                className={`py-2 px-6 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 flex items-center gap-2 ${
+                className={`px-6 py-3 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 flex items-center gap-2 ${
                   loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 disabled={loading}
@@ -2081,7 +2142,7 @@ export default function SellerProductUpload() {
                   </>
                 ) : (
                   <>
-                    <i className="bx bx-check-circle"></i>
+                    <i className="bx bx-upload"></i>
                     Add Product
                   </>
                 )}
@@ -2089,36 +2150,31 @@ export default function SellerProductUpload() {
             </div>
           </form>
 
-          {/* Custom Alert */}
+          {/* Custom Alerts */}
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-          {/* Popup for Successful Upload */}
-          {isPopupOpen && (
-            <SellerProductUploadPopup
-              onClose={() => setIsPopupOpen(false)}
-              onViewProducts={() => navigate('/seller/products')}
-              onAddAnother={() => setIsPopupOpen(false)}
-            />
-          )}
 
           {/* Zoomed Media Modal */}
           {zoomedMedia && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-              <div className="relative max-w-4xl w-full p-4">
+            <div
+              className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+              onClick={() => setZoomedMedia(null)}
+            >
+              <div className="relative max-w-4xl max-h-[90vh] p-4">
                 {zoomedMedia.type === 'image' ? (
                   <img
                     src={zoomedMedia.src}
-                    alt="Zoomed"
-                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    alt="Zoomed Media"
+                    className="max-w-full max-h-[80vh] rounded-lg shadow-lg"
                   />
                 ) : (
                   <video
                     src={zoomedMedia.src}
                     controls
-                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    className="max-w-full max-h-[80vh] rounded-lg shadow-lg"
                   />
                 )}
                 <button
+                  type="button"
                   onClick={() => setZoomedMedia(null)}
                   className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
                 >
@@ -2126,6 +2182,16 @@ export default function SellerProductUpload() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Success Popup */}
+          {isPopupOpen && (
+            <SellerProductUploadPopup
+              onClose={() => {
+                setIsPopupOpen(false);
+                navigate('/seller-products');
+              }}
+            />
           )}
         </div>
       </div>

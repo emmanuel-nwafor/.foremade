@@ -327,7 +327,6 @@ const Product = () => {
 
     const fetchAllData = async () => {
       try {
-        setLoading(true);
         await Promise.all([fetchProduct(), fetchRecentSearches()]);
       } catch (err) {
         console.error('Error in fetchAllData:', err);
@@ -335,7 +334,8 @@ const Product = () => {
         setLoading(false);
       }
     };
-
+    window.scrollTo(0, 0);
+    setLoading(true);
     fetchAllData();
   }, [id, navigate]);
 

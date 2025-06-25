@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
@@ -7,6 +8,7 @@ import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
 import SellerLocationForm from './SellerLocationForm';
 import SellerProductUploadPopup from './SellerProductUploadPopup';
+import SellerProductVariants from './SellerProductVariants';
 
 // Set global Axios timeout
 axios.defaults.timeout = 60000; // 60 seconds
@@ -63,8 +65,6 @@ export default function SellerProductUpload() {
       sellerName: '',
       name: '',
       description: '',
-      price: '',
-      stock: '',
       category: '',
       subcategory: '',
       subSubcategory: '',
@@ -76,6 +76,7 @@ export default function SellerProductUpload() {
       videos: [],
       tags: [],
       manualSize: '',
+      variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
     };
   });
 
@@ -113,6 +114,14 @@ export default function SellerProductUpload() {
     const savedVideoPreviews = localStorage.getItem('sellerProductVideoPreviews');
     return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
   });
+  const [variantImageFiles, setVariantImageFiles] = useState(() => {
+    const savedVariantImages = localStorage.getItem('sellerVariantImages');
+    return savedVariantImages ? JSON.parse(savedVariantImages) : [[]];
+  });
+  const [variantImagePreviews, setVariantImagePreviews] = useState(() => {
+    const savedVariantPreviews = localStorage.getItem('sellerVariantPreviews');
+    return savedVariantPreviews ? JSON.parse(savedVariantPreviews) : [[]];
+  });
 
   // Other states
   const [errors, setErrors] = useState({});
@@ -135,14 +144,12 @@ export default function SellerProductUpload() {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [customSubcategories, setCustomSubcategories] = useState({});
-  const [customSubSubcategories, setCustomSubSubcategories] = useState({});
+  const [customSubcategories, setSubcategories] = useState({});
+  const [customSubSubcategories, setSubSubcategories] = useState({});
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [zoomedMedia, setZoomedMedia] = useState(null);
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
-
-  console.log(showSizeWarning);
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -150,28 +157,30 @@ export default function SellerProductUpload() {
   const videoInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   const descriptionRef = useRef(null);
+  const variantDropZoneRefs = useRef([]);
+  const variantFileInputRefs = useRef([]);
 
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
     { name: 'Orange', hex: '#FFA500' },
     { name: 'Blue', hex: '#0000ff' },
-    { name: 'Green', hex: '#008000' },
-    { name: 'Brown', hex: '#8b4513' },
+    { name: 'Green', hex: '#006400' },
+    { name: 'Brown', hex: '#8B4513' },
     { name: 'Black', hex: '#000000' },
-    { name: 'White', hex: '#ffffff' },
+    { name: 'White', hex: '#FFFFFF' },
     { name: 'Purple', hex: '#800080' },
-    { name: 'Pink', hex: '#ffc1cc' },
+    { name: 'Pink', hex: '#FFC1CC' },
     { name: 'Gray', hex: '#808080' },
     { name: 'Yellow', hex: '#FFFF00' },
-    { name: 'Gold', hex: '#ff9a1d' },
-    { name: 'Silver', hex: '#e2f2ec' },
+    { name: 'Gold', hex: '#FFD700' },
+    { name: 'Silver', hex: '#C0C0C0' },
   ];
 
   const menClothingSizes = ['S', 'M', 'L', 'XL', 'XXL'];
   const womenClothingSizes = ['3', '4', '6', '8', '10', '12', '14', '16', '18', '20'];
   const footwearSizes = [
-    '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
-    '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"'
+    '3', '5', '5.5', '6', '6.5', '7', '7.5',
+    '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5'
   ];
   const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
   const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
@@ -185,6 +194,23 @@ export default function SellerProductUpload() {
   useEffect(() => {
     localStorage.setItem('sellerLocationForm', JSON.stringify(locationData));
   }, [locationData]);
+
+  // Persist form data and media to localStorage
+  useEffect(() => {
+    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
+    localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
+    localStorage.setItem('sellerProductPreviews', JSON.stringify(imagePreviews));
+    localStorage.setItem('sellerProductVideos', JSON.stringify(videoFiles));
+    localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
+    localStorage.setItem('sellerVariantImages', JSON.stringify(variantImageFiles));
+    localStorage.setItem('sellerVariantPreviews', JSON.stringify(variantImagePreviews));
+  }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews, variantImageFiles, variantImagePreviews]);
+
+  // Initialize variant refs
+  useEffect(() => {
+    variantDropZoneRefs.current = formData.variants.map((_, i) => variantDropZoneRefs.current[i] || { current: null });
+    variantFileInputRefs.current = formData.variants.map((_, i) => variantFileInputRefs.current[i] || { current: null });
+  }, [formData.variants.length]);
 
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
   useEffect(() => {
@@ -205,7 +231,7 @@ export default function SellerProductUpload() {
       snapshot.forEach((doc) => {
         subcatData[doc.id] = doc.data().subcategories || [];
       });
-      setCustomSubcategories(subcatData);
+      setSubcategories(subcatData);
       if (formData.category && formData.subcategory && !subcatData[formData.category]?.includes(formData.subcategory)) {
         setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '', sizes: [] }));
         addAlert('Selected subcategory was removed by admin.', 'error');
@@ -214,8 +240,6 @@ export default function SellerProductUpload() {
       console.error('Error fetching subcategories:', error);
       addAlert('Failed to load subcategories.', 'error');
     });
-
-    console.log(authenticityTags);
 
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
@@ -227,7 +251,7 @@ export default function SellerProductUpload() {
           subSubcatData[category][subcat] = Array.isArray(subSubcatList) ? subSubcatList : [];
         });
       });
-      setCustomSubSubcategories(subSubcatData);
+      setSubSubcategories(subSubcatData);
       if (
         formData.category &&
         formData.subcategory &&
@@ -263,7 +287,7 @@ export default function SellerProductUpload() {
       unsubscribeSubcategories();
       unsubscribeSubSubcategories();
     };
-  }, [formData.category, formData.subcategory, formData.subSubcategory]);
+  }, [formData.category, formData.subcategory, formData.subSubcategory, addAlert]);
 
   // Handle user authentication
   useEffect(() => {
@@ -288,13 +312,16 @@ export default function SellerProductUpload() {
       }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, formData, addAlert]);
 
-  // Calculate fees
+  // Calculate fees based on highest variant price
   useEffect(() => {
-    if (!feeConfig || !formData.category) return;
-    const price = parseFloat(formData.price);
-    if (!price || isNaN(price)) {
+    if (!feeConfig || !formData.category || !formData.variants.length) return;
+    const prices = formData.variants
+      .map((variant) => parseFloat(variant.price))
+      .filter((price) => !isNaN(price) && price > 0);
+    const price = prices.length ? Math.max(...prices) : 0;
+    if (!price) {
       setFees({
         productSize: '',
         buyerProtectionFee: 0,
@@ -321,17 +348,7 @@ export default function SellerProductUpload() {
       totalEstimatedPrice,
       sellerEarnings,
     });
-    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-  }, [formData.price, formData.category, feeConfig]);
-
-  // Persist form data and media to localStorage
-  useEffect(() => {
-    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-    localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
-    localStorage.setItem('sellerProductPreviews', JSON.stringify(imagePreviews));
-    localStorage.setItem('sellerProductVideos', JSON.stringify(videoFiles));
-    localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
-  }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews]);
+  }, [formData.variants, formData.category, feeConfig]);
 
   // Update description preview
   useEffect(() => {
@@ -619,10 +636,6 @@ export default function SellerProductUpload() {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
     if (!formData.name.trim()) newErrors.name = 'Product name is required.';
-    if (!formData.price || isNaN(formData.price) || formData.price <= 0)
-      newErrors.price = 'Enter a valid price greater than 0.';
-    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
-      newErrors.stock = 'Enter a valid stock quantity (0 or more).';
     if (!formData.category || !categories.includes(formData.category))
       newErrors.category = 'Select a valid category.';
     if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
@@ -658,6 +671,17 @@ export default function SellerProductUpload() {
       newErrors.sizes = 'Select or enter at least one size for perfume products.';
     }
     if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
+    // Validate variants
+    formData.variants.forEach((variant, index) => {
+      if (!variant.color) newErrors[`variant${index}_color`] = 'Select a color for this variant.';
+      if (!variant.size) newErrors[`variant${index}_size`] = 'Select a size for this variant.';
+      if (!variant.price || isNaN(variant.price) || parseFloat(variant.price) <= 0)
+        newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
+      if (!variant.stock || isNaN(variant.stock) || parseInt(variant.stock, 10) < 0)
+        newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity (0 or more).';
+      if (variant.images.length === 0)
+        newErrors[`variant${index}_images`] = 'At least one image is required for this variant.';
+    });
     return newErrors;
   };
 
@@ -725,10 +749,15 @@ export default function SellerProductUpload() {
       return;
     }
     try {
-      const imageUrls = await Promise.all(imageFiles.map((file) => uploadFile(file)));
+      const imageUrls = await Promise.all(imageFiles.map((file) => uploadFile(file, false)));
       const videoUrls = videoFiles.length > 0
         ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
         : [];
+      const variantImageUrls = await Promise.all(
+        formData.variants.map((variant, index) =>
+          Promise.all(variant.images.map((file) => uploadFile(file, false)))
+        )
+      );
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
       }
@@ -736,8 +765,6 @@ export default function SellerProductUpload() {
         sellerName: formData.sellerName,
         name: formData.name,
         description: formData.description || '',
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock, 10),
         category: formData.category.toLowerCase(),
         subcategory: formData.subcategory || '',
         subSubcategory: formData.subSubcategory || '',
@@ -763,6 +790,13 @@ export default function SellerProductUpload() {
           city: locationData.city || '',
           address: locationData.address || '',
         },
+        variants: formData.variants.map((variant, index) => ({
+          color: variant.color,
+          size: variant.size,
+          price: parseFloat(variant.price),
+          stock: parseInt(variant.stock, 10),
+          imageUrls: variantImageUrls[index] || [],
+        })),
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
       console.log('Product uploaded with ID:', docRef.id);
@@ -771,8 +805,6 @@ export default function SellerProductUpload() {
         sellerName: '',
         name: '',
         description: '',
-        price: '',
-        stock: '',
         category: '',
         subcategory: '',
         subSubcategory: '',
@@ -783,7 +815,7 @@ export default function SellerProductUpload() {
         images: [],
         videos: [],
         tags: [],
-        manualSize: '',
+        variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
       });
       setLocationData({
         country: '',
@@ -795,15 +827,22 @@ export default function SellerProductUpload() {
       setImagePreviews([]);
       setVideoFiles([]);
       setVideoPreviews([]);
+      setVariantImageFiles([]);
+      setVariantImagePreviews([]);
       localStorage.removeItem('sellerProductForm');
       localStorage.removeItem('sellerLocationForm');
       localStorage.removeItem('sellerProductImages');
       localStorage.removeItem('sellerProductPreviews');
       localStorage.removeItem('sellerProductVideos');
       localStorage.removeItem('sellerProductVideoPreviews');
+      localStorage.removeItem('sellerVariantImages');
+      localStorage.removeItem('sellerVariantPreviews');
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
+      variantFileInputRefs.current.forEach((ref) => {
+        if (ref.current) ref.current.value = '';
+      });
       setColorSuggestions([]);
       setShowColorDropdown(false);
       setShowCategoryDropdown(false);
@@ -832,12 +871,12 @@ export default function SellerProductUpload() {
   // Dynamic size options
   const getSizeOptions = () => {
     if (formData.category === 'Clothing' && formData.subcategory) {
-      return formData.subcategory === 'Men' ? menClothingSizes : womenClothingSizes;
+      return formData.subcategoryData.subcategory === 'Men' ? menClothingSizes : womenClothingSizes;
     }
     if (formData.category === 'Footwear' && formData.subcategory) {
       return footwearSizes;
     }
-    if (formData.category === 'Perfumes' && formData.subSubcategory?.startsWith('Oil -')) {
+    if (formData.category === 'Perfumes' && formData.subSubcategory?.startsWith('Oil')) {
       return perfumeSizes;
     }
     return [];
@@ -871,7 +910,7 @@ export default function SellerProductUpload() {
             <div className="relative group">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 4 images (JPEG, PNG, etc.)"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 8 images (JPEG, PNG, etc.)"></i>
               </label>
               <div
                 ref={dropZoneRef}
@@ -908,7 +947,7 @@ export default function SellerProductUpload() {
                         </>
                       ) : (
                         <>
-                          Drag and drop up to {MAX_IMAGES} images or{' '}
+                          Drag and drop images or{' '}
                           <button
                             type="button"
                             onClick={() => fileInputRef.current.click()}
@@ -927,7 +966,7 @@ export default function SellerProductUpload() {
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
                     {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
@@ -941,7 +980,7 @@ export default function SellerProductUpload() {
                           disabled={loading}
                           title="Remove image"
                         >
-                          <i className="bx bx-x text-sm"></i>
+                          <i className="bx bx-x"></i>
                         </button>
                       </div>
                     ))}
@@ -966,7 +1005,7 @@ export default function SellerProductUpload() {
                 />
               </div>
               {errors.images && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
                   {errors.images}
                 </p>
@@ -995,49 +1034,49 @@ export default function SellerProductUpload() {
             <div className="relative group">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Video (1 video, Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload one video (MP4, MKV, WEBM, max 10MB, 30s, no audio)"></i>
+                <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Upload one video (MP4, MKV, WEBM, max 10MB, 30s, no audio)"></i>
               </label>
               <div
-                className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[200px] transition-colors ${
-                  errors.videos ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
-                } ${loading ? 'opacity-50' : ''}`}
+                className={`bg-white dark:bg-gray-800 mt-4 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center min-h-[200px] transition-all duration-200 ${
+                  errors.videos ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-500 dark:hover:border-blue-400'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {videoPreviews.length === 0 ? (
                   <div className="text-center">
-                    <i className="bx bx-video-plus text-5xl text-gray-600 dark:text-gray-400"></i>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <i className="bx bx-video-plus text-5xl text-gray-600 dark:text-blue-400"></i>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                       Drag and drop a video or{' '}
                       <button
                         type="button"
                         onClick={() => videoInputRef.current.click()}
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                         disabled={loading}
                       >
                         select a video
                       </button>
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      (MP4, MKV, WEBM, max 10MB, under 30 seconds, no audio)
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      (MP4, MKV, WEBM, max 10MB, under 30s, no audio)
                     </p>
                   </div>
                 ) : (
                   <div className="w-full">
                     {videoPreviews.map((preview, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <video
                           src={preview}
                           controls
-                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm md:w-full md:h-auto"
+                          className="w-full h-[255px] object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm md:w-full"
                           onClick={() => setZoomedMedia({ type: 'video', src: preview })}
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveVideo(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 dark:hover:bg-red-400 shadow-sm transition-opacity duration-200"
                           disabled={loading}
                           title="Remove video"
                         >
-                          <i className="bx bx-x text-sm"></i>
+                          <i className="bx bx-x"></i>
                         </button>
                       </div>
                     ))}
@@ -1053,7 +1092,7 @@ export default function SellerProductUpload() {
                 />
               </div>
               {errors.videos && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
                   {errors.videos}
                 </p>
@@ -1061,7 +1100,7 @@ export default function SellerProductUpload() {
               {uploadProgress > 0 && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div
-                    className="bg-blue-600 h-2.5 rounded-full"
+                    className="bg-blue-400 h-600 h-2.5 rounded-full"
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
@@ -1078,7 +1117,7 @@ export default function SellerProductUpload() {
                 <div className="relative group">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Seller Name <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Your registered name"></i>
+                    <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Your registered name"></i>
                   </label>
                   <input
                     type="text"
@@ -1089,7 +1128,7 @@ export default function SellerProductUpload() {
                     disabled
                   />
                   {errors.sellerName && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       {errors.sellerName}
                     </p>
@@ -1098,7 +1137,7 @@ export default function SellerProductUpload() {
                 <div className="relative group">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Product Name <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Name of the product"></i>
+                    <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Name of the product"></i>
                   </label>
                   <input
                     type="text"
@@ -1112,7 +1151,7 @@ export default function SellerProductUpload() {
                     disabled={loading}
                   />
                   {errors.name && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       {errors.name}
                     </p>
@@ -1122,7 +1161,7 @@ export default function SellerProductUpload() {
               <div className="mt-6 relative group">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Description
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Describe your product with optional bold, italic, or code formatting"></i>
+                  <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Describe your product with optional bold, italic, or code formatting"></i>
                 </label>
                 <div className="mt-1">
                   <div className="flex gap-2 mb-2">
@@ -1177,7 +1216,7 @@ export default function SellerProductUpload() {
                   )}
                 </div>
                 {errors.description && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                     <i className="bx bx-error-circle"></i>
                     {errors.description}
                   </p>
@@ -1185,67 +1224,16 @@ export default function SellerProductUpload() {
               </div>
             </div>
 
-            {/* Pricing & Stock Section */}
+            {/* Product Size Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-money text-blue-500"></i>
-                Pricing & Stock
+                <i className="bx bx-ruler text-blue-500"></i>
+                Product Size
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Price (₦) <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Price in Naira"></i>
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g., 5000.00"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.price ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {errors.price && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Stock Quantity <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Available stock"></i>
-                  </label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    min="0"
-                    placeholder="e.g., 10"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.stock ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                  {errors.stock && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                      <i className="bx bx-error-circle"></i>
-                      {errors.stock}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="mt-6 relative group">
+              <div className="relative group">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Product Size <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
+                  <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select product size"></i>
                 </label>
                 <select
                   name="manualSize"
@@ -1264,7 +1252,7 @@ export default function SellerProductUpload() {
                   ))}
                 </select>
                 {errors.manualSize && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                     <i className="bx bx-error-circle"></i>
                     {errors.manualSize}
                   </p>
@@ -1277,16 +1265,16 @@ export default function SellerProductUpload() {
                     Foremade Fees
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p> 
+                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
                     <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="font-bold text-green-600">
+                    <p className="font-bold text-green-600 dark:text-green-400">
                       Your Estimated Earnings: ₦{fees.sellerEarnings.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       Note: International shipping costs can be added separately.
                     </p>
                   </div>
@@ -1304,7 +1292,7 @@ export default function SellerProductUpload() {
                 <div className="relative group">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Category <span className="text-red-500">*</span>
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product category"></i>
+                    <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select product category"></i>
                   </label>
                   <div className="relative mt-1">
                     <button
@@ -1331,7 +1319,7 @@ export default function SellerProductUpload() {
                                 setFormData((prev) => ({ ...prev, category: cat, subcategory: '', subSubcategory: '', sizes: [] }));
                                 setShowCategoryDropdown(false);
                               }}
-                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                              className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 transition-colors duration-200"
                             >
                               {cat}
                             </button>
@@ -1341,13 +1329,13 @@ export default function SellerProductUpload() {
                     )}
                   </div>
                   {errors.category && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       {errors.category}
                     </p>
                   )}
                   {categories.length === 0 && (
-                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       Loading categories...
                     </p>
@@ -1357,7 +1345,7 @@ export default function SellerProductUpload() {
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
+                      <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
                     </label>
                     <div className="relative mt-1">
                       <input
@@ -1384,7 +1372,7 @@ export default function SellerProductUpload() {
                                   setFormData((prev) => ({ ...prev, subcategory: subcat, subSubcategory: '', sizes: [] }));
                                   setShowSubcategoryDropdown(false);
                                 }}
-                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 transition-colors duration-200"
                               >
                                 {subcat}
                               </button>
@@ -1392,13 +1380,13 @@ export default function SellerProductUpload() {
                         </div>
                       )}
                       {!customSubcategories[formData.category] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           Loading subcategories...
                         </p>
                       )}
                       {errors.subcategory && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors.subcategory}
                         </p>
@@ -1410,7 +1398,7 @@ export default function SellerProductUpload() {
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Sub-Subcategory <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
+                      <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
                     </label>
                     <div className="relative mt-1">
                       <input
@@ -1437,7 +1425,7 @@ export default function SellerProductUpload() {
                                   setFormData((prev) => ({ ...prev, subSubcategory: subSubcat, sizes: [] }));
                                   setShowSubSubcategoryDropdown(false);
                                 }}
-                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                                className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 transition-colors duration-200"
                               >
                                 {subSubcat}
                               </button>
@@ -1445,7 +1433,7 @@ export default function SellerProductUpload() {
                         </div>
                       )}
                       {errors.subSubcategory && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
                           {errors.subSubcategory}
                         </p>
@@ -1465,7 +1453,7 @@ export default function SellerProductUpload() {
                 </h3>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Sizes <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter sizes"></i>
+                  <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select or enter sizes"></i>
                 </label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {getSizeOptions().map((size) => (
@@ -1505,7 +1493,7 @@ export default function SellerProductUpload() {
                       <button
                         type="button"
                         onClick={() => handleRemoveSize(size)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
                         disabled={loading}
                         title="Remove size"
                       >
@@ -1515,7 +1503,7 @@ export default function SellerProductUpload() {
                   ))}
                 </div>
                 {errors.sizes && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                     <i className="bx bx-error-circle"></i>
                     {errors.sizes}
                   </p>
@@ -1531,7 +1519,7 @@ export default function SellerProductUpload() {
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Colors <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
+                <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2 mb-2">
                 {formData.colors.map((color) => {
@@ -1551,7 +1539,7 @@ export default function SellerProductUpload() {
                       <button
                         type="button"
                         onClick={() => handleRemoveColor(color)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
                         disabled={loading}
                         title="Remove color"
                       >
@@ -1582,7 +1570,7 @@ export default function SellerProductUpload() {
                         key={color.name}
                         type="button"
                         onMouseDown={() => handleColorToggle(color.name)}
-                        className="flex items-center w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+                        className="flex items-center w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 transition-colors duration-200"
                         disabled={loading}
                       >
                         <span
@@ -1596,22 +1584,105 @@ export default function SellerProductUpload() {
                 )}
               </div>
               {errors.colors && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
                   {errors.colors}
                 </p>
               )}
             </div>
 
+            {/* Variants Section */}
+            <SellerProductVariants
+              formData={formData}
+              setFormData={setFormData}
+              errors={errors}
+              setErrors={setErrors}
+              variantImageFiles={variantImageFiles}
+              setVariantImageFiles={setVariantImageFiles}
+              variantImagePreviews={variantImagePreviews}
+              setVariantImagePreviews={setVariantImagePreviews}
+              variantFileInputRefs={variantFileInputRefs}
+              variantDropZoneRefs={variantDropZoneRefs}
+              loading={loading}
+              availableColors={availableColors}
+              getSizeOptions={getSizeOptions}
+              addAlert={addAlert}
+            />
+
+            {/* Condition Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-check-circle text-blue-500"></i>
+                Condition
+              </h3>
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product Condition <span className="text-red-500">*</span>
+                  <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
+                </label>
+                <select
+                  name="condition"
+                  value={formData.condition}
+                  onChange={handleChange}
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.condition ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                >
+                  <option value="New">New</option>
+                  <option value="Used - Like New">Used - Like New</option>
+                  <option value="Used - Good">Used - Good</option>
+                  <option value="Used - Fair">Used - Fair</option>
+                </select>
+                {errors.condition && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.condition}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Product URL Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-link text-blue-500"></i>
+                Product URL
+              </h3>
+              <div className="relative group">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product URL (Optional)
+                  <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Add a link to an external product page"></i>
+                </label>
+                <input
+                  type="url"
+                  name="productUrl"
+                  value={formData.productUrl}
+                  onChange={handleChange}
+                  placeholder="e.g., https://example.com/product"
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {errors.productUrl && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.productUrl}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Tags Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-purchase-tag text-blue-500"></i>
+                <i className="bx bx-tag text-blue-500"></i>
                 Tags
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Tags (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
+                <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Add tags to improve searchability"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2 mb-2">
                 {formData.tags.map((tag) => (
@@ -1623,7 +1694,7 @@ export default function SellerProductUpload() {
                     <button
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
                       disabled={loading}
                       title="Remove tag"
                     >
@@ -1632,32 +1703,35 @@ export default function SellerProductUpload() {
                   </div>
                 ))}
               </div>
-              <input
-                type="text"
-                placeholder="Type a tag and press Enter (e.g., Fashion)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    const tag = e.target.value.trim();
-                    if (tag.length > 20) {
-                      addAlert('Tag must be 20 characters or less.', 'error');
-                      return;
+              <div className="relative mt-2">
+                <input
+                  type="text"
+                  placeholder="Type a tag and press Enter (e.g., Luxury)"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const tag = e.target.value.trim();
+                      if (!formData.tags.includes(tag)) {
+                        setFormData((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
+                      }
+                      e.target.value = '';
+                      e.preventDefault();
                     }
-                    handleTagToggle(tag);
-                    e.target.value = '';
-                  }
-                }}
-                className={`mt-1 w-full py-4 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                disabled={loading}
-              />
+                  }}
+                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.tags ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+              </div>
               {suggestedTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Suggested:</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</span>
                   {suggestedTags.map((tag) => (
                     <button
                       key={tag}
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm"
+                      className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
                       disabled={loading}
                     >
                       {tag}
@@ -1665,48 +1739,12 @@ export default function SellerProductUpload() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Condition & Product URL Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-circle text-blue-500"></i>
-                Condition & Product URL
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Condition
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
-                  </label>
-                  <select
-                    name="condition"
-                    value={formData.condition}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  >
-                    <option value="New">New</option>
-                    <option value="Used">Used</option>
-                    <option value="Refurbished">Refurbished</option>
-                  </select>
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Product URL (Optional)
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (if any)"></i>
-                  </label>
-                  <input
-                    type="url"
-                    name="productUrl"
-                    value={formData.productUrl}
-                    onChange={handleChange}
-                    placeholder="e.g., https://example.com/product"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+              {errors.tags && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.tags}
+                </p>
+              )}
             </div>
 
             {/* Location Section */}
@@ -1715,20 +1753,23 @@ export default function SellerProductUpload() {
                 <i className="bx bx-map text-blue-500"></i>
                 Location
               </h3>
-              <SellerLocationForm
+              {/* <SellerLocationForm
                 locationData={locationData}
                 setLocationData={setLocationData}
-                errors={locationErrors}
-                disabled={loading}
-              />
+                locationErrors={locationErrors}
+                setLocationErrors={setLocationErrors}
+                loading={loading}
+              /> */}
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end mt-8">
+            <div className="flex justify-end">
               <button
                 type="submit"
-                className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                className={`py-2 px-6 rounded-lg shadow-md text-white text-sm font-semibold flex items-center gap-2 transition-all duration-200 ${
+                  loading
+                    ? 'bg-blue-400 cursor-not-allowed opacity-50'
+                    : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
                 }`}
                 disabled={loading}
               >
@@ -1746,52 +1787,54 @@ export default function SellerProductUpload() {
               </button>
             </div>
           </form>
-
-          {/* Custom Alerts */}
-          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-          {/* Success Popup */}
-          <SellerProductUploadPopup
-            isOpen={isPopupOpen}
-            onClose={() => setIsPopupOpen(false)}
-            onViewListings={() => {
-              setIsPopupOpen(false);
-              navigate('/seller/listings');
-            }}
-            onAddAnother={() => setIsPopupOpen(false)}
-          />
-
-          {/* Zoomed Media Modal */}
-          {zoomedMedia && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-              onClick={() => setZoomedMedia(null)}
-            >
-              <div className="relative max-w-4xl max-h-[90vh] p-4">
-                {zoomedMedia.type === 'image' ? (
-                  <img
-                    src={zoomedMedia.src}
-                    alt="Zoomed"
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                ) : (
-                  <video
-                    src={zoomedMedia.src}
-                    controls
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                )}
-                <button
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                  onClick={() => setZoomedMedia(null)}
-                >
-                  <i className="bx bx-x text-lg"></i>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Custom Alerts */}
+      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+      {/* Success Popup */}
+      {isPopupOpen && (
+        <SellerProductUploadPopup
+          onClose={() => {
+            setIsPopupOpen(false);
+            navigate('/seller/products');
+          }}
+          onViewProduct={() => {
+            setIsPopupOpen(false);
+            navigate('/seller/products');
+          }}
+        />
+      )}
+
+      {/* Zoomed Media Modal */}
+      {zoomedMedia && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+          <div className="relative max-w-4xl w-full p-4">
+            {zoomedMedia.type === 'image' ? (
+              <img
+                src={zoomedMedia.src}
+                alt="Zoomed"
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
+            ) : (
+              <video
+                src={zoomedMedia.src}
+                controls
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setZoomedMedia(null)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+              title="Close"
+            >
+              <i className="bx bx-x text-xl"></i>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

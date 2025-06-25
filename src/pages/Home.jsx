@@ -182,8 +182,7 @@ const Home = () => {
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
 
-      {/* Investor Deck section - only for new users */}
-      {isNewVisitor && <ForemadeInvestorDeck />}
+  
 
       {/* This is for spacing the nav on mobile */}
       <div className="h-20"></div>

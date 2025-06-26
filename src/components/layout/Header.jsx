@@ -556,9 +556,9 @@ const Header = () => {
         </Link>
         <Link
           to="/products-upload"
-          className={`flex flex-col items-center ${location.pathname === '/products-upload' ? 'text-blue-600' : 'text-gray-600'} hover:text-amber-500`}
+          className={`flex flex-col items-center ${location.pathname === '/products-upload' ? 'text-blue-600' : 'text-orange-500'} hover:text-amber-500`}
         >
-          <i className="bx bxs-plus-circle text-2xl"></i>
+          <i className="bx bxs-plus-circle text-4xl"></i>
           <span className="text-xs">Sell</span>
         </Link>
         <Link
@@ -593,16 +593,6 @@ const Header = () => {
               <i className="bx bx-x text-2xl text-[#112040]"></i>
             </button>
             <div className="flex flex-col space-y-3">
-              {categories.map((category) => (
-                <Link
-                  key={category}
-                  to={`/category/${slugify(category)}`}
-                  className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  {category}
-                </Link>
-              ))}
               {!user && (
                 <div className="flex items-center justify-center mt-6 bg-[#112040] text-white px-4 py-3 rounded-lg text-sm hover:bg-[#112040]/80">
                   <Link to="/login" className="mx-2" onClick={() => setSidebarOpen(false)}>
@@ -623,6 +613,16 @@ const Header = () => {
                   My Profile
                 </Link>
               )}
+              {categories.map((category) => (
+                <Link
+                  key={category}
+                  to={`/category/${slugify(category)}`}
+                  className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  {category}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

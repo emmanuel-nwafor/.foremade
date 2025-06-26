@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
@@ -58,37 +57,31 @@ export default function SellerProductUpload() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
 
-  // State for form data (persisted in localStorage)
-  const [formData, setFormData] = useState(() => {
-    const savedData = localStorage.getItem('sellerProductForm');
-    return savedData ? JSON.parse(savedData) : {
-      sellerName: '',
-      name: '',
-      description: '',
-      category: '',
-      subcategory: '',
-      subSubcategory: '',
-      colors: [],
-      sizes: [],
-      condition: 'New',
-      productUrl: '',
-      images: [],
-      videos: [],
-      tags: [],
-      manualSize: '',
-      variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
-    };
+  // State for form data
+  const [formData, setFormData] = useState({
+    sellerName: '',
+    name: '',
+    description: '',
+    category: '',
+    subcategory: '',
+    subSubcategory: '',
+    colors: [],
+    sizes: [],
+    condition: 'New',
+    productUrl: '',
+    images: [],
+    videos: [],
+    tags: [],
+    manualSize: '',
+    variants: [{ color: '', size: '', price: '', stock: '', images: [] }],
   });
 
   // State for location data
-  const [locationData, setLocationData] = useState(() => {
-    const savedLocation = localStorage.getItem('sellerLocationForm');
-    return savedLocation ? JSON.parse(savedLocation) : {
-      country: '',
-      state: '',
-      city: '',
-      address: '',
-    };
+  const [locationData, setLocationData] = useState({
+    country: '',
+    state: '',
+    city: '',
+    address: '',
   });
 
   // State for location errors
@@ -98,30 +91,12 @@ export default function SellerProductUpload() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   // State for media files and previews
-  const [imageFiles, setImageFiles] = useState(() => {
-    const savedImages = localStorage.getItem('sellerProductImages');
-    return savedImages ? JSON.parse(savedImages) : [];
-  });
-  const [imagePreviews, setImagePreviews] = useState(() => {
-    const savedPreviews = localStorage.getItem('sellerProductPreviews');
-    return savedPreviews ? JSON.parse(savedPreviews) : [];
-  });
-  const [videoFiles, setVideoFiles] = useState(() => {
-    const savedVideos = localStorage.getItem('sellerProductVideos');
-    return savedVideos ? JSON.parse(savedVideos) : [];
-  });
-  const [videoPreviews, setVideoPreviews] = useState(() => {
-    const savedVideoPreviews = localStorage.getItem('sellerProductVideoPreviews');
-    return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
-  });
-  const [variantImageFiles, setVariantImageFiles] = useState(() => {
-    const savedVariantImages = localStorage.getItem('sellerVariantImages');
-    return savedVariantImages ? JSON.parse(savedVariantImages) : [[]];
-  });
-  const [variantImagePreviews, setVariantImagePreviews] = useState(() => {
-    const savedVariantPreviews = localStorage.getItem('sellerVariantPreviews');
-    return savedVariantPreviews ? JSON.parse(savedVariantPreviews) : [[]];
-  });
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [videoFiles, setVideoFiles] = useState([]);
+  const [videoPreviews, setVideoPreviews] = useState([]);
+  const [variantImageFiles, setVariantImageFiles] = useState([[]]);
+  const [variantImagePreviews, setVariantImagePreviews] = useState([[]]);
 
   // Other states
   const [errors, setErrors] = useState({});
@@ -189,22 +164,6 @@ export default function SellerProductUpload() {
   const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
-
-  // Persist location data to localStorage
-  useEffect(() => {
-    localStorage.setItem('sellerLocationForm', JSON.stringify(locationData));
-  }, [locationData]);
-
-  // Persist form data and media to localStorage
-  useEffect(() => {
-    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
-    localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
-    localStorage.setItem('sellerProductPreviews', JSON.stringify(imagePreviews));
-    localStorage.setItem('sellerProductVideos', JSON.stringify(videoFiles));
-    localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
-    localStorage.setItem('sellerVariantImages', JSON.stringify(variantImageFiles));
-    localStorage.setItem('sellerVariantPreviews', JSON.stringify(variantImagePreviews));
-  }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews, variantImageFiles, variantImagePreviews]);
 
   // Initialize variant refs
   useEffect(() => {
@@ -301,7 +260,6 @@ export default function SellerProductUpload() {
             sellerName = parsed.name || '';
           }
           setFormData((prev) => ({ ...prev, sellerName }));
-          localStorage.setItem('sellerProductForm', JSON.stringify({ ...formData, sellerName }));
         } catch (err) {
           console.error('Error parsing displayName:', err);
           addAlert('Failed to load seller profile.', 'error');
@@ -312,7 +270,7 @@ export default function SellerProductUpload() {
       }
     });
     return () => unsubscribe();
-  }, [navigate, formData, addAlert]);
+  }, [navigate, addAlert]);
 
   // Calculate fees based on highest variant price
   useEffect(() => {
@@ -829,14 +787,6 @@ export default function SellerProductUpload() {
       setVideoPreviews([]);
       setVariantImageFiles([]);
       setVariantImagePreviews([]);
-      localStorage.removeItem('sellerProductForm');
-      localStorage.removeItem('sellerLocationForm');
-      localStorage.removeItem('sellerProductImages');
-      localStorage.removeItem('sellerProductPreviews');
-      localStorage.removeItem('sellerProductVideos');
-      localStorage.removeItem('sellerProductVideoPreviews');
-      localStorage.removeItem('sellerVariantImages');
-      localStorage.removeItem('sellerVariantPreviews');
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
@@ -1682,7 +1632,7 @@ export default function SellerProductUpload() {
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Tags (Optional)
-                <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Add tags to improve searchability"></i>
+                <i className="bx bx-info-circle text-gray-400 hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2 mb-2">
                 {formData.tags.map((tag) => (
@@ -1703,73 +1653,56 @@ export default function SellerProductUpload() {
                   </div>
                 ))}
               </div>
-              <div className="relative mt-2">
-                <input
-                  type="text"
-                  placeholder="Type a tag and press Enter (e.g., Luxury)"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const tag = e.target.value.trim();
-                      if (!formData.tags.includes(tag)) {
-                        setFormData((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
-                      }
-                      e.target.value = '';
-                      e.preventDefault();
-                    }
-                  }}
-                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.tags ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                  disabled={loading}
-                />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {suggestedTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagToggle(tag)}
+                    className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                      formData.tags.includes(tag)
+                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={loading}
+                  >
+                    {tag}
+                  </button>
+                ))}
+                {authenticityTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagToggle(tag)}
+                    className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                      formData.tags.includes(tag)
+                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={loading}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
-              {suggestedTags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</span>
-                  {suggestedTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
-                      disabled={loading}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {errors.tags && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.tags}
-                </p>
-              )}
             </div>
 
-            {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              {/* <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                locationErrors={locationErrors}
-                setLocationErrors={setLocationErrors}
-                loading={loading}
-              /> */}
-            </div>
+            {/* Location Form Section */}
+            {/* <SellerLocationForm
+              locationData={locationData}
+              setLocationData={setLocationData}
+              errors={locationErrors}
+              loading={loading}
+            /> */}
 
             {/* Submit Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-8">
               <button
                 type="submit"
-                className={`py-2 px-6 rounded-lg shadow-md text-white text-sm font-semibold flex items-center gap-2 transition-all duration-200 ${
+                className={`py-2 px-6 rounded-lg shadow-md flex items-center gap-2 transition-all duration-200 ${
                   loading
-                    ? 'bg-blue-400 cursor-not-allowed opacity-50'
-                    : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+                    ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
                 }`}
                 disabled={loading}
               >
@@ -1787,54 +1720,50 @@ export default function SellerProductUpload() {
               </button>
             </div>
           </form>
+
+          {/* Custom Alert */}
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+          {/* Success Popup */}
+          {isPopupOpen && (
+            <SellerProductUploadPopup
+              onClose={() => setIsPopupOpen(false)}
+              onViewProducts={() => {
+                setIsPopupOpen(false);
+                navigate('/seller/products');
+              }}
+              onAddAnother={() => setIsPopupOpen(false)}
+            />
+          )}
+
+          {/* Zoomed Media Modal */}
+          {zoomedMedia && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="relative max-w-4xl w-full p-4">
+                <button
+                  onClick={() => setZoomedMedia(null)}
+                  className="absolute top-4 right-4 text-white text-2xl font-bold hover:text-gray-300"
+                >
+                  ✕
+                </button>
+                {zoomedMedia.type === 'image' ? (
+                  <img
+                    src={zoomedMedia.src}
+                    alt="Zoomed"
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={zoomedMedia.src}
+                    controls
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Custom Alerts */}
-      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-      {/* Success Popup */}
-      {isPopupOpen && (
-        <SellerProductUploadPopup
-          onClose={() => {
-            setIsPopupOpen(false);
-            navigate('/seller/products');
-          }}
-          onViewProduct={() => {
-            setIsPopupOpen(false);
-            navigate('/seller/products');
-          }}
-        />
-      )}
-
-      {/* Zoomed Media Modal */}
-      {zoomedMedia && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-          <div className="relative max-w-4xl w-full p-4">
-            {zoomedMedia.type === 'image' ? (
-              <img
-                src={zoomedMedia.src}
-                alt="Zoomed"
-                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-              />
-            ) : (
-              <video
-                src={zoomedMedia.src}
-                controls
-                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => setZoomedMedia(null)}
-              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-              title="Close"
-            >
-              <i className="bx bx-x text-xl"></i>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

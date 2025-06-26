@@ -917,23 +917,6 @@ const Product = () => {
           )}
         </div>
       </div>
-      {product.stock > 0 && (
-        <div className="lg:hidden sticky-cart">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <p className="text-lg font-bold text-blue-600">₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-              <p className="text-xs text-gray-500">Total for {quantity} item(s)</p>
-            </div>
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-transform transform hover:scale-105"
-              aria-label="Add to cart"
-            >
-              Add to Cart
-            </button>
-          </div>
-        </div>
-      )}
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );

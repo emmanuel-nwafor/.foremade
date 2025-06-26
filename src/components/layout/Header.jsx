@@ -558,7 +558,7 @@ const Header = () => {
           to="/products-upload"
           className={`flex flex-col items-center ${location.pathname === '/products-upload' ? 'text-blue-600' : 'text-orange-500'} hover:text-amber-500`}
         >
-          <i className="bx bxs-plus-circle text-4xl"></i>
+          <i className="bx bxs-plus-circle text-5xl"></i>
           <span className="text-xs">Sell</span>
         </Link>
         <Link

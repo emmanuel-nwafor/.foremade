@@ -66,6 +66,7 @@ import Notifications from './profile/Notifications';
 import Store from './components/store/Store';
 import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
+import ProSellerForm from './pages/ProSellerForm';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -138,6 +139,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/add-phone" element={<AddPhone />} />
             <Route path="/sellers-guide" element={<HowItWorks />} />
+            <Route path="/pro-seller-form" element={<ProSellerForm />} />
 
             <Route
               path="/smile"
@@ -245,25 +247,6 @@ function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/best-selling" element={<BestSelling />} />
-            <Route path="/camera-photography" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/clothing" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/coffee-tea-bag" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/computers-laptops" element={<ComputerAccessories />} />
-            <Route path="/drinks-beverages" element={<Drinks />} />
-            <Route path="/footwear" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/game-console" element={<GamesFun />} />
-            <Route path="/grills-outdoor-cooking" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/hair-nails-accessories" element={<HealthBeauty />} /> {/* Placeholder, update if component exists */}
-            <Route path="/home-living" element={<HomeKitchen />} />
-            <Route path="/jewellery-accessories" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/perfumes-fragrances" element={<HealthBeauty />} /> {/* Placeholder, update if component exists */}
-            <Route path="/sneakers-joggers" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/sound-audio" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/sports-outdoors" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/television-accessories" element={<Electronics />} /> {/* Placeholder, update if component exists */}
-            <Route path="/vehicles-transport" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/pregnancy-mother-care" element={<TabletsPhones />} /> {/* Placeholder, update if component exists */}
-            <Route path="/health-wellness" element={<HealthBeauty />} />
             <Route path="/electronics" element={<Electronics />} />
             <Route path="/tablet-phones" element={<TabletsPhones />} />
             <Route path="/smart-watches" element={<SmartWatches />} />

@@ -1,8 +1,16 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const EmpowermentHubPreview = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Force scroll on every render (for debugging)
+  window.scrollTo(0, 0);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 py-6 px-4 sm:py-8 sm:px-6 lg:px-8 my-4 sm:my-6 rounded-xl sm:rounded-2xl mx-2 sm:mx-4 shadow-lg">

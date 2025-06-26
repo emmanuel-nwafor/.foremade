@@ -23,25 +23,12 @@ const Header = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
 
   const categories = [
-    "Camera & Photography",
-    "Clothing",
-    "Coffee & Tea",
-    "Computers & Laptops",
     "Drinks & Beverages",
-    "Footwear",
     "Game & Console",
-    "Grills & Outdoor Cooking",
-    "Hair, Nails & Accessories",
     "Home & Living",
-    "Jewellery & Accessories",
     "Perfumes & Fragrances",
-    "Sneakers & Joggers",
-    "Sound & Audio",
-    "Sports & Outdoors",
     "Television & Accessories",
     "Vehicles & Transport",
-    "🍼 Pregnancy & Mother Care",
-    "💊 Health & Wellness"
   ];
 
   const slugify = (name) =>

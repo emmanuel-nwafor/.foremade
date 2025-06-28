@@ -5,4 +5,5 @@ export default function SellersUploadGuide() {
             This tells sellers how to upload their products, and variants etc
         </div>
     )
+    
 }

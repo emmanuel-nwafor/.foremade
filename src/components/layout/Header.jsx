@@ -20,11 +20,7 @@ const Header = () => {
   const [userData, setUserData] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // State for the main navigation "More" dropdown
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
-  
-  // A SEPARATE state for the categories "More" dropdown
   const [categoryMoreOpen, setCategoryMoreOpen] = useState(false);
 
   const categories = [
@@ -55,7 +51,7 @@ const Header = () => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-  const visibleCategories = categories.slice(0, 4);
+  const visibleCategories = categories.slice(0, 8);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -189,13 +185,11 @@ const Header = () => {
   const handleBlur = () => {
     setTimeout(() => setShowDropdown(false), 200);
   };
-  
-  // Handler for the main navigation "More"
+
   const toggleMoreDropdown = () => {
     setMoreDropdownOpen(!moreDropdownOpen);
   };
-  
-  // A SEPARATE handler for the categories "More"
+
   const toggleCategoryMore = () => {
     setCategoryMoreOpen(!categoryMoreOpen);
   };
@@ -212,16 +206,13 @@ const Header = () => {
       <div className="bg-[#112D4E] hidden sm:flex text-white py-2 px-4">
         <div className="flex items-center w-full max-w-7xl mx-auto">
           {/* Logo */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Link to="/">
-              <img
-                src={logo}
-                className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
-                alt="Foremade"
-              />
-            </Link>
-          </div>
-
+          <Link to="/">
+            <img
+              src={logo}
+              className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+              alt="Foremade"
+            />
+          </Link>
           {/* Navigation Links */}
           <div className="flex ml-5 items-center space-x-4 mt-2">
             <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
@@ -242,7 +233,7 @@ const Header = () => {
                 More <i className="bx bx-chevron-down"></i>
               </button>
               {moreDropdownOpen && (
-                <div className="absolute hidden group-hover:block top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                   <Link
                     to="/daily-deals"
                     className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
@@ -275,7 +266,6 @@ const Header = () => {
               )}
             </div>
           </div>
-
           {/* User Actions */}
           <div className="flex items-center space-x-3 flex-shrink-0 ml-auto">
             {user ? (
@@ -318,8 +308,8 @@ const Header = () => {
 
       {/* Mobile Header */}
       <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
-        <Link to="/" className="flex-shrink-0">
-          <img src={logo} className="h-10 w-auto" alt="Foremade" />
+        <Link to="/">
+          <img src={logo} className="h-10" alt="Foremade" />
         </Link>
         <div className="flex items-center space-x-4">
           <Link to="/cart" className="relative">
@@ -337,27 +327,25 @@ const Header = () => {
       </div>
 
       {/* Mobile Content */}
-      <div className="block sm:hidden pt-16">
+      <div className="block sm:hidden pt-7">
         <FreeShipping />
       </div>
-
-      {/* Mobile Search */}
-      <div className="block sm:hidden px-4 -mt-7">
+      <div className="block sm:hidden px-2 mt-2">
         <div className="relative w-full">
           <input
             type="text"
             placeholder="Search for electronics, accessories..."
-            className="w-full p-2 pl-8 border border-gray-400 rounded-md text-black placeholder-gray-600 focus:outline-none text-sm"
+            className="w-full p-2 pl-8 border border-gray-400 rounded-md text-black placeholder-gray-600 focus:outline-none text-xs"
             value={searchQuery}
             onChange={handleSearch}
             onFocus={handleFocus}
             onBlur={handleBlur}
           />
-          <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600"></i>
+          <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm"></i>
           {showDropdown && (
             <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
               {loading ? (
-                <div className="p-2 text-sm text-gray-600">Loading...</div>
+                <div className="p-2 text-xs text-gray-600">Loading...</div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((product) => (
                   <Link
@@ -381,17 +369,15 @@ const Header = () => {
                         e.target.src = 'https://via.placeholder.com/40?text=Image+Not+Found';
                       }}
                     />
-                    <span className="text-sm text-gray-800 truncate">{product.name}</span>
+                    <span className="text-xs text-gray-800">{product.name}</span>
                   </Link>
                 ))
               ) : (
-                <div className="p-2 text-sm text-gray-600">No results found</div>
+                <div className="p-2 text-xs text-gray-600">No results found</div>
               )}
             </div>
           )}
         </div>
-
-        {/* Mobile Categories */}
         <div className="flex overflow-x-auto gap-2 text-xs text-gray-700 py-2 scrollbar-hide">
           {categories.map((category) => (
             <Link
@@ -461,13 +447,10 @@ const Header = () => {
                 </div>
               )}
             </div>
-            
             {/* Fixed Categories Section */}
             <div className="w-full mt-2 sm:mt-4 overflow-hidden">
               <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-700 flex-wrap">
-                
-                {/* Display first 8 categories on all screen sizes */}
-                {categories.slice(0, 8).map((category) => (
+                {visibleCategories.map((category) => (
                   <Link
                     key={category}
                     to={`/category/${slugify(category)}`}
@@ -476,7 +459,6 @@ const Header = () => {
                     {category}
                   </Link>
                 ))}
-
                 {/* Categories "More" dropdown */}
                 <div className="relative">
                   <button
@@ -487,48 +469,16 @@ const Header = () => {
                   </button>
                   {categoryMoreOpen && (
                     <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                      <Link
-                        to="/hair-nails-accessories"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Hair Nails & Accessories
-                      </Link>
-                      <Link
-                        to="/home-living"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Home & Living
-                      </Link>
-                      <Link
-                        to="/jewellery-accessories"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Jewellery & Accessories
-                      </Link>
-                      <Link
-                        to="/perfumes-fragrances"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Perfumes & Fragrances
-                      </Link>
-                      <Link
-                        to="/sneakers-joggers"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Sneakers & Joggers
-                      </Link>
-                      <Link
-                        to="/health-wellness"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                        onClick={() => setCategoryMoreOpen(false)}
-                      >
-                        Health & Wellness
-                      </Link>
+                      {categories.slice(8).map((category) => (
+                        <Link
+                          key={category}
+                          to={`/category/${slugify(category)}`}
+                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                          onClick={() => setCategoryMoreOpen(false)}
+                        >
+                          {category}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -558,7 +508,11 @@ const Header = () => {
           to="/products-upload"
           className={`flex flex-col items-center ${location.pathname === '/products-upload' ? 'text-blue-600' : 'text-orange-500'} hover:text-amber-500`}
         >
+<<<<<<< HEAD
           <i className="bx bxs-plus-circle text-4xl"></i>
+=======
+          <i className="bx bxs-plus-circle text-2xl"></i>
+>>>>>>> c6647ce7ce0d89461e942afdd5ae6cf8a9591946
           <span className="text-xs">Sell</span>
         </Link>
         <Link
@@ -585,7 +539,7 @@ const Header = () => {
       {/* Mobile Sidebar */}
       <div className="sm:hidden">
         <div
-          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-80 transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto"
+          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
           style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
         >
           <div className="p-4">

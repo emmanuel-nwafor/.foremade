@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { vendorAuth as auth } from '../firebase';
+import { auth } from '../firebase'; // <-- use main auth, not vendorAuth
 import { onAuthStateChanged } from 'firebase/auth';
 
 const AuthContext = createContext();
@@ -13,14 +13,15 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [vendor, setVendor] = useState(null);
+  // Change vendor to user for consistency
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     console.log('Setting up auth provider');
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       console.log('Auth state changed in context:', user?.uid);
-      setVendor(user);
+      setUser(user);
       setLoading(false);
     });
 
@@ -31,9 +32,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const value = {
-    vendor,
+    user,
     loading,
-    isAuthenticated: !!vendor
+    isAuthenticated: !!user
   };
 
   return (
@@ -41,4 +42,4 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-}; 
+};

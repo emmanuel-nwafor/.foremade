@@ -224,6 +224,7 @@ const Header = () => {
             <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
               Smile
             </Link>
+            
             <div className="relative group">
               <button
                 onClick={toggleMoreDropdown}
@@ -232,6 +233,7 @@ const Header = () => {
               >
                 More <i className="bx bx-chevron-down"></i>
               </button>
+              
               {moreDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                   <Link

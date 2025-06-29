@@ -39,6 +39,7 @@ import AdminEditFees from './admin/AdminEditFees';
 import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
 import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
+import AdminBankSetup from './admin/AdminBankSetup';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -83,7 +84,6 @@ const Layout = ({ children }) => {
     '/products-gallery',
     '/products-upload',
     '/seller/edit-product/:productId',
-    
     '/admin',
     '/admin/payouts',
     '/admin/dashboard',
@@ -96,7 +96,7 @@ const Layout = ({ children }) => {
     '/admin/notifications',
     '/admin/edit/banners',
     '/admin/edit/daily-deals',
-
+    '/admin/bank-setup',
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
@@ -151,7 +151,6 @@ function App() {
             <Route path="/add-phone" element={<AddPhone />} />
             <Route path="/sellers-guide" element={<HowItWorks />} />
             <Route path="/pro-seller-form" element={<ProSellerForm />} />
-
             <Route
               path="/smile"
               element={
@@ -240,6 +239,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/bank-setup"
+              element={
+                <ProtectedRoute>
+                  <AdminBankSetup />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/products" element={<Admin />} />
@@ -249,7 +256,6 @@ function App() {
             <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
             <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
-
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />

@@ -1,133 +1,369 @@
-import React, { useState } from 'react';
-import { auth, db } from '../firebase';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { auth, db } from '/src/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import SellerSidebar from './SellerSidebar';
 
-const SellerOnboarding = () => {
-  const [country, setCountry] = useState('');
-  const [bankCode, setBankCode] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function SellerOnboarding() {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    fullName: '',
+    country: 'Nigeria',
+    bvn: '',
+    idNumber: '',
+    bankName: '',
+    bankCode: '',
+    accountNumber: '',
+    iban: '',
+    email: auth.currentUser?.email || '',
+  });
+  const [banks, setBanks] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleSetup = async (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required.';
+    if (formData.country === 'Nigeria') {
+      if (!formData.bvn.match(/^\d{11}$/)) newErrors.bvn = 'Enter a valid 11-digit BVN.';
+      if (!formData.bankCode) newErrors.bankCode = 'Select a bank.';
+      if (!formData.accountNumber.match(/^\d{10}$/)) newErrors.accountNumber = 'Enter a valid 10-digit account number.';
+    } else {
+      if (!formData.idNumber.trim()) newErrors.idNumber = 'Enter a valid ID number.';
+      if (!formData.iban.match(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/)) newErrors.iban = 'Enter a valid IBAN.';
+      if (!formData.email.match(/\S+@\S+\.\S+/)) newErrors.email = 'Enter a valid email.';
+    }
+    return newErrors;
+  };
+
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        if (!auth.currentUser) {
+          setError('Please log in to onboard.');
+          navigate('/login');
+          return;
+        }
+        if (formData.country === 'Nigeria') {
+          try {
+            const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
+            setBanks(response.data);
+          } catch (err) {
+            setError('Failed to fetch bank list: ' + err.message);
+          }
+        }
+      } catch (err) {
+        setError('Authentication error: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initialize();
+  }, [formData.country, navigate]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
     setLoading(true);
-    setError('');
-
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
+      // addAlert('Please fix form errors.');
+      return;
+    }
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Not logged in');
-
-      const response = await fetch('https://foremade-backend.onrender.com/onboard-seller', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.uid,
-          email: user.email,
-          country,
-          bankCode: country === 'Nigeria' ? bankCode : undefined,
-          accountNumber: country === 'Nigeria' ? accountNumber : undefined,
-        }),
+      const payload = {
+        userId: auth.currentUser.uid,
+        country: formData.country,
+        email: formData.email,
+        bankCode: formData.country === 'Nigeria' ? formData.bankCode : undefined,
+        accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : undefined,
+        iban: formData.country === 'United Kingdom' ? formData.iban : undefined,
+        bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
+      };
+      const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
+      await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
+        fullName: formData.fullName,
+        country: formData.country,
+        bvn: formData.country === 'Nigeria' ? formData.bvn : '',
+        idNumber: formData.country === 'United Kingdom' ? formData.idNumber : '',
+        bankName: formData.country === 'Nigeria' ? banks.find((b) => b.code === formData.bankCode)?.name : formData.bankName,
+        bankCode: formData.country === 'Nigeria' ? formData.bankCode : '',
+        accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
+        iban: formData.country === 'United Kingdom' ? formData.iban : '',
+        email: formData.country === 'United Kingdom' ? formData.email : '',
+        createdAt: new Date().toISOString(),
       });
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('Non-JSON response:', text);
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-
-      if (result.redirectUrl) {
-        window.location.href = result.redirectUrl;
-        return;
-      }
-
-      await setDoc(doc(db, 'sellers', user.uid), {
-        email: user.email,
-        paystackRecipientCode: result.recipientCode || null,
-        stripeAccountId: result.stripeAccountId || null,
-        country,
-        bankCode: country === 'Nigeria' ? bankCode : null,
-        accountNumber: country === 'Nigeria' ? accountNumber : null,
-        createdAt: new Date(),
-      });
-
-      await setDoc(doc(db, 'wallets', user.uid), {
-        availableBalance: 0,
-        pendingBalance: 0,
-        payoutHoldBalance: 0,
-        updatedAt: new Date(),
-      });
-
-      navigate('/wallet');
-    } catch (err) {
-      console.error('Onboarding error:', err);
-      setError('Setup failed: ' + err.message);
+      
+      console.log(response)
+      setError('');
+      alert('Onboarding successful!');
+      navigate('/smile');
+    } catch (error) {
+      setError(error.response?.data?.details || 'Failed to onboard.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Become a Seller</h2>
-        {error && <p className="text-red-600 mb-4">{error}</p>}
-        <form onSubmit={handleSetup}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Country</label>
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="mt-1 p-2 w-full border rounded"
-              required
-            >
-              <option value="">Select Country</option>
-              <option value="Nigeria">Nigeria</option>
-              <option value="United Kingdom">United Kingdom</option>
-            </select>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <SellerSidebar />
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
           </div>
-          {country === 'Nigeria' && (
-            <>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Bank Code</label>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-50">
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
+          <p className="text-red-700 text-base mb-4">{error}</p>
+          <Link to="/seller/login" className="text-blue-600 hover:text-blue-800 font-medium underline">
+            Return to Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+      <SellerSidebar />
+      <div className="flex-1 ml-0 md:ml-64 p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+              <i className="bx bxs-bank text-blue-500 mr-2"></i>
+              Seller Onboarding
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">Set up your seller account to start selling.</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative mt-1">
                 <input
                   type="text"
-                  value={bankCode}
-                  onChange={(e) => setBankCode(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
-                  placeholder="e.g., 044"
-                  required
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                    errors.fullName ? 'border-red-500' : ''
+                  }`}
+                  disabled={loading}
                 />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <i className="bx bx-user"></i>
+                </span>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Account Number</label>
-                <input
-                  type="text"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
-                  placeholder="e.g., 1234567890"
-                  required
-                />
-              </div>
-            </>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full p-2 bg-blue-600 text-white rounded ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
-          >
-            {loading ? 'Processing...' : 'Complete Setup'}
-          </button>
-        </form>
+              {errors.fullName && <p className="text-red-600 text-xs mt-1">{errors.fullName}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Country <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                className="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                disabled={loading}
+              >
+                <option value="Nigeria">Nigeria</option>
+                <option value="United Kingdom">UK</option>
+              </select>
+            </div>
+            {formData.country === 'Nigeria' && (
+              <>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    BVN <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      name="bvn"
+                      value={formData.bvn}
+                      onChange={handleChange}
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.bvn ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-id-card"></i>
+                    </span>
+                  </div>
+                  {errors.bvn && <p className="text-red-600 text-xs mt-1">{errors.bvn}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Bank Name <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="bankCode"
+                    value={formData.bankCode}
+                    onChange={handleChange}
+                    className={`mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      errors.bankCode ? 'border-red-500' : ''
+                    }`}
+                    disabled={loading}
+                  >
+                    <option value="">Select a bank</option>
+                    {banks.map((bank) => (
+                      <option key={bank.code} value={bank.code}>
+                        {bank.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.bankCode && <p className="text-red-600 text-xs mt-1">{errors.bankCode}</p>}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Account Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      name="accountNumber"
+                      value={formData.accountNumber}
+                      onChange={handleChange}
+                      placeholder="e.g., 0123456789"
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.accountNumber ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-bank"></i>
+                    </span>
+                  </div>
+                  {errors.accountNumber && <p className="text-red-600 text-xs mt-1">{errors.accountNumber}</p>}
+                </div>
+              </>
+            )}
+            {formData.country === 'United Kingdom' && (
+              <>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    ID Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      name="idNumber"
+                      value={formData.idNumber}
+                      onChange={handleChange}
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.idNumber ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-id-card"></i>
+                    </span>
+                  </div>
+                  {errors.idNumber && <p className="text-red-600 text-xs mt-1">{errors.idNumber}</p>}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Bank Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleChange}
+                      placeholder="e.g., Barclays"
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.bankName ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-bank"></i>
+                    </span>
+                  </div>
+                  {errors.bankName && <p className="text-red-600 text-xs mt-1">{errors.bankName}</p>}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    IBAN <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      name="iban"
+                      value={formData.iban}
+                      onChange={handleChange}
+                      placeholder="e.g., GB33BUKB20201555555555"
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.iban ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-credit-card"></i>
+                    </span>
+                  </div>
+                  {errors.iban && <p className="text-red-600 text-xs mt-1">{errors.iban}</p>}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="e.g., seller@example.com"
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                        errors.email ? 'border-red-500' : ''
+                      }`}
+                      disabled={loading}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <i className="bx bx-envelope"></i>
+                    </span>
+                  </div>
+                  {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+                </div>
+              </>
+            )}
+            <button
+              type="submit"
+              className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 transition duration-300 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={loading}
+            >
+              <i className="bx bx-check"></i>
+              Complete Onboarding
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
-};
-
-export default SellerOnboarding;
+}

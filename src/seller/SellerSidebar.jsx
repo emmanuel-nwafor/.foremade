@@ -69,14 +69,14 @@ export default function SellerSidebar() {
     },
     { 
       to: '/sellers-guide', 
-      label: 'Pro Seller', 
+      label: 'Pro Seller Onboard', 
       icon: 'bxl-product-hunt', 
       category: 'Registering with us', 
       dropdown: 'register' 
     },
     { 
-      to: '/products-gallery', 
-      label: 'Seller', 
+      to: '/seller-onboarding', 
+      label: 'Seller Onboard', 
       icon: 'bx-select-multiple', 
       category: 'Registering with us',
       dropdown: 'register' 

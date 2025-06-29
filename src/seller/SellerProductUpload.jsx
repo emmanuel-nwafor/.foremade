@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
@@ -5,7 +6,6 @@ import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore'
 import axios from 'axios';
 import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
-import SellerLocationForm from './SellerLocationForm';
 import SellerProductUploadPopup from './SellerProductUploadPopup';
 
 // Set global Axios timeout
@@ -89,9 +89,6 @@ export default function SellerProductUpload() {
       address: '',
     };
   });
-
-  // State for location errors
-  const [locationErrors, setLocationErrors] = useState({});
 
   // State for popup visibility
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -707,7 +704,6 @@ export default function SellerProductUpload() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setLocationErrors({});
     setLoading(true);
     if (!user) {
       addAlert('You must be logged in to add products.', 'error');
@@ -719,7 +715,6 @@ export default function SellerProductUpload() {
     const newLocationErrors = validateLocationForm();
     if (Object.keys(newErrors).length > 0 || Object.keys(newLocationErrors).length > 0) {
       setErrors(newErrors);
-      setLocationErrors(newLocationErrors);
       setLoading(false);
       addAlert('Please fix the form errors.', 'error');
       return;
@@ -1707,20 +1702,6 @@ export default function SellerProductUpload() {
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
-                disabled={loading}
-              />
             </div>
 
             {/* Submit Button */}

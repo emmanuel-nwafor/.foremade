@@ -1,21 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '/src/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '/src/firebase';
 import axios from 'axios';
 
-export default function SellerOnboarding() {
+export default function AdminBankSetup() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
     country: 'Nigeria',
-    bvn: '',
-    idNumber: '',
-    bankName: '',
     bankCode: '',
     accountNumber: '',
     iban: '',
-    email: auth.currentUser?.email || '',
+    bankName: '',
   });
   const [banks, setBanks] = useState([]);
   const [errors, setErrors] = useState({});
@@ -30,7 +25,7 @@ export default function SellerOnboarding() {
 
   useEffect(() => {
     if (!auth.currentUser) {
-      addAlert('Please log in to onboard.');
+      addAlert('Please log in as admin.');
       navigate('/login');
       return;
     }
@@ -53,15 +48,12 @@ export default function SellerOnboarding() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required.';
     if (formData.country === 'Nigeria') {
-      if (!formData.bvn.match(/^\d{11}$/)) newErrors.bvn = 'Enter a valid 11-digit BVN.';
       if (!formData.bankCode) newErrors.bankCode = 'Select a bank.';
       if (!formData.accountNumber.match(/^\d{10}$/)) newErrors.accountNumber = 'Enter a valid 10-digit account number.';
     } else {
-      if (!formData.idNumber.trim()) newErrors.idNumber = 'Enter a valid ID number.';
       if (!formData.iban.match(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/)) newErrors.iban = 'Enter a valid IBAN.';
-      if (!formData.email.match(/\S+@\S+\.\S+/)) newErrors.email = 'Enter a valid email.';
+      if (!formData.bankName.trim()) newErrors.bankName = 'Enter a bank name.';
     }
     return newErrors;
   };
@@ -78,32 +70,17 @@ export default function SellerOnboarding() {
       return;
     }
     try {
-      const payload = {
-        userId: auth.currentUser.uid,
+      await axios.post('https://foremade-backend.onrender.com/admin-bank', {
         country: formData.country,
-        email: formData.email,
         bankCode: formData.country === 'Nigeria' ? formData.bankCode : undefined,
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : undefined,
         iban: formData.country === 'United Kingdom' ? formData.iban : undefined,
         bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
-      };
-      const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
-      await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
-        fullName: formData.fullName,
-        country: formData.country,
-        bvn: formData.country === 'Nigeria' ? formData.bvn : '',
-        idNumber: formData.country === 'United Kingdom' ? formData.idNumber : '',
-        bankName: formData.country === 'Nigeria' ? banks.find((b) => b.code === formData.bankCode)?.name : formData.bankName,
-        bankCode: formData.country === 'Nigeria' ? formData.bankCode : '',
-        accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
-        iban: formData.country === 'United Kingdom' ? formData.iban : '',
-        email: formData.country === 'United Kingdom' ? formData.email : '',
-        createdAt: new Date().toISOString(),
       });
-      addAlert('Onboarding successful!', 'success');
-      navigate('/seller/wallet');
+      addAlert('Admin bank details saved!', 'success');
+      navigate('/admin/dashboard');
     } catch (error) {
-      addAlert(error.response?.data?.details || 'Failed to onboard.', 'error');
+      addAlert(error.response?.data?.details || 'Failed to save bank details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -114,26 +91,10 @@ export default function SellerOnboarding() {
       <div className="flex-1 p-4 flex justify-center items-start">
         <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <i className="bx bx-user-plus text-blue-500"></i>
-            Seller Onboarding
+            <i className="bx bx-bank text-blue-500"></i>
+            Admin Bank Setup
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                  errors.fullName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                disabled={loading}
-              />
-              {errors.fullName && <p className="text-red-600 text-xs mt-1">{errors.fullName}</p>}
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Country <span className="text-red-500">*</span>
@@ -151,22 +112,6 @@ export default function SellerOnboarding() {
             </div>
             {formData.country === 'Nigeria' && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    BVN <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="bvn"
-                    value={formData.bvn}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.bvn ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.bvn && <p className="text-red-600 text-xs mt-1">{errors.bvn}</p>}
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Bank Name <span className="text-red-500">*</span>
@@ -212,22 +157,6 @@ export default function SellerOnboarding() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    ID Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="idNumber"
-                    value={formData.idNumber}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.idNumber ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.idNumber && <p className="text-red-600 text-xs mt-1">{errors.idNumber}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Bank Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -260,23 +189,6 @@ export default function SellerOnboarding() {
                   />
                   {errors.iban && <p className="text-red-600 text-xs mt-1">{errors.iban}</p>}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="e.g., seller@example.com"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
-                </div>
               </>
             )}
             <button
@@ -287,7 +199,7 @@ export default function SellerOnboarding() {
               disabled={loading}
             >
               <i className="bx bx-check"></i>
-              Complete Onboarding
+              Save Bank Details
             </button>
           </form>
           <div className="fixed bottom-4 right-4 space-y-2">

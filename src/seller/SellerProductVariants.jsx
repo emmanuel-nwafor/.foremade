@@ -3,9 +3,8 @@ import { useState, useEffect } from 'react';
 const MAX_VARIANT_IMAGES = 4;
 
 export default function SellerProductVariants({
-  variants = [], // Default to empty array to avoid undefined
+  variants = [],
   setVariants,
-  colors,
   sizes,
   errors,
   loading,
@@ -22,7 +21,7 @@ export default function SellerProductVariants({
 
   // Sync localVariants with props.variants
   useEffect(() => {
-    setLocalVariants(variants || []); // Ensure variants is always an array
+    setLocalVariants(variants || []);
   }, [variants]);
 
   // Update parent state when localVariants change
@@ -154,7 +153,7 @@ export default function SellerProductVariants({
           {/* Variant Image Upload */}
           <div className="relative group mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-              Variant Images (up to {maxVariantImages}) <span className="text-red-500">*</span>
+              Variant Images (up to {maxVariantImages})
             </label>
             <div
               ref={(el) => (dropZoneRefs.current[index] = { current: el })}
@@ -230,25 +229,20 @@ export default function SellerProductVariants({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Color <span className="text-red-500">*</span>
+                Color
               </label>
-              <select
+              <input
+                type="text"
                 value={variant.color}
                 onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
+                placeholder="Type a color (e.g., Navy Blue)"
                 className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                   errors[`variant${index}_color`]
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                 } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                 disabled={loading}
-              >
-                <option value="">Select a color</option>
-                {colors.map((color) => (
-                  <option key={color} value={color}>
-                    {color}
-                  </option>
-                ))}
-              </select>
+              />
               {errors[`variant${index}_color`] && (
                 <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>
@@ -258,7 +252,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Size <span className="text-red-500">*</span>
+                Size
               </label>
               <select
                 value={variant.size}
@@ -286,7 +280,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Price (₦) <span className="text-red-500">*</span>
+                Price (₦)
               </label>
               <input
                 type="number"
@@ -311,7 +305,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Stock <span className="text-red-500">*</span>
+                Stock
               </label>
               <input
                 type="number"

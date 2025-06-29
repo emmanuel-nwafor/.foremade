@@ -1832,7 +1832,7 @@ export default function SellerProductUpload() {
       onViewProducts={() => navigate('/seller/products')}
     />
   )}
-</div>
+  </div>
 </div>
 </div>
 );

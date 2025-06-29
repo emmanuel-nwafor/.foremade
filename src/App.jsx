@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
 
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
@@ -67,6 +68,7 @@ import Store from './components/store/Store';
 import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
+import ProSellerGuide from './seller/ProSellerGuide';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -129,9 +131,18 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Layout>
           <Routes>
@@ -267,6 +278,7 @@ function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
+            <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

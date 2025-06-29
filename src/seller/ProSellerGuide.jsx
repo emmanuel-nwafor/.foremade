@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const ProSellerGuide = () => {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen mb-12">
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-4xl font-bold text-blue-950 text-center mb-4">
           Registering as a FOREMADE Pro Seller
@@ -53,7 +54,7 @@ const ProSellerGuide = () => {
           your standard account to Pro.
         </p>
 
-        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">What You’ll Need to Provide</h2>
+        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">What You'll Need to Provide</h2>
         <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">For Sole Traders / Entrepreneurs:</h3>
         <ul className="list-disc list-inside text-blue-950 mb-6 space-y-2">
           <li>BVN or National ID</li>
@@ -73,7 +74,7 @@ const ProSellerGuide = () => {
 
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">Verification Process</h2>
         <p className="text-blue-950 mb-6">
-          You’ll need to complete our Know Your Business (KYB) verification. Once approved, you’ll get a “Pro Seller”
+          You'll need to complete our Know Your Business (KYB) verification. Once approved, you'll get a "Pro Seller"
           badge, and your business details will be displayed for buyer transparency.
         </p>
 
@@ -87,9 +88,12 @@ const ProSellerGuide = () => {
         </ul>
 
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-6">Ready to grow?</h2>
-        <a href="#" className="cta inline-block bg-[#F49B1B] text-[#0D2A4D] px-6 py-3 text-center font-bold mt-6 rounded-md hover:bg-[#e6b800] transition duration-200">
+        <Link 
+          to="/pro-seller-form" 
+          className="cta inline-block bg-[#F49B1B] text-[#0D2A4D] px-6 py-3 text-center font-bold mt-6 rounded-md hover:bg-[#e6b800] transition duration-200"
+        >
           Register as a FOREMADE Pro Seller
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -9,6 +9,23 @@ const Footer = () => {
   const [hoveredLink, setHoveredLink] = useState(null);
   const [emailInput, setEmailInput] = useState('');
 
+  // Same categories as used in the header
+  const categories = [
+    "Television & Accessories",
+    "Drinks & Beverages",
+    "Game & Console",
+    "Home & Living",
+    "Perfumes & Fragrances",
+    "Vehicles & Transport",
+    "Computers & Laptops",
+  ];
+
+  const slugify = (name) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
   const socialLinks = [
     { name: 'twitter', icon: 'bx bxl-twitter', color: 'text-blue-400', url: 'https://twitter.com' },
     { name: 'instagram', icon: 'bx bxl-instagram', color: 'text-pink-400', url: 'https://instagram.com' },
@@ -23,12 +40,6 @@ const Footer = () => {
   ];
 
   const footerLinks = {
-    shop: [
-      { name: 'Electronics', url: '/electronics' },
-      { name: 'Fashion', url: '/fashion' },
-      { name: 'Health & Beauty', url: '/health-beauty' },
-      { name: 'Home & Kitchen', url: '/home-kitchen' }
-    ],
     account: [
       { name: 'My Profile', url: '/profile' },
       { name: 'My Orders', url: '/orders' },
@@ -36,8 +47,6 @@ const Footer = () => {
     ],
     about: [
       { name: 'About Us', url: '/about' },
-      { name: 'Careers', url: '/careers' },
-      { name: 'Store Locations', url: '/stores' },
       { name: 'Support', url: '/support' }
     ]
   };
@@ -161,33 +170,56 @@ const Footer = () => {
 
             {/* Footer Link Columns - Arranged side by side on mobile */}
             <div className="flex flex-wrap w-full md:w-auto justify-between">
-              {/* Shop Column */}
+              {/* Categories Column */}
               <div className="w-1/3 pr-2">
-                <h3 className="text-sm font-semibold mb-2">Shop</h3>
+                <h3 className="text-sm font-semibold mb-2">Categories</h3>
                 <ul className="space-y-1 text-xs">
-                  {footerLinks.shop.map((link, index) => (
+                  {categories.slice(0, 8).map((category, index) => (
                     <motion.li 
                       key={index}
                       whileHover={{ x: 3 }}
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     >
                       <Link 
-                        to={link.url} 
-                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === `shop-${index}` ? 'text-blue-500' : 'text-gray-600'}`}
-                        onMouseEnter={() => setHoveredLink(`shop-${index}`)}
+                        to={`/category/${slugify(category)}`}
+                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === `category-${index}` ? 'text-blue-500' : 'text-gray-600'}`}
+                        onMouseEnter={() => setHoveredLink(`category-${index}`)}
                         onMouseLeave={() => setHoveredLink(null)}
                       >
-                        {link.name}
+                        {category}
                         <motion.span 
                           className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
                           animate={{ 
-                            width: hoveredLink === `shop-${index}` ? '100%' : '0%'
+                            width: hoveredLink === `category-${index}` ? '100%' : '0%'
                           }}
                           transition={{ duration: 0.3 }}
                         ></motion.span>
                       </Link>
                     </motion.li>
                   ))}
+                  {/* Show "More Categories" link if there are more than 8 categories */}
+                  {categories.length > 8 && (
+                    <motion.li 
+                      whileHover={{ x: 3 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    >
+                      <Link 
+                        to="/products"
+                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === 'more-categories' ? 'text-blue-500' : 'text-gray-600'}`}
+                        onMouseEnter={() => setHoveredLink('more-categories')}
+                        onMouseLeave={() => setHoveredLink(null)}
+                      >
+                        More Categories...
+                        <motion.span 
+                          className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
+                          animate={{ 
+                            width: hoveredLink === 'more-categories' ? '100%' : '0%'
+                          }}
+                          transition={{ duration: 0.3 }}
+                        ></motion.span>
+                      </Link>
+                    </motion.li>
+                  )}
                 </ul>
               </div>
 

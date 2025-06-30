@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import AdminSidebar from '/src/admin/AdminSidebar';
-import MediaPreview from '/src/admin/MediaPreview';
-import AdminActionButtons from '/src/admin/AdminActionbuttons';
+import AdminSidebar from '/src/Admin/AdminSidebar';
+import MediaPreview from '/src/Admin/MediaPreview';
+import AdminActionButtons from '/src/Admin/AdminActionbuttons';
 import axios from 'axios';
 
 

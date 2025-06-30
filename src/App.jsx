@@ -29,7 +29,6 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
-
 import Admin from './admin/Admin';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminNotifications from './admin/AdminNotifications';
@@ -40,17 +39,14 @@ import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers';
 import AdminEditDeals from './admin/AdminEditDeals';
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AdminBankSetup from './admin/AdminBankSetup';
-
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
-
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
 import EmpowermentHub from './pages/EmpowermentHub';
 import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
 import YouthEmpowermentTerms from './pages/YouthEmpowermentTerms';
 import GDPRAccess from './pages/GDPRAccess';
-
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
 import Electronics from './pages/Electronics';
@@ -60,7 +56,6 @@ import Drinks from './pages/Drinks';
 import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
-
 import OtherProductsPage from './pages/OtherProducts';
 import AboutUs from './pages/AboutUs';
 import Search from './pages/Search';
@@ -118,7 +113,7 @@ const Layout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth() || { loading: true, user: null }; // Default to loading if undefined
 
   if (loading) {
     return (
@@ -128,7 +123,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return children;
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 function ScrollToTop() {
@@ -277,6 +272,7 @@ function App() {
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+            <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

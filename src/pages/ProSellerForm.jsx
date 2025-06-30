@@ -116,7 +116,8 @@ const ProSellerForm = () => {
         formType: 'Pro Seller Application'
       };
       console.log('Submitting Pro Seller Application:', submissionData);
-      const response = await fetch('http://localhost:5000/api/pro-seller', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await fetch(`${backendUrl}/api/pro-seller`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

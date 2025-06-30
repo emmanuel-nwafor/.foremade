@@ -94,7 +94,8 @@ const YouthApplicationForm = () => {
       // Make API call to /api/youth-empowerment
       console.log('Sending data to /api/youth-empowerment...');
       
-      const response = await fetch('http://localhost:5000/api/youth-empowerment', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await fetch(`${backendUrl}/api/youth-empowerment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

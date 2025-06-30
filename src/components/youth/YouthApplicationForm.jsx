@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Users, User, ChevronDown, ArrowRight, Target, Lightbulb, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomAlert, { useAlerts } from '../common/CustomAlert';
 
 const YouthApplicationForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Personal Info
     fullName: '',
@@ -20,6 +22,7 @@ const YouthApplicationForm = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const { alerts, addAlert, removeAlert } = useAlerts();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -58,14 +61,89 @@ const YouthApplicationForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (validateStep(currentStep)) {
       if (currentStep < 3) {
         setCurrentStep(prev => prev + 1);
       } else {
         // Handle final submission
-        console.log('Final form data:', formData);
+        await handleSubmit();
       }
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      // Enhanced console logging with detailed information
+      const submissionData = {
+        ...formData,
+        submittedAt: new Date().toISOString(),
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        formType: 'Youth Empowerment Application'
+      };
+
+      console.log('=== YOUTH EMPOWERMENT FORM SUBMISSION ===');
+      console.log('Form Data:', submissionData);
+      console.log('Submission Time:', new Date().toLocaleString());
+      console.log('Total Fields:', Object.keys(formData).length);
+      console.log('==========================================');
+
+      // Make API call to /api/youth-empowerment
+      console.log('Sending data to /api/youth-empowerment...');
+      
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await fetch(`${backendUrl}/api/youth-empowerment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      console.log('API Response Status:', response.status);
+      console.log('API Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('API Success Response:', result);
+      console.log('=== SUBMISSION COMPLETED SUCCESSFULLY ===');
+
+      // Show success message
+      addAlert('Application submitted successfully! We will review your application and get back to you soon.', 'success');
+      
+      // Reset form
+      setFormData({
+        fullName: '',
+        age: '',
+        email: '',
+        businessIdea: '',
+        motivation: '',
+        relevantExperience: '',
+        expectedChallenges: '',
+        twelveMonthGoals: '',
+        supportNeeded: ''
+      });
+      setCurrentStep(1);
+
+    } catch (error) {
+      console.error('=== SUBMISSION ERROR ===');
+      console.error('Error Details:', error);
+      console.error('Error Message:', error.message);
+      console.error('Error Stack:', error.stack);
+      console.error('=======================');
+      
+      addAlert('There was an error submitting your application. Please try again or contact support at support@foremade.com', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -256,84 +334,99 @@ const YouthApplicationForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-6 px-4 sm:py-8 md:py-12 lg:py-16">
-      <div className="max-w-md lg:max-w-2xl xl:max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
-            <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+    <div className="relative">
+      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+      <div className="min-h-screen bg-neutral-50 py-6 px-4 sm:py-8 md:py-12 lg:py-16">
+        <div className="max-w-md lg:max-w-2xl xl:max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-3 sm:mb-4 leading-tight">
+              Youth Empowerment<br />Program
+            </h1>
+            <p className="text-neutral-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-2xl mx-auto">
+              Join our exclusive community of ambitious young entrepreneurs and creators.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-3 sm:mb-4 leading-tight">
-            Youth Empowerment<br />Program
-          </h1>
-          <p className="text-neutral-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-2xl mx-auto">
-            Join our exclusive community of ambitious young entrepreneurs and creators.
-          </p>
-        </div>
 
-        {/* Progress Steps */}
-        <div className="flex justify-center items-center gap-2 sm:gap-4 lg:gap-6 mb-8 sm:mb-10 max-w-lg mx-auto">
-          {[1, 2, 3].map((step, index) => (
-            <React.Fragment key={step}>
-              <div
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all
-                  ${currentStep > step ? 'bg-black text-white' : 
-                    currentStep === step ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'}`}
-              >
-                {currentStep > step ? (
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                ) : (
-                  <span className="text-sm sm:text-base font-bold">{step}</span>
+          {/* Progress Steps */}
+          <div className="flex justify-center items-center gap-2 sm:gap-4 lg:gap-6 mb-8 sm:mb-10 max-w-lg mx-auto">
+            {[1, 2, 3].map((step, index) => (
+              <React.Fragment key={step}>
+                <div
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all
+                    ${currentStep > step ? 'bg-black text-white' : 
+                      currentStep === step ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'}`}
+                >
+                  {currentStep > step ? (
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  ) : (
+                    <span className="text-sm sm:text-base font-bold">{step}</span>
+                  )}
+                </div>
+                {index < 2 && (
+                  <div className={`w-8 sm:w-12 h-0.5 transition-all ${
+                    currentStep > step + 1 ? 'bg-black' : 'bg-neutral-200'
+                  }`} />
                 )}
-              </div>
-              {index < 2 && (
-                <div className={`w-8 sm:w-12 h-0.5 transition-all ${
-                  currentStep > step + 1 ? 'bg-black' : 'bg-neutral-200'
-                }`} />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl shadow-neutral-200/50 mb-6">
-          {renderStepContent()}
-
-          {/* Navigation Buttons */}
-          <div className="flex gap-3 mt-6 sm:mt-8 lg:mt-10">
-            {currentStep > 1 && (
-              <button
-                onClick={handleBack}
-                className="flex-1 px-4 py-3 sm:py-4 border border-neutral-300 rounded-xl font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors lg:text-lg"
-              >
-                Previous
-              </button>
-            )}
-            <button
-              onClick={handleContinue}
-              className="flex-1 bg-black text-white py-3 sm:py-4 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors lg:text-lg"
-            >
-              {currentStep === 3 ? (
-                <>
-                  Submit Application
-                  <CheckCircle className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+              </React.Fragment>
+            ))}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-xs sm:text-sm lg:text-base text-neutral-500">
-            Questions? Contact us at{' '}
-            <span className="text-black font-medium hover:underline">support@foremade.com</span>
-          </p>
+          {/* Form Card */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl shadow-neutral-200/50 mb-6">
+            {renderStepContent()}
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-3 mt-6 sm:mt-8 lg:mt-10">
+              {currentStep > 1 && (
+                <button
+                  onClick={handleBack}
+                  className="flex-1 px-4 py-3 sm:py-4 border border-neutral-300 rounded-xl font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors lg:text-lg"
+                >
+                  Previous
+                </button>
+              )}
+              <button
+                onClick={handleContinue}
+                disabled={isSubmitting}
+                className={`flex-1 bg-black text-white py-3 sm:py-4 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors lg:text-lg ${
+                  isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'hover:bg-neutral-800'
+                }`}
+              >
+                {currentStep === 3 ? (
+                  isSubmitting ? (
+                    <>
+                      Submitting...
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    </>
+                  ) : (
+                    <>
+                      Submit Application
+                      <CheckCircle className="w-4 h-4" />
+                    </>
+                  )
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center">
+            <p className="text-xs sm:text-sm lg:text-base text-neutral-500">
+              Questions? Contact us at{' '}
+              <span className="text-black font-medium hover:underline">support@foremade.com</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>

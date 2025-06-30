@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
 
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
@@ -29,16 +30,16 @@ import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 
-import Admin from '/src/admin/Admin';
-import AdminDashboard from '/src/admin/AdminDashboard';
-import AdminNotifications from '/src/admin/AdminNotifications';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
-import AdminEditFees from './admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
-import AdminCategoryEdit from './admin/AdminCategoryEdit';
-import AdminBankSetup from './admin/AdminBankSetup';
+import Admin from './Admin/Admin';
+import AdminDashboard from './Admin/AdminDashboard';
+import AdminNotifications from './Admin/AdminNotifications';
+import AdminUsers from './Admin/AdminUsers';
+import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
+import AdminEditFees from './Admin/AdminEditFees';
+import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './Admin/AdminEditDeals';
+import AdminCategoryEdit from './Admin/AdminCategoryEdit';
+import AdminBankSetup from './Admin/AdminBankSetup';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -68,6 +69,7 @@ import Store from './components/store/Store';
 import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
+import ProSellerGuide from './seller/ProSellerGuide';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -129,9 +131,18 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Layout>
           <Routes>
@@ -265,6 +276,7 @@ function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
+            <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

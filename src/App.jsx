@@ -30,16 +30,16 @@ import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 
-import Admin from './Admin/Admin';
-import AdminDashboard from './Admin/AdminDashboard';
-import AdminNotifications from './Admin/AdminNotifications';
-import AdminUsers from './Admin/AdminUsers';
-import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
-import AdminEditFees from './Admin/AdminEditFees';
-import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
-import AdminEditDeals from './Admin/AdminEditDeals';
-import AdminCategoryEdit from './Admin/AdminCategoryEdit';
-import AdminBankSetup from './Admin/AdminBankSetup';
+import Admin from './admin/Admin';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminNotifications from './admin/AdminNotifications';
+import AdminUsers from './admin/AdminUsers';
+import AdminPayoutMonitor from './admin/AdminPayoutMonitor';
+import AdminEditFees from './admin/AdminEditFees';
+import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './admin/AdminEditDeals';
+import AdminCategoryEdit from './admin/AdminCategoryEdit';
+import AdminBankSetup from './admin/AdminBankSetup';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';

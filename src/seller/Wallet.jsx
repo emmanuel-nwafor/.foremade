@@ -23,16 +23,18 @@ export default function Wallet() {
           return;
         }
         const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
-        const sellerSnap = await getDoc(sellerRef);
+        const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+        const [sellerSnap, walletSnap] = await Promise.all([getDoc(sellerRef), getDoc(walletRef)]);
         if (sellerSnap.exists()) {
-          const data = sellerSnap.data();
+          const sellerData = sellerSnap.data();
+          const walletData = walletSnap.exists() ? walletSnap.data() : { pendingBalance: 0, availableBalance: 0 };
           setIsOnboarded(true);
           setSellerData({
-            fullName: data.fullName || 'Unknown Seller',
-            accountNumber: data.accountNumber || 'N/A',
-            pendingBalance: data.pendingBalance || 0,
-            availableBalance: data.availableBalance || 0,
-            bankName: data.bankName || 'N/A',
+            fullName: sellerData.fullName || 'Unknown Seller',
+            accountNumber: sellerData.accountNumber || 'N/A',
+            pendingBalance: walletData.pendingBalance || 0,
+            availableBalance: walletData.availableBalance || 0,
+            bankName: sellerData.bankName || 'N/A',
           });
         }
       } catch (error) {
@@ -85,10 +87,14 @@ export default function Wallet() {
     }
     try {
       setLoading(true);
-      const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
-      await updateDoc(sellerRef, {
-        pendingBalance: sellerData.pendingBalance - amount,
-        availableBalance: sellerData.availableBalance,
+      const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+      const walletDoc = await getDoc(walletRef);
+      if (!walletDoc.exists) {
+        throw new Error('Wallet not found');
+      }
+      const newPendingBalance = walletDoc.data().pendingBalance - amount;
+      await updateDoc(walletRef, {
+        pendingBalance: newPendingBalance,
         withdrawalRequests: {
           amount,
           accountNumber: sellerData.accountNumber,
@@ -97,7 +103,7 @@ export default function Wallet() {
           timestamp: new Date().toISOString(),
         },
       });
-      setSellerData((prev) => ({ ...prev, pendingBalance: prev.pendingBalance - amount }));
+      setSellerData((prev) => ({ ...prev, pendingBalance: newPendingBalance }));
       setWithdrawAmount('');
       setShowWithdrawModal(false);
       setShowSuccessModal(true);
@@ -135,7 +141,7 @@ export default function Wallet() {
               <button
                 onClick={() => setShowWithdrawModal(true)}
                 className="mt-2 sm:mt-4 w-full sm:w-auto bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700 transition-colors"
-                disabled={sellerData.pendingBalance === 0}
+                disabled={sellerData.pendingBalance === 0 || loading}
               >
                 Withdraw
               </button>

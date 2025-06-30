@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 
@@ -64,7 +64,7 @@ export default function SellerOnboarding() {
         if (formData.country === 'Nigeria') {
           try {
             const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
-            setBanks(response.data);
+            setBanks(response.data || []);
           } catch (err) {
             setError('Failed to fetch bank list: ' + err.message);
           }
@@ -105,6 +105,7 @@ export default function SellerOnboarding() {
         bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
       };
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
+      console.log(response)
       await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
         fullName: formData.fullName,
         country: formData.country,
@@ -117,8 +118,14 @@ export default function SellerOnboarding() {
         updatedAt: isUpdating ? new Date().toISOString() : undefined,
         createdAt: !isUpdating ? new Date().toISOString() : undefined,
       }, { merge: true });
-      
-      console.log(response);
+
+      await setDoc(doc(db, 'wallets', auth.currentUser.uid), {
+        availableBalance: 0,
+        pendingBalance: 0,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+
       setError('');
       alert(isUpdating ? 'Account updated successfully!' : 'Onboarding successful!');
       navigate('/smile');

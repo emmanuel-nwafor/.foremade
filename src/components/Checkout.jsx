@@ -16,7 +16,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { clearCart } from '../utils/cartUtils';
+import { clearCart, getCart } from '../utils/cartUtils';
 import placeholder from '../assets/placeholder.png';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -174,12 +174,12 @@ const Checkout = () => {
   const [adminBank, setAdminBank] = useState(null);
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
-  const conversionRateNgnToGbp = 0.0005; // Example rate
+  const conversionRateNgnToGbp = 0.0005;
   const feeConfig = {
     default: {
-      handlingRate: 0.02, // 2%
-      buyerProtectionRate: 0.015, // 1.5%
-      taxRate: 0.075, // 7.5%
+      handlingRate: 0.02,
+      buyerProtectionRate: 0.015,
+      taxRate: 0.075,
     },
   };
 
@@ -213,7 +213,7 @@ const Checkout = () => {
 
         const payload = {
           orderId: order.id,
-          email: order.shippingDetails?.email || formData.email || '',
+          email: order.shippingDetails?.email || formData.email || auth.currentUser?.email || '',
           items: (order.items || []).map((item) => ({
             productId: item.productId || 'unknown',
             name: item.name || 'Unknown Product',
@@ -330,7 +330,6 @@ const Checkout = () => {
         const savedOrderIds = [];
         let lastOrder = null;
 
-        // Fetch admin bank details
         if (!adminBank) {
           const adminDoc = await getDoc(doc(db, 'admin', 'bank'));
           if (adminDoc.exists()) {
@@ -377,13 +376,12 @@ const Checkout = () => {
             );
             const sellerSubtotal = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
 
-            // Calculate fees
             const handlingFee = feeConfig[cart[0]?.product?.category]?.handlingRate * sellerSubtotal || 0;
             const buyerProtectionFee = feeConfig[cart[0]?.product?.category]?.buyerProtectionRate * sellerSubtotal || 0;
             const taxFee = feeConfig[cart[0]?.product?.category]?.taxRate * sellerSubtotal || 0;
             const totalFees = handlingFee + buyerProtectionFee + taxFee;
-            const adminAmount = totalFees; // Fees go to admin
-            const sellerAmount = sellerSubtotal - totalFees; // Remainder to seller
+            const adminAmount = totalFees;
+            const sellerAmount = sellerSubtotal - totalFees;
 
             const order = {
               id: orderId,
@@ -412,7 +410,7 @@ const Checkout = () => {
             orders.push({ order, firestoreOrderId });
             savedOrderIds.push(firestoreOrderId);
 
-            const pendingBalance = (exists ? data?.pendingBalance || 0 : 0,) + sellerAmount;
+            const pendingBalance = (exists ? data?.pendingBalance || 0 : 0) + sellerAmount;
             transaction.set(
               ref,
               {
@@ -449,10 +447,9 @@ const Checkout = () => {
           );
           await Promise.all(transactionPromises);
 
-          // Initiate payout to admin
           if (adminBank) {
             const adminPayload = {
-              amount: orders.reduce((sum, { order }) => sum + order.adminAmount, 0) * 100, // Convert to kobo/cents
+              amount: orders.reduce((sum, { order }) => sum + order.adminAmount, 0) * 100,
               ...(adminBank.country === 'Nigeria'
                 ? { bankCode: adminBank.bankCode, accountNumber: adminBank.accountNumber }
                 : { iban: adminBank.iban, bankName: adminBank.bankName }),
@@ -602,7 +599,6 @@ const Checkout = () => {
     };
     loadData();
 
-    // Fetch admin bank details
     const fetchAdminBank = async () => {
       try {
         const adminDoc = await getDoc(doc(db, 'admin', 'bank'));

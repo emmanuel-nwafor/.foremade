@@ -171,14 +171,15 @@ const Checkout = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [adminBank, setAdminBank] = useState(null);
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
   const conversionRateNgnToGbp = 0.0005; // Example rate
   const feeConfig = {
     default: {
-      handlingRate: 0.02,
-      buyerProtectionRate: 0.015,
-      taxRate: 0.075,
+      handlingRate: 0.02, // 2%
+      buyerProtectionRate: 0.015, // 1.5%
+      taxRate: 0.075, // 7.5%
     },
   };
 
@@ -211,7 +212,7 @@ const Checkout = () => {
         addDebugLog({ type: 'email_attempt', backendUrl });
 
         const payload = {
-          orderId: order.id, // Use Firestore orderId (e.g., order-timestamp-sellerId)
+          orderId: order.id,
           email: order.shippingDetails?.email || formData.email || '',
           items: (order.items || []).map((item) => ({
             productId: item.productId || 'unknown',
@@ -224,7 +225,6 @@ const Checkout = () => {
           currency: (order.currency || currency).toLowerCase(),
         };
 
-        // Validate payload
         if (!payload.orderId) throw new Error('Order ID is missing');
         if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) throw new Error('Invalid or missing email address');
         if (!payload.items.length) throw new Error('No items provided in the order');
@@ -250,7 +250,7 @@ const Checkout = () => {
           } catch (err) {
             lastError = err;
             attempts--;
-            addDebugLog({ type: 'email_retry', error: 'err.message, attempts });
+            addDebugLog({ type: 'email_retry', error: err.message, attempts });
             if (err.response?.status === 404) {
               throw new Error('Order not found. Check server configuration.');
             }
@@ -261,7 +261,7 @@ const Checkout = () => {
               position: 'top-right',
               autoClose: 2000,
             });
-            await new Promise((resolve) => setTimeout(resolve, 2000 * (3 - attempts));
+            await new Promise((resolve) => setTimeout(resolve, 2000 * (3 - attempts)));
           }
         }
         throw lastError || new Error('Failed to send email after retries');
@@ -327,8 +327,18 @@ const Checkout = () => {
           sellers[sellerId].push(item);
         });
 
-        const savedOrderIds = []; // Track Firestore order IDs
+        const savedOrderIds = [];
         let lastOrder = null;
+
+        // Fetch admin bank details
+        if (!adminBank) {
+          const adminDoc = await getDoc(doc(db, 'admin', 'bank'));
+          if (adminDoc.exists()) {
+            setAdminBank(adminDoc.data());
+          } else {
+            throw new Error('Admin bank details not configured.');
+          }
+        }
 
         await runTransaction(db, async (transaction) => {
           const productRefs = cart.map((item) => doc(db, 'products', item.productId));
@@ -362,10 +372,18 @@ const Checkout = () => {
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
             const sellerItems = sellers[sellerId];
             const sellerSubtotalNgn = sellerItems.reduce(
-              (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0))),
+              (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
               0
             );
-            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+            const sellerSubtotal = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+
+            // Calculate fees
+            const handlingFee = feeConfig[cart[0]?.product?.category]?.handlingRate * sellerSubtotal || 0;
+            const buyerProtectionFee = feeConfig[cart[0]?.product?.category]?.buyerProtectionRate * sellerSubtotal || 0;
+            const taxFee = feeConfig[cart[0]?.product?.category]?.taxRate * sellerSubtotal || 0;
+            const totalFees = handlingFee + buyerProtectionFee + taxFee;
+            const adminAmount = totalFees; // Fees go to admin
+            const sellerAmount = sellerSubtotal - totalFees; // Remainder to seller
 
             const order = {
               id: orderId,
@@ -379,7 +397,7 @@ const Checkout = () => {
                 sellerId: item.product?.sellerId || sellerId,
                 imageUrls: item.product?.imageUrls || [placeholder],
               })),
-              totalAmount: sellerShare,
+              totalAmount: sellerSubtotal,
               date: new Date().toISOString(),
               createdAt: serverTimestamp(),
               shippingDetails: formData,
@@ -387,12 +405,14 @@ const Checkout = () => {
               paymentGateway,
               paymentId,
               currency,
+              adminAmount,
+              sellerAmount,
             };
             const firestoreOrderId = `${orderId}-${sellerId}`;
             orders.push({ order, firestoreOrderId });
-            savedOrderIds.push(firestoreOrderId); // Save Firestore-specific ID
+            savedOrderIds.push(firestoreOrderId);
 
-            const pendingBalance = (exists ? data?.pendingBalance || 0) + :sellerShare;
+            const pendingBalance = (exists ? data?.pendingBalance || 0 : 0,) + sellerAmount;
             transaction.set(
               ref,
               {
@@ -415,23 +435,34 @@ const Checkout = () => {
             transaction.update(ref, { stock: newStock });
           });
 
-          const transactionPromises = orders.map(({ order }) => Promise.all(
-              addDoc(collection(db, 'transactions'), {
-                userId: order.sellerId,
-                type: 'Sale',
-                description: `Sale from ${order.id}`,
-                amount: order.totalAmount,
-                date: new Date().toISOString().split('T')[0],
-                status: 'Pending',
-                createdAt: serverTimestamp(),
-                reference: order.paymentId,
-              })
-            );
-            await Promise.all(transactionPromises);
-          });
+          const transactionPromises = orders.map(({ order }) =>
+            addDoc(collection(db, 'transactions'), {
+              userId: order.sellerId,
+              type: 'Sale',
+              description: `Sale from ${order.id}`,
+              amount: order.sellerAmount,
+              date: new Date().toISOString().split('T')[0],
+              status: 'Pending',
+              createdAt: serverTimestamp(),
+              reference: order.paymentId,
+            })
+          );
+          await Promise.all(transactionPromises);
+
+          // Initiate payout to admin
+          if (adminBank) {
+            const adminPayload = {
+              amount: orders.reduce((sum, { order }) => sum + order.adminAmount, 0) * 100, // Convert to kobo/cents
+              ...(adminBank.country === 'Nigeria'
+                ? { bankCode: adminBank.bankCode, accountNumber: adminBank.accountNumber }
+                : { iban: adminBank.iban, bankName: adminBank.bankName }),
+              currency: currency.toLowerCase(),
+              paymentId,
+            };
+            await axios.post(`${backendUrl}/split-payout`, adminPayload, { timeout: 15000 });
+          }
         });
 
-        // Send email for each order
         for (const firestoreOrderId of savedOrderIds) {
           const sellerId = firestoreOrderId.split('-').slice(-1)[0];
           const sellerItems = sellers[sellerId] || [];
@@ -439,12 +470,17 @@ const Checkout = () => {
             (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
             0
           );
-          const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+          const sellerSubtotal = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+          const handlingFee = feeConfig[cart[0]?.product?.category]?.handlingRate * sellerSubtotal || 0;
+          const buyerProtectionFee = feeConfig[cart[0]?.product?.category]?.buyerProtectionRate * sellerSubtotal || 0;
+          const taxFee = feeConfig[cart[0]?.product?.category]?.taxRate * sellerSubtotal || 0;
+          const adminAmount = handlingFee + buyerProtectionFee + taxFee;
+          const sellerAmount = sellerSubtotal - adminAmount;
 
           await sendOrderConfirmationEmail({
             id: firestoreOrderId,
             userId,
-            sellerId: sellerId,
+            sellerId,
             items: sellerItems.map((item) => ({
               productId: item.productId || 'unknown',
               quantity: item.quantity || 0,
@@ -453,7 +489,7 @@ const Checkout = () => {
               sellerId: item.product?.sellerId || sellerId,
               imageUrls: item.product?.imageUrls || [placeholder],
             })),
-            totalAmount: sellerShare,
+            totalAmount: sellerSubtotal,
             date: new Date().toISOString(),
             createdAt: new Date(),
             shippingDetails: formData,
@@ -461,11 +497,13 @@ const Checkout = () => {
             paymentGateway,
             paymentId,
             currency,
+            adminAmount,
+            sellerAmount,
           });
         }
 
         if (auth.currentUser && formData.saveInfo) {
-          await setDoc(doc(db, 'users', auth.currentUser.uid)), formData, { merge: true });
+          await setDoc(doc(db, 'users', auth.currentUser.uid), formData, { merge: true });
         }
 
         await clearCart(auth.currentUser?.uid);
@@ -491,11 +529,11 @@ const Checkout = () => {
           autoClose: 3000,
         });
         if (debugMode) {
-          toast.error(`Debug: ${err.message}`, { position: 'top-right', autoClose: 'bottom-right', autoClose: 5000 });
+          toast.error(`Debug: ${err.message}`, { position: 'bottom-right', autoClose: 5000 });
         }
       } finally {
         setTimeout(() => {
-          setShowConfirmModal(false),
+          setShowConfirmModal(false);
         }, 1000);
       }
     },
@@ -504,7 +542,6 @@ const Checkout = () => {
       subtotalNgn,
       isBelowMinimumPrice,
       formData,
-      formData.totalAmount,
       currency,
       totalAmount,
       totalItems,
@@ -512,18 +549,17 @@ const Checkout = () => {
       debugMode,
       addDebugLog,
       validateForm,
-      sendOrder,
       sendOrderConfirmationEmail,
+      adminBank,
     ]
   );
 
-  // Paystack checkout component (placeholder, update if custom)
   const PaystackCheckout = () => {
     const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
     const amountInKobo = totalAmount * 100;
 
     return (
-      <PaystackCheckout
+      <PaystackButton
         email={formData.email}
         amount={amountInKobo}
         publicKey={publicKey}
@@ -535,22 +571,17 @@ const Checkout = () => {
         onClose={() => {
           toast.error('Payment cancelled.', { position: 'top-right', autoClose: 3000 });
         }}
-      >
-        <button
-          className="mt-6 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-        >
-          Pay with Paystack
-        </button>
-      </PaystackCheckout
+        className="mt-6 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+        text="Pay with Paystack"
+      />
     );
   };
 
   useEffect(() => {
-    // Load cart and user data
     const loadData = async () => {
       try {
         const userCart = await getCart(user?.uid);
-        setUserCart(userCart);
+        setCart(userCart);
         setSubtotalNgn(
           userCart.reduce(
             (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
@@ -561,7 +592,7 @@ const Checkout = () => {
         if (user) {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setFormData((prev) => ({ ...prevData, ...userDoc.data() }));
+            setFormData((prev) => ({ ...prev, ...userDoc.data() }));
           }
         }
       } catch (err) {
@@ -570,6 +601,22 @@ const Checkout = () => {
       }
     };
     loadData();
+
+    // Fetch admin bank details
+    const fetchAdminBank = async () => {
+      try {
+        const adminDoc = await getDoc(doc(db, 'admin', 'bank'));
+        if (adminDoc.exists()) {
+          setAdminBank(adminDoc.data());
+        } else {
+          toast.warn('Admin bank details not configured.', { position: 'top-right', autoClose: 5000 });
+        }
+      } catch (err) {
+        console.error('Error fetching admin bank:', err);
+        toast.error('Failed to fetch admin bank details.', { position: 'top-right', autoClose: 3000 });
+      }
+    };
+    fetchAdminBank();
   }, [user]);
 
   useEffect(() => {
@@ -606,7 +653,84 @@ const Checkout = () => {
                 />
                 {formErrors.name && <p className="text-red-500 text-sm">{formErrors.name}</p>}
               </div>
-              {/* Add other form fields: email, phone, address, city, postalCode, country */}
+              <div>
+                <label className="block mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+                {formErrors.email && <p className="text-red-500 text-sm">{formErrors.email}</p>}
+              </div>
+              <div>
+                <label className="block mb-1">Phone</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+                {formErrors.phone && <p className="text-red-500 text-sm">{formErrors.phone}</p>}
+              </div>
+              <div>
+                <label className="block mb-1">Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+                {formErrors.address && <p className="text-red-500 text-sm">{formErrors.address}</p>}
+              </div>
+              <div>
+                <label className="block mb-1">City</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+                {formErrors.city && <p className="text-red-500 text-sm">{formErrors.city}</p>}
+              </div>
+              <div>
+                <label className="block mb-1">Postal Code</label>
+                <input
+                  type="text"
+                  name="postalCode"
+                  value={formData.postalCode}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+                {formErrors.postalCode && <p className="text-red-500 text-sm">{formErrors.postalCode}</p>}
+              </div>
+              <div>
+                <label className="block mb-1">Country</label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleFormChange}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                >
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                </select>
+                {formErrors.country && <p className="text-red-500 text-sm">{formErrors.country}</p>}
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="saveInfo"
+                  checked={formData.saveInfo}
+                  onChange={handleFormChange}
+                  className="mr-2"
+                />
+                <label>Save shipping info</label>
+              </div>
             </div>
           </div>
           <div className="mb-6">
@@ -635,7 +759,7 @@ const Checkout = () => {
           </button>
         </form>
         {debugMode && (
-          <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded shadow-lg max-h-[500px overflow-y-auto">
+          <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded shadow-lg max-h-[500px] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-2">Debug Logs</h3>
             {debugLogs.map((log, index) => (
               <pre key={index} className="text-sm text-gray-300">
@@ -658,14 +782,14 @@ const Checkout = () => {
               {isEmailSending ? 'Processing...' : 'Confirm Payment'}
             </button>
             <button
-              onClick={() => setShowConfirmModal(false)} className="ml-4 text-gray-600"
-              className="ml-400 text-gray-500"
+              onClick={() => setShowConfirmModal(false)}
+              className="ml-4 text-gray-500 hover:text-gray-300"
             >
               Cancel
             </button>
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 };

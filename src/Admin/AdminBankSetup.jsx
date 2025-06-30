@@ -35,6 +35,7 @@ export default function AdminBankSetup() {
         setBanks(response.data);
       } catch (error) {
         addAlert('Failed to fetch bank list.', 'error');
+        console.log(error)
       }
     };
     if (formData.country === 'Nigeria') fetchBanks();
@@ -70,16 +71,17 @@ export default function AdminBankSetup() {
       return;
     }
     try {
-      await axios.post('https://foremade-backend.onrender.com/admin-bank', {
+      const payload = {
         country: formData.country,
-        bankCode: formData.country === 'Nigeria' ? formData.bankCode : undefined,
-        accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : undefined,
-        iban: formData.country === 'United Kingdom' ? formData.iban : undefined,
-        bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
-      });
+        ...(formData.country === 'Nigeria' ? { bankCode: formData.bankCode, accountNumber: formData.accountNumber } : {}),
+        ...(formData.country === 'United Kingdom' ? { iban: formData.iban, bankName: formData.bankName } : {}),
+      };
+      console.log('Sending payload:', payload); // Debug
+      await axios.post('https://foremade-backend.onrender.com/admin-bank', payload);
       addAlert('Admin bank details saved!', 'success');
       navigate('/admin/dashboard');
     } catch (error) {
+      console.error('Admin bank error:', error.response?.data || error.message);
       addAlert(error.response?.data?.details || 'Failed to save bank details.', 'error');
     } finally {
       setLoading(false);

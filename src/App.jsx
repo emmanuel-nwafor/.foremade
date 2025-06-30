@@ -181,14 +181,6 @@ function App() {
               }
             />
             <Route
-              path="/seller/edit-product/:productId"
-              element={
-                <ProtectedRoute>
-                  <SellerEditProduct />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>

@@ -74,16 +74,9 @@ export default function SellerSidebar() {
       category: 'Registering with us', 
       dropdown: 'register' 
     }, 
-    {
-      to: '/sellers-guide', 
-      label: 'Pro Seller Onboard', 
-      icon: 'bxl-product-hunt', 
-      category: 'Registering with us', 
-      dropdown: 'register' 
-    },
     { 
       to: '/seller-onboarding', 
-      label: 'Seller Onboard', 
+      label: 'Seller', 
       icon: 'bx-select-multiple', 
       category: 'Registering with us',
       dropdown: 'register' 

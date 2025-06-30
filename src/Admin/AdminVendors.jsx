@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import AdminSidebar from '/src/admin/AdminSidebar';
+import AdminSidebar from '/src/Admin/AdminSidebar';
 
 export default function AdminVendors() {
   const [vendors, setVendors] = useState([]);

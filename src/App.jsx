@@ -30,14 +30,14 @@ import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 
-import Admin from '/src/admin/Admin';
-import AdminDashboard from '/src/admin/AdminDashboard';
-import AdminNotifications from '/src/admin/AdminNotifications';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
+import Admin from './admin/Admin';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminNotifications from './admin/AdminNotifications';
+import AdminUsers from './admin/AdminUsers';
+import AdminPayoutMonitor from './admin/AdminPayoutMonitor';
 import AdminEditFees from './admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
+import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './admin/AdminEditDeals';
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AdminBankSetup from './admin/AdminBankSetup';
 

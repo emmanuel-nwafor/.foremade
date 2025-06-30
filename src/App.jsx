@@ -29,28 +29,24 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
-
-import Admin from './Admin/Admin';
-import AdminDashboard from './Admin/AdminDashboard';
-import AdminNotifications from './Admin/AdminNotifications';
-import AdminUsers from './Admin/AdminUsers';
-import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
-import AdminEditFees from './Admin/AdminEditFees';
-import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
-import AdminEditDeals from './Admin/AdminEditDeals';
-import AdminCategoryEdit from './Admin/AdminCategoryEdit';
-import AdminBankSetup from './Admin/AdminBankSetup';
-
+import Admin from '/src/admin/Admin';
+import AdminDashboard from '/src/admin/AdminDashboard';
+import AdminNotifications from '/src/admin/AdminNotifications.jsx';
+import AdminUsers from '/src/admin/AdminUsers';
+import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
+import AdminEditFees from '/src/admin/AdminEditFees';
+import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
+import AdminEditDeals from '/src/admin/AdminEditDeals';
+import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
+import AdminBankSetup from '/src/admin/AdminBankSetup';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
-
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import AllPolicies from './pages/AllPolicies';
 import EmpowermentHub from './pages/EmpowermentHub';
 import YouthEmpowermentForm from './pages/YouthEmpowermentForm';
 import YouthEmpowermentTerms from './pages/YouthEmpowermentTerms';
 import GDPRAccess from './pages/GDPRAccess';
-
 import TabletsPhones from './pages/TabletsPhones';
 import HealthBeauty from './pages/HealthBeauty';
 import Electronics from './pages/Electronics';
@@ -60,7 +56,6 @@ import Drinks from './pages/Drinks';
 import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
-
 import OtherProductsPage from './pages/OtherProducts';
 import AboutUs from './pages/AboutUs';
 import Search from './pages/Search';
@@ -118,7 +113,7 @@ const Layout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth() || { loading: true, user: null }; // Default to loading if undefined
 
   if (loading) {
     return (
@@ -128,7 +123,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return children;
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 function ScrollToTop() {
@@ -277,6 +272,7 @@ function App() {
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+            <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

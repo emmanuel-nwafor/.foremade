@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 
@@ -10,7 +10,6 @@ export default function SellerOnboarding() {
   const [formData, setFormData] = useState({
     fullName: '',
     country: 'Nigeria',
-    bvn: '',
     idNumber: '',
     bankName: '',
     bankCode: '',
@@ -22,12 +21,12 @@ export default function SellerOnboarding() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required.';
     if (formData.country === 'Nigeria') {
-      if (!formData.bvn.match(/^\d{11}$/)) newErrors.bvn = 'Enter a valid 11-digit BVN.';
       if (!formData.bankCode) newErrors.bankCode = 'Select a bank.';
       if (!formData.accountNumber.match(/^\d{10}$/)) newErrors.accountNumber = 'Enter a valid 10-digit account number.';
     } else {
@@ -46,10 +45,26 @@ export default function SellerOnboarding() {
           navigate('/login');
           return;
         }
+        const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
+        const sellerSnap = await getDoc(sellerRef);
+        if (sellerSnap.exists()) {
+          const data = sellerSnap.data();
+          setFormData({
+            fullName: data.fullName || '',
+            country: data.country || 'Nigeria',
+            idNumber: data.idNumber || '',
+            bankName: data.bankName || '',
+            bankCode: data.bankCode || '',
+            accountNumber: data.accountNumber || '',
+            iban: data.iban || '',
+            email: data.email || auth.currentUser.email || '',
+          });
+          setIsUpdating(true);
+        }
         if (formData.country === 'Nigeria') {
           try {
             const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
-            setBanks(response.data);
+            setBanks(response.data || []);
           } catch (err) {
             setError('Failed to fetch bank list: ' + err.message);
           }
@@ -77,7 +92,6 @@ export default function SellerOnboarding() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setLoading(false);
-      // addAlert('Please fix form errors.');
       return;
     }
     try {
@@ -91,25 +105,32 @@ export default function SellerOnboarding() {
         bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
       };
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
+      console.log(response)
       await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
         fullName: formData.fullName,
         country: formData.country,
-        bvn: formData.country === 'Nigeria' ? formData.bvn : '',
         idNumber: formData.country === 'United Kingdom' ? formData.idNumber : '',
         bankName: formData.country === 'Nigeria' ? banks.find((b) => b.code === formData.bankCode)?.name : formData.bankName,
         bankCode: formData.country === 'Nigeria' ? formData.bankCode : '',
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
         iban: formData.country === 'United Kingdom' ? formData.iban : '',
         email: formData.country === 'United Kingdom' ? formData.email : '',
-        createdAt: new Date().toISOString(),
-      });
-      
-      console.log(response)
+        updatedAt: isUpdating ? new Date().toISOString() : undefined,
+        createdAt: !isUpdating ? new Date().toISOString() : undefined,
+      }, { merge: true });
+
+      await setDoc(doc(db, 'wallets', auth.currentUser.uid), {
+        availableBalance: 0,
+        pendingBalance: 0,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+
       setError('');
-      alert('Onboarding successful!');
+      alert(isUpdating ? 'Account updated successfully!' : 'Onboarding successful!');
       navigate('/smile');
     } catch (error) {
-      setError(error.response?.data?.details || 'Failed to onboard.');
+      setError(error.response?.data?.details || 'Failed to onboard or update.');
     } finally {
       setLoading(false);
     }
@@ -123,7 +144,6 @@ export default function SellerOnboarding() {
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
             <span>Loading...</span>
-            
           </div>
         </div>
       </div>
@@ -154,9 +174,11 @@ export default function SellerOnboarding() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center">
               <i className="bx bxs-bank text-blue-500 mr-2"></i>
-              Seller Onboarding
+              {isUpdating ? 'Update Account' : 'Seller Onboarding'}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Set up your seller account to start selling.</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {isUpdating ? 'Update your seller account details.' : 'Set up your seller account to start selling.'}
+            </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
@@ -189,7 +211,7 @@ export default function SellerOnboarding() {
                 value={formData.country}
                 onChange={handleChange}
                 className="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                disabled={loading}
+                disabled={loading || isUpdating}
               >
                 <option value="Nigeria">Nigeria</option>
                 <option value="United Kingdom">UK</option>
@@ -197,27 +219,6 @@ export default function SellerOnboarding() {
             </div>
             {formData.country === 'Nigeria' && (
               <>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    BVN <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative mt-1">
-                    <input
-                      type="text"
-                      name="bvn"
-                      value={formData.bvn}
-                      onChange={handleChange}
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
-                        errors.bvn ? 'border-red-500' : ''
-                      }`}
-                      disabled={loading}
-                    />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                      <i className="bx bx-id-card"></i>
-                    </span>
-                  </div>
-                  {errors.bvn && <p className="text-red-600 text-xs mt-1">{errors.bvn}</p>}
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Bank Name <span className="text-red-500">*</span>
@@ -363,7 +364,7 @@ export default function SellerOnboarding() {
               disabled={loading}
             >
               <i className="bx bx-check"></i>
-              Complete Onboarding
+              {isUpdating ? 'Update Account' : 'Complete Onboarding'}
             </button>
           </form>
         </div>

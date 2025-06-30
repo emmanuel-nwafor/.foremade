@@ -123,6 +123,7 @@ export default function SellerOnboarding() {
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
             <span>Loading...</span>
+            
           </div>
         </div>
       </div>

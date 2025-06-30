@@ -123,6 +123,7 @@ export default function SellerOnboarding() {
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
             <span>Loading...</span>
+            
           </div>
         </div>
       </div>
@@ -131,12 +132,15 @@ export default function SellerOnboarding() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-50">
-        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
-          <p className="text-red-700 text-base mb-4">{error}</p>
-          <Link to="/seller/login" className="text-blue-600 hover:text-blue-800 font-medium underline">
-            Return to Login
-          </Link>
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <SellerSidebar />
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
+            <p className="text-red-700 text-base mb-4">{error}</p>
+            <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium underline">
+              Return to Login
+            </Link>
+          </div>
         </div>
       </div>
     );

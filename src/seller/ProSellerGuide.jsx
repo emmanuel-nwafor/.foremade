@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import businessImage from '../assets/images/business_image.png';
 
 const ProSellerGuide = () => {
   return (
@@ -9,17 +10,12 @@ const ProSellerGuide = () => {
           Registering as a FOREMADE Pro Seller
         </h1>
         <p className="text-lg text-blue-950 leading-relaxed mb-6">
-          Are you a <strong className="font-semibold">manufacturer</strong>,{' '}
-          <strong className="font-semibold">trader</strong>,{' '}
-          <strong className="font-semibold">brand</strong>, or{' '}
-          <strong className="font-semibold">retail business</strong> looking to reach more customers across Nigeria and
-          beyond? Become a <strong className="font-semibold">FOREMADE Pro Seller</strong> and get access to advanced
-          features, dedicated support, and increased visibility.
+          Are you a <strong className="font-semibold">manufacturer</strong>, <strong className="font-semibold">trader</strong>, <strong className="font-semibold">brand</strong>, or <strong className="font-semibold">retail business</strong> looking to grow your customer base and expand your reach? Become a <strong className="font-semibold">FOREMADE Pro Seller</strong> and unlock advanced features, dedicated support, and greater visibility.
         </p>
 
         <div className="text-center mb-6">
           <img
-            src="business_image.png"
+            src={businessImage}
             alt="Inspiring Business Image"
             className="w-full max-w-3xl rounded-lg shadow-md"
           />
@@ -27,7 +23,7 @@ const ProSellerGuide = () => {
 
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">Who Can Register?</h2>
         <ul className="list-disc list-inside text-blue-950 mb-6 space-y-2">
-          <li>Registered businesses or companies in Nigeria</li>
+          <li>Registered businesses or companies</li>
           <li>Manufacturers, distributors, or wholesalers</li>
           <li>NGOs or registered charities</li>
           <li>Verified online entrepreneurs or sole traders</li>
@@ -36,63 +32,58 @@ const ProSellerGuide = () => {
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">How to Register</h2>
         <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">1. New to FOREMADE?</h3>
         <p className="text-blue-950 mb-4">
-          Start fresh by signing up directly via the <strong className="font-semibold">FOREMADE Pro Seller registration
-          page</strong>.
+          Sign up directly through the <strong className="font-semibold">FOREMADE Pro Seller registration page</strong>.
         </p>
-        <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">2. Already on FOREMADE?</h3>
+        <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">2. Already a FOREMADE seller?</h3>
         <p className="text-blue-950 mb-4">
-          Convert your existing seller account to a Pro account <strong className="font-semibold">after all current orders
-          are completed</strong> and your balance is withdrawn.
+          You can upgrade your existing account to a Pro Seller account once all current orders are fulfilled and your balance is withdrawn.
         </p>
-        <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">3. Want both personal and business accounts?</h3>
+        <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">3. Need both personal and business accounts?</h3>
         <p className="text-blue-950 mb-4">
-          No wahala! Use a <strong className="font-semibold">different email and phone number</strong> to register your
-          Pro account.
+          No problem! Just use a <strong className="font-semibold">separate email address and phone number</strong> for your Pro account.
         </p>
         <p className="text-blue-950 mb-6">
-          <strong className="font-semibold">Note:</strong> You must complete and withdraw all orders before converting
-          your standard account to Pro.
+          <strong className="font-semibold">Note:</strong> All orders must be completed and funds withdrawn before switching to a Pro account.
         </p>
 
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">What You'll Need to Provide</h2>
         <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">For Sole Traders / Entrepreneurs:</h3>
         <ul className="list-disc list-inside text-blue-950 mb-6 space-y-2">
-          <li>BVN or National ID</li>
-          <li>CAC registration (if available)</li>
+          <li>National ID or equivalent</li>
+          <li>Business registration (if available)</li>
           <li>Business address</li>
-          <li>Valid ID</li>
+          <li>Valid identification</li>
           <li>Bank details</li>
         </ul>
         <h3 className="text-xl font-medium text-blue-950 mt-6 mb-2">For Registered Companies / NGOs / Manufacturers:</h3>
         <ul className="list-disc list-inside text-blue-950 mb-6 space-y-2">
-          <li>CAC certificate</li>
-          <li>TIN (Tax ID Number)</li>
+          <li>Business registration certificate</li>
+          <li>Tax Identification Number</li>
           <li>Business name and address</li>
-          <li>Director/representative ID</li>
+          <li>ID of an authorised representative</li>
           <li>Company bank account</li>
         </ul>
 
         <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">Verification Process</h2>
         <p className="text-blue-950 mb-6">
-          You'll need to complete our Know Your Business (KYB) verification. Once approved, you'll get a "Pro Seller"
-          badge, and your business details will be displayed for buyer transparency.
+          All Pro Sellers must complete our Know Your Business (KYB) verification. Once verified, you'll receive a "Pro Seller" badge, and your business information will be visible to buyers for added credibility.
         </p>
 
-        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">What You Gain</h2>
+        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-4">Benefits of Being a Pro Seller</h2>
         <ul className="list-disc list-inside text-blue-950 mb-6 space-y-2">
-          <li>FOREMADE handles shipping and logistics (unless you prefer otherwise)</li>
-          <li>Bulk upload and inventory tools</li>
+          <li>Shipping and logistics support (optional if you prefer self-fulfillment)</li>
+          <li>Bulk product upload and inventory management tools</li>
           <li>Dedicated account support</li>
-          <li>More visibility across our campaigns</li>
-          <li>Get featured in promotions and newsletters</li>
+          <li>Increased exposure in marketing campaigns</li>
+          <li>Opportunity to be featured in promotions and newsletters</li>
         </ul>
 
-        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-6">Ready to grow?</h2>
-        <Link 
-          to="/pro-seller-form" 
+        <h2 className="text-2xl font-semibold text-blue-950 mt-8 mb-6">Ready to grow your business with FOREMADE?</h2>
+        <Link
+          to="/pro-seller-form"
           className="cta inline-block bg-[#F49B1B] text-[#0D2A4D] px-6 py-3 text-center font-bold mt-6 rounded-md hover:bg-[#e6b800] transition duration-200"
         >
-          Register as a FOREMADE Pro Seller
+          Register now and take the next step toward scaling your success.
         </Link>
       </div>
     </div>

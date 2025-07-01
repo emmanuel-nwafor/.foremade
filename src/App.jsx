@@ -29,7 +29,6 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
-<<<<<<< HEAD
 
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
@@ -42,18 +41,6 @@ import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
 import AdminBankSetup from '/src/admin/AdminBankSetup';
 
-=======
-import Admin from './Admin/Admin';
-import AdminDashboard from './Admin/AdminDashboard';
-import AdminNotifications from './Admin/AdminNotifications.jsx';
-import AdminUsers from './Admin/AdminUsers';
-import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
-import AdminEditFees from './Admin/AdminEditFees';
-import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
-import AdminEditDeals from './Admin/AdminEditDeals';
-import AdminCategoryEdit from './Admin/AdminCategoryEdit';
-import AdminBankSetup from './Admin/AdminBankSetup';
->>>>>>> e9e1b30cc96675b07ca4a3d52f2a38d92e713174
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';

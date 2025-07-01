@@ -177,9 +177,9 @@ const Checkout = () => {
   const conversionRateNgnToGbp = 0.0005;
   const feeConfig = {
     default: {
-      handlingRate: 0.02,
-      buyerProtectionRate: 0.015,
-      taxRate: 0.075,
+      handlingRate: 0.05, // Updated to 5%
+      buyerProtectionRate: 0.02, // Updated to 2%
+      taxRate: 0.075, // 7.5%
     },
   };
 
@@ -307,7 +307,7 @@ const Checkout = () => {
           return;
         }
         if (isBelowMinimumPrice) {
-          toast.error('Total amount must be at least ₦12,000.', { position: 'top-right', autoClose: 3000 });
+          toast.error('Total amount must be at least ₦1,000.', { position: 'top-right', autoClose: 3000 });
           return;
         }
 
@@ -331,7 +331,7 @@ const Checkout = () => {
         let lastOrder = null;
 
         if (!adminBank) {
-          const adminDoc = await getDoc(doc(db, 'admin', 'bank'));
+          const adminDoc = await getDoc(doc(db, 'admins', 'admin123')); // Aligned with AdminBankSetup
           if (adminDoc.exists()) {
             setAdminBank(adminDoc.data());
           } else {
@@ -410,12 +410,12 @@ const Checkout = () => {
             orders.push({ order, firestoreOrderId });
             savedOrderIds.push(firestoreOrderId);
 
-            const pendingBalance = (exists ? data?.pendingBalance || 0 : 0) + sellerAmount;
+            const availableBalance = (exists ? data?.availableBalance || 0 : 0) + sellerAmount; // Credit availableBalance
             transaction.set(
               ref,
               {
-                availableBalance: exists ? data?.availableBalance || 0 : 0,
-                pendingBalance,
+                availableBalance,
+                pendingBalance: exists ? data?.pendingBalance || 0 : 0,
                 updatedAt: serverTimestamp(),
                 ...(exists ? {} : { createdAt: serverTimestamp() }),
               },
@@ -433,30 +433,31 @@ const Checkout = () => {
             transaction.update(ref, { stock: newStock });
           });
 
-          const transactionPromises = orders.map(({ order }) =>
-            addDoc(collection(db, 'transactions'), {
-              userId: order.sellerId,
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          for (const { order } of orders) {
+            const payload = {
+              buyerId: userId,
+              sellerId: order.sellerId,
+              productId: order.items[0]?.productId || 'unknown',
+              amount: order.totalAmount,
+              transactionReference: order.paymentId,
+              adminAmount: order.adminAmount,
+              sellerAmount: order.sellerAmount,
+            };
+            await axios.post(`${backendUrl}/process-payment`, payload, { timeout: 15000 });
+            await addDoc(collection(db, 'transactions'), {
+              buyerId: order.userId,
+              sellerId: order.sellerId,
+              productId: order.items[0]?.productId || 'unknown',
               type: 'Sale',
-              description: `Sale from ${order.id}`,
-              amount: order.sellerAmount,
-              date: new Date().toISOString().split('T')[0],
-              status: 'Pending',
+              description: `Purchase of ${order.items[0]?.name || 'product'} - Fees to admin, earnings to seller`,
+              amount: order.totalAmount,
+              sellerAmount: order.sellerAmount,
+              adminFees: order.adminAmount,
+              status: 'Completed',
               createdAt: serverTimestamp(),
               reference: order.paymentId,
-            })
-          );
-          await Promise.all(transactionPromises);
-
-          if (adminBank) {
-            const adminPayload = {
-              amount: orders.reduce((sum, { order }) => sum + order.adminAmount, 0) * 100,
-              ...(adminBank.country === 'Nigeria'
-                ? { bankCode: adminBank.bankCode, accountNumber: adminBank.accountNumber }
-                : { iban: adminBank.iban, bankName: adminBank.bankName }),
-              currency: currency.toLowerCase(),
-              paymentId,
-            };
-            await axios.post(`${backendUrl}/split-payout`, adminPayload, { timeout: 15000 });
+            });
           }
         });
 
@@ -601,7 +602,7 @@ const Checkout = () => {
 
     const fetchAdminBank = async () => {
       try {
-        const adminDoc = await getDoc(doc(db, 'admin', 'bank'));
+        const adminDoc = await getDoc(doc(db, 'admins', 'admin123')); // Aligned with AdminBankSetup
         if (adminDoc.exists()) {
           setAdminBank(adminDoc.data());
         } else {
@@ -618,7 +619,7 @@ const Checkout = () => {
   useEffect(() => {
     const total = subtotalNgn * (currency === 'GBP' ? conversionRateNgnToGbp : 1);
     setTotalAmount(total);
-    setIsBelowMinimumPrice(currency === 'NGN' && subtotalNgn < 12000);
+    setIsBelowMinimumPrice(currency === 'NGN' && subtotalNgn < 1000);
   }, [subtotalNgn, currency]);
 
   const handleFormChange = (e) => {

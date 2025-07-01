@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
@@ -139,8 +138,6 @@ export default function SellerProductUpload() {
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
 
-  console.log(showSizeWarning);
-
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const singleImageInputRef = useRef(null);
@@ -211,8 +208,6 @@ export default function SellerProductUpload() {
       console.error('Error fetching subcategories:', error);
       addAlert('Failed to load subcategories.', 'error');
     });
-
-    console.log(authenticityTags);
 
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
@@ -622,39 +617,18 @@ export default function SellerProductUpload() {
       newErrors.stock = 'Enter a valid stock quantity (0 or more).';
     if (!formData.category || !categories.includes(formData.category))
       newErrors.category = 'Select a valid category.';
-    if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
+    if (formData.subcategory && !customSubcategories[formData.category]?.includes(formData.subcategory))
       newErrors.subcategory = 'Select a valid subcategory.';
-    if (
-      customSubSubcategories[formData.category]?.[formData.subcategory] &&
-      !formData.subSubcategory
-    )
-      newErrors.subSubcategory = 'Select a sub-subcategory.';
     if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
     if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
     if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
-    if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
     if (
-      formData.category === 'Clothing' &&
+      (formData.category === 'Clothing' || formData.category === 'Footwear' || formData.category === 'Perfumes') &&
       formData.subcategory &&
       formData.sizes.length === 0
     ) {
-      newErrors.sizes = 'Select or enter at least one size for clothing products.';
+      newErrors.sizes = 'Select or enter at least one size for this category.';
     }
-    if (
-      formData.category === 'Footwear' &&
-      formData.subcategory &&
-      formData.sizes.length === 0
-    ) {
-      newErrors.sizes = 'Select or enter at least one size for footwear products.';
-    }
-    if (
-      formData.category === 'Perfumes' &&
-      formData.subcategory &&
-      formData.sizes.length === 0
-    ) {
-      newErrors.sizes = 'Select or enter at least one size for perfume products.';
-    }
-    if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
     return newErrors;
   };
 
@@ -751,7 +725,7 @@ export default function SellerProductUpload() {
         handlingFee: fees.handlingFee,
         totalEstimatedPrice: fees.totalEstimatedPrice,
         sellerEarnings: fees.sellerEarnings,
-        manualSize: formData.manualSize,
+        manualSize: formData.manualSize || '',
         location: {
           country: locationData.country,
           state: locationData.state,
@@ -1237,34 +1211,6 @@ export default function SellerProductUpload() {
                   )}
                 </div>
               </div>
-              <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Size <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
-                </label>
-                <select
-                  name="manualSize"
-                  value={formData.manualSize}
-                  onChange={handleChange}
-                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.manualSize ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                  disabled={loading}
-                >
-                  <option value="">Select a size</option>
-                  {manualSizes.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                {errors.manualSize && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.manualSize}
-                  </p>
-                )}
-              </div>
               {fees.productSize && feeConfig && (
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -1273,8 +1219,8 @@ export default function SellerProductUpload() {
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <p>Category: <span className="font-semibold">{fees.productSize}</span></p> 
-                    <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
@@ -1351,7 +1297,7 @@ export default function SellerProductUpload() {
                 {formData.category && (
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Subcategory <span className="text-red-500">*</span>
+                      Subcategory
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
                     </label>
                     <div className="relative mt-1">
@@ -1404,7 +1350,7 @@ export default function SellerProductUpload() {
                 {formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory] && (
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Sub-Subcategory <span className="text-red-500">*</span>
+                      Sub-Subcategory
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
                     </label>
                     <div className="relative mt-1">
@@ -1459,7 +1405,7 @@ export default function SellerProductUpload() {
                   Sizes
                 </h3>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Sizes <span className="text-red-500">*</span>
+                  Sizes
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter sizes"></i>
                 </label>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -1525,7 +1471,7 @@ export default function SellerProductUpload() {
                 Colors
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Colors <span className="text-red-500">*</span>
+                Colors
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2 mb-2">
@@ -1590,12 +1536,6 @@ export default function SellerProductUpload() {
                   </div>
                 )}
               </div>
-              {errors.colors && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.colors}
-                </p>
-              )}
             </div>
 
             {/* Tags Section */}
@@ -1662,7 +1602,7 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Condition & Product URL Section */}
+  {/* Condition & Product URL Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-check-circle text-blue-500"></i>

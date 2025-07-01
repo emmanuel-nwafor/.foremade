@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 
@@ -62,15 +62,11 @@ export default function SellerOnboarding() {
           setIsUpdating(true);
         }
         if (formData.country === 'Nigeria') {
-          try {
-            const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
-            setBanks(response.data || []);
-          } catch (err) {
-            setError('Failed to fetch bank list: ' + err.message);
-          }
+          const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
+          setBanks(response.data);
         }
       } catch (err) {
-        setError('Authentication error: ' + err.message);
+        setError('Initialization error: ' + err.message);
       } finally {
         setLoading(false);
       }
@@ -98,14 +94,16 @@ export default function SellerOnboarding() {
       const payload = {
         userId: auth.currentUser.uid,
         country: formData.country,
+        fullName: formData.fullName,
         email: formData.email,
         bankCode: formData.country === 'Nigeria' ? formData.bankCode : undefined,
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : undefined,
         iban: formData.country === 'United Kingdom' ? formData.iban : undefined,
         bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
+        idNumber: formData.country === 'United Kingdom' ? formData.idNumber : undefined,
       };
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
-      console.log(response)
+      if (response.data.error) throw new Error(response.data.error);
       await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
         fullName: formData.fullName,
         country: formData.country,
@@ -118,19 +116,10 @@ export default function SellerOnboarding() {
         updatedAt: isUpdating ? new Date().toISOString() : undefined,
         createdAt: !isUpdating ? new Date().toISOString() : undefined,
       }, { merge: true });
-
-      await setDoc(doc(db, 'wallets', auth.currentUser.uid), {
-        availableBalance: 0,
-        pendingBalance: 0,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-
-      setError('');
       alert(isUpdating ? 'Account updated successfully!' : 'Onboarding successful!');
       navigate('/smile');
     } catch (error) {
-      setError(error.response?.data?.details || 'Failed to onboard or update.');
+      setError('Failed to onboard or update: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }

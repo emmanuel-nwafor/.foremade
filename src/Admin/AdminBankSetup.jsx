@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '/src/firebase';
+import { auth, db } from '/src/firebase';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 
 export default function AdminBankSetup() {
@@ -16,6 +17,9 @@ export default function AdminBankSetup() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [showForm, setShowForm] = useState(true);
 
   const addAlert = (message, type = 'error') => {
     const id = Date.now();
@@ -39,6 +43,38 @@ export default function AdminBankSetup() {
       }
     };
     if (formData.country === 'Nigeria') fetchBanks();
+
+    // Check if admin has bank setup
+    const checkBankSetup = async () => {
+      const adminRef = doc(db, 'admins', auth.currentUser.uid);
+      const adminSnap = await getDoc(adminRef);
+      if (adminSnap.exists() && adminSnap.data().paystackRecipientCode) {
+        setBankDetails({
+          bankCode: adminSnap.data().bankCode || '',
+          accountNumber: adminSnap.data().accountNumber || '',
+          iban: adminSnap.data().iban || '',
+          bankName: adminSnap.data().bankName || '',
+          country: adminSnap.data().country,
+        });
+        setShowForm(false);
+      }
+    };
+    checkBankSetup();
+
+    // Real-time transaction listener
+    const q = query(collection(db, 'transactions'), where('adminFees', '>', 0));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const transactionData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTransactions(transactionData);
+    }, (error) => {
+      addAlert('Failed to fetch transactions.', 'error');
+      console.error('Transaction fetch error:', error);
+    });
+
+    return () => unsubscribe();
   }, [formData.country, navigate]);
 
   const handleChange = (e) => {
@@ -72,20 +108,48 @@ export default function AdminBankSetup() {
     }
     try {
       const payload = {
+        userId: auth.currentUser.uid,
         country: formData.country,
         ...(formData.country === 'Nigeria' ? { bankCode: formData.bankCode, accountNumber: formData.accountNumber } : {}),
         ...(formData.country === 'United Kingdom' ? { iban: formData.iban, bankName: formData.bankName } : {}),
       };
       console.log('Sending payload:', payload); // Debug
-      await axios.post('https://foremade-backend.onrender.com/admin-bank', payload);
+      const response = await axios.post('https://foremade-backend.onrender.com/admin-bank', payload);
+      await setDoc(doc(db, 'admins', auth.currentUser.uid), {
+        paystackRecipientCode: response.data.recipientCode || '',
+        bankCode: formData.bankCode || '',
+        accountNumber: formData.accountNumber || '',
+        iban: formData.iban || '',
+        bankName: formData.bankName || '',
+        country: formData.country,
+        setupAt: serverTimestamp(),
+      }, { merge: true });
+      setBankDetails({
+        bankCode: formData.bankCode || '',
+        accountNumber: formData.accountNumber || '',
+        iban: formData.iban || '',
+        bankName: formData.bankName || '',
+        country: formData.country,
+      });
+      setShowForm(false);
       addAlert('Admin bank details saved!', 'success');
-      navigate('/admin/dashboard');
     } catch (error) {
       console.error('Admin bank error:', error.response?.data || error.message);
       addAlert(error.response?.data?.details || 'Failed to save bank details.', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = () => {
+    setShowForm(true);
+    setFormData({
+      country: bankDetails.country,
+      bankCode: bankDetails.bankCode || '',
+      accountNumber: bankDetails.accountNumber || '',
+      iban: bankDetails.iban || '',
+      bankName: bankDetails.bankName || '',
+    });
   };
 
   return (
@@ -96,114 +160,178 @@ export default function AdminBankSetup() {
             <i className="bx bx-bank text-blue-500"></i>
             Admin Bank Setup
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Country <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          {showForm ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Country <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  disabled={loading}
+                >
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="United Kingdom">UK</option>
+                </select>
+              </div>
+              {formData.country === 'Nigeria' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Bank Name <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="bankCode"
+                      value={formData.bankCode}
+                      onChange={handleChange}
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.bankCode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      disabled={loading}
+                    >
+                      <option value="">Select a bank</option>
+                      {banks.map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.bankCode && <p className="text-red-600 text-xs mt-1">{errors.bankCode}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Account Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="accountNumber"
+                      value={formData.accountNumber}
+                      onChange={handleChange}
+                      placeholder="e.g., 0123456789"
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.accountNumber ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      disabled={loading}
+                    />
+                    {errors.accountNumber && <p className="text-red-600 text-xs mt-1">{errors.accountNumber}</p>}
+                  </div>
+                </>
+              )}
+              {formData.country === 'United Kingdom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Bank Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleChange}
+                      placeholder="e.g., Barclays"
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.bankName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      disabled={loading}
+                    />
+                    {errors.bankName && <p className="text-red-600 text-xs mt-1">{errors.bankName}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      IBAN <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="iban"
+                      value={formData.iban}
+                      onChange={handleChange}
+                      placeholder="e.g., GB33BUKB20201555555555"
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.iban ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      disabled={loading}
+                    />
+                    {errors.iban && <p className="text-red-600 text-xs mt-1">{errors.iban}</p>}
+                  </div>
+                </>
+              )}
+              <button
+                type="submit"
+                className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 disabled={loading}
               >
-                <option value="Nigeria">Nigeria</option>
-                <option value="United Kingdom">UK</option>
-              </select>
+                <i className="bx bx-check"></i>
+                Save Bank Details
+              </button>
+            </form>
+          ) : (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Bank Details</h3>
+              <div className="space-y-2">
+                {bankDetails.country === 'Nigeria' ? (
+                  <>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Bank:</span>{' '}
+                      {banks.find((bank) => bank.code === bankDetails?.bankCode)?.name || 'Unknown'}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Account Number:</span> {bankDetails?.accountNumber}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Bank:</span> {bankDetails?.bankName}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">IBAN:</span> {bankDetails?.iban}
+                    </p>
+                  </>
+                )}
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-medium">Country:</span> {bankDetails?.country}
+                </p>
+                <button
+                  onClick={handleEdit}
+                  className="mt-4 py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <i className="bx bx-edit"></i>
+                  Edit Bank Details
+                </button>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mt-8 mb-4">Fee Transactions</h3>
+              {transactions.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">No fee transactions yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {transactions.map((txn) => (
+                    <div
+                      key={txn.id}
+                      className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-sm"
+                    >
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Transaction ID:</span> {txn.id}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Date:</span> {new Date(txn.createdAt?.toDate()).toLocaleString()}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Total Fees:</span> ₦{txn.adminFees?.toFixed(2)}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Description:</span> {txn.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {formData.country === 'Nigeria' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Bank Name <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="bankCode"
-                    value={formData.bankCode}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.bankCode ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  >
-                    <option value="">Select a bank</option>
-                    {banks.map((bank) => (
-                      <option key={bank.code} value={bank.code}>
-                        {bank.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.bankCode && <p className="text-red-600 text-xs mt-1">{errors.bankCode}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Account Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="accountNumber"
-                    value={formData.accountNumber}
-                    onChange={handleChange}
-                    placeholder="e.g., 0123456789"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.accountNumber ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.accountNumber && <p className="text-red-600 text-xs mt-1">{errors.accountNumber}</p>}
-                </div>
-              </>
-            )}
-            {formData.country === 'United Kingdom' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Bank Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="bankName"
-                    value={formData.bankName}
-                    onChange={handleChange}
-                    placeholder="e.g., Barclays"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.bankName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.bankName && <p className="text-red-600 text-xs mt-1">{errors.bankName}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    IBAN <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="iban"
-                    value={formData.iban}
-                    onChange={handleChange}
-                    placeholder="e.g., GB33BUKB20201555555555"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                      errors.iban ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
-                    disabled={loading}
-                  />
-                  {errors.iban && <p className="text-red-600 text-xs mt-1">{errors.iban}</p>}
-                </div>
-              </>
-            )}
-            <button
-              type="submit"
-              className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={loading}
-            >
-              <i className="bx bx-check"></i>
-              Save Bank Details
-            </button>
-          </form>
+          )}
           <div className="fixed bottom-4 right-4 space-y-2">
             {alerts.map((alert) => (
               <div

@@ -3,7 +3,8 @@ import SellerSidebar from './SellerSidebar';
 import SellerOnboardModal from './SellerOnboardModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import axios from 'axios';
 
 export default function Wallet() {
   const navigate = useNavigate();
@@ -36,6 +37,22 @@ export default function Wallet() {
             availableBalance: walletData.availableBalance || 0,
             bankName: sellerData.bankName || 'N/A',
           });
+
+          // Real-time listener for wallet updates
+          const unsubscribe = onSnapshot(walletRef, (snap) => {
+            if (snap.exists()) {
+              const newWalletData = snap.data();
+              setSellerData((prev) => ({
+                ...prev,
+                pendingBalance: newWalletData.pendingBalance || 0,
+                availableBalance: newWalletData.availableBalance || 0,
+              }));
+            }
+          }, (error) => {
+            console.error('Real-time wallet update error:', error);
+          });
+
+          return () => unsubscribe(); // Cleanup on unmount
         }
       } catch (error) {
         console.error('Error fetching seller data:', error);
@@ -81,36 +98,38 @@ export default function Wallet() {
 
   const handleWithdrawRequest = async () => {
     const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0 || amount > sellerData.pendingBalance) {
-      setError('Please enter a valid amount up to your pending balance.');
+    if (isNaN(amount) || amount <= 0 || amount > sellerData.availableBalance) {
+      setError('Please enter a valid amount up to your available balance.');
       return;
     }
     try {
       setLoading(true);
-      const walletRef = doc(db, 'wallets', auth.currentUser.uid);
-      const walletDoc = await getDoc(walletRef);
-      if (!walletDoc.exists) {
-        throw new Error('Wallet not found');
-      }
-      const newPendingBalance = walletDoc.data().pendingBalance - amount;
-      await updateDoc(walletRef, {
-        pendingBalance: newPendingBalance,
-        withdrawalRequests: {
+      const sellerId = auth.currentUser.uid;
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const response = await axios.post(
+        `${backendUrl}/initiate-seller-payout`,
+        {
+          sellerId,
           amount,
-          accountNumber: sellerData.accountNumber,
-          bankName: sellerData.bankName,
-          status: 'pending',
-          timestamp: new Date().toISOString(),
-        },
-      });
-      setSellerData((prev) => ({ ...prev, pendingBalance: newPendingBalance }));
-      setWithdrawAmount('');
-      setShowWithdrawModal(false);
-      setShowSuccessModal(true);
-      setError('');
+          transactionReference: `TXN_${Date.now()}`,
+          country: sellerData.bankName.includes('OPay') ? 'Nigeria' : 'United Kingdom', // Infer country
+        }
+      );
+
+      if (response.data.status === 'success') {
+        setSellerData((prev) => ({
+          ...prev,
+          availableBalance: prev.availableBalance - amount,
+          pendingBalance: prev.pendingBalance + amount,
+        }));
+        setWithdrawAmount('');
+        setShowWithdrawModal(false);
+        setShowSuccessModal(true);
+        setError('');
+      }
     } catch (error) {
-      setError('Failed to request withdrawal. Please try again.');
-      console.error('Withdrawal error:', error);
+      console.error('Withdrawal request error:', error);
+      setError('Failed to request withdrawal. Please try again or contact support.');
     } finally {
       setLoading(false);
     }
@@ -126,31 +145,30 @@ export default function Wallet() {
               <i className="bx bx-wallet text-xl sm:text-2xl"></i>
               Smile Wallet
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-              Welcome, {sellerData.fullName}! Manage your earnings here.
-              <br className="hidden sm:block" />
-              Your account no is {sellerData.accountNumber || 'N/A'} with {sellerData.bankName}.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="flex-col gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
-              <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Balance</h3>
-              <p className="text-2xl sm:text-4xl font-bold mt-2">₦{sellerData.pendingBalance.toFixed(2)}</p>
-              <p className="text-xs sm:text-sm mt-1 opacity-75">Awaiting admin approval for withdrawal</p>
-              <button
-                onClick={() => setShowWithdrawModal(true)}
-                className="mt-2 sm:mt-4 w-full sm:w-auto bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700 transition-colors"
-                disabled={sellerData.pendingBalance === 0 || loading}
-              >
-                Withdraw
-              </button>
-            </div>
+              <div className="flex justify-between">
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
+                  <p className="text-2xl sm:text-4xl font-bold mt-2">₦{sellerData.availableBalance.toFixed(2)}</p>
+                  <p className="text-xs sm:text-xs mt-1 opacity-75">Awaiting admin approval for withdrawal</p>
 
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
-              <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
-              <p className="text-2xl sm:text-4xl font-bold mt-2">₦{sellerData.availableBalance.toFixed(2)}</p>
-              <p className="text-xs sm:text-sm mt-1 opacity-75">Ready for approved withdrawals</p>
+                  <button
+                    onClick={() => setShowWithdrawModal(true)}
+                    className="mt-2 sm:mt-4 w-full sm:w-auto bg-white text-blue-600 px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700 transition-colors"
+                    disabled={sellerData.availableBalance === 0 || loading}
+                  >
+                    Withdraw
+                  </button>
+                </div>
+
+                <p className="text-sm font-bold sm:text-sm md:text-base text-white dark:text-gray-400 mt-1">
+                  <br className="hidden sm:block" />
+                  Acc No {sellerData.accountNumber || 'N/A'}.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -201,7 +219,7 @@ export default function Wallet() {
         isOpen={showWithdrawModal}
         onClose={() => { setShowWithdrawModal(false); setError(''); }}
         title="Request Withdrawal"
-        message={`Request to withdraw from your ${sellerData.bankName} account ending in ${sellerData.accountNumber}.`}
+        message={`Request to withdraw ₦${withdrawAmount || '0.00'} from your ${sellerData.bankName} account ending in ${sellerData.accountNumber.slice(-4) || 'N/A'}.`}
         primaryAction={{
           label: "Submit Request",
           onClick: handleWithdrawRequest,
@@ -219,6 +237,8 @@ export default function Wallet() {
               className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Enter amount"
               disabled={loading}
+              min="1"
+              max={sellerData.availableBalance}
             />
             {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
           </div>

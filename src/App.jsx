@@ -29,6 +29,7 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
+
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
 import AdminNotifications from '/src/admin/AdminNotifications.jsx';
@@ -39,6 +40,7 @@ import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
 import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
 import AdminBankSetup from '/src/admin/AdminBankSetup';
+
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';

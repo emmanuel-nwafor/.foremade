@@ -65,6 +65,8 @@ import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
 import ProSellerGuide from './seller/ProSellerGuide';
+import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
+import RefundPolicy from './pages/RefundPolicy';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -273,6 +275,8 @@ function App() {
             <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
             <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
+            <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

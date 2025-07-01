@@ -280,6 +280,18 @@ const Footer = () => {
                       </Link>
                     </motion.li>
                   ))}
+                  <motion.li whileHover={{ x: 3 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
+                    <Link to="/buyer-protection-policy" className="hover:text-blue-400 relative inline-block text-gray-600">
+                      Buyer Protection Policy
+                      <motion.span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400" animate={{ width: '0%' }} transition={{ duration: 0.3 }}></motion.span>
+                    </Link>
+                  </motion.li>
+                  <motion.li whileHover={{ x: 3 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
+                    <Link to="/refund-policy" className="hover:text-blue-400 relative inline-block text-gray-600">
+                      Refund Policy
+                      <motion.span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400" animate={{ width: '0%' }} transition={{ duration: 0.3 }}></motion.span>
+                    </Link>
+                  </motion.li>
                 </ul>
               </div>
             </div>

@@ -1,14 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
+
+// Simulated checkout function
+const handleCheckout = async (sellerId, productPrice, totalAmount) => {
+  console.log(`Checkout triggered for seller ${sellerId} with product price ${productPrice} and total ${totalAmount}`);
+  const walletRef = doc(db, 'wallets', sellerId);
+  const adminRef = doc(db, 'wallets', 'admin'); // Assuming 'admin' is the admin UID
+  const fees = totalAmount - productPrice;
+  try {
+    await updateDoc(walletRef, {
+      availableBalance: db.FieldValue.increment(productPrice),
+      updatedAt: serverTimestamp(),
+    });
+    await updateDoc(adminRef, {
+      availableBalance: db.FieldValue.increment(fees),
+      updatedAt: serverTimestamp(),
+    });
+    console.log(`Checkout successful: Added ₦${productPrice} to seller and ₦${fees} to admin`);
+  } catch (err) {
+    console.error(`Checkout failed for ${sellerId}:`, err);
+  }
+};
 
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [pending, setPending] = useState(0);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -23,12 +43,44 @@ export default function Wallet() {
       const walletSnap = await getDoc(walletRef);
       if (walletSnap.exists()) {
         const data = walletSnap.data();
-        setBalance(data.availableBalance || 0);
-        setPending(data.pendingBalance || 0);
+        // Migrate only the product price portion of pending balance, assuming fees were included
+        let newBalance = data.pendingBalance || 0;
+        if (data.pendingBalance && data.pendingBalance > 0) {
+          // Estimate original product price (e.g., subtract a assumed fee percentage if known)
+          const assumedFees = data.pendingBalance * 0.05; // Adjust this percentage based on your fee structure
+          newBalance = data.pendingBalance - assumedFees;
+          await updateDoc(walletRef, {
+            availableBalance: newBalance,
+            pendingBalance: 0,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          setBalance(data.availableBalance || 0);
+        }
+        setBalance(newBalance);
+      } else {
+        await setDoc(walletRef, {
+          availableBalance: 0,
+          updatedAt: serverTimestamp(),
+          accountDetails: null,
+        });
+        setBalance(0);
       }
       setLoading(false);
     };
     fetchWallet();
+
+    const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setBalance(docSnap.data().availableBalance || 0);
+        console.log(`Balance updated to ₦${docSnap.data().availableBalance || 0}`);
+      }
+    }, (err) => {
+      console.error('Snapshot error:', err);
+      setError('Failed to update wallet data: ' + err.message);
+    });
+    return () => unsubscribe();
   }, [navigate, auth.currentUser?.uid]);
 
   const handleWithdraw = async (e) => {
@@ -50,17 +102,32 @@ export default function Wallet() {
       const payload = {
         sellerId: auth.currentUser.uid,
         amount: amountNum,
-        transactionReference: `withdrawal-${Date.now()}`,
+        transactionReference: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
-      await axios.post('https://foremade-backend.onrender.com/initiate-seller-payout', payload);
-      setBalance(balance - amountNum);
-      setAmount('');
-      alert('Withdrawal request submitted. Awaiting admin approval.');
+      console.log('Sending withdrawal request to:', 'https://foremade-backend.onrender.com/initiate-seller-payout', payload);
+      const response = await axios.post('https://foremade-backend.onrender.com/initiate-seller-payout', payload, {
+        timeout: 20000, // 10-second timeout
+      });
+      if (response.data.status === 'success') {
+        setAmount('');
+        alert('Withdrawal request submitted. Awaiting admin approval.');
+      }
     } catch (err) {
-      setError('Failed to submit withdrawal: ' + err.response?.data?.error || err.message);
+      console.error('Withdrawal error:', err);
+      setError('Failed to submit withdrawal: ' + (err.response?.data?.error || err.message || 'Server not reachable'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAccountDetails = async () => {
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      return userData.accountDetails || {};
+    }
+    return {};
   };
 
   if (loading) {
@@ -77,10 +144,7 @@ export default function Wallet() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <div className="flex flex-1">
-        <button
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg"
-          onClick={() => {}}
-        >
+        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg" onClick={() => {}}>
           <i className="bx bx-menu text-xl"></i>
         </button>
 
@@ -92,26 +156,13 @@ export default function Wallet() {
           <div className="max-w-full mx-auto">
             <div className="mb-4 md:mb-8">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Wallet</h1>
-              {error && (
-                <div className="mt-2 md:mt-4 p-2 sm:p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
+              {error && <div className="mt-2 md:mt-4 p-2 sm:p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 md:gap-6 mb-4 md:mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 sm:p-6 text-white">
                 <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{balance.toLocaleString()}</p>
-              </div>
-
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-8 sm:p-8 text-white">
-                <div className="text-xs text-white">
-                  <span className="font-light">Wallet ID: {auth.currentUser?.uid.slice(0, 8)}</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold opacity-90">Pending Balance</h3>
-                <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{pending.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm mt-1 md:mt-2 opacity-75">Earnings from recent sales awaiting processing</p>
               </div>
             </div>
 

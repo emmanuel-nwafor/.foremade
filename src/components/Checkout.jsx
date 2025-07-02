@@ -307,7 +307,7 @@ const Checkout = () => {
           return;
         }
         if (isBelowMinimumPrice) {
-          toast.error('Total amount must be at least ₦12,000.', { position: 'top-right', autoClose: 3000 });
+          toast.error('Total amount must be at least ₦1,000.', { position: 'top-right', autoClose: 3000 });
           return;
         }
 
@@ -619,7 +619,7 @@ const Checkout = () => {
   useEffect(() => {
     const total = subtotalNgn * (currency === 'GBP' ? conversionRateNgnToGbp : 1);
     setTotalAmount(total);
-    setIsBelowMinimumPrice(currency === 'NGN' && subtotalNgn < 12000);
+    setIsBelowMinimumPrice(currency === 'NGN' && subtotalNgn < 1000);
   }, [subtotalNgn, currency]);
 
   const handleFormChange = (e) => {

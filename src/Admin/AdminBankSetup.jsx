@@ -3,8 +3,49 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
+import AdminSidebar from './AdminSidebar';
+
+function CustomAlert({ alerts, removeAlert }) {
+  useEffect(() => {
+    if (alerts.length === 0) return;
+    const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
+    return () => clearTimeout(timer);
+  }, [alerts, removeAlert]);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className={`p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out animate-slide-in ${
+            alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+          } flex items-center gap-2`}
+        >
+          <i className={`bx ${alert.type === 'error' ? 'bx-error-circle' : 'bx-check-circle'} text-xl`}></i>
+          <span>{alert.message}</span>
+          <button onClick={() => removeAlert(alert.id)} className="ml-auto text-lg font-bold hover:text-gray-200">
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function useAlerts() {
+  const [alerts, setAlerts] = useState([]);
+  const addAlert = (message, type = 'info') => {
+    const id = Date.now();
+    setAlerts((prev) => [...prev, { id, message, type }]);
+  };
+  const removeAlert = (id) => {
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
+  };
+  return { alerts, addAlert, removeAlert };
+}
 
 export default function AdminBankSetup() {
+  const { alerts, addAlert, removeAlert } = useAlerts();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     country: 'Nigeria',
@@ -16,35 +57,29 @@ export default function AdminBankSetup() {
   const [banks, setBanks] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [alerts, setAlerts] = useState([]);
   const [bankDetails, setBankDetails] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [totalEarnings, setTotalEarnings] = useState(0);
   const [showForm, setShowForm] = useState(true);
-
-  const addAlert = (message, type = 'error') => {
-    const id = Date.now();
-    setAlerts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setAlerts((prev) => prev.filter((alert) => alert.id !== id)), 5000);
-  };
 
   useEffect(() => {
     if (!auth.currentUser) {
-      addAlert('Please log in as admin.');
+      addAlert('Please log in as admin.', 'error');
       navigate('/login');
       return;
     }
+
     const fetchBanks = async () => {
       try {
         const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
         setBanks(response.data);
       } catch (error) {
         addAlert('Failed to fetch bank list.', 'error');
-        console.log(error)
+        console.log(error);
       }
     };
     if (formData.country === 'Nigeria') fetchBanks();
 
-    // Check if admin has bank setup
     const checkBankSetup = async () => {
       const adminRef = doc(db, 'admins', auth.currentUser.uid);
       const adminSnap = await getDoc(adminRef);
@@ -61,7 +96,6 @@ export default function AdminBankSetup() {
     };
     checkBankSetup();
 
-    // Real-time transaction listener
     const q = query(collection(db, 'transactions'), where('adminFees', '>', 0));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const transactionData = snapshot.docs.map((doc) => ({
@@ -69,6 +103,8 @@ export default function AdminBankSetup() {
         ...doc.data(),
       }));
       setTransactions(transactionData);
+      const earnings = transactionData.reduce((sum, txn) => sum + (txn.adminFees || 0), 0);
+      setTotalEarnings(earnings);
     }, (error) => {
       addAlert('Failed to fetch transactions.', 'error');
       console.error('Transaction fetch error:', error);
@@ -113,7 +149,6 @@ export default function AdminBankSetup() {
         ...(formData.country === 'Nigeria' ? { bankCode: formData.bankCode, accountNumber: formData.accountNumber } : {}),
         ...(formData.country === 'United Kingdom' ? { iban: formData.iban, bankName: formData.bankName } : {}),
       };
-      console.log('Sending payload:', payload); // Debug
       const response = await axios.post('https://foremade-backend.onrender.com/admin-bank', payload);
       await setDoc(doc(db, 'admins', auth.currentUser.uid), {
         paystackRecipientCode: response.data.recipientCode || '',
@@ -152,14 +187,86 @@ export default function AdminBankSetup() {
     });
   };
 
+  const exportToCSV = () => {
+    const headers = ['Transaction ID,Date,Total Fees,Tax Fee,Handling Fee,Buyer Protection Fee,Description'];
+    const rows = transactions.map((txn) => [
+      txn.id,
+      new Date(txn.createdAt?.toDate()).toLocaleDateString(),
+      `₦${(txn.adminFees || 0).toFixed(2)}`,
+      `₦${(txn.taxFee || 0).toFixed(2)}`,
+      `₦${(txn.handlingFee || 0).toFixed(2)}`,
+      `₦${(txn.buyerProtectionFee || 0).toFixed(2)}`,
+      txn.description || '',
+    ].join(','));
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `admin_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    addAlert('Transactions exported to CSV!', 'success');
+  };
+
+  const refreshData = () => {
+    const q = query(collection(db, 'transactions'), where('adminFees', '>', 0));
+    onSnapshot(q, (snapshot) => {
+      const transactionData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTransactions(transactionData);
+      const earnings = transactionData.reduce((sum, txn) => sum + (txn.adminFees || 0), 0);
+      setTotalEarnings(earnings);
+      addAlert('Data refreshed!', 'success');
+    }, (error) => {
+      addAlert('Failed to refresh data.', 'error');
+      console.error('Refresh error:', error);
+    });
+  };
+
+  if (!auth.currentUser) {
+    return (
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <AdminSidebar />
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-      <div className="flex-1 p-4 flex justify-center items-start">
-        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <i className="bx bx-bank text-blue-500"></i>
-            Admin Bank Setup
-          </h2>
+      <AdminSidebar />
+      <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
+        <div className="w-full lg:max-w-5xl md:max-w-4xl sm:max-w-3xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+              <i className="bx bx-bank text-blue-500"></i>
+              Admin Bank & Wallet
+            </h2>
+            {!showForm && (
+              <div className="space-x-2">
+                <button
+                  onClick={exportToCSV}
+                  className="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                >
+                  <i className="bx bx-download"></i> Export CSV
+                </button>
+                <button
+                  onClick={refreshData}
+                  className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <i className="bx bx-refresh"></i> Refresh
+                </button>
+              </div>
+            )}
+          </div>
           {showForm ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -271,48 +378,71 @@ export default function AdminBankSetup() {
             </form>
           ) : (
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Bank Details</h3>
-              <div className="space-y-2">
-                {bankDetails.country === 'Nigeria' ? (
-                  <>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">Bank:</span>{' '}
-                      {banks.find((bank) => bank.code === bankDetails?.bankCode)?.name || 'Unknown'}
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Wallet Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-lg shadow-sm">
+                    <p className="text-gray-700 dark:text-gray-300">Total Earnings</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">₦{totalEarnings.toFixed(2)}</p>
+                  </div>
+                  <div className="p-4 bg-green-100 dark:bg-green-900 rounded-lg shadow-sm">
+                    <p className="text-gray-700 dark:text-gray-300">Pending Payouts</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">₦0.00</p>
+                  </div>
+                  <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg shadow-sm">
+                    <p className="text-gray-700 dark:text-gray-300">Fee Breakdown</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Tax: ₦{transactions.reduce((sum, txn) => sum + (txn.taxFee || 0), 0).toFixed(2)} |
+                      Handling: ₦{transactions.reduce((sum, txn) => sum + (txn.handlingFee || 0), 0).toFixed(2)} |
+                      Buyer Protection: ₦{transactions.reduce((sum, txn) => sum + (txn.buyerProtectionFee || 0), 0).toFixed(2)}
                     </p>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">Account Number:</span> {bankDetails?.accountNumber}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">Bank:</span> {bankDetails?.bankName}
-                    </p>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">IBAN:</span> {bankDetails?.iban}
-                    </p>
-                  </>
-                )}
-                <p className="text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Country:</span> {bankDetails?.country}
-                </p>
-                <button
-                  onClick={handleEdit}
-                  className="mt-4 py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <i className="bx bx-edit"></i>
-                  Edit Bank Details
-                </button>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mt-8 mb-4">Fee Transactions</h3>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Bank Details</h3>
+                <div className="space-y-2 mb-6">
+                  {bankDetails.country === 'Nigeria' ? (
+                    <>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Bank:</span>{' '}
+                        {banks.find((bank) => bank.code === bankDetails.bankCode)?.name || 'Unknown'}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Account Number:</span> {bankDetails.accountNumber}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Bank:</span> {bankDetails.bankName}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">IBAN:</span> {bankDetails.iban}
+                      </p>
+                    </>
+                  )}
+                  <p className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Country:</span> {bankDetails.country}
+                  </p>
+                  <button
+                    onClick={handleEdit}
+                    className="mt-4 py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <i className="bx bx-edit"></i>
+                    Edit Bank Details
+                  </button>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Transaction History</h3>
               {transactions.length === 0 ? (
-                <p className="text-gray-600 dark:text-gray-400">No fee transactions yet.</p>
+                <p className="text-gray-600 dark:text-gray-400">No transactions yet.</p>
               ) : (
                 <div className="space-y-4">
                   {transactions.map((txn) => (
                     <div
                       key={txn.id}
-                      className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-sm"
+                      className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600"
                     >
                       <p className="text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Transaction ID:</span> {txn.id}
@@ -321,10 +451,19 @@ export default function AdminBankSetup() {
                         <span className="font-medium">Date:</span> {new Date(txn.createdAt?.toDate()).toLocaleString()}
                       </p>
                       <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Total Fees:</span> ₦{txn.adminFees?.toFixed(2)}
+                        <span className="font-medium">Total Fees:</span> ₦{(txn.adminFees || 0).toFixed(2)}
                       </p>
                       <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Description:</span> {txn.description}
+                        <span className="font-medium">Tax Fee:</span> ₦{(txn.taxFee || 0).toFixed(2)}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Handling Fee:</span> ₦{(txn.handlingFee || 0).toFixed(2)}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Buyer Protection Fee:</span> ₦{(txn.buyerProtectionFee || 0).toFixed(2)}
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Description:</span> {txn.description || 'N/A'}
                       </p>
                     </div>
                   ))}
@@ -332,16 +471,7 @@ export default function AdminBankSetup() {
               )}
             </div>
           )}
-          <div className="fixed bottom-4 right-4 space-y-2">
-            {alerts.map((alert) => (
-              <div
-                key={alert.id}
-                className={`p-4 rounded-lg shadow-md ${alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}
-              >
-                {alert.message}
-              </div>
-            ))}
-          </div>
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         </div>
       </div>
     </div>

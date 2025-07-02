@@ -35,7 +35,8 @@ const Footer = () => {
     ],
     other: [
       { name: 'Privacy Policy', url: '/privacy-policy' },
-      { name: 'Terms & Conditions', url: '/terms-conditions' }
+      { name: 'Terms & Conditions', url: '/terms-conditions' },
+      { name: 'Buyer Protection Policy', url: '/buyer-protection-policy' }
     ]
   };
 

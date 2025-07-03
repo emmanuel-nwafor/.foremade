@@ -310,7 +310,6 @@ export default function AdminCategoryEdit() {
   };
 
   const handleDeleteCategory = async (category) => {
-    if (!window.confirm(`Are you sure you want to delete "${category}"?`)) return;
     setLoading(true);
     try {
       await deleteDoc(doc(db, 'categories', category));
@@ -414,7 +413,6 @@ export default function AdminCategoryEdit() {
   };
 
   const handleDeleteSubcategory = async (category, subcategory) => {
-    if (!window.confirm(`Are you sure you want to delete "${subcategory}"?`)) return;
     setLoading(true);
     try {
       const subcatRef = doc(db, 'customSubcategories', category);
@@ -514,7 +512,6 @@ export default function AdminCategoryEdit() {
   };
 
   const handleDeleteSubSubcategory = async (category, subcategory, subSubcategory) => {
-    if (!window.confirm(`Are you sure you want to delete "${subSubcategory}"?`)) return;
     setLoading(true);
     try {
       const subSubcatRef = doc(db, 'customSubSubcategories', category);

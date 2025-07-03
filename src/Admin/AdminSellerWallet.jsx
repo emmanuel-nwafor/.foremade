@@ -66,6 +66,9 @@ export default function AdminSellerWallet() {
           email: doc.data().email || 'N/A',
           phoneNumber: doc.data().phoneNumber || 'N/A',
           walletAddress: doc.data().walletAddress || 'N/A',
+          bankName: doc.data().bankName || 'N/A',
+          fullName: doc.data().fullName || 'N/A',
+          accountNumber: doc.data().accountNumber || 'N/A',
         }));
         setSellers(sellerList);
       } catch (error) {
@@ -101,7 +104,7 @@ export default function AdminSellerWallet() {
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
-            <span>Loading sellers...</span>
+            <span>Loading...</span>
           </div>
         </div>
       </div>
@@ -111,46 +114,55 @@ export default function AdminSellerWallet() {
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
-        <div className="w-full lg:max-w-6xl md:max-w-5xl sm:max-w-3xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-lg">
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+      <div className="flex-1 ml-0 md:ml-64 p-4 md:p-6">
+        <div className="w-full max-w-7xl mx-auto bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-2 md:pb-3 flex items-center gap-2">
             <i className="bx bx-wallet-alt text-blue-500"></i>
             Admin Seller Wallet
           </h2>
 
           {sellers.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400 text-center py-6">No sellers found.</p>
+            <p className="text-gray-600 dark:text-gray-400 text-center py-4 md:py-6">No sellers found.</p>
           ) : (
-            <div className="space-y-4 mt-6">
+            <div className="space-y-4 mt-4 md:mt-6">
               {sellers.map((seller) => (
                 <div
                   key={seller.id}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                  className="p-3 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-gray-700 dark:text-gray-300">
+                  <div className="grid grid-cols-1 gap-2  lg:flex md:items-center md:justify-between md:gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Seller ID:</span> {seller.id}
                       </p>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Email:</span> {seller.email}
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Full Name:</span> {seller.fullName}
+                      </p>
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Email:</span> {seller.email}
+                      </p>
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Bank Name:</span> {seller.bankName}
+                      </p>
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Account Number:</span> {seller.accountNumber}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Phone:</span> {seller.phoneNumber}
+                    <div className="space-y-1 md:space-y-2">
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Phone:</span> {seller.phoneNumber}
                       </p>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Wallet Address:</span> {seller.walletAddress}
+                      <p className="text-sm font-light md:text-base text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-sm">Wallet Address:</span> {seller.walletAddress}
                       </p>
                     </div>
-                    <div className="flex items-end justify-end">
+                    <div className="mt-2 md:mt-0">
                       <button
                         onClick={() => {
                           setSelectedSeller(seller);
                           setShowDeleteModal(true);
                         }}
-                        className="py-2 px-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2 transition"
+                        className="w-full md:w-auto py-2 px-3 md:px-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center justify-center gap-1 md:gap-2 text-sm md:text-base transition"
                         disabled={loading}
                       >
                         <i className="bx bx-trash"></i> Delete Wallet
@@ -164,21 +176,21 @@ export default function AdminSellerWallet() {
 
           {showDeleteModal && (
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Confirm Deletion</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
+              <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg w-11/12 md:max-w-md">
+                <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 md:mb-4">Confirm Deletion</h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mb-2 md:mb-4">
                   Are you sure you want to delete the wallet for {selectedSeller.email}? This action cannot be undone.
                 </p>
-                <div className="flex justify-end gap-4">
+                <div className="flex justify-end gap-2 md:gap-4">
                   <button
                     onClick={() => setShowDeleteModal(false)}
-                    className="py-2 px-4 bg-gray-300 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 transition"
+                    className="py-1 md:py-2 px-2 md:px-4 bg-gray-300 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 text-sm md:text-base transition"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 transition"
+                    className="py-1 md:py-2 px-2 md:px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-1 md:gap-2 text-sm md:text-base transition"
                     disabled={loading}
                   >
                     <i className="bx bx-trash"></i> Delete

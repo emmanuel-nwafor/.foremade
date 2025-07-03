@@ -6,10 +6,12 @@ import { doc, getDoc } from 'firebase/firestore';
 const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const navigate = useNavigate();
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
 
   useEffect(() => {
-    const fetchFeeConfig = async () => {
+    const fetchConfigs = async () => {
       try {
+        // Fetch fee configuration
         const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
         const feeSnap = await getDoc(feeRef);
         if (feeSnap.exists()) {
@@ -17,13 +19,22 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
           const category = cartItems[0]?.product?.category || 'default';
           setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
         }
+
+        // Fetch minimum purchase amount
+        const minRef = doc(db, 'settings', 'minimumPurchase');
+        const minSnap = await getDoc(minRef);
+        if (minSnap.exists()) {
+          setMinimumPurchase(minSnap.data().amount || 25000);
+        }
       } catch (err) {
-        console.error('Error fetching fee config:', err);
+        console.error('Error fetching configs:', err);
       }
     };
 
-    fetchFeeConfig();
+    fetchConfigs();
   }, [cartItems]);
+
+  console.log(propTotalPrice)
 
   const calculateTotalPrice = (basePrice, qty = 1) => {
     return basePrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
@@ -33,7 +44,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  const belowMinimumPrice = totalPrice < 1000; // Aligned with Checkout.js
+  const belowMinimumPrice = totalPrice < minimumPurchase;
 
   // Shipping is free within Nigeria
   const shipping = 0;
@@ -43,7 +54,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
 
   const handleCheckout = () => {
     if (belowMinimumPrice) {
-      alert('Minimum purchase amount is ₦12,000 to checkout.');
+      alert(`Minimum purchase amount is ₦${minimumPurchase.toLocaleString('en-NG')} to checkout.`);
       return;
     }
     if (totalItems > 20) {
@@ -74,7 +85,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
       {/* Error Messages */}
       {belowMinimumPrice && (
         <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-          ❌ Minimum purchase amount is ₦25,000 to checkout.
+          ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
         </p>
       )}
       {totalItems > 20 && (

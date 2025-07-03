@@ -232,6 +232,7 @@ const Checkout = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState(null);
+  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
 
@@ -244,6 +245,13 @@ const Checkout = () => {
       try {
         setLoadingState(true);
         const user = auth.currentUser;
+
+        // Fetch minimum purchase amount
+        const minRef = doc(db, 'settings', 'minimumPurchase');
+        const minSnap = await getDoc(minRef);
+        if (minSnap.exists()) {
+          setMinimumPurchase(minSnap.data().amount || 25000);
+        }
 
         const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
         const feeSnap = await getDoc(feeRef);
@@ -484,7 +492,7 @@ const Checkout = () => {
     (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < 1000;
+  const belowMinimumPrice = subtotalNgn < minimumPurchase; // Updated to use dynamic minimumPurchase
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048;
   const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
@@ -628,7 +636,7 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error('Total amount must be at least ₦25,000 to proceed.', { position: 'top-right', autoClose: 3000 });
+          toast.error(`Total amount must be at least ₦${minimumPurchase.toLocaleString('en-NG')} to proceed.`, { position: 'top-right', autoClose: 3000 });
           return;
         }
 
@@ -842,7 +850,7 @@ const Checkout = () => {
         setShowConfirmModal(false);
       }
     },
-    [cart, subtotalNgn, belowMinimumPrice, formData, totalAmount, navigate, totalItems, currency, debugMode]
+    [cart, subtotalNgn, belowMinimumPrice, formData, totalAmount, navigate, totalItems, currency, debugMode, minimumPurchase]
   );
 
   const handleCancel = () => {
@@ -1292,7 +1300,7 @@ const Checkout = () => {
               </div>
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is ₦25,000 to checkout.
+                  ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -1379,7 +1387,7 @@ const Checkout = () => {
       {debugMode && (
         <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
           <h3 className="font-bold mb-2">Debug Logs</h3>
-          <pre>{JSON.stringify({ cart, formData, formErrors, imageLoading, imageErrors }, null, 2)}</pre>
+          <pre>{JSON.stringify({ cart, formData, formErrors, imageLoading, imageErrors, minimumPurchase }, null, 2)}</pre>
         </div>
       )}
     </div>

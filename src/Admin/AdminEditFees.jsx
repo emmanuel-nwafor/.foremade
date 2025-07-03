@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
+import AdminSetMinimumPurchase from './AdminSetMinimumPurchase';
 import 'boxicons/css/boxicons.min.css';
 
 function CustomAlert({ alerts, removeAlert }) {
@@ -37,9 +38,7 @@ function useAlerts() {
     const id = Date.now();
     setAlerts((prev) => [...prev, { id, message, type }]);
   };
-  const removeAlert = (id) => {
-    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
-  };
+  const removeAlert = (id) => setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   return { alerts, addAlert, removeAlert };
 }
 
@@ -55,25 +54,20 @@ export default function AdminEditFees() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('Fetching categories...');
         const catSnapshot = await getDocs(collection(db, 'categories'));
         const catList = catSnapshot.docs.map((doc) => doc.id).sort();
-        console.log('Categories fetched:', catList);
         setCategories(catList);
 
-        console.log('Fetching fee configurations...');
         const docRef = doc(db, 'feeConfigurations', 'categoryFees');
         const docSnap = await getDoc(docRef);
         let feeData = {};
         if (docSnap.exists()) {
           feeData = docSnap.data();
-          console.log('Fee data found:', feeData);
         } else {
           feeData = catList.reduce((acc, cat) => ({
             ...acc,
             [cat]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20, taxRate: 0.075 },
           }), {});
-          console.log('No fee data, setting defaults:', feeData);
           await setDoc(docRef, feeData);
         }
 
@@ -84,13 +78,11 @@ export default function AdminEditFees() {
           }
         });
         setFeeConfig(updatedFees);
-        console.log('Fee config set:', updatedFees);
       } catch (err) {
         console.error('Error fetching data:', err);
         addAlert('Failed to load categories or fees.', 'error');
       } finally {
         setLoading(false);
-        console.log('Loading set to false');
       }
     };
     fetchData();
@@ -103,9 +95,7 @@ export default function AdminEditFees() {
         ...prev[category],
         [field]:
           field === 'minPrice' || field === 'maxPrice'
-            ? value === ''
-              ? Infinity
-              : parseFloat(value) || 0
+            ? value === '' ? Infinity : parseFloat(value) || 0
             : (parseFloat(value) || 0) / 100,
       },
     }));
@@ -116,21 +106,11 @@ export default function AdminEditFees() {
     const newErrors = {};
     categories.forEach((category) => {
       const config = feeConfig[category] || {};
-      if (config.minPrice < 0) {
-        newErrors[`${category}_minPrice`] = 'Minimum price cannot be negative.';
-      }
-      if (config.maxPrice !== Infinity && config.maxPrice < config.minPrice) {
-        newErrors[`${category}_maxPrice`] = 'Maximum price must be greater than minimum price.';
-      }
-      if (config.buyerProtectionRate < 0 || config.buyerProtectionRate > 1) {
-        newErrors[`${category}_buyerProtectionRate`] = 'Rate must be between 0 and 100%.';
-      }
-      if (config.handlingRate < 0 || config.handlingRate > 1) {
-        newErrors[`${category}_handlingRate`] = 'Rate must be between 0 and 100%.';
-      }
-      if (config.taxRate < 0 || config.taxRate > 1) {
-        newErrors[`${category}_taxRate`] = 'Tax rate must be between 0 and 100%.';
-      }
+      if (config.minPrice < 0) newErrors[`${category}_minPrice`] = 'Minimum price cannot be negative.';
+      if (config.maxPrice !== Infinity && config.maxPrice < config.minPrice) newErrors[`${category}_maxPrice`] = 'Maximum price must be greater than minimum price.';
+      if (config.buyerProtectionRate < 0 || config.buyerProtectionRate > 1) newErrors[`${category}_buyerProtectionRate`] = 'Rate must be between 0 and 100%.';
+      if (config.handlingRate < 0 || config.handlingRate > 1) newErrors[`${category}_handlingRate`] = 'Rate must be between 0 and 100%.';
+      if (config.taxRate < 0 || config.taxRate > 1) newErrors[`${category}_taxRate`] = 'Tax rate must be between 0 and 100%.';
     });
     return newErrors;
   };
@@ -149,7 +129,6 @@ export default function AdminEditFees() {
     }
 
     try {
-      console.log('Saving fee config:', feeConfig);
       const docRef = doc(db, 'feeConfigurations', 'categoryFees');
       await setDoc(docRef, feeConfig);
       addAlert('Fees updated successfully! 🎉', 'success');
@@ -164,13 +143,7 @@ export default function AdminEditFees() {
   const resetCategoryFees = (category) => {
     setFeeConfig((prev) => ({
       ...prev,
-      [category]: {
-        minPrice: 1000,
-        maxPrice: Infinity,
-        buyerProtectionRate: 0.08,
-        handlingRate: 0.20,
-        taxRate: 0.075,
-      },
+      [category]: { minPrice: 1000, maxPrice: Infinity, buyerProtectionRate: 0.08, handlingRate: 0.20, taxRate: 0.075 },
     }));
     setErrors((prev) => ({
       ...prev,
@@ -208,7 +181,8 @@ export default function AdminEditFees() {
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
         <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+          <AdminSetMinimumPurchase label="Set Minimum Purchase" currencySymbol="₦" firestorePath="settings/minimumPurchase" defaultValue={25000} />
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-8 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-money text-blue-500"></i>
             Edit Category Fees
           </h2>

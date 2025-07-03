@@ -21,7 +21,7 @@ export default function SellerOnboarding() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -48,18 +48,8 @@ export default function SellerOnboarding() {
         const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
         const sellerSnap = await getDoc(sellerRef);
         if (sellerSnap.exists()) {
-          const data = sellerSnap.data();
-          setFormData({
-            fullName: data.fullName || '',
-            country: data.country || 'Nigeria',
-            idNumber: data.idNumber || '',
-            bankName: data.bankName || '',
-            bankCode: data.bankCode || '',
-            accountNumber: data.accountNumber || '',
-            iban: data.iban || '',
-            email: data.email || auth.currentUser.email || '',
-          });
-          setIsUpdating(true);
+          setShowModal(true);
+          return;
         }
         if (formData.country === 'Nigeria') {
           const response = await axios.get('https://foremade-backend.onrender.com/fetch-banks');
@@ -78,6 +68,29 @@ export default function SellerOnboarding() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const createRecipient = async (bankCode, accountNumber, name) => {
+    const response = await axios.post(
+      'https://api.paystack.co/transferrecipient',
+      {
+        type: 'nuban',
+        name,
+        account_number: accountNumber,
+        bank_code: bankCode,
+        currency: 'NGN',
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    if (!response.data.status) {
+      throw new Error('Failed to create transfer recipient');
+    }
+    return response.data.data.recipient_code;
   };
 
   const handleSubmit = async (e) => {
@@ -104,6 +117,13 @@ export default function SellerOnboarding() {
       };
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
       if (response.data.error) throw new Error(response.data.error);
+
+      let recipientCode = null;
+      if (formData.country === 'Nigeria') {
+        recipientCode = await createRecipient(formData.bankCode, formData.accountNumber, formData.fullName);
+      }
+
+      const currentDate = new Date().toISOString();
       await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
         fullName: formData.fullName,
         country: formData.country,
@@ -113,13 +133,15 @@ export default function SellerOnboarding() {
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
         iban: formData.country === 'United Kingdom' ? formData.iban : '',
         email: formData.country === 'United Kingdom' ? formData.email : '',
-        updatedAt: isUpdating ? new Date().toISOString() : undefined,
-        createdAt: !isUpdating ? new Date().toISOString() : undefined,
+        paystackRecipientCode: recipientCode || '',
+        createdAt: currentDate,
+        updatedAt: currentDate,
       }, { merge: true });
-      alert(isUpdating ? 'Account updated successfully!' : 'Onboarding successful!');
-      navigate('/smile');
+
+      alert('Onboarding successful!');
+      navigate('/seller-dashboard');
     } catch (error) {
-      setError('Failed to onboard or update: ' + (error.response?.data?.error || error.message));
+      setError('Failed to onboard: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -163,10 +185,10 @@ export default function SellerOnboarding() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-800 flex items-center">
               <i className="bx bxs-bank text-blue-500 mr-2"></i>
-              {isUpdating ? 'Update Account' : 'Seller Onboarding'}
+              Seller Onboarding
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              {isUpdating ? 'Update your seller account details.' : 'Set up your seller account to start selling.'}
+              Set up your seller account to start selling.
             </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -200,7 +222,7 @@ export default function SellerOnboarding() {
                 value={formData.country}
                 onChange={handleChange}
                 className="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                disabled={loading || isUpdating}
+                disabled={loading}
               >
                 <option value="Nigeria">Nigeria</option>
                 <option value="United Kingdom">UK</option>
@@ -353,11 +375,33 @@ export default function SellerOnboarding() {
               disabled={loading}
             >
               <i className="bx bx-check"></i>
-              {isUpdating ? 'Update Account' : 'Complete Onboarding'}
+              Complete Onboarding
             </button>
           </form>
         </div>
       </div>
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Already Onboarded</h2>
+            <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your dashboard?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => navigate('/smile')}
+                className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

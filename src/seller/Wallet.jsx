@@ -43,11 +43,9 @@ export default function Wallet() {
       const walletSnap = await getDoc(walletRef);
       if (walletSnap.exists()) {
         const data = walletSnap.data();
-        // Migrate only the product price portion of pending balance, assuming fees were included
         let newBalance = data.pendingBalance || 0;
         if (data.pendingBalance && data.pendingBalance > 0) {
-          // Estimate original product price (e.g., subtract a assumed fee percentage if known)
-          const assumedFees = data.pendingBalance * 0.05; // Adjust this percentage based on your fee structure
+          const assumedFees = data.pendingBalance * 0.04958; // ~4.958% fee
           newBalance = data.pendingBalance - assumedFees;
           await updateDoc(walletRef, {
             availableBalance: newBalance,
@@ -106,7 +104,7 @@ export default function Wallet() {
       };
       console.log('Sending withdrawal request to:', 'https://foremade-backend.onrender.com/initiate-seller-payout', payload);
       const response = await axios.post('https://foremade-backend.onrender.com/initiate-seller-payout', payload, {
-        timeout: 20000, // 10-second timeout
+        timeout: 10000,
       });
       if (response.data.status === 'success') {
         setAmount('');
@@ -114,7 +112,7 @@ export default function Wallet() {
       }
     } catch (err) {
       console.error('Withdrawal error:', err);
-      setError('Failed to submit withdrawal: ' + (err.response?.data?.error || err.message || 'Server not reachable'));
+      setError('Failed to submit withdrawal: ' + (err.response?.data?.error || err.message || 'Endpoint not found. Check Render deployment at https://dashboard.render.com/'));
     } finally {
       setLoading(false);
     }
@@ -161,6 +159,7 @@ export default function Wallet() {
 
             <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 md:gap-6 mb-4 md:mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 sm:p-6 text-white">
+                <span className="font-light">Wallet ID: {auth.currentUser.uid}</span>
                 <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
                 <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{balance.toLocaleString()}</p>
               </div>

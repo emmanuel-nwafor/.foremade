@@ -1715,12 +1715,12 @@ export default function SellerProductUpload() {
                 <i className="bx bx-map text-blue-500"></i>
                 Location
               </h3>
-              {/* <SellerLocationForm
+              <SellerLocationForm
                 locationData={locationData}
                 setLocationData={setLocationData}
                 errors={locationErrors}
                 disabled={loading}
-              /> */}
+              />
             </div>
 
             {/* Submit Button */}

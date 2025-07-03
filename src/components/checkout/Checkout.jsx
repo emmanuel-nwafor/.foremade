@@ -484,7 +484,7 @@ const Checkout = () => {
     (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < 25000;
+  const belowMinimumPrice = subtotalNgn < 1000;
   const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
   const conversionRateNgnToGbp = 0.00048;
   const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;

@@ -47,7 +47,7 @@ export default function AdminPayoutMonitor() {
   useEffect(() => {
     const handleAuthChange = (user) => {
       if (!user) {
-        addAlert('Please log in as admin.', 'error');
+        addAlert('Please log in.', 'error');
         navigate('/login');
         return;
       }
@@ -77,17 +77,17 @@ export default function AdminPayoutMonitor() {
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
     try {
+      console.log('Attempting approval for amount:', amount); // Log the amount
       const response = await axios.post('https://foremade-backend.onrender.com/approve-payout', { transactionId, sellerId });
       addAlert(response.data.message, 'success');
       console.log('Approval response:', response.data);
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Approval failed';
+      const errorMsg = error.response?.data?.details || 'Approval failed. Please check your Paystack balance.';
       addAlert(errorMsg, 'error');
       console.error('Approval error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
-    console.log(amount)
   };
 
   const handleReject = async (transactionId, sellerId) => {

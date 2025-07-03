@@ -39,7 +39,7 @@ import AdminEditFees from '/src/admin/AdminEditFees';
 import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
 import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
-import AdminBankSetup from '/src/admin/AdminBankSetup';
+import AdminSellerWallet from '/src/admin/AdminSellerWallet';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -95,7 +95,7 @@ const Layout = ({ children }) => {
     '/admin/notifications',
     '/admin/edit/banners',
     '/admin/edit/daily-deals',
-    '/admin/bank-setup',
+    '/admin/sellers-wallet',
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
@@ -231,10 +231,10 @@ function App() {
               }
             />
             <Route
-              path="/admin/bank-setup"
+              path="/admin/sellers-wallet"
               element={
                 <ProtectedRoute>
-                  <AdminBankSetup />
+                  <AdminSellerWallet />
                 </ProtectedRoute>
               }
             />

@@ -21,7 +21,7 @@ export default function AdminSidebar() {
   const menuItems = [
     { path: '/admin/dashboard', icon: 'bx-home-alt-2', label: 'Dashboard' },
     { path: '/admin/users', icon: 'bx-user', label: 'Manage Users' },
-    { path: '/admin/bank-setup', icon: 'bx bx-cog', label: 'Account Management' },
+    { path: '/admin/sellers-wallet', icon: 'bx bx-cog', label: 'Account Management' },
     { path: '/admin/sellers/payouts', icon: 'bx-money-withdraw', label: 'Approve Payments' },
     { path: '/admin/products', icon: 'bx-package', label: 'Manage Products' },
     { path: '/admin/edit/categories', icon: 'bx-category', label: 'Categories' },

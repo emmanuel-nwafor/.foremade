@@ -18,12 +18,12 @@ function CustomAlert({ alerts, removeAlert }) {
       {alerts.map((alert) => (
         <div
           key={alert.id}
-          className={`p-4 rounded-lg shadow-md transform transition-all duration-300 ease-in-out animate-slide-in ${
+          className={`p-3 rounded-lg shadow-md transform transition-all duration-300 ease-in-out animate-slide-in ${
             alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
           } flex items-center gap-2`}
         >
-          <i className={`bx ${alert.type === 'error' ? 'bx-error-circle' : 'bx-check-circle'} text-xl`}></i>
-          <span>{alert.message}</span>
+          <i className={`bx ${alert.type === 'error' ? 'bx-error-circle' : 'bx-check-circle'} text-lg`}></i>
+          <span className="text-sm">{alert.message}</span>
           <button onClick={() => removeAlert(alert.id)} className="ml-auto text-lg font-bold hover:text-gray-200">
             ✕
           </button>
@@ -74,6 +74,8 @@ export default function AdminUsers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   // Check admin authentication and fetch users
   useEffect(() => {
@@ -284,10 +286,10 @@ export default function AdminUsers() {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+        <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-            <i className="bx bx-loader bx-spin text-2xl"></i>
-            <span>Loading...</span>
+            <i className="bx bx-loader bx-spin text-xl sm:text-2xl"></i>
+            <span className="text-sm sm:text-base">Loading...</span>
           </div>
         </div>
       </div>
@@ -297,60 +299,60 @@ export default function AdminUsers() {
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-6">
+      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-6">
         <div className="w-full max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
-            <i className="bx bx-user text-blue-500"></i>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 sm:mb-6 border-b-2 border-blue-500 pb-2 sm:pb-3 flex items-center gap-2">
+            <i className="bx bx-user text-blue-500 text-lg sm:text-xl"></i>
             Manage Users
           </h2>
 
           {/* Search Bar */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <div className="relative group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-1">
                 Search Users
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Search by email or name"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Search by email or name"></i>
               </label>
               <div className="relative">
-                <i className="bx bx-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="bx bx-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm sm:text-base"></i>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by email or name..."
-                  className="w-full py-2 pl-10 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                  className="w-full py-2 pl-10 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                 />
               </div>
             </div>
           </div>
 
           {/* Add User Form */}
-          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md mb-8">
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-8">
             <div
               className="flex justify-between items-center cursor-pointer"
               onClick={() => setIsFormOpen(!isFormOpen)}
             >
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                <i className={`bx bx-chevron-${isFormOpen ? 'up' : 'down'} text-blue-500`}></i>
+              <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <i className={`bx bx-chevron-${isFormOpen ? 'up' : 'down'} text-blue-500 text-lg sm:text-xl`}></i>
                 Add New User
               </h3>
             </div>
             {isFormOpen && (
               <div className="mt-4 animate-slide-down">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="relative group">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           First Name <span className="text-red-500">*</span>
-                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's first name"></i>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's first name"></i>
                         </label>
                         <input
                           type="text"
                           value={formData.firstName}
                           onChange={(e) => handleChange('firstName', e.target.value)}
                           placeholder="John"
-                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                             errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
@@ -363,16 +365,16 @@ export default function AdminUsers() {
                         )}
                       </div>
                       <div className="relative group">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           Last Name <span className="text-red-500">*</span>
-                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's last name"></i>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's last name"></i>
                         </label>
                         <input
                           type="text"
                           value={formData.lastName}
                           onChange={(e) => handleChange('lastName', e.target.value)}
                           placeholder="Doe"
-                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                             errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
@@ -385,16 +387,16 @@ export default function AdminUsers() {
                         )}
                       </div>
                       <div className="relative group">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           Email <span className="text-red-500">*</span>
-                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's email address"></i>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's email address"></i>
                         </label>
                         <input
                           type="email"
                           value={formData.email}
                           onChange={(e) => handleChange('email', e.target.value)}
                           placeholder="john.doe@example.com"
-                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                             errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
@@ -407,20 +409,30 @@ export default function AdminUsers() {
                         )}
                       </div>
                       <div className="relative group">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           Password <span className="text-red-500">*</span>
-                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Password (min 6 characters)"></i>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Password (min 6 characters)"></i>
                         </label>
-                        <input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => handleChange('password', e.target.value)}
-                          placeholder="Enter password"
-                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                            errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                          disabled={loading}
-                        />
+                        <div className="relative mt-1">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password}
+                            onChange={(e) => handleChange('password', e.target.value)}
+                            placeholder="Enter password"
+                            className={`w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                              errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                            } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                            disabled={loading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'}`}></i>
+                          </button>
+                        </div>
                         {errors.password && (
                           <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                             <i className="bx bx-error-circle"></i>
@@ -428,15 +440,15 @@ export default function AdminUsers() {
                           </p>
                         )}
                       </div>
-                      <div className="relative group">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <div className="relative group sm:col-span-2">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           Role <span className="text-red-500">*</span>
-                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select user role"></i>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Select user role"></i>
                         </label>
                         <select
                           value={formData.role}
                           onChange={(e) => handleChange('role', e.target.value)}
-                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                             errors.role ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
@@ -458,7 +470,7 @@ export default function AdminUsers() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`py-2 px-6 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm`}
+                      className={`py-2 px-4 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm`}
                     >
                       {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-plus"></i>}
                       {loading ? 'Adding...' : 'Add User'}
@@ -470,35 +482,35 @@ export default function AdminUsers() {
           </div>
 
           {/* Users Table */}
-          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-              <i className="bx bx-list-ul text-blue-500"></i>
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
+            <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 mb-2 sm:mb-4 flex items-center gap-2">
+              <i className="bx bx-list-ul text-blue-500 text-lg sm:text-xl"></i>
               All Users
             </h3>
             {filteredUsers.length === 0 ? (
-              <p className="text-gray-600 dark:text-gray-300 italic">No users found.</p>
+              <p className="text-gray-600 dark:text-gray-300 italic text-sm">No users found.</p>
             ) : (
               <>
-                {/* Desktop/Tablets Table (sm and up) */}
-                <div className="hidden sm:block overflow-x-auto">
+                {/* Desktop/Tablets Table (md and up) */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
                     <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-3 min-w-[150px]">Email</th>
-                        <th className="px-4 py-3 min-w-[120px]">Name</th>
-                        <th className="px-4 py-3 min-w-[100px] hidden md:table-cell">Username</th>
-                        <th className="px-4 py-3 min-w-[80px]">Role</th>
-                        <th className="px-4 py-3 min-w-[120px] hidden lg:table-cell">Created At</th>
-                        <th className="px-4 py-3 min-w-[100px]">Actions</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[120px]">Email</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[100px]">Name</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[80px] hidden lg:table-cell">Username</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[70px]">Role</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[100px] hidden xl:table-cell">Created At</th>
+                        <th className="px-1 sm:px-2 py-2 min-w-[80px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredUsers.map((user) => (
                         <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-sm transition-all duration-200">
-                          <td className="px-4 py-3 break-words">{user.email}</td>
-                          <td className="px-4 py-3 break-words">{user.name}</td>
-                          <td className="px-4 py-3 break-words hidden md:table-cell">{user.username}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-1 sm:px-2 py-2 break-words">{user.email}</td>
+                          <td className="px-1 sm:px-2 py-2 break-words">{user.name}</td>
+                          <td className="px-1 sm:px-2 py-2 break-words hidden lg:table-cell">{user.username}</td>
+                          <td className="px-1 sm:px-2 py-2">
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 user.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
@@ -509,17 +521,17 @@ export default function AdminUsers() {
                               {user.role}
                             </span>
                           </td>
-                          <td className="px-4 py-3 hidden lg:table-cell">
+                          <td className="px-2 sm:px-4 py-2 hidden xl:table-cell">
                             {new Date(user.createdAt).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric',
                             })}
                           </td>
-                          <td className="px-4 py-3 flex gap-2">
+                          <td className="px-2 sm:px-4 py-2 flex gap-2">
                             <button
                               onClick={() => openEditModal(user)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 text-xs sm:text-sm"
                               disabled={loading}
                               title="Edit user"
                             >
@@ -528,7 +540,7 @@ export default function AdminUsers() {
                             </button>
                             <button
                               onClick={() => handleDelete(user.id, user.email)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1"
+                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1 text-xs sm:text-sm"
                               disabled={loading}
                               title="Delete user"
                             >
@@ -542,29 +554,29 @@ export default function AdminUsers() {
                   </table>
                 </div>
 
-                {/* Mobile Card Layout (below sm) */}
-                <div className="block sm:hidden space-y-4">
+                {/* Mobile Card Layout (below md) */}
+                <div className="block md:hidden space-y-3">
                   {filteredUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600"
+                      className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600"
                     >
                       <div className="space-y-2">
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Email:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words">{user.email}</p>
+                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Email:</span>
+                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.email}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Name:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words">{user.name}</p>
+                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Name:</span>
+                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.name}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Username:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words">{user.username}</p>
+                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Username:</span>
+                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.username}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Role:</span>
-                          <p className="text-gray-600 dark:text-gray-400 capitalize">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Role:</span>
+                          <p className="text-gray-600 dark:text-gray-400 capitalize text-xs sm:text-sm">
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 user.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
@@ -577,8 +589,8 @@ export default function AdminUsers() {
                           </p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Created At:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Created At:</span>
+                          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
                             {new Date(user.createdAt).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'short',
@@ -587,10 +599,10 @@ export default function AdminUsers() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-4 mt-4">
+                      <div className="flex gap-2 mt-3">
                         <button
                           onClick={() => openEditModal(user)}
-                          className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm"
+                          className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm"
                           disabled={loading}
                         >
                           <i className="bx bx-edit"></i>
@@ -598,7 +610,7 @@ export default function AdminUsers() {
                         </button>
                         <button
                           onClick={() => handleDelete(user.id, user.email)}
-                          className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm"
+                          className="flex-1 py-2 px-3 bg-red-600 text-white rounded-lg text-xs sm:text-sm hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm"
                           disabled={loading}
                         >
                           <i className="bx bx-trash"></i>
@@ -615,15 +627,15 @@ export default function AdminUsers() {
           {/* Edit User Modal */}
           {showEditModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md w-full max-w-sm sm:max-w-md">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                    <i className="bx bx-edit text-blue-500"></i>
+                  <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                    <i className="bx bx-edit text-blue-500 text-lg sm:text-xl"></i>
                     Edit User
                   </h3>
                   <button
                     onClick={() => setShowEditModal(false)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl"
                     title="Close"
                   >
                     <i className="bx bx-x"></i>
@@ -631,16 +643,16 @@ export default function AdminUsers() {
                 </div>
                 <form onSubmit={handleEditSubmit} className="space-y-4">
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       First Name <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's first name"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's first name"></i>
                     </label>
                     <input
                       type="text"
                       value={editUser.firstName}
                       onChange={(e) => handleEditChange('firstName', e.target.value)}
                       placeholder="John"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                         errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                       disabled={loading}
@@ -653,16 +665,16 @@ export default function AdminUsers() {
                     )}
                   </div>
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Last Name <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's last name"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's last name"></i>
                     </label>
                     <input
                       type="text"
                       value={editUser.lastName}
                       onChange={(e) => handleEditChange('lastName', e.target.value)}
                       placeholder="Doe"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                         errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                       disabled={loading}
@@ -675,16 +687,16 @@ export default function AdminUsers() {
                     )}
                   </div>
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Email <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="User's email address"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's email address"></i>
                     </label>
                     <input
                       type="email"
                       value={editUser.email}
                       onChange={(e) => handleEditChange('email', e.target.value)}
                       placeholder="john.doe@example.com"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                         errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                       disabled={loading}
@@ -697,34 +709,44 @@ export default function AdminUsers() {
                     )}
                   </div>
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Username
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Unique username (auto-generated if blank)"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Unique username (auto-generated if blank)"></i>
                     </label>
                     <input
                       type="text"
                       value={editUser.username}
                       onChange={(e) => handleEditChange('username', e.target.value)}
                       placeholder="Auto-generated if blank"
-                      className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                      className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                       disabled={loading}
                     />
                   </div>
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       New Password (optional)
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Enter new password to send reset email"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Enter new password to send reset email"></i>
                     </label>
-                    <input
-                      type="password"
-                      value={editUser.password}
-                      onChange={(e) => handleEditChange('password', e.target.value)}
-                      placeholder="Leave blank to keep current password"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                        errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                      disabled={loading}
-                    />
+                    <div className="relative mt-1">
+                      <input
+                        type={showEditPassword ? 'text' : 'password'}
+                        value={editUser.password}
+                        onChange={(e) => handleEditChange('password', e.target.value)}
+                        placeholder="Leave blank to keep current password"
+                        className={`w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                          errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditPassword(!showEditPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                        title={showEditPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <i className={`bx ${showEditPassword ? 'bx-hide' : 'bx-show'}`}></i>
+                      </button>
+                    </div>
                     {errors.password && (
                       <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                         <i className="bx bx-error-circle"></i>
@@ -733,14 +755,14 @@ export default function AdminUsers() {
                     )}
                   </div>
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Role <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select user role"></i>
+                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Select user role"></i>
                     </label>
                     <select
                       value={editUser.role}
                       onChange={(e) => handleEditChange('role', e.target.value)}
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
                         errors.role ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                       disabled={loading}
@@ -756,11 +778,11 @@ export default function AdminUsers() {
                       </p>
                     )}
                   </div>
-                  <div className="flex justify-end gap-4">
+                  <div className="flex justify-end gap-2 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => setShowEditModal(false)}
-                      className="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm flex items-center gap-2 transition-all duration-200 shadow-sm"
+                      className="py-2 px-3 rounded-lg text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-xs sm:text-sm flex items-center gap-1 transition-all duration-200 shadow-sm"
                       disabled={loading}
                     >
                       <i className="bx bx-x"></i>
@@ -769,7 +791,7 @@ export default function AdminUsers() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`py-2 px-4 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm`}
+                      className={`py-2 px-3 rounded-lg text-white text-xs sm:text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm`}
                     >
                       {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-save"></i>}
                       {loading ? 'Updating...' : 'Update User'}

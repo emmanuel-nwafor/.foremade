@@ -6,6 +6,7 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
+import dailyDealsImage from '/src/assets/images/daily-deals2.png'; // Imported your daily deals image
 
 const Product = () => {
   const { id } = useParams();
@@ -199,15 +200,25 @@ const Product = () => {
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
           status: data.status || 'pending',
-          isDailyDeal: data.isDailyDeal || false,
-          discountPercentage: data.discountPercentage || 0,
         };
+
+        // Check for active daily deal
+        const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const activeDeal = dealsSnapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .find((deal) => deal.productId === id && new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
+        if (activeDeal) {
+          setIsDailyDeal(true);
+          setDiscountPercentage((activeDeal.discount * 100).toFixed(2));
+        } else {
+          setIsDailyDeal(false);
+          setDiscountPercentage(0);
+        }
+
         console.log('Fetched product:', productData);
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
-        setIsDailyDeal(productData.isDailyDeal);
-        setDiscountPercentage(productData.discountPercentage);
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -255,8 +266,6 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
-              isDailyDeal: data.isDailyDeal || false,
-              discountPercentage: data.discountPercentage || 0,
             };
           })
           .filter((product) => product && product.imageUrl);
@@ -312,8 +321,6 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
-              isDailyDeal: data.isDailyDeal || false,
-              discountPercentage: data.discountPercentage || 0,
             });
           }
         }
@@ -502,9 +509,10 @@ const Product = () => {
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
   const imageMedia = product.imageUrls;
   const totalPrice = calculateTotalPrice(product.price, quantity, isDailyDeal ? discountPercentage : 0);
+  const originalPrice = calculateTotalPrice(product.price, quantity, 0);
 
   return (
-    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8">
+    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
         {`
           @keyframes fadeIn {
@@ -576,7 +584,14 @@ const Product = () => {
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
             <div>
-              <div className="main-media-container">
+              <div className="relative">
+                {isDailyDeal && (
+                  <img
+                    src={dailyDealsImage}
+                    alt="Daily Deal"
+                    className="absolute bottom-2 right-2 w-44 h-20"
+                  />
+                )}
                 {mainMedia.includes('.mp4') ? (
                   <video
                     src={mainMedia}
@@ -637,11 +652,6 @@ const Product = () => {
             </div>
             <div className="flex flex-col gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{product.name}</h1>
-              {isDailyDeal && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  Daily Deal! -{discountPercentage}%
-                </span>
-              )}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>
                   Seller: <strong>{product.seller.name}</strong>
@@ -726,7 +736,21 @@ const Product = () => {
               )}
               <div className="mt-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Price:</h3>
-                <p className="text-2xl font-bold text-blue-600">₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                {isDailyDeal && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-xl md:text-2xl font-bold text-blue-600">
+                      ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-gray-500 line-through">
+                      ₦{originalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+                {!isDailyDeal && (
+                  <p className="text-2xl md:text-3xl font-bold text-blue-600">
+                    ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
                 <p className="text-xs text-gray-500">Total for {quantity} item(s)</p>
               </div>
               <div className="flex items-center gap-4 mt-4">

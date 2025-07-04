@@ -1,32 +1,31 @@
-import { useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../firebase';
 
-export default function SellerLocationForm({ locationData, setLocationData, locationErrors, saveLocation }) {
-  // If locationData is undefined, don't render until it's initialized
-  if (!locationData) {
-    return null;
-  }
-
+export default function SellerLocationForm({ locationData, setLocationData, errors, saveLocation }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setLocationData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
-    if (saveLocation && auth.currentUser?.uid) {
-      try {
-        await setDoc(doc(db, 'sellerLocations', auth.currentUser.uid), locationData, { merge: true });
-        console.log('Location saved to Firestore:', locationData);
-      } catch (err) {
-        console.error('Error saving location:', err);
+    if (saveLocation) {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        try {
+          await setDoc(doc(db, 'sellerLocations', userId), locationData, { merge: true });
+          console.log('Location saved to Firestore:', locationData);
+        } catch (err) {
+          console.error('Error saving location:', err);
+        }
       }
     }
   };
 
-  useEffect(() => {
-    if (saveLocation && Object.values(locationData).some((val) => val)) {
+  React.useEffect(() => {
+    if (saveLocation && Object.values(locationData).some(val => val)) {
       handleSave();
     }
   }, [locationData, saveLocation]);
@@ -54,13 +53,13 @@ export default function SellerLocationForm({ locationData, setLocationData, loca
             value={locationData.country || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-              locationErrors.country ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              errors.country ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
           />
-          {locationErrors.country && (
+          {errors.country && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
               <i className="bx bx-error-circle"></i>
-              {locationErrors.country}
+              {errors.country}
             </p>
           )}
         </div>
@@ -80,13 +79,13 @@ export default function SellerLocationForm({ locationData, setLocationData, loca
             value={locationData.state || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-              locationErrors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              errors.state ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
           />
-          {locationErrors.state && (
+          {errors.state && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
               <i className="bx bx-error-circle"></i>
-              {locationErrors.state}
+              {errors.state}
             </p>
           )}
         </div>
@@ -106,13 +105,13 @@ export default function SellerLocationForm({ locationData, setLocationData, loca
             value={locationData.city || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-              locationErrors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
           />
-          {locationErrors.city && (
+          {errors.city && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
               <i className="bx bx-error-circle"></i>
-              {locationErrors.city}
+              {errors.city}
             </p>
           )}
         </div>
@@ -132,13 +131,13 @@ export default function SellerLocationForm({ locationData, setLocationData, loca
             value={locationData.address || ''}
             onChange={handleChange}
             className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-              locationErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
             } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
           />
-          {locationErrors.address && (
+          {errors.address && (
             <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
               <i className="bx bx-error-circle"></i>
-              {locationErrors.address}
+              {errors.address}
             </p>
           )}
         </div>
@@ -153,18 +152,12 @@ SellerLocationForm.propTypes = {
     state: PropTypes.string,
     city: PropTypes.string,
     address: PropTypes.string,
-  }),
+  }).isRequired,
   setLocationData: PropTypes.func.isRequired,
-  locationErrors: PropTypes.object.isRequired,
+  errors: PropTypes.object.isRequired,
   saveLocation: PropTypes.func,
 };
 
 SellerLocationForm.defaultProps = {
-  locationData: {
-    country: '',
-    state: '',
-    city: '',
-    address: '',
-  },
   saveLocation: null,
 };

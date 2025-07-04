@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar';
 
@@ -45,9 +45,18 @@ export default function AdminPayoutMonitor() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const handleAuthChange = (user) => {
+      if (!user) {
+        addAlert('Please log in.', 'error');
+        navigate('/login');
+        return;
+      }
+    };
+
+    const unsubscribeAuth = auth.onAuthStateChanged(handleAuthChange);
+
     if (!auth.currentUser) {
-      addAlert('Please log in as admin.', 'error');
-      navigate('/login');
+      handleAuthChange(null);
       return;
     }
 
@@ -56,19 +65,26 @@ export default function AdminPayoutMonitor() {
       setTransactions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       addAlert('Failed to fetch transactions.', 'error');
-      console.error(error);
+      console.error('Firestore listener error:', error);
     });
 
-    return () => unsubscribe();
-  }, [navigate, auth.currentUser?.uid]);
+    return () => {
+      unsubscribeAuth();
+      unsubscribe && unsubscribe();
+    };
+  }, [navigate]);
 
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/approve-payout', { transactionId, sellerId });
+      console.log('Attempting approval for amount:', amount); // Log the amount
+      const response = await axios.post('https://foremade-backend.onrender.com/approve-payout', { transactionId, sellerId });
       addAlert(response.data.message, 'success');
+      console.log('Approval response:', response.data);
     } catch (error) {
-      addAlert(error.response?.data?.error || 'Approval failed', 'error');
+      const errorMsg = error.response?.data?.details || 'Approval failed. Please check your Paystack balance.';
+      addAlert(errorMsg, 'error');
+      console.error('Approval error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -77,7 +93,7 @@ export default function AdminPayoutMonitor() {
   const handleReject = async (transactionId, sellerId) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/reject-payout', { transactionId, sellerId });
+      const response = await axios.post('https://foremade-backend.onrender.com/reject-payout', { transactionId, sellerId });
       addAlert(response.data.message, 'success');
     } catch (error) {
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');

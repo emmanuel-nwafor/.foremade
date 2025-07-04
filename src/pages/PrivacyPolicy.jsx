@@ -285,12 +285,32 @@ const PrivacyPolicy = () => {
                 <Link
                   key={index}
                   to={`/privacy-policy/${policy.type}`}
-                  className={`block p-4 rounded-lg border-2 border-${policy.color}-200 bg-${policy.color}-50 hover:bg-${policy.color}-100 hover:border-${policy.color}-300 transition-all group`}
+                  className={
+                    `block p-4 rounded-lg border-2 bg-${policy.color}-50 hover:bg-${policy.color}-100 transition-all group ` +
+                    (policy.color === 'blue' ? 'border-blue-200 hover:border-blue-300' :
+                     policy.color === 'green' ? 'border-green-200 hover:border-green-300' :
+                     policy.color === 'red' ? 'border-red-200 hover:border-red-300' :
+                     policy.color === 'yellow' ? 'border-yellow-200 hover:border-yellow-300' :
+                     policy.color === 'purple' ? 'border-purple-200 hover:border-purple-300' : '')
+                  }
                 >
-                  <div className={`text-${policy.color}-800 font-semibold group-hover:text-${policy.color}-900`}>
+                  <div className={
+                    policy.color === 'blue' ? 'text-blue-800 group-hover:text-blue-900' :
+                    policy.color === 'green' ? 'text-green-800 group-hover:text-green-900' :
+                    policy.color === 'red' ? 'text-red-800 group-hover:text-red-900' :
+                    policy.color === 'yellow' ? 'text-yellow-800 group-hover:text-yellow-900' :
+                    policy.color === 'purple' ? 'text-purple-800 group-hover:text-purple-900' : ''
+                  }>
                     {policy.name}
                   </div>
-                  <div className={`text-sm text-${policy.color}-600 mt-1 flex items-center gap-1`}>
+                  <div className={
+                    'text-sm flex items-center gap-1 ' +
+                    (policy.color === 'blue' ? 'text-blue-600' :
+                     policy.color === 'green' ? 'text-green-600' :
+                     policy.color === 'red' ? 'text-red-600' :
+                     policy.color === 'yellow' ? 'text-yellow-600' :
+                     policy.color === 'purple' ? 'text-purple-600' : '')
+                  }>
                     View regional details
                     <i className="bx bx-right-arrow-alt"></i>
                   </div>

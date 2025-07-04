@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import HeroImage from '../assets/icons/undraw_my-files_1xwx.svg';
 
 const RefundPolicy = () => (
@@ -14,7 +15,7 @@ const RefundPolicy = () => (
       <div className="bg-white/90 rounded-xl shadow-lg p-6 md:p-10 border border-blue-100">
         <h2 className="text-xl font-bold text-blue-700 mb-3">Important</h2>
         <p className="mb-4">
-          If your purchase was made through a Foremade Pro Seller, please refer to our <strong>Pro Refund Policy</strong> instead.<br/>
+          If your purchase was made through a Foremade <Link to="/pro-seller-guide" className="text-blue-600 underline font-semibold">Pro Seller</Link>, please refer to our <Link to="/pro-refund-policy" className="text-blue-600 underline font-semibold">Pro Refund Policy</Link> instead.<br/>
           Every order placed using the Buy Now button includes our Buyer Protection (added as a fee at checkout), which activates the Foremade Refund Policy. This protection ensures you're eligible for a refund if:
         </p>
         <ul className="list-disc ml-6 mb-4 text-blue-900">
@@ -50,7 +51,7 @@ const RefundPolicy = () => (
         <h2 className="text-xl font-bold text-blue-700 mb-3 mt-8">How to Request a Refund</h2>
         <p className="mb-2">You must act within 2 days of being notified that your order was delivered or marked as lost:</p>
         <ol className="list-decimal ml-6 mb-4">
-          <li>Go to your <em>chat with the seller</em></li>
+          <li>Go to your <Link to="/orders" className="text-blue-600 underline font-semibold">chat with the seller</Link></li>
           <li>Press <em>I have an issue</em></li>
           <li>Follow the prompts to submit your refund request</li>
         </ol>
@@ -65,7 +66,7 @@ const RefundPolicy = () => (
           <li>You and the seller can work toward a solution</li>
         </ul>
         <p className="mb-4">
-          You can track the status directly in the <em>conversation screen</em>. If you both resolve the issue yourselves, simply press:
+          You can track the status directly in the <Link to="/orders" className="text-blue-600 underline font-semibold">conversation screen</Link>. If you both resolve the issue yourselves, simply press:
         </p>
         <ul className="list-disc ml-6 mb-4">
           <li><em>Resolve this issue</em> for missing/damaged parcels</li>
@@ -87,7 +88,7 @@ const RefundPolicy = () => (
         <p className="mb-2">If a return is requested:</p>
         <ul className="list-disc ml-6 mb-4">
           <li>Buyer ships the item within 5 business days</li>
-          <li>Share your <em>contact info</em> if required</li>
+          <li>Share your <em>contact info</em> if required (<Link to="/support" className="text-blue-600 underline font-semibold">Contact Us</Link>)</li>
           <li>After receiving the item, confirm its condition within 2 days</li>
           <li>Press <em>Everything is OK</em> to complete the return</li>
         </ul>
@@ -95,7 +96,7 @@ const RefundPolicy = () => (
         <p className="mb-2">You may dispute the refund request:</p>
         <ol className="list-decimal ml-6 mb-4">
           <li>Press <em>View issue details</em></li>
-          <li>Click <em>Contact Us</em></li>
+          <li>Click <Link to="/support" className="text-blue-600 underline font-semibold">Contact Us</Link></li>
           <li>Review the terms and press <em>Agree</em></li>
           <li>Press <em>Submit</em> to escalate to our support team</li>
         </ol>
@@ -114,7 +115,7 @@ const RefundPolicy = () => (
         <ul className="list-disc ml-6 mb-4">
           <li>Notify the seller</li>
           <li>If unlinking fails, discuss a return or refund</li>
-          <li>If a return is required, use the <em>Return the order</em> button</li>
+          <li>If a return is required, use the <Link to="/orders" className="text-blue-600 underline font-semibold">Return the order</Link> button</li>
         </ul>
         <p className="mb-4">
           Shipping details must be accurate. If not provided, Foremade may issue a refund even without a return.

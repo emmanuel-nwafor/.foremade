@@ -105,37 +105,37 @@ export default function Sidebar() {
       <nav className="flex flex-col space-y-2">
         <Link
           to="/profile"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg"
         >
-          <i className="bx bx-user text-lg text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"></i>
+          <i className="bx bx-user text-lg text-blue-500 dark:text-blue-400"></i>
           <span>Profile</span>
         </Link>
         <Link
           to="/orders"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg"
         >
-          <i className="bx bx-package text-lg text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300"></i>
+          <i className="bx bx-package text-lg text-green-500 dark:text-green-400"></i>
           <span>Orders</span>
         </Link>
         <Link
           to="/favorites"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg"
         >
-          <i className="bx bx-heart text-lg text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"></i>
+          <i className="bx bx-heart text-lg text-red-500 dark:text-red-400"></i>
           <span>Wishlist</span>
         </Link>
         <Link
           to="/address"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg"
         >
-          <i className="bx bx-map text-lg text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"></i>
+          <i className="bx bx-map text-lg text-purple-500 dark:text-purple-400"></i>
           <span>Addresses</span>
         </Link>
         <Link
           to="/setting"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg"
         >
-          <i className="bx bx-cog text-lg text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300"></i>
+          <i className="bx bx-cog text-lg text-orange-500 dark:text-orange-400"></i>
           <span>Settings</span>
         </Link>
       </nav>

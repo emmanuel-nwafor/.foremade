@@ -6,19 +6,10 @@ import debounce from 'lodash.debounce';
 export default function SellerSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
-  const [isRegisterDropdownOpen, setIsRegisterDropdownOpen] = useState(false);
+  // Remove all dropdown state and logic
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
-  };
-
-  const toggleProductsDropdown = () => {
-    setIsProductsDropdownOpen(!isProductsDropdownOpen);
-  };
-
-  const toggleRegisterDropdown = () => {
-    setIsRegisterDropdownOpen(!isRegisterDropdownOpen);
   };
 
   // Debounced search handler
@@ -76,7 +67,7 @@ export default function SellerSidebar() {
     }, 
     { 
       to: '/seller-onboarding', 
-      label: 'Seller', 
+      label: 'Standard Seller', 
       icon: 'bx-select-multiple', 
       category: 'Registering with us',
       dropdown: 'register' 
@@ -184,38 +175,20 @@ export default function SellerSidebar() {
               {filteredMenuItems.some((item) => item.category === 'Product Management') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Product Management</h3>
-                  <button
-                    onClick={toggleProductsDropdown}
-                    className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-gray-700 transition"
-                    aria-expanded={isProductsDropdownOpen}
-                    aria-label="Toggle Products menu"
-                  >
-                    <i className="bx bx-box text-lg mr-2"></i>
-                    Products
-                    <i
-                      className={`bx ${isProductsDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm transition-transform duration-200`}
-                    ></i>
-                  </button>
-                  <div
-                    className={`ml-6 space-y-1 mt-1 overflow-hidden transition-all duration-200 ${
-                      isProductsDropdownOpen ? 'max-h-40' : 'max-h-0'
-                    }`}
-                  >
-                    {filteredMenuItems
-                      .filter((item) => item.dropdown === 'products')
-                      .map((item) => (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center p-1 rounded-lg text-gray-200 hover:bg-gray-600 transition"
-                          aria-label={item.label}
-                        >
-                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
-                          {item.label}
-                        </Link>
-                      ))}
-                  </div>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Product Management')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        {item.label}
+                      </Link>
+                    ))}
                 </div>
               )}
 
@@ -223,38 +196,20 @@ export default function SellerSidebar() {
               {filteredMenuItems.some((item) => item.category === 'Registering with us') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
-                  <button
-                    onClick={toggleRegisterDropdown}
-                    className="flex items-center p-2 rounded-lg text-gray-200 w-full text-left hover:bg-gray-700 transition"
-                    aria-expanded={isRegisterDropdownOpen}
-                    aria-label="Toggle Register menu"
-                  >
-                    <i className="bx bx-registered text-lg mr-2"></i>
-                    Register
-                    <i
-                      className={`bx ${isRegisterDropdownOpen ? 'bx-chevron-up' : 'bx-chevron-down'} ml-auto text-sm transition-transform duration-200`}
-                    ></i>
-                  </button>
-                  <div
-                    className={`ml-6 space-y-1 mt-1 overflow-hidden transition-all duration-200 ${
-                      isRegisterDropdownOpen ? 'max-h-40' : 'max-h-0'
-                    }`}
-                  >
-                    {filteredMenuItems
-                      .filter((item) => item.dropdown === 'register')
-                      .map((item) => (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center p-1 rounded-lg text-gray-200 hover:bg-gray-600 transition"
-                          aria-label={item.label}
-                        >
-                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
-                          {item.label}
-                        </Link>
-                      ))}
-                  </div>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Registering with us')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        {item.label}
+                      </Link>
+                    ))}
                 </div>
               )}
 

@@ -69,6 +69,10 @@ import ProSellerForm from './pages/ProSellerForm';
 import ProSellerGuide from './seller/ProSellerGuide';
 import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
 import RefundPolicy from './pages/RefundPolicy';
+import ProRefundPolicy from './pages/ProRefundPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+import SellerAgreement from './pages/SellerAgreement';
+import ShippingPolicy from './pages/ShippingPolicy';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -276,9 +280,13 @@ function App() {
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+            <Route path="/pro-refund-policy" element={<ProRefundPolicy />} />
             <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
             <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/terms-conditions" element={<TermsAndConditions />} />
+            <Route path="/seller-agreement" element={<SellerAgreement />} />
+            <Route path="/shipping-policy" element={<ShippingPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

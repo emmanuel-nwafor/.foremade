@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '/src/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
 const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
-  const [mainImage, setMainImage] = useState('https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+  const [mainImage, setMainImage] = useState('https://via.placeholder.com/200?text=No+Image');
+  const [product, setProduct] = useState(null);
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+  const [isDailyDeal, setIsDailyDeal] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
-  const calculateTotalPrice = (basePrice, qty = 1) => {
-    return basePrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+  const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
+    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
+    const discountedPrice = basePrice - discount;
+    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
   };
 
   useEffect(() => {
@@ -18,7 +23,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
         const feeSnap = await getDoc(feeRef);
         if (feeSnap.exists()) {
           const data = feeSnap.data();
-          const category = item?.product?.category || 'default';
+          const category = product?.category || 'default';
           setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
         }
       } catch (err) {
@@ -26,36 +31,57 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
       }
     };
 
-    const fetchImage = async () => {
+    const fetchProduct = async () => {
       if (item && item.productId) {
         try {
           const productRef = doc(db, 'products', item.productId);
           const productSnap = await getDoc(productRef);
-          let imageUrl = 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg';
           if (productSnap.exists()) {
             const productData = productSnap.data();
+            setProduct({
+              id: productSnap.id,
+              name: productData.name || 'Unnamed Product',
+              price: productData.price || 0,
+              stock: productData.stock || 0,
+              category: productData.category?.trim().toLowerCase() || 'uncategorized',
+            });
             const imageUrls = Array.isArray(productData.imageUrls)
               ? productData.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
               : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
               ? [productData.imageUrl]
               : [];
-            imageUrl = imageUrl.length > 0 ? imageUrls[0] : imageUrl;
+            setMainImage(imageUrls.length > 0 ? imageUrls[0] : 'https://via.placeholder.com/200?text=No+Image');
+
+            // Check for active daily deal
+            const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+            const activeDeal = dealsSnapshot.docs
+              .map((doc) => ({ id: doc.id, ...doc.data() }))
+              .find((deal) => deal.productId === item.productId && new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
+            if (activeDeal) {
+              setIsDailyDeal(true);
+              setDiscountPercentage((activeDeal.discount * 100).toFixed(2));
+            } else {
+              setIsDailyDeal(false);
+              setDiscountPercentage(0);
+            }
           } else {
             console.warn(`Product ${item.productId} not found in Firestore.`);
+            setProduct(null);
+            setMainImage('https://via.placeholder.com/200?text=No+Image');
           }
-          setMainImage(imageUrl);
         } catch (err) {
-          console.error('Image fetch error for cart item:', item.productId, ':', err);
-          setMainImage('https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+          console.error('Product fetch error for cart item:', item.productId, ':', err);
+          setProduct(null);
+          setMainImage('https://via.placeholder.com/200?text=No+Image');
         }
       }
     };
 
     fetchFeeConfig();
-    fetchImage();
+    fetchProduct();
   }, [item]);
 
-  if (!item || !item.product || !item.productId) {
+  if (!item || !item.productId || !product) {
     console.error('Invalid cart item data:', item);
     return (
       <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
@@ -80,14 +106,8 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
     );
   }
 
-  const product = {
-    id: item.product.id || item.productId,
-    name: item.product.name || 'Unnamed Product',
-    price: item.product.price || 0,
-    stock: item.product.stock || 0,
-  };
   const isOutOfStock = product.stock === 0;
-  const totalPrice = calculateTotalPrice(product.price, item.quantity);
+  const totalPrice = calculateTotalPrice(product.price, item.quantity, isDailyDeal ? discountPercentage : 0);
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
@@ -98,9 +118,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
           className="w-16 h-16 object-cover rounded"
           onError={(e) => {
             console.error('CartItem image load error:', { productId: item.productId, failedUrl: e.target.src, name: product.name });
-            e.target.style.display = 'none';
-            e.target.parentElement.innerHTML =
-              '<div class="w-16 h-16 bg-gray-200 rounded flex items-center justify-center"><span class="text-gray-500 text-xs">Image N/A</span></div>';
+            e.target.src = 'https://via.placeholder.com/200?text=No+Image';
           }}
           onLoad={() => {
             console.log('CartItem image loaded successfully:', { productId: item.productId, imageUrl: mainImage, name: product.name });
@@ -111,9 +129,21 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
         <Link to={`/product/${product.id}`}>
           <h3 className="text-sm font-bold text-gray-800">{product.name}</h3>
         </Link>
-        <p className="text-xs text-gray-600">
-          ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
+        {isDailyDeal && (
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-blue-600 font-medium">
+              ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-gray-500 line-through">
+              ₦{calculateTotalPrice(product.price, item.quantity, 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+        )}
+        {!isDailyDeal && (
+          <p className="text-xs text-gray-600">
+            ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        )}
         <p className="text-xs text-gray-600">
           Stock:{' '}
           <span className={isOutOfStock ? 'text-red-600' : 'text-green-600'}>

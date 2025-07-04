@@ -199,15 +199,25 @@ const Product = () => {
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
           status: data.status || 'pending',
-          isDailyDeal: data.isDailyDeal || false,
-          discountPercentage: data.discountPercentage || 0,
         };
+
+        // Check for active daily deal
+        const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const activeDeal = dealsSnapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .find((deal) => deal.productId === id && new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
+        if (activeDeal) {
+          setIsDailyDeal(true);
+          setDiscountPercentage((activeDeal.discount * 100).toFixed(2));
+        } else {
+          setIsDailyDeal(false);
+          setDiscountPercentage(0);
+        }
+
         console.log('Fetched product:', productData);
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
-        setIsDailyDeal(productData.isDailyDeal);
-        setDiscountPercentage(productData.discountPercentage);
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -255,8 +265,6 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
-              isDailyDeal: data.isDailyDeal || false,
-              discountPercentage: data.discountPercentage || 0,
             };
           })
           .filter((product) => product && product.imageUrl);
@@ -312,8 +320,6 @@ const Product = () => {
               seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || Math.random() * 2 + 3,
               status: data.status || 'pending',
-              isDailyDeal: data.isDailyDeal || false,
-              discountPercentage: data.discountPercentage || 0,
             });
           }
         }
@@ -502,9 +508,10 @@ const Product = () => {
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
   const imageMedia = product.imageUrls;
   const totalPrice = calculateTotalPrice(product.price, quantity, isDailyDeal ? discountPercentage : 0);
+  const originalPrice = calculateTotalPrice(product.price, quantity, 0);
 
   return (
-    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8">
+    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
         {`
           @keyframes fadeIn {
@@ -570,8 +577,43 @@ const Product = () => {
           .formatted-description li {
             margin-bottom: 0.25rem;
           }
+          .deal-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 50% 50%, #ff0000 50%, transparent 51%);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+          }
+          .deal-badge::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transform: scale(1.1);
+            z-index: -1;
+          }
         `}
       </style>
+      {isDailyDeal && (
+        <div className="deal-badge" style={{ transform: 'rotate(45deg)' }}>
+          <span style={{ transform: 'rotate(-45deg)' }}>Daily Deal<br />-{discountPercentage}%</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
@@ -638,7 +680,8 @@ const Product = () => {
             <div className="flex flex-col gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{product.name}</h1>
               {isDailyDeal && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                  <i className="bx bx-time-five text-sm"></i>
                   Daily Deal! -{discountPercentage}%
                 </span>
               )}
@@ -726,7 +769,21 @@ const Product = () => {
               )}
               <div className="mt-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Price:</h3>
-                <p className="text-2xl font-bold text-blue-600">₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                {isDailyDeal && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-xl md:text-2xl font-bold text-blue-600">
+                      ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-gray-500 line-through">
+                      ₦{originalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+                {!isDailyDeal && (
+                  <p className="text-2xl md:text-3xl font-bold text-blue-600">
+                    ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
                 <p className="text-xs text-gray-500">Total for {quantity} item(s)</p>
               </div>
               <div className="flex items-center gap-4 mt-4">

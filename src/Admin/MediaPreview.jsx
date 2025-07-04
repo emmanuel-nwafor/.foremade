@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Video as VideoIcon, Edit2, Check, X } from 'lucide-react';
 
-function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct }) {
+function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, onUpdateProduct }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProduct, setEditedProduct] = useState({ ...product });
+  const [editedProduct, setEditedProduct] = useState({
+    ...product,
+    imageUrls: product.imageUrls || [],
+    videoUrls: product.videoUrls || [],
+  });
   const allMedia = [
     ...editedProduct.imageUrls.map((url) => ({ type: 'image', url })),
     ...editedProduct.videoUrls.map((url) => ({ type: 'video', url })),
-  ];
+  ].filter((media) => media.url); // Filter out invalid URLs
 
   if (!allMedia.length) {
     return (
       <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1">
-        <ImageIcon size={16} className="text-gray-500" /> No media available
+        {/* <ImageIcon size={16} className="text-gray-500" /> No media available */}
       </p>
     );
   }
@@ -31,7 +35,11 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     if (!isEditing) {
-      setEditedProduct({ ...product });
+      setEditedProduct({
+        ...product,
+        imageUrls: product.imageUrls || [],
+        videoUrls: product.videoUrls || [],
+      });
     }
   };
 
@@ -88,10 +96,11 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
         {currentMedia.type === 'image' && (
           <img
             src={currentMedia.url}
-            alt="Product"
+            alt={`${product.name || 'Product'} image`}
             className="w-full h-full object-cover rounded-xl transition-transform duration-300 hover:scale-105"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/150';
+              e.target.src = 'https://via.placeholder.com/150'; // Fallback image
+              console.error(`Failed to load image: ${currentMedia.url}`);
             }}
           />
         )}
@@ -101,7 +110,8 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
             controls
             className="w-full h-full object-cover rounded-xl"
             onError={(e) => {
-              e.target.poster = 'https://via.placeholder.com/150';
+              e.target.poster = 'https://via.placeholder.com/150'; // Fallback poster
+              console.error(`Failed to load video: ${currentMedia.url}`);
             }}
           />
         )}
@@ -176,7 +186,7 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
         )}
       </div>
       {isEditing && isModal && (
-        <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <div className="mt-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-y-auto max-h-[40vh]">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Edit Product Details</h4>
           <div className="space-y-2">
             <div>
@@ -269,7 +279,7 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
                 <div key={index} className="flex items-center gap-2 mt-1">
                   <input
                     type="text"
-                    value={url}
+                    value={url || ''}
                     onChange={(e) => handleUrlChange(index, e.target.value, 'image')}
                     className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     placeholder="Enter image URL"
@@ -297,7 +307,7 @@ function MediaPreview({ imageUrls, videoUrls, isModal, product, onUpdateProduct 
                 <div key={index} className="flex items-center gap-2 mt-1">
                   <input
                     type="text"
-                    value={url}
+                    value={url || ''}
                     onChange={(e) => handleUrlChange(index, e.target.value, 'video')}
                     className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     placeholder="Enter video URL"

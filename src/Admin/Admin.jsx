@@ -417,7 +417,10 @@ function Admin() {
                     {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
                   </span>
                 </div>
-                <MediaPreview imageUrls={product.imageUrls} videoUrls={product.videoUrls} />
+                <MediaPreview
+                  imageUrls={product.imageUrls || ['https://via.placeholder.com/150']} // Fallback image
+                  videoUrls={product.videoUrls || []}
+                />
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
                   <User size={14} /> Seller: {product.sellerName || 'Unknown'}
                 </p>
@@ -444,121 +447,51 @@ function Admin() {
 
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-lg">
-            <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <Camera size={20} className="text-blue-500" /> {selectedProduct.name || 'Unnamed Product'}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
-                title="Close"
-              >
-                <i className="bx bx-x"></i>
-              </button>
-            </div>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Camera size={18} className="text-blue-500" /> Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  <p><strong>Seller:</strong> {selectedProduct.sellerName || 'Unknown Seller'}</p>
-                  <p><strong>Status:</strong> {selectedProduct.status === 'pending' ? 'Pending' : selectedProduct.status === 'approved' ? 'Approved' : 'Not Approved'}</p>
-                  <p><strong>Price:</strong> ₦{(selectedProduct.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                  <p><strong>Stock:</strong> {selectedProduct.stock || 0} units</p>
-                  <p><strong>Category:</strong> {selectedProduct.category || 'Uncategorized'}</p>
-                  <p><strong>Colors:</strong> {Array.isArray(selectedProduct.colors) ? selectedProduct.colors.join(', ') : 'None'}</p>
-                  <p><strong>Sizes:</strong> {Array.isArray(selectedProduct.sizes) ? selectedProduct.sizes.join(', ') : 'None'}</p>
-                  <p><strong>Condition:</strong> {selectedProduct.condition || 'New'}</p>
-                  <p><strong>Rating:</strong> {selectedProduct.rating || 'N/A'}</p>
-                  <p><strong>Buyers:</strong> {selectedProduct.buyerCount || 0}</p>
-                </div>
+          <div className="bg-white dark:bg-gray-900 p-6 m-6 rounded-xl w-full max-w-6xl max-h-[96vh] overflow-y-auto shadow-lg flex flex-col md:flex-row gap-6">
+            <div className="w-full md:w-1/2 space-y-6">
+              <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                  {selectedProduct.name || 'Unnamed Product'}
+                </h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                  title="Close"
+                >
+                  <i className="bx bx-x"></i>
+                </button>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Video size={18} className="text-blue-500" /> Media Preview
+                  <Camera size={23} className="text-blue-500" /> Details
                 </h3>
-                <MediaPreview
-                  imageUrls={selectedProduct.imageUrls}
-                  videoUrls={selectedProduct.videoUrls}
-                  isModal
-                  product={selectedProduct}
-                  onUpdateProduct={(updatedProduct) => {
-                    const productRef = doc(db, 'products', updatedProduct.id);
-                    updateDoc(productRef, {
-                      ...updatedProduct,
-                      price: parseFloat(updatedProduct.price) || 0,
-                      stock: parseInt(updatedProduct.stock) || 0,
-                    }).then(() => {
-                      setData((prev) => ({
-                        ...prev,
-                        products: prev.products.map((item) =>
-                          item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item
-                        ),
-                      }));
-                      addAlert('Product updated successfully! 🎉', 'success');
-                    }).catch((err) => {
-                      console.error('Error updating product:', err);
-                      addAlert('Failed to update product.', 'error');
-                    });
-                  }}
-                />
-                <div className="mt-2">
-                  <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Image URLs:</h4>
-                  {Array.isArray(selectedProduct.imageUrls) && selectedProduct.imageUrls.length > 0 ? (
-                    <ul className="list-disc pl-5">
-                      {selectedProduct.imageUrls.map((url, index) => (
-                        <li key={`image-${index}`}>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline text-sm break-all"
-                          >
-                            Image {index + 1}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">No images uploaded.</p>
-                  )}
-                </div>
-                <div className="mt-2">
-                  <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Video URLs:</h4>
-                  {Array.isArray(selectedProduct.videoUrls) && selectedProduct.videoUrls.length > 0 ? (
-                    <ul className="list-disc pl-5">
-                      {selectedProduct.videoUrls.map((url, index) => (
-                        <li key={`video-${index}`}>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline text-sm break-all"
-                          >
-                            Video {index + 1}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">No videos uploaded.</p>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Seller:</span> {selectedProduct.sellerName || 'Unknown Seller'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Status:</span> {selectedProduct.status === 'pending' ? 'Pending' : selectedProduct.status === 'approved' ? 'Approved' : 'Not Approved'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Price:</span> ₦{(selectedProduct.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Stock:</span> {selectedProduct.stock || 0} units</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Category:</span> {selectedProduct.category || 'Uncategorized'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Colors:</span> {Array.isArray(selectedProduct.colors) ? selectedProduct.colors.join(', ') : 'None'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Sizes:</span> {Array.isArray(selectedProduct.sizes) ? selectedProduct.sizes.join(', ') : 'None'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Condition:</span> {selectedProduct.condition || 'New'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Rating:</span> {selectedProduct.rating || 'N/A'}</p>
+                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Buyers:</span> {selectedProduct.buyerCount || 0}</p>
                 </div>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <Edit2 size={18} className="text-blue-500" /> Tags
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{Array.isArray(selectedProduct.tags) ? selectedProduct.tags.join(', ') : 'None'}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-sm">
+                  {Array.isArray(selectedProduct.tags) ? selectedProduct.tags.join(', ') : 'None'}
+                </p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <User size={18} className="text-blue-500" /> Seller Info
                 </h3>
-                <p className="text-sm"><span className="text-green-500 font-medium">Name:</span> {selectedProduct.seller?.name || 'Unknown Seller'}</p>
-                <p className="text-sm"><span className="text-green-500 font-medium">ID:</span> {selectedProduct.seller?.id || 'N/A'}</p>
+                <p className="text-[13px] mt-3"><span className="bg-amber-100 rounded-full p-1">Name:</span> {selectedProduct.seller?.name || 'Unknown Seller'}</p>
+                <p className="text-[13px] mt-4"><span className="bg-amber-100 rounded-full p-1">ID:</span> {selectedProduct.seller?.id || 'N/A'}</p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
@@ -573,10 +506,9 @@ function Admin() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">No reviews available.</p>
+                  <p className="text-[13px] text-gray-600 dark:text-gray-400">No reviews available yet.</p>
                 )}
               </div>
-              // Update AdminActionButtons props
               <AdminActionButtons
                 productId={selectedProduct.id}
                 currentStatus={selectedProduct.status}
@@ -585,6 +517,36 @@ function Admin() {
                 loading={loading}
                 onEdit={() => handleEditClick(selectedProduct)}
                 isModal
+              />
+            </div>
+            <div className="w-full md:w-1/2">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-4">
+                <Video size={18} className="text-blue-500" /> Media Preview
+              </h3>
+              <MediaPreview
+                imageUrls={selectedProduct.imageUrls || []}
+                videoUrls={selectedProduct.videoUrls || []}
+                isModal
+                product={selectedProduct}
+                onUpdateProduct={(updatedProduct) => {
+                  const productRef = doc(db, 'products', updatedProduct.id);
+                  updateDoc(productRef, {
+                    ...updatedProduct,
+                    price: parseFloat(updatedProduct.price) || 0,
+                    stock: parseInt(updatedProduct.stock) || 0,
+                  }).then(() => {
+                    setData((prev) => ({
+                      ...prev,
+                      products: prev.products.map((item) =>
+                        item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item
+                      ),
+                    }));
+                    addAlert('Product updated successfully! 🎉', 'success');
+                  }).catch((err) => {
+                    console.error('Error updating product:', err);
+                    addAlert('Failed to update product.', 'error');
+                  });
+                }}
               />
             </div>
           </div>

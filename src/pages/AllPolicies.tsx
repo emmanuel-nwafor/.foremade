@@ -156,58 +156,52 @@ const AllPolicies = () => {
 
       case 'nigeria':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <i className="bx bx-flag text-2xl text-green-600"></i>
-              Nigeria Privacy Policy
-            </h2>
-            <div className="prose prose-green max-w-none">
-              <p className="text-gray-700">
-                This policy complies with NDPR requirements for Nigerian residents.
-              </p>
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-4">Key NDPR Rights</h3>
-              <div className="grid gap-4">
-                {[
-                  {
-                    title: 'Right to Access Personal Data',
-                    description: 'Individuals can request access to their personal data held by an organization and obtain information about how it\'s processed.',
-                    link: 'https://ndpc.gov.ng/'
-                  },
-                  {
-                    title: 'Right to Data Correction',
-                    description: 'Allows individuals to have inaccurate or incomplete personal data corrected.',
-                    link: 'https://ndpc.gov.ng/'
-                  },
-                  {
-                    title: 'Right to Data Deletion',
-                    description: 'Enables individuals to request the deletion of their personal data under certain circumstances.',
-                    link: 'https://ndpc.gov.ng/'
-                  },
-                  {
-                    title: 'Right to Restrict Data Processing',
-                    description: 'Individuals can request the limitation of their data processing under specific conditions.',
-                    link: 'https://ndpc.gov.ng/'
-                  },
-                  {
-                    title: 'Right to Data Portability',
-                    description: 'Allows individuals to receive their personal data in a structured format and transfer it to another controller.',
-                    link: 'https://ndpc.gov.ng/'
-                  }
-                ].map((right, index) => (
-                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-2">{right.title}</h4>
-                    <p className="text-gray-600 mb-3">{right.description}</p>
-                    <a 
-                      href={right.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 transition-colors"
-                    >
-                      Learn More
-                      <i className="bx bx-external-link text-lg"></i>
-                    </a>
-                  </div>
-                ))}
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 py-10">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-20 h-20 mb-4 flex items-center justify-center bg-green-100 rounded-full">
+                  <i className="bx bx-shield text-5xl text-green-700"></i>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-green-700 mb-2">Your Data Protection Rights under Nigerian Law (NDPA 2023)</h1>
+                <p className="text-gray-600 max-w-xl">As a data subject in Nigeria, the Nigeria Data Protection Act (NDPA) 2023 grants you specific rights regarding your personal data. These rights ensure transparency, accountability, and give you greater control over how your information is collected, used, stored, and shared by organizations.</p>
+              </div>
+              <div className="bg-white/90 rounded-xl shadow-lg p-6 md:p-10 border border-green-100">
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">1. Right to Access Personal Data</h2>
+                <p className="mb-2">You have the right to request and receive confirmation as to whether or not an organization holds your personal data. Where your data is being processed, you are entitled to:</p>
+                <ul className="list-disc ml-6 mb-4 text-green-900">
+                  <li>A copy of the personal data being processed</li>
+                  <li>Information about the purpose of the processing</li>
+                  <li>The categories of data involved</li>
+                  <li>The recipients or categories of recipients to whom the data has been disclosed</li>
+                  <li>The retention period for the data or criteria for determining that period</li>
+                  <li>The existence of your data protection rights (e.g., correction, deletion)</li>
+                  <li>Information about any automated decision-making (e.g., profiling) that may affect you</li>
+                </ul>
+                <p className="mb-4">Organizations must respond within 30 days and in a clear, intelligible format.</p>
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">2. Right to Data Correction (Rectification)</h2>
+                <p className="mb-4">You have the right to request that inaccurate or incomplete data about you be corrected or updated without undue delay. The organization must also notify any third parties who received the inaccurate data.</p>
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">3. Right to Data Deletion (Erasure)</h2>
+                <p className="mb-2">Also known as the "right to be forgotten", you may request the deletion of your data under specific conditions, such as:</p>
+                <ul className="list-disc ml-6 mb-4">
+                  <li>Data is no longer needed for its original purpose</li>
+                  <li>You withdraw consent</li>
+                  <li>You object to processing with no overriding legitimate reason</li>
+                  <li>Data was unlawfully processed</li>
+                  <li>Deletion is required for legal compliance</li>
+                </ul>
+                <p className="mb-4">Note: This right is not absolute and may be limited by legal obligations.</p>
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">4. Right to Restrict Data Processing</h2>
+                <p className="mb-2">You can request temporary restriction of data processing under circumstances such as:</p>
+                <ul className="list-disc ml-6 mb-4">
+                  <li>Contesting the accuracy of the data</li>
+                  <li>Unlawful processing but preferring restriction over deletion</li>
+                  <li>Data no longer needed but required for legal claims</li>
+                  <li>Pending verification of objection to processing</li>
+                </ul>
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">5. Right to Data Portability</h2>
+                <p className="mb-4">You have the right to receive your personal data in a structured, machine-readable format, and to transmit it to another data controller. This applies to data based on consent or a contract and processed by automated means.</p>
+                <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">How to Exercise Your Rights</h2>
+                <p className="mb-4">You may contact the organization (data controller) through a formal Data Subject Access Request (DSAR). A response is typically required within 30 days. If unsatisfied, complaints can be filed with the Nigeria Data Protection Commission (NDPC) at <a href="https://ndpc.gov.ng" target="_blank" rel="noopener noreferrer" className="text-green-700 underline font-semibold">https://ndpc.gov.ng</a>.</p>
               </div>
             </div>
           </div>
@@ -340,15 +334,38 @@ const AllPolicies = () => {
                     description: 'The 13 APPs that form the basis of privacy protection in Australia.',
                     link: 'https://www.oaic.gov.au/privacy/australian-privacy-principles'
                   },
-                  {
-                    title: 'Privacy Rights for Individuals',
-                    description: 'Comprehensive guide to privacy rights and protections for individuals.',
-                    link: 'https://www.oaic.gov.au/privacy/privacy-rights-for-individuals'
-                  },
+                  // OLD: Showing page not found
+                  // {
+                  //   title: 'Privacy Rights for Individuals',
+                  //   description: 'Comprehensive guide to privacy rights and protections for individuals.',
+                  //   link: 'https://www.oaic.gov.au/privacy/privacy-rights-for-individuals'
+                  // },
                   {
                     title: 'Privacy Complaints',
                     description: 'Information about making privacy complaints and the complaint process.',
                     link: 'https://www.oaic.gov.au/privacy/privacy-complaints'
+                  },
+                  // OLD: Showing page not found
+                  // {
+                  //   title: 'Privacy Complaints',
+                  //   description: 'Information about making privacy complaints and the complaint process.',
+                  //   link: 'https://www.oaic.gov.au/privacy/privacy-complaints'
+                  // },
+                  {
+                    title: 'Privacy Guidance for Organisations and Government Agencies',
+                    description: 'Guidance for organisations and government agencies on privacy obligations.',
+                    link: 'https://www.oaic.gov.au/privacy/guidance-and-advice'
+                  },
+                  // OLD: Showing page not found
+                  // {
+                  //   title: 'Notifiable Data Breaches',
+                  //   description: 'Information about the Notifiable Data Breaches (NDB) scheme and reporting requirements.',
+                  //   link: 'https://www.oaic.gov.au/privacy/notifiable-data-breaches'
+                  // },
+                  {
+                    title: 'Notifiable Data Breaches',
+                    description: 'Information about the Notifiable Data Breaches (NDB) scheme and reporting requirements.',
+                    link: 'https://www.oaic.gov.au/privacy/notifiable-data-breaches'
                   },
                   {
                     title: 'Anonymity and Pseudonymity',

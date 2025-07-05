@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export default function SellerBanner() {
   const slides = [
@@ -152,15 +153,15 @@ export default function SellerBanner() {
 
             {/* CTA buttons */}
             <div className="flex gap-2 xs:gap-3 sm:gap-4 pt-1 xs:pt-2">
-              <button className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-gradient-to-r 
+              <Link to={slides[current].link} className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-gradient-to-r 
                 from-amber-600 to-amber-500 text-white hover:from-amber-500 
-                hover:to-amber-600 transition-all duration-300 shadow-lg">
+                hover:to-amber-600 transition-all duration-300 shadow-lg flex items-center justify-center">
                 {slides[current].button}
-              </button>
-              <button className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border 
-                border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200">
+              </Link>
+              <Link to={current === 0 ? "/seller/guide" : "/seller/features"} className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border 
+                border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200 flex items-center justify-center">
                 {slides[current].secondaryButton}
-              </button>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export default function BuyerBanner() {
   const slides = [
@@ -29,7 +30,7 @@ export default function BuyerBanner() {
       ],
       button: 'Browse Electronics',
       secondaryButton: 'View Brands',
-      link: '/electronics',
+      link: '/category/electronics',
       bgClass: 'bg-gradient-to-br from-gray-900 to-blue-900',
       accentColor: 'bg-blue-500 text-white hover:bg-blue-600'
     }
@@ -146,12 +147,12 @@ export default function BuyerBanner() {
 
             {/* CTA buttons */}
             <div className="flex gap-2 xs:gap-3 sm:gap-4 pt-1 xs:pt-2">
-              <button className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-lg">
+              <Link to={slides[current].link} className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-lg flex items-center justify-center">
                 {slides[current].button}
-              </button>
-              <button className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200">
+              </Link>
+              <Link to="/deals" className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200 flex items-center justify-center">
                 {slides[current].secondaryButton}
-              </button>
+              </Link>
             </div>
           </div>
         </div>

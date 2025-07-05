@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const Support = () => {
@@ -318,24 +319,14 @@ const Support = () => {
 
       {/* Policies */}
       {activeTab === 'policies' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-3xl mx-auto"
-        >
+        <div className="max-w-3xl mx-auto">
           <h2 className="text-xl font-semibold mb-6 text-center">Policies & Terms</h2>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {policyLinks.map((policy, index) => (
-              <motion.a
+              <Link
                 key={index}
-                href={policy.url}
-                className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center hover:shadow-lg transition-shadow duration-200"
-                whileHover={{ y: -5 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                to={policy.url}
+                className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center hover:shadow-lg transition-shadow duration-200 hover:text-blue-600"
               >
                 <div className="bg-blue-100 p-4 rounded-full text-blue-500 mb-4">
                   <i className="bx bx-file text-2xl"></i>
@@ -345,10 +336,10 @@ const Support = () => {
                   Read more
                   <i className="bx bx-right-arrow-alt ml-1"></i>
                 </p>
-              </motion.a>
+              </Link>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );

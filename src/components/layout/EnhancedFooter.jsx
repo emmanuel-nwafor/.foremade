@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import ngFlag from '/src/assets/nglogo.png';
 import ukFlag from '/src/assets/uklogo.png';
 
@@ -65,22 +64,16 @@ const Footer = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-xs text-gray-600">
             {benefitItems.map((item, index) => (
-              <motion.div 
+              <div 
                 key={index} 
                 className="flex flex-col items-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.05 }}
               >
-                <motion.i 
+                <i 
                   className={`bx ${item.icon} text-base mb-1 text-blue-500`}
-                  whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                  transition={{ duration: 0.5 }}
-                ></motion.i>
+                ></i>
                 <p className="font-semibold text-xs">{item.title}</p>
                 <p className="text-xs">{item.description}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -93,24 +86,19 @@ const Footer = () => {
             {/* Left Section: Logo and Social */}
             <div className="w-full md:w-auto mb-6 md:mb-0">
               {/* Logo */}
-              <motion.div 
+              <div 
                 className="flex items-center space-x-2 mb-3"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
                 <span className="text-lg font-bold">Foremade</span>
-                <motion.i 
+                <i 
                   className="bx bx-chevron-up text-blue-500 rotate-45"
-                  animate={{ rotate: 45 }}
-                  whileHover={{ rotate: [45, 90, 45], scale: 1.2 }}
-                  transition={{ duration: 0.5 }}
-                ></motion.i>
-              </motion.div>
+                ></i>
+              </div>
 
               {/* Social Media Icons */}
               <div className="flex space-x-4 items-center mb-4">
                 {socialLinks.map((social, index) => (
-                  <motion.a 
+                  <a 
                     key={index}
                     href={social.url} 
                     target="_blank" 
@@ -118,28 +106,24 @@ const Footer = () => {
                     className={`text-lg ${hoveredIcon === social.name ? social.color : 'text-gray-600'}`}
                     onMouseEnter={() => setHoveredIcon(social.name)}
                     onMouseLeave={() => setHoveredIcon(null)}
-                    whileHover={{ scale: 1.2, y: -3 }}
-                    whileTap={{ scale: 0.9 }}
                   >
                     <i className={social.icon}></i>
-                  </motion.a>
+                  </a>
                 ))}
 
                 <div className="relative group ml-2">
-                  <motion.button 
+                  <button 
                     className="hover:text-blue-600 flex items-center"
-                    whileHover={{ scale: 1.05 }}
                   >
                     <img src={ukFlag} alt="UK flag" className="h-4" />
                     <i className="bx bx-chevron-down ml-1"></i>
-                  </motion.button>
+                  </button>
                   <div className="absolute hidden group-hover:block bg-white z-10 w-36 rounded-md shadow-xl border border-gray-200">
-                    <motion.span 
+                    <span 
                       className="block px-3 py-1 text-xs hover:bg-gray-100 cursor-pointer"
-                      whileHover={{ x: 3 }}
                     >
                       <img src={ngFlag} alt="NG flag" className="h-4" />
-                    </motion.span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -156,14 +140,12 @@ const Footer = () => {
                     className="flex-1 p-1 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                     required
                   />
-                  <motion.button
+                  <button
                     type="submit"
                     className="bg-blue-500 text-white px-2 py-1 rounded-r-md hover:bg-blue-600 text-xs"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
                   >
                     <i className="bx bx-envelope"></i>
-                  </motion.button>
+                  </button>
                 </form>
               </div>
             </div>
@@ -175,50 +157,32 @@ const Footer = () => {
                 <h3 className="text-sm font-semibold mb-2">Categories</h3>
                 <ul className="space-y-1 text-xs">
                   {categories.slice(0, 8).map((category, index) => (
-                    <motion.li 
+                    <li 
                       key={index}
-                      whileHover={{ x: 3 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     >
                       <Link 
                         to={`/category/${slugify(category)}`}
-                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === `category-${index}` ? 'text-blue-500' : 'text-gray-600'}`}
+                        className="text-gray-600 hover:text-blue-500 transition-colors"
                         onMouseEnter={() => setHoveredLink(`category-${index}`)}
                         onMouseLeave={() => setHoveredLink(null)}
                       >
                         {category}
-                        <motion.span 
-                          className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
-                          animate={{ 
-                            width: hoveredLink === `category-${index}` ? '100%' : '0%'
-                          }}
-                          transition={{ duration: 0.3 }}
-                        ></motion.span>
                       </Link>
-                    </motion.li>
+                    </li>
                   ))}
                   {/* Show "More Categories" link if there are more than 8 categories */}
                   {categories.length > 8 && (
-                    <motion.li 
-                      whileHover={{ x: 3 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    <li 
                     >
                       <Link 
                         to="/products"
-                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === 'more-categories' ? 'text-blue-500' : 'text-gray-600'}`}
+                        className="text-gray-600 hover:text-blue-500 transition-colors"
                         onMouseEnter={() => setHoveredLink('more-categories')}
                         onMouseLeave={() => setHoveredLink(null)}
                       >
                         More Categories...
-                        <motion.span 
-                          className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
-                          animate={{ 
-                            width: hoveredLink === 'more-categories' ? '100%' : '0%'
-                          }}
-                          transition={{ duration: 0.3 }}
-                        ></motion.span>
                       </Link>
-                    </motion.li>
+                    </li>
                   )}
                 </ul>
               </div>
@@ -228,27 +192,18 @@ const Footer = () => {
                 <h3 className="text-sm font-semibold mb-2">Account</h3>
                 <ul className="space-y-1 text-xs">
                   {footerLinks.account.map((link, index) => (
-                    <motion.li 
+                    <li 
                       key={index}
-                      whileHover={{ x: 3 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     >
                       <Link 
                         to={link.url} 
-                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === `account-${index}` ? 'text-blue-500' : 'text-gray-600'}`}
+                        className="text-gray-600 hover:text-blue-500 transition-colors"
                         onMouseEnter={() => setHoveredLink(`account-${index}`)}
                         onMouseLeave={() => setHoveredLink(null)}
                       >
                         {link.name}
-                        <motion.span 
-                          className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
-                          animate={{ 
-                            width: hoveredLink === `account-${index}` ? '100%' : '0%'
-                          }}
-                          transition={{ duration: 0.3 }}
-                        ></motion.span>
                       </Link>
-                    </motion.li>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -258,54 +213,50 @@ const Footer = () => {
                 <h3 className="text-sm font-semibold mb-2">About</h3>
                 <ul className="space-y-1 text-xs">
                   {footerLinks.about.map((link, index) => (
-                    <motion.li 
+                    <li 
                       key={index}
-                      whileHover={{ x: 3 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     >
                       <Link 
                         to={link.url} 
-                        className={`hover:text-blue-400 relative inline-block ${hoveredLink === `about-${index}` ? 'text-blue-500' : 'text-gray-600'}`}
+                        className="text-gray-600 hover:text-blue-500 transition-colors"
                         onMouseEnter={() => setHoveredLink(`about-${index}`)}
                         onMouseLeave={() => setHoveredLink(null)}
                       >
                         {link.name}
-                        <motion.span 
-                          className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400"
-                          animate={{ 
-                            width: hoveredLink === `about-${index}` ? '100%' : '0%'
-                          }}
-                          transition={{ duration: 0.3 }}
-                        ></motion.span>
                       </Link>
-                    </motion.li>
+                    </li>
                   ))}
-                  <motion.li whileHover={{ x: 3 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
-                    <Link to="/buyer-protection-policy" className="hover:text-blue-400 relative inline-block text-gray-600">
+                  <li>
+                    <Link to="/buyer-protection-policy" className="text-gray-600 hover:text-blue-500 transition-colors">
                       Buyer Protection Policy
-                      <motion.span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400" animate={{ width: '0%' }} transition={{ duration: 0.3 }}></motion.span>
                     </Link>
-                  </motion.li>
-                  <motion.li whileHover={{ x: 3 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
-                    <Link to="/refund-policy" className="hover:text-blue-400 relative inline-block text-gray-600">
+                  </li>
+                  <li>
+                    <Link to="/refund-policy" className="text-gray-600 hover:text-blue-500 transition-colors">
                       Refund Policy
-                      <motion.span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400" animate={{ width: '0%' }} transition={{ duration: 0.3 }}></motion.span>
                     </Link>
-                  </motion.li>
+                  </li>
+                  
+                  <li>
+                    <Link to="/terms-conditions" className="text-gray-600 hover:text-blue-500 transition-colors">Terms & Conditions</Link>
+                  </li>
+                  <li>
+                    <Link to="/seller-agreement" className="text-gray-600 hover:text-blue-500 transition-colors">Seller Agreement</Link>
+                  </li>
+                  <li>
+                    <Link to="/shipping-policy" className="text-gray-600 hover:text-blue-500 transition-colors">Shipping Policy</Link>
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
 
           {/* Bottom Section: Copyright */}
-          <motion.div 
+          <div 
             className="mt-6 text-center text-xs text-gray-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
           >
             <p>&copy; {new Date().getFullYear()} Foremade, Inc. All rights reserved.</p>
-          </motion.div>
+          </div>
         </div>
       </div>
     </footer>

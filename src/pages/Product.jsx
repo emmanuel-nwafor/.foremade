@@ -6,7 +6,7 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
-import dailyDealsImage from '/src/assets/images/daily-deals2.png'; // Imported your daily deals image
+import dailyDealsImage from '/src/assets/images/daily-deals.png'; // Imported your daily deals image
 
 const Product = () => {
   const { id } = useParams();
@@ -512,7 +512,7 @@ const Product = () => {
   const originalPrice = calculateTotalPrice(product.price, quantity, 0);
 
   return (
-    <div className="mb-[160px] container mx-auto px-4 py-6 md:py-8 relative">
+    <div className="mb-[140px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
         {`
           @keyframes fadeIn {
@@ -584,12 +584,12 @@ const Product = () => {
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
             <div>
-              <div className="relative">
+              <div className="relative main-media-container">
                 {isDailyDeal && (
                   <img
                     src={dailyDealsImage}
                     alt="Daily Deal"
-                    className="absolute bottom-2 right-2 w-44 h-20"
+                    className="absolute bottom-2 right-2 w-24 h-20"
                   />
                 )}
                 {mainMedia.includes('.mp4') ? (

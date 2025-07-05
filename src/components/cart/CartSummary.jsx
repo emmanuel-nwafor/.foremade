@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '/src/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
 const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const navigate = useNavigate();
@@ -31,16 +31,51 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
       }
     };
 
+    const fetchDailyDeals = async () => {
+      try {
+        const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const activeDeals = dealsSnapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
+        return activeDeals;
+      } catch (err) {
+        console.error('Error fetching daily deals:', err);
+        return [];
+      }
+    };
+
+    const updateDealsForItems = async () => {
+      const activeDeals = await fetchDailyDeals();
+      cartItems.forEach((item) => {
+        const deal = activeDeals.find((d) => d.productId === item.product.id);
+        if (deal) {
+          item.isDailyDeal = true;
+          item.discountPercentage = (deal.discount * 100).toFixed(2);
+        } else {
+          item.isDailyDeal = false;
+          item.discountPercentage = 0;
+        }
+      });
+    };
+
+    if (cartItems.length > 0) {
+      updateDealsForItems();
+    }
+
     fetchConfigs();
   }, [cartItems]);
 
-  console.log(propTotalPrice)
+  console.log(propTotalPrice);
 
-  const calculateTotalPrice = (basePrice, qty = 1) => {
-    return basePrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+  const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
+    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
+    const discountedPrice = basePrice - discount;
+    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
   };
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + calculateTotalPrice(item.product.price || 0, item.quantity || 1), 0);
+  const totalPrice = cartItems.reduce((sum, item) => {
+    return sum + calculateTotalPrice(item.product.price || 0, item.quantity || 1, item.discountPercentage || 0);
+  }, 0);
   const hasStockIssues = cartItems.some((item) => item.quantity > (item.product?.stock || 0));
   const isCartEmpty = cartItems.length === 0;
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -49,7 +84,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   // Shipping is free within Nigeria
   const shipping = 0;
 
-  // Remove discount logic to match Checkout.js
+  // Grand total with applied discounts
   const grandTotal = totalPrice + shipping;
 
   const handleCheckout = () => {
@@ -68,6 +103,14 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
     <div className="p-4 bg-gray-50 rounded-lg shadow-sm">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
       <div className="space-y-2 text-sm text-gray-700">
+        {cartItems.map((item, index) => (
+          item.isDailyDeal && (
+            <div key={index} className="flex justify-between text-xs text-green-600">
+              <span>Discount on {item.product.name}</span>
+              <span>-₦{((item.product.price * item.discountPercentage / 100) * item.quantity).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )
+        ))}
         <div className="flex justify-between">
           <span>Subtotal</span>
           <span>₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>

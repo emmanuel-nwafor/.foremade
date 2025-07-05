@@ -6,6 +6,7 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
+import dailyDealsImage from '/src/assets/images/daily-deals2.png'; // Imported your daily deals image
 
 const Product = () => {
   const { id } = useParams();
@@ -577,48 +578,20 @@ const Product = () => {
           .formatted-description li {
             margin-bottom: 0.25rem;
           }
-          .deal-badge {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle at 50% 50%, #ff0000 50%, transparent 51%);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            transform: rotate(45deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            padding: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-          }
-          .deal-badge::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: inherit;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            transform: scale(1.1);
-            z-index: -1;
-          }
         `}
       </style>
-      {isDailyDeal && (
-        <div className="deal-badge" style={{ transform: 'rotate(45deg)' }}>
-          <span style={{ transform: 'rotate(-45deg)' }}>Daily Deal<br />-{discountPercentage}%</span>
-        </div>
-      )}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
             <div>
-              <div className="main-media-container">
+              <div className="relative">
+                {isDailyDeal && (
+                  <img
+                    src={dailyDealsImage}
+                    alt="Daily Deal"
+                    className="absolute bottom-2 right-2 w-44 h-20"
+                  />
+                )}
                 {mainMedia.includes('.mp4') ? (
                   <video
                     src={mainMedia}
@@ -679,12 +652,6 @@ const Product = () => {
             </div>
             <div className="flex flex-col gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{product.name}</h1>
-              {isDailyDeal && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                  <i className="bx bx-time-five text-sm"></i>
-                  Daily Deal! -{discountPercentage}%
-                </span>
-              )}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>
                   Seller: <strong>{product.seller.name}</strong>

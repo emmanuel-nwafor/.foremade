@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
+import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js';
+import { Line } from 'react-chartjs-2';
 
-// Simulated checkout function
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
+
 const handleCheckout = async (sellerId, productPrice, totalAmount) => {
   console.log(`Checkout triggered for seller ${sellerId} with product price ${productPrice} and total ${totalAmount}`);
   const walletRef = doc(db, 'wallets', sellerId);
-  const adminRef = doc(db, 'wallets', 'admin'); // Assuming 'admin' is the admin UID
+  const adminRef = doc(db, 'wallets', 'admin');
   const fees = totalAmount - productPrice;
   try {
     await updateDoc(walletRef, {
@@ -30,16 +33,19 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      navigate('/login');
+      return;
+    }
     const fetchWallet = async () => {
-      if (!auth.currentUser) {
-        navigate('/login');
-        return;
-      }
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       const walletSnap = await getDoc(walletRef);
       if (walletSnap.exists()) {
@@ -53,32 +59,59 @@ export default function Wallet() {
             updatedAt: serverTimestamp(),
           });
           setBalance(newBalance);
+          setPendingBalance(0);
         } else {
           setBalance(data.availableBalance || 0);
+          setPendingBalance(data.pendingBalance || 0);
         }
       } else {
         await setDoc(walletRef, {
           availableBalance: 0,
+          pendingBalance: 0,
           updatedAt: serverTimestamp(),
           accountDetails: null,
         });
         setBalance(0);
+        setPendingBalance(0);
       }
       setLoading(false);
     };
     fetchWallet();
 
     const walletRef = doc(db, 'wallets', auth.currentUser.uid);
-    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+    const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
-        setBalance(docSnap.data().availableBalance || 0);
-        console.log(`Balance updated to ₦${docSnap.data().availableBalance || 0}`);
+        const data = docSnap.data();
+        setBalance(data.availableBalance || 0);
+        setPendingBalance(data.pendingBalance || 0);
+        updateChartData(data.availableBalance || 0, data.pendingBalance || 0);
+        console.log(`Balance updated to ₦${data.availableBalance || 0}, Pending: ₦${data.pendingBalance || 0}`);
       }
     }, (err) => {
-      console.error('Snapshot error:', err);
+      console.error('Wallet snapshot error:', err);
       setError('Failed to update wallet data: ' + err.message);
     });
-    return () => unsubscribe();
+
+    const transactionQuery = query(
+      collection(db, 'transactions'),
+      where('userId', '==', auth.currentUser.uid),
+      where('type', '==', 'Withdrawal')
+    );
+    const unsubscribeTransactions = onSnapshot(transactionQuery, (snapshot) => {
+      let totalWithdrawals = 0;
+      snapshot.forEach((doc) => {
+        totalWithdrawals += doc.data().amount || 0;
+      });
+      updateChartData(balance, pendingBalance, totalWithdrawals);
+    }, (err) => {
+      console.error('Transaction snapshot error:', err);
+      setError('Failed to fetch transaction data: ' + err.message);
+    });
+
+    return () => {
+      unsubscribeWallet();
+      unsubscribeTransactions();
+    };
   }, [navigate, auth.currentUser?.uid]);
 
   const handleWithdraw = async (e) => {
@@ -108,7 +141,8 @@ export default function Wallet() {
       });
       if (response.data.status === 'success') {
         setAmount('');
-        alert('Withdrawal request submitted. Awaiting admin approval.');
+        setIsModalOpen(false);
+        alert('Withdrawal request submitted. Funds will be credited to your bank account shortly. Some banks may take up to 30 minutes to process.');
       }
     } catch (err) {
       console.error('Withdrawal error:', err);
@@ -128,12 +162,78 @@ export default function Wallet() {
     return {};
   };
 
+  // Chart data update function
+  const updateChartData = (available = balance, pending = pendingBalance, totalWithdrawals = 0) => {
+    const labels = ['Current State'];
+    setChartData({
+      labels,
+      datasets: [
+        {
+          label: 'Available Balance',
+          data: [available],
+          fill: false,
+          backgroundColor: '#3490dc',
+          borderColor: '#2563EB',
+          tension: 0.4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Pending Balance',
+          data: [pending],
+          fill: false,
+          backgroundColor: '#f6ad55',
+          borderColor: '#c08640',
+          tension: 0.4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Total Withdrawals',
+          data: [totalWithdrawals],
+          fill: false,
+          backgroundColor: '#718096',
+          borderColor: '#4a5568',
+          tension: 0.4,
+          borderWidth: 2,
+        },
+      ],
+    });
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Amount (₦)'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Wallet Overview'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top'
+      },
+      title: {
+        display: true,
+        text: 'Wallet Wave Statistics'
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gray-50">
         <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+        <div className="flex-1 ml-0 md:ml-64 p-2 sm:p-4 flex justify-center items-center">
+          <div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-t-2 border-b-2 border-blue-600"></div>
         </div>
       </div>
     );
@@ -165,6 +265,8 @@ export default function Wallet() {
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-700">Available Balance</h3>
               <p className="text-2xl sm:text-3xl font-bold text-blue-700">₦{balance.toLocaleString()}</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 mt-2">Pending Balance</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-500">₦{pendingBalance.toLocaleString()}</p>
             </div>
             {/* Withdrawal Form */}
             <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
@@ -196,6 +298,13 @@ export default function Wallet() {
                 Request Withdrawal
               </button>
             </form>
+            {/* Statistics Chart */}
+            <div className="mt-6 h-48 sm:h-64 bg-white p-3 rounded-lg shadow">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">Statistics</h2>
+              <div className="h-full">
+                <Line data={chartData} options={chartOptions} />
+              </div>
+            </div>
           </div>
         </div>
       </div>

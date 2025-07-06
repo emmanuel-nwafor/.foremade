@@ -16,9 +16,7 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
 
   if (!allMedia.length) {
     return (
-      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1">
-        {/* <ImageIcon size={16} className="text-gray-500" /> No media available */}
-      </p>
+      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1"></p>
     );
   }
 

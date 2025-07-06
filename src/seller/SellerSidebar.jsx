@@ -175,20 +175,20 @@ export default function SellerSidebar() {
               {filteredMenuItems.some((item) => item.category === 'Product Management') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Product Management</h3>
-                  {filteredMenuItems
+                    {filteredMenuItems
                     .filter((item) => item.category === 'Product Management')
-                    .map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setIsOpen(false)}
+                      .map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setIsOpen(false)}
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
-                        aria-label={item.label}
-                      >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
-                        {item.label}
-                      </Link>
-                    ))}
+                          aria-label={item.label}
+                        >
+                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                          {item.label}
+                        </Link>
+                      ))}
                 </div>
               )}
 
@@ -196,20 +196,20 @@ export default function SellerSidebar() {
               {filteredMenuItems.some((item) => item.category === 'Registering with us') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
-                  {filteredMenuItems
+                    {filteredMenuItems
                     .filter((item) => item.category === 'Registering with us')
-                    .map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setIsOpen(false)}
+                      .map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setIsOpen(false)}
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
-                        aria-label={item.label}
-                      >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
-                        {item.label}
-                      </Link>
-                    ))}
+                          aria-label={item.label}
+                        >
+                          <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                          {item.label}
+                        </Link>
+                      ))}
                 </div>
               )}
 

@@ -4,6 +4,7 @@ import { auth, db } from '/src/firebase';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
+import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
 
 // Simulated checkout function
 const handleCheckout = async (sellerId, productPrice, totalAmount) => {
@@ -43,19 +44,18 @@ export default function Wallet() {
       const walletSnap = await getDoc(walletRef);
       if (walletSnap.exists()) {
         const data = walletSnap.data();
-        let newBalance = data.pendingBalance || 0;
         if (data.pendingBalance && data.pendingBalance > 0) {
           const assumedFees = data.pendingBalance * 0.04958; // ~4.958% fee
-          newBalance = data.pendingBalance - assumedFees;
+          const newBalance = data.pendingBalance - assumedFees;
           await updateDoc(walletRef, {
             availableBalance: newBalance,
             pendingBalance: 0,
             updatedAt: serverTimestamp(),
           });
+          setBalance(newBalance);
         } else {
           setBalance(data.availableBalance || 0);
         }
-        setBalance(newBalance);
       } else {
         await setDoc(walletRef, {
           availableBalance: 0,
@@ -130,7 +130,7 @@ export default function Wallet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gray-100">
+      <div className="min-h-screen flex bg-gray-50">
         <SellerSidebar />
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
@@ -140,51 +140,58 @@ export default function Wallet() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="flex flex-1">
-        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg" onClick={() => {}}>
+        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg" onClick={() => {}} aria-label="Open sidebar">
           <i className="bx bx-menu text-xl"></i>
         </button>
-
-        <div className="md:block md:w-64 lg:w-72 bg-gray-100 transition-all duration-300">
+        <div className="md:block md:w-64 lg:w-72 bg-gray-50 transition-all duration-300">
           <SellerSidebar />
         </div>
-
-        <div className="flex-1 p-4 md:p-6">
-          <div className="max-w-full mx-auto">
-            <div className="mb-4 md:mb-8">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Wallet</h1>
-              {error && <div className="mt-2 md:mt-4 p-2 sm:p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
+        <div className="flex-1 p-3 sm:p-4 md:p-8">
+          <div className="max-w-xl mx-auto w-full">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <WalletIcon className="w-7 h-7 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-blue-900">My Wallet</h1>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 md:gap-6 mb-4 md:mb-8">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 sm:p-6 text-white">
-                <span className="font-light">Wallet ID: {auth.currentUser.uid}</span>
-                <h3 className="text-base sm:text-lg font-semibold opacity-90">Available Balance</h3>
-                <p className="text-xl sm:text-3xl font-bold mt-1 md:mt-2">₦{balance.toLocaleString()}</p>
+            {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
+            {/* Balance Card */}
+            <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-5 sm:p-6 mb-6 flex flex-col gap-2 items-start">
+              <div className="flex items-center gap-2 mb-1">
+                <WalletIcon className="w-6 h-6 text-blue-500" />
+                <span className="font-medium text-gray-500 text-xs sm:text-sm">Wallet ID:</span>
+                <span className="font-mono text-xs sm:text-sm text-gray-700">{auth.currentUser.uid}</span>
               </div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700">Available Balance</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-700">₦{balance.toLocaleString()}</p>
             </div>
-
-            <form onSubmit={handleWithdraw} className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-              <div className="p-4 sm:p-6 border-b">
+            {/* Withdrawal Form */}
+            <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ArrowDownCircle className="w-5 h-5 text-green-600" />
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Request Withdrawal</h2>
               </div>
-              <div className="mb-2 sm:mb-4">
-                <label className="block text-sm font-medium text-gray-700">Withdrawal Amount (₦)</label>
+              <div className="mb-4">
+                <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount (₦)</label>
                 <input
+                  id="withdraw-amount"
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 p-2 w-full border rounded"
+                  className="mt-1 p-2 w-full border border-blue-200 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-200 text-base"
                   required
+                  aria-label="Withdrawal Amount"
+                  min="1"
+                  step="any"
                 />
+                <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: ₦1. Withdrawals are subject to admin approval and may take up to 24 hours.</p>
               </div>
               <button
                 type="submit"
-                className={`mt-2 sm:mt-4 bg-blue-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-medium hover:bg-blue-700 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`w-full mt-2 sm:mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition text-base ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={loading}
+                aria-label="Request Withdrawal"
               >
                 Request Withdrawal
               </button>

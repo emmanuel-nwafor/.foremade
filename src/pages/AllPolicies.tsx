@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import PrivacyRequestForm from '../components/privacy/PrivacyRequestForm';
 
 type PolicyParams = {
   type: string;
@@ -69,23 +70,7 @@ const AllPolicies = () => {
                 Contact our Data Protection Officers for any privacy-related concerns or to exercise your data rights.
               </p>
               
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                  <h3 className="font-semibold text-blue-900 mb-2">Data Rights Request</h3>
-                  <p className="text-sm text-blue-700 mb-4">Submit a request to access, modify, or delete your data.</p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Submit Request
-                  </button>
-                </div>
-                
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                  <h3 className="font-semibold text-blue-900 mb-2">Privacy Questions</h3>
-                  <p className="text-sm text-blue-700 mb-4">Get help with privacy-related questions.</p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Contact DPO
-                  </button>
-                </div>
-              </div>
+              <PrivacyRequestForm />
             </div>
           </div>
         );
@@ -164,7 +149,7 @@ const AllPolicies = () => {
                 </div>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-green-700 mb-2">Your Data Protection Rights under Nigerian Law (NDPA 2023)</h1>
                 <p className="text-gray-600 max-w-xl">As a data subject in Nigeria, the Nigeria Data Protection Act (NDPA) 2023 grants you specific rights regarding your personal data. These rights ensure transparency, accountability, and give you greater control over how your information is collected, used, stored, and shared by organizations.</p>
-              </div>
+                  </div>
               <div className="bg-white/90 rounded-xl shadow-lg p-6 md:p-10 border border-green-100">
                 <h2 className="text-xl font-bold text-green-700 mb-3 mt-8">1. Right to Access Personal Data</h2>
                 <p className="mb-2">You have the right to request and receive confirmation as to whether or not an organization holds your personal data. Where your data is being processed, you are entitled to:</p>

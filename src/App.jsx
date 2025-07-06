@@ -73,6 +73,9 @@ import ProRefundPolicy from './pages/ProRefundPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import SellerAgreement from './pages/SellerAgreement';
 import ShippingPolicy from './pages/ShippingPolicy';
+import ChatTemplates from './pages/ChatTemplates';
+import ChatSystem from './pages/ChatSystem';
+import PrivacyCenter from './pages/PrivacyCenter';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -287,6 +290,9 @@ function App() {
             <Route path="/terms-conditions" element={<TermsAndConditions />} />
             <Route path="/seller-agreement" element={<SellerAgreement />} />
             <Route path="/shipping-policy" element={<ShippingPolicy />} />
+            <Route path="/chat-templates" element={<ChatTemplates />} />
+            <Route path="/chat-system" element={<ChatSystem />} />
+            <Route path="/privacy-center" element={<PrivacyCenter />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

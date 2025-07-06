@@ -589,7 +589,7 @@ const Product = () => {
                   <img
                     src={dailyDealsImage}
                     alt="Daily Deal"
-                    className="absolute bottom-2 right-2 w-24 h-20"
+                    className="absolute bottom-2 right-2 w-44 h-20"
                   />
                 )}
                 {mainMedia.includes('.mp4') ? (

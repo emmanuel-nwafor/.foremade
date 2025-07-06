@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 
@@ -34,11 +34,12 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      navigate('/login');
+      return;
+    }
+
     const fetchWallet = async () => {
-      if (!auth.currentUser) {
-        navigate('/login');
-        return;
-      }
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       const walletSnap = await getDoc(walletRef);
       if (walletSnap.exists()) {
@@ -66,19 +67,42 @@ export default function Wallet() {
       }
       setLoading(false);
     };
+
     fetchWallet();
 
     const walletRef = doc(db, 'wallets', auth.currentUser.uid);
-    const unsubscribe = onSnapshot(walletRef, (docSnap) => {
+    const transactionQuery = query(
+      collection(db, 'transactions'),
+      where('userId', '==', auth.currentUser.uid),
+      where('type', '==', 'Withdrawal')
+    );
+
+    const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
         setBalance(docSnap.data().availableBalance || 0);
         console.log(`Balance updated to ₦${docSnap.data().availableBalance || 0}`);
       }
     }, (err) => {
-      console.error('Snapshot error:', err);
+      console.error('Wallet snapshot error:', err);
       setError('Failed to update wallet data: ' + err.message);
     });
-    return () => unsubscribe();
+
+    const unsubscribeTransactions = onSnapshot(transactionQuery, (snapshot) => {
+      const pendingTransactions = snapshot.docs.filter((doc) => doc.data().status === 'Pending');
+      if (pendingTransactions.length > 0) {
+        setError('You have pending withdrawal requests. Funds will be credited to your bank account shortly. Some banks may take up to 30 minutes to process.');
+      } else {
+        setError('');
+      }
+    }, (err) => {
+      console.error('Transaction snapshot error:', err);
+      setError('Failed to fetch transaction status: ' + err.message);
+    });
+
+    return () => {
+      unsubscribeWallet();
+      unsubscribeTransactions();
+    };
   }, [navigate, auth.currentUser?.uid]);
 
   const handleWithdraw = async (e) => {
@@ -108,7 +132,7 @@ export default function Wallet() {
       });
       if (response.data.status === 'success') {
         setAmount('');
-        alert('Withdrawal request submitted. Awaiting admin approval.');
+        alert('Withdrawal request submitted. Funds will be credited to your bank account shortly. Some banks may take up to 30 minutes to process.');
       }
     } catch (err) {
       console.error('Withdrawal error:', err);

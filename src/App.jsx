@@ -28,6 +28,8 @@ import SellersProducts from './seller/SellersProducts';
 import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
+import SellerTransactions from './seller/SellerTransactions';
+import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
 
 import Admin from '/src/admin/Admin';
@@ -106,6 +108,8 @@ const Layout = ({ children }) => {
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
+    '/transactions',
+    '/products-upload-variant',
     '/dashboard',
   ].includes(location.pathname);
 
@@ -230,10 +234,26 @@ function App() {
               }
             />
             <Route
+              path="/products-upload-variant"
+              element={
+                <ProtectedRoute>
+                  <SellerProductVariants />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/recover-password"
               element={
                 <ProtectedRoute>
                   <ForgetPassword />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transactions"
+              element={
+                <ProtectedRoute>
+                  <SellerTransactions />
                 </ProtectedRoute>
               }
             />

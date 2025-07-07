@@ -93,8 +93,9 @@ export default function SellerProductUpload() {
   // State for location errors
   const [locationErrors, setLocationErrors] = useState({});
 
-  // State for popup visibility
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  // State for popups
+  const [isVariantPopupOpen, setIsVariantPopupOpen] = useState(true); // Show variant popup on page load
+  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false); // Success popup after submission
 
   // State for media files and previews
   const [imageFiles, setImageFiles] = useState(() => {
@@ -244,8 +245,6 @@ export default function SellerProductUpload() {
       console.error('Error fetching subcategories:', error);
       addAlert('Failed to load subcategories.', 'error');
     });
-
-    console.log(authenticityTags);
 
     const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
       const subSubcatData = {};
@@ -796,7 +795,7 @@ export default function SellerProductUpload() {
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
       console.log('Product uploaded with ID:', docRef.id);
-      setIsPopupOpen(true);
+      setIsSuccessPopupOpen(true); // Show success popup
       setFormData({
         sellerName: '',
         name: '',
@@ -873,6 +872,16 @@ export default function SellerProductUpload() {
     return [];
   };
 
+  // Handle variant popup actions
+  const handleVariantYes = () => {
+    setIsVariantPopupOpen(false);
+    navigate('/products-upload-variant');
+  };
+
+  const handleVariantNo = () => {
+    setIsVariantPopupOpen(false);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
@@ -901,7 +910,7 @@ export default function SellerProductUpload() {
             <div className="relative group">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 4 images (JPEG, PNG, etc.)"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 8 images (JPEG, PNG, etc.)"></i>
               </label>
               <div
                 ref={dropZoneRef}
@@ -1307,7 +1316,7 @@ export default function SellerProductUpload() {
                     Foremade Fees
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p> 
+                    <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
                     <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
@@ -1643,185 +1652,201 @@ export default function SellerProductUpload() {
                 Tags (Optional)
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
               </label>
-              <div className="flex flex-wrap gap-2 mt-2 mb-2">
-                {formData.tags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
-                  >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="text-red-500 hover:text-red-700"
-                      disabled={loading}
-                      title="Remove tag"
-                    >
-                      <i className="bx bx-x"></i>
-                    </button>
+              <div className="relative mt-1">
+                <input
+                  type="text"
+                  value={formData.tags.join(', ')}
+                  onChange={(e) => {
+                    const tags = e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag);
+                    setFormData((prev) => ({ ...prev, tags }));
+                  }}
+                  placeholder="e.g., Vintage, Leather, Smartphone"
+                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {suggestedTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {suggestedTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagToggle(tag)}
+                          className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                            formData.tags.includes(tag)
+                              ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={loading}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
-              <input
-                type="text"
-                placeholder="Type a tag and press Enter (e.g., Fashion)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    const tag = e.target.value.trim();
-                    if (tag.length > 20) {
-                      addAlert('Tag must be 20 characters or less.', 'error');
-                      return;
-                    }
-                    handleTagToggle(tag);
-                    e.target.value = '';
-                  }
-                }}
-                className={`mt-1 w-full py-4 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                disabled={loading}
-              />
-              {suggestedTags.length > 0 && (
+
+              {/* Condition Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-star text-blue-500"></i>
+                  Condition
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product Condition <span className="text-red-500">*</span>
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
+                </label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Suggested:</span>
-                  {suggestedTags.map((tag) => (
+                  {['New', 'Used', 'Refurbished'].map((condition) => (
                     <button
-                      key={tag}
+                      key={condition}
                       type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 shadow-sm"
+                      onClick={() => setFormData((prev) => ({ ...prev, condition }))}
+                      className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                        formData.condition === condition
+                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       disabled={loading}
                     >
-                      {tag}
+                      {condition}
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Condition & Product URL Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-circle text-blue-500"></i>
-                Condition & Product URL
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Condition
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
-                  </label>
-                  <select
-                    name="condition"
-                    value={formData.condition}
-                    onChange={handleChange}
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  >
-                    <option value="New">New</option>
-                    <option value="Used">Used</option>
-                    <option value="Refurbished">Refurbished</option>
-                  </select>
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Product URL (Optional)
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="External link to product (if any)"></i>
-                  </label>
-                  <input
-                    type="url"
-                    name="productUrl"
-                    value={formData.productUrl}
-                    onChange={handleChange}
-                    placeholder="e.g., https://example.com/product"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                    disabled={loading}
-                  />
-                </div>
+                {errors.condition && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.condition}
+                  </p>
+                )}
               </div>
-            </div>
 
-            {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
-                disabled={loading}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end mt-8">
-              <button
-                type="submit"
-                className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <i className="bx bx-loader bx-spin"></i>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <i className="bx bx-upload"></i>
-                    Upload Product
-                  </>
+              {/* Product URL Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-link text-blue-500"></i>
+                  Product URL (Optional)
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  External Product URL
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Link to external product page (optional)"></i>
+                </label>
+                <input
+                  type="url"
+                  name="productUrl"
+                  value={formData.productUrl}
+                  onChange={handleChange}
+                  placeholder="e.g., https://example.com/product"
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {errors.productUrl && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.productUrl}
+                  </p>
                 )}
-              </button>
-            </div>
-          </form>
+              </div>
 
-          {/* Custom Alerts */}
-          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+              {/* Location Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-map text-blue-500"></i>
+                  Location
+                </h3>
+                <SellerLocationForm
+                  locationData={locationData}
+                  setLocationData={setLocationData}
+                  errors={locationErrors}
+                  disabled={loading}
+                />
+              </div>
 
-          {/* Success Popup */}
-          <SellerProductUploadPopup
-            isOpen={isPopupOpen}
-            onClose={() => setIsPopupOpen(false)}
-            onViewListings={() => {
-              setIsPopupOpen(false);
-              navigate('/seller/listings');
-            }}
-            onAddAnother={() => setIsPopupOpen(false)}
-          />
-
-          {/* Zoomed Media Modal */}
-          {zoomedMedia && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-              onClick={() => setZoomedMedia(null)}
-            >
-              <div className="relative max-w-4xl max-h-[90vh] p-4">
-                {zoomedMedia.type === 'image' ? (
-                  <img
-                    src={zoomedMedia.src}
-                    alt="Zoomed"
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                ) : (
-                  <video
-                    src={zoomedMedia.src}
-                    controls
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  />
-                )}
+              {/* Submit Button */}
+              <div className="flex justify-end mt-8">
                 <button
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                  onClick={() => setZoomedMedia(null)}
+                  type="submit"
+                  className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={loading}
                 >
-                  <i className="bx bx-x text-lg"></i>
+                  {loading ? (
+                    <>
+                      <i className="bx bx-loader bx-spin"></i>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bx bx-upload"></i>
+                      Add Product
+                    </>
+                  )}
                 </button>
               </div>
-            </div>
-          )}
+              </div>
+            </form>
+
+            {/* Custom Alerts */}
+            <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+            {/* Variant Popup */}
+            <SellerProductUploadPopup
+              isOpen={isVariantPopupOpen}
+              onClose={handleVariantNo}
+              message="Does this product have variants (e.g., different sizes, colors)?"
+              icon="bx-question-mark"
+              type="question"
+              showYesNoButtons={true}
+              onYes={handleVariantYes}
+              onNo={handleVariantNo}
+            />
+
+            {/* Success Popup */}
+            <SellerProductUploadPopup
+              isOpen={isSuccessPopupOpen}
+              onClose={() => {
+                setIsSuccessPopupOpen(false);
+              }}
+              message="Product added successfully!"
+              icon="bx-check-circle"
+              type="success"
+              showYesNoButtons={false}
+            />
+
+            {/* Zoomed Media Modal */}
+            {zoomedMedia && (
+              <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                <div className="relative max-w-4xl w-full">
+                  {zoomedMedia.type === 'image' ? (
+                    <img
+                      src={zoomedMedia.src}
+                      alt="Zoomed media"
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  ) : (
+                    <video
+                      src={zoomedMedia.src}
+                      controls
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  )}
+                  <button
+                    onClick={() => setZoomedMedia(null)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                    title="Close"
+                  >
+                    <i className="bx bx-x text-xl"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
   );
 }

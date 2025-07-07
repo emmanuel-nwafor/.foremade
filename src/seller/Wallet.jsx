@@ -230,10 +230,13 @@ export default function Wallet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-2 sm:p-4 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-t-2 border-b-2 border-blue-600"></div>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
+          </div>
         </div>
       </div>
     );
@@ -255,18 +258,17 @@ export default function Wallet() {
               <WalletIcon className="w-7 h-7 text-blue-600" />
               <h1 className="text-2xl sm:text-3xl font-bold text-blue-900">My Wallet</h1>
             </div>
-            {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
-            {/* Balance Card */}
-            <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-5 sm:p-6 mb-6 flex flex-col gap-2 items-start">
-              <div className="flex items-center gap-2 mb-1">
-                <WalletIcon className="w-6 h-6 text-blue-500" />
-                <span className="font-medium text-gray-500 text-xs sm:text-sm">Wallet ID:</span>
-                <span className="font-mono text-xs sm:text-sm text-gray-700">{auth.currentUser.uid}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-2 sm:mb-4 md:mb-6">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-2 sm:p-4 md:p-6 text-white">
+                <span className="text-[10px] sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
+                <h3 className="text-sm sm:text-lg md:text-xl font-semibold mt-1 sm:mt-2">Available Balance</h3>
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold mt-1 sm:mt-2">₦{balance.toLocaleString()}</p>
               </div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-700">Available Balance</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-blue-700">₦{balance.toLocaleString()}</p>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-700 mt-2">Pending Balance</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-orange-500">₦{pendingBalance.toLocaleString()}</p>
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-2 sm:p-4 md:p-6 text-white">
+                <span className="text-xs sm:text-sm font-light">Pending Withdrawals</span>
+                <h3 className="text-sm sm:text-lg md:text-xl font-semibold mt-1 sm:mt-2">Pending Balance</h3>
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold mt-1 sm:mt-2">₦{pendingBalance.toLocaleString()}</p>
+              </div>
             </div>
             {/* Withdrawal Form */}
             <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">

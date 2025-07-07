@@ -37,11 +37,13 @@ export default function SellerProductGallery() {
                 const videoUrls = Array.isArray(data.videoUrls)
                   ? data.videoUrls.filter(url => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
                   : [];
+                const variants = Array.isArray(data.variants) ? data.variants : [];
                 return {
                   id: doc.id,
                   ...data,
                   imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
                   videoUrls,
+                  variants,
                   uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date()
                 };
               });
@@ -125,40 +127,54 @@ export default function SellerProductGallery() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-xl transition duration-300">
-                  <div className="relative aspect-[4/3] mb-4">
-                    {product.imageUrls[0] && (
-                      <img
-                        src={product.imageUrls[0]}
-                        alt={product.name || 'Product Image'}
-                        className="w-full h-full object-cover rounded-lg hover:opacity-90 transition"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500">Image N/A</span></div>';
-                        }}
-                      />
-                    )}
-                    {product.videoUrls[0] && (
-                      <video controls className="w-full h-full rounded-lg mt-2">
-                        <source src={product.videoUrls[0]} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
-                    )}
+              filteredProducts.map((product) => {
+                const displayImage = product.variants?.length > 0 && product.variants[0].imageUrls?.length > 0
+                  ? product.variants[0].imageUrls[0]
+                  : product.imageUrls[0];
+                return (
+                  <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-xl transition duration-300">
+                    <div className="relative aspect-[4/3] mb-4">
+                      {displayImage ? (
+                        <img
+                          src={displayImage}
+                          alt={product.name || 'Product Image'}
+                          className="w-full h-full object-cover rounded-lg hover:opacity-90 transition"
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/150';
+                            console.error(`Failed to load image: ${displayImage}`);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-500">Image N/A</span>
+                        </div>
+                      )}
+                      {product.videoUrls[0] && (
+                        <video controls className="w-full h-full rounded-lg mt-2">
+                          <source src={product.videoUrls[0]} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
+                    <p className="text-gray-600 text-sm mb-1">
+                      Price: ₦{product.variants?.length > 0
+                        ? `${Math.min(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG')} - ${Math.max(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG')}`
+                        : (product.price || 0).toLocaleString('en-NG')}
+                    </p>
+                    <p className="text-gray-600 text-sm mb-1">Variants: {product.variants?.length || 0}</p>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      product.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                      product.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
+                    </span>
+                    <p className="text-gray-500 text-xs mt-1">
+                      Uploaded: {product.uploadDate.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
-                  <p className="text-gray-600 text-sm mb-1">Price: ₦{product.price || 0}</p>
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                    product.status === 'pending' ? 'bg-orange-100 text-orange-800' :
-                    product.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
-                  </span>
-                  <p className="text-gray-500 text-xs mt-1">
-                    Uploaded: {product.uploadDate.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-gray-600 text-center mt-6 text-lg col-span-full">No products uploaded yet.</p>
             )}

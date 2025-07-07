@@ -11,15 +11,6 @@ import SellerProductUploadPopup from './SellerProductUploadPopup';
 // Set global Axios timeout
 axios.defaults.timeout = 60000; // 60 seconds
 
-// Custom debounce function
-const debounce = (func, wait) => {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
-
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -122,7 +113,6 @@ export default function SellerProductVariants() {
   const dropZoneRefs = useRef([]);
   const fileInputRefs = useRef([]);
   const descriptionRef = useRef(null);
-  const isAddingRef = useRef(false);
 
   const MAX_VARIANT_IMAGES = 4;
   const availableColors = useMemo(
@@ -310,27 +300,17 @@ export default function SellerProductVariants() {
     suggestTags();
   }, [formData.name, formData.description, formData.subSubcategory]);
 
-  const addVariant = useCallback(
-    debounce(() => {
-      if (isAddingRef.current) return;
-      isAddingRef.current = true;
-
-      const defaultSize = getSizeOptions().length > 0 ? getSizeOptions()[0] : '';
-      setVariants((prev) => [
-        ...prev,
-        { color: '', size: defaultSize, price: '', stock: '', images: [] },
-      ]);
-      setVariantImageFiles((prev) => [...prev, []]);
-      setVariantImagePreviews((prev) => [...prev, []]);
-      dropZoneRefs.current.push({ current: null });
-      fileInputRefs.current.push({ current: null });
-
-      setTimeout(() => {
-        isAddingRef.current = false;
-      }, 300);
-    }, 300),
-    []
-  );
+  const addVariant = useCallback(() => {
+    const defaultSize = getSizeOptions().length > 0 ? getSizeOptions()[0] : '';
+    setVariants((prev) => [
+      ...prev,
+      { color: '', size: defaultSize, price: '', stock: '', images: [] },
+    ]);
+    setVariantImageFiles((prev) => [...prev, []]);
+    setVariantImagePreviews((prev) => [...prev, []]);
+    dropZoneRefs.current.push({ current: null });
+    fileInputRefs.current.push({ current: null });
+  }, []);
 
   const removeVariant = useCallback((index) => {
     setVariants((prev) => prev.filter((_, i) => i !== index));
@@ -418,19 +398,16 @@ export default function SellerProductVariants() {
     }
   }, []);
 
-  const handleChange = useCallback(
-    debounce((e) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-        ...(name === 'category' ? { subcategory: '', subSubcategory: '' } : {}),
-        ...(name === 'subcategory' ? { subSubcategory: '' } : {}),
-      }));
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }, 200),
-    []
-  );
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'category' ? { subcategory: '', subSubcategory: '' } : {}),
+      ...(name === 'subcategory' ? { subSubcategory: '' } : {}),
+    }));
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  }, []);
 
   const handleColorToggle = useCallback((color) => {
     setFormData((prev) => {
@@ -567,7 +544,7 @@ export default function SellerProductVariants() {
     if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
       newErrors.subcategory = 'Select a valid subcategory.';
     if (
-      customSubSubcategories[formData.category]?.[formData.subcategory] &&
+      customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 &&
       !formData.subSubcategory
     )
       newErrors.subSubcategory = 'Select a sub-subcategory.';
@@ -728,11 +705,11 @@ export default function SellerProductVariants() {
         city: '',
         address: '',
       });
-      setVariants([]);
-      setVariantImageFiles([]);
-      setVariantImagePreviews([]);
-      dropZoneRefs.current = [];
-      fileInputRefs.current = [];
+      setVariants([{ color: '', size: '', price: '', stock: '', images: [] }]);
+      setVariantImageFiles([[]]);
+      setVariantImagePreviews([[]]);
+      dropZoneRefs.current = [{ current: null }];
+      fileInputRefs.current = [{ current: null }];
       setColorSuggestions([]);
       setShowColorDropdown(false);
       setShowCategoryDropdown(false);
@@ -883,7 +860,7 @@ export default function SellerProductVariants() {
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    placeholder="e.g., **Premium leather** jacket with *stylish stitching*"
+                    placeholder="e.g., Premium leather jacket with stylish stitching"
                     className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                       errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                     } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
@@ -1546,7 +1523,6 @@ export default function SellerProductVariants() {
             isOpen={isPopupOpen}
             onClose={() => {
               setIsPopupOpen(false);
-              // navigate('/seller/products');
             }}
             message="Product variants uploaded successfully!"
             icon="bx-check-circle"

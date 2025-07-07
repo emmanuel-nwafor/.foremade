@@ -3,9 +3,9 @@ import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import MediaPreview from './MediaPreview';
-import AdminActionButtons from './AdminActionbuttons';
+import AdminActionButtons from './AdminActionButtons';
 import axios from 'axios';
-import { Camera, Video, Trash2, CheckCircle2, XCircle, Edit2, User, ShoppingBag } from 'lucide-react';
+import { Camera, User, ShoppingBag, Edit2, CheckCircle2, XCircle } from 'lucide-react';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -55,11 +55,9 @@ function Admin() {
   const [sortOption, setSortOption] = useState('default');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [productToReject, setProductToReject] = useState(null);
-  const [editProduct, setEditProduct] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,17 +81,17 @@ function Admin() {
     };
 
     fetchData();
-  }, []);
+  }, [addAlert]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && (selectedProduct || isRejectionModalOpen || isEditModalOpen)) {
+      if (e.key === 'Escape' && (selectedProduct || isRejectionModalOpen)) {
         closeModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedProduct, isRejectionModalOpen, isEditModalOpen]);
+  }, [selectedProduct, isRejectionModalOpen]);
 
   const getBuyerCount = async (productId) => {
     try {
@@ -231,40 +229,40 @@ function Admin() {
     }
   };
 
-  const handleCardClick = (product) => {
+  const handleCardClick = (product, e) => {
+    e.stopPropagation(); // Prevent clicks on child elements from bubbling up
+    console.log('Card clicked:', product.id, product.name); // Debug log
     setSelectedProduct(product);
   };
 
-  const handleEditClick = (product) => {
-    setEditProduct({ ...product });
-    setIsEditModalOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editProduct.name || !editProduct.price || !editProduct.stock) {
-      addAlert('Please fill all required fields.', 'error');
+  const handleUpdateProduct = async (updatedProduct) => {
+    if (!updatedProduct.name || updatedProduct.variants.some((v) => !v.price || !v.stock || !v.color)) {
+      addAlert('Please fill all required fields for all variants.', 'error');
       return;
     }
     setLoading(true);
     try {
-      const productRef = doc(db, 'products', editProduct.id);
+      const productRef = doc(db, 'products', updatedProduct.id);
       await updateDoc(productRef, {
-        name: editProduct.name,
-        price: parseFloat(editProduct.price),
-        stock: parseInt(editProduct.stock),
-        category: editProduct.category,
-        colors: editProduct.colors,
-        sizes: editProduct.sizes,
-        condition: editProduct.condition,
+        name: updatedProduct.name,
+        category: updatedProduct.category,
+        condition: updatedProduct.condition,
+        tags: updatedProduct.tags,
+        variants: updatedProduct.variants.map((variant) => ({
+          ...variant,
+          price: parseFloat(variant.price) || 0,
+          stock: parseInt(variant.stock) || 0,
+        })),
+        imageUrls: updatedProduct.imageUrls || [],
       });
       setData((prev) => ({
         ...prev,
         products: prev.products.map((item) =>
-          item.id === editProduct.id ? { ...item, ...editProduct } : item
+          item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item
         ),
       }));
       addAlert('Product updated successfully! 🎉', 'success');
-      closeModal();
+      setSelectedProduct(null);
     } catch (err) {
       console.error('Error updating product:', err);
       addAlert('Failed to update product.', 'error');
@@ -276,11 +274,9 @@ function Admin() {
   const closeModal = () => {
     setSelectedProduct(null);
     setIsRejectionModalOpen(false);
-    setIsEditModalOpen(false);
     setRejectionReason('');
     setCustomReason('');
     setProductToReject(null);
-    setEditProduct(null);
   };
 
   const sortProducts = (products) => {
@@ -291,9 +287,17 @@ function Admin() {
       case 'name-desc':
         return sorted.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
       case 'price-asc':
-        return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+        return sorted.sort((a, b) => {
+          const minPriceA = a.variants && a.variants.length ? Math.min(...a.variants.map((v) => v.price || 0)) : a.price || 0;
+          const minPriceB = b.variants && b.variants.length ? Math.min(...b.variants.map((v) => v.price || 0)) : b.price || 0;
+          return minPriceA - minPriceB;
+        });
       case 'price-desc':
-        return sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+        return sorted.sort((a, b) => {
+          const maxPriceA = a.variants && a.variants.length ? Math.max(...a.variants.map((v) => v.price || 0)) : a.price || 0;
+          const maxPriceB = b.variants && b.variants.length ? Math.max(...b.variants.map((v) => v.price || 0)) : b.price || 0;
+          return maxPriceB - maxPriceA;
+        });
       case 'status-pending':
         return sorted.sort((a) => (a.status === 'pending' ? -1 : 1));
       case 'status-approved':
@@ -403,7 +407,7 @@ function Admin() {
               <div
                 key={product.id}
                 className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-lg transition-all duration-200 shadow-md"
-                onClick={() => handleCardClick(product)}
+                onClick={(e) => handleCardClick(product, e)}
               >
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{product.name || 'Unnamed Product'}</h2>
@@ -418,8 +422,8 @@ function Admin() {
                   </span>
                 </div>
                 <MediaPreview
-                  imageUrls={product.imageUrls || ['https://via.placeholder.com/150']} // Fallback image
-                  videoUrls={product.videoUrls || []}
+                  variants={product.variants || []}
+                  imageUrls={product.imageUrls || []}
                 />
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
                   <User size={14} /> Seller: {product.sellerName || 'Unknown'}
@@ -427,14 +431,19 @@ function Admin() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
                   <ShoppingBag size={14} /> Buyers: {product.buyerCount || 0}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Price: ₦{(product.price || 0).toLocaleString('en-NG')}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Variants: {product.variants?.length || 0}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Price Range: ₦{product.variants && product.variants.length ? Math.min(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG') : (product.price || 0).toLocaleString('en-NG')} - ₦{product.variants && product.variants.length ? Math.max(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG') : (product.price || 0).toLocaleString('en-NG')}
+                </p>
                 <AdminActionButtons
                   productId={product.id}
                   currentStatus={product.status}
                   onStatusChange={handleProductStatus}
                   onDelete={handleDelete}
                   loading={loading}
-                  onEdit={() => handleEditClick(product)}
+                  onEdit={(e) => handleCardClick(product, e)}
                 />
               </div>
             ))}
@@ -447,7 +456,7 @@ function Admin() {
 
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 p-6 m-6 rounded-xl w-full max-w-6xl max-h-[96vh] overflow-y-auto shadow-lg flex flex-col md:flex-row gap-6">
+          <div className="bg-white dark:bg-gray-900 p-6 m-4 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-lg flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-1/2 space-y-6">
               <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
@@ -463,16 +472,12 @@ function Admin() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Camera size={23} className="text-blue-500" /> Details
+                  <Camera size={18} className="text-blue-500" /> Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Seller:</span> {selectedProduct.sellerName || 'Unknown Seller'}</p>
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Status:</span> {selectedProduct.status === 'pending' ? 'Pending' : selectedProduct.status === 'approved' ? 'Approved' : 'Not Approved'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Price:</span> ₦{(selectedProduct.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Stock:</span> {selectedProduct.stock || 0} units</p>
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Category:</span> {selectedProduct.category || 'Uncategorized'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Colors:</span> {Array.isArray(selectedProduct.colors) ? selectedProduct.colors.join(', ') : 'None'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Sizes:</span> {Array.isArray(selectedProduct.sizes) ? selectedProduct.sizes.join(', ') : 'None'}</p>
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Condition:</span> {selectedProduct.condition || 'New'}</p>
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Rating:</span> {selectedProduct.rating || 'N/A'}</p>
                   <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Buyers:</span> {selectedProduct.buyerCount || 0}</p>
@@ -492,6 +497,29 @@ function Admin() {
                 </h3>
                 <p className="text-[13px] mt-3"><span className="bg-amber-100 rounded-full p-1">Name:</span> {selectedProduct.seller?.name || 'Unknown Seller'}</p>
                 <p className="text-[13px] mt-4"><span className="bg-amber-100 rounded-full p-1">ID:</span> {selectedProduct.seller?.id || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <ShoppingBag size={18} className="text-blue-500" /> Variants
+                </h3>
+                {selectedProduct.variants && selectedProduct.variants.length > 0 ? (
+                  <div className="space-y-4 mt-2">
+                    {selectedProduct.variants.map((variant, index) => (
+                      <div key={index} className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Variant {index + 1}</h4>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Color:</span> {variant.color || 'N/A'}</p>
+                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Size:</span> {variant.size || 'N/A'}</p>
+                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Price:</span> ₦{(variant.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Stock:</span> {variant.stock || 0} units</p>
+                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Images:</span> {variant.imageUrls?.length || 0}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-gray-600 dark:text-gray-400">No variants available.</p>
+                )}
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
@@ -515,38 +543,20 @@ function Admin() {
                 onStatusChange={handleProductStatus}
                 onDelete={handleDelete}
                 loading={loading}
-                onEdit={() => handleEditClick(selectedProduct)}
+                onEdit={(e) => handleCardClick(selectedProduct, e)}
                 isModal
               />
             </div>
             <div className="w-full md:w-1/2">
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-4">
-                <Video size={18} className="text-blue-500" /> Media Preview
+                <Camera size={18} className="text-blue-500" /> Variant Media Preview
               </h3>
               <MediaPreview
+                variants={selectedProduct.variants || []}
                 imageUrls={selectedProduct.imageUrls || []}
-                videoUrls={selectedProduct.videoUrls || []}
                 isModal
                 product={selectedProduct}
-                onUpdateProduct={(updatedProduct) => {
-                  const productRef = doc(db, 'products', updatedProduct.id);
-                  updateDoc(productRef, {
-                    ...updatedProduct,
-                    price: parseFloat(updatedProduct.price) || 0,
-                    stock: parseInt(updatedProduct.stock) || 0,
-                  }).then(() => {
-                    setData((prev) => ({
-                      ...prev,
-                      products: prev.products.map((item) =>
-                        item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item
-                      ),
-                    }));
-                    addAlert('Product updated successfully! 🎉', 'success');
-                  }).catch((err) => {
-                    console.error('Error updating product:', err);
-                    addAlert('Failed to update product.', 'error');
-                  });
-                }}
+                onUpdateProduct={handleUpdateProduct}
               />
             </div>
           </div>
@@ -610,106 +620,6 @@ function Admin() {
                 >
                   {loading ? <i className="bx bx-loader bx-spin"></i> : <XCircle size={16} />}
                   Reject Product
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isEditModalOpen && editProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl w-full max-w-md shadow-lg">
-            <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <Edit2 size={20} className="text-blue-500" /> Edit Product
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
-                title="Close"
-              >
-                <i className="bx bx-x"></i>
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={editProduct.name || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price (₦)</label>
-                <input
-                  type="number"
-                  value={editProduct.price || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
-                <input
-                  type="number"
-                  value={editProduct.stock || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, stock: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                <input
-                  type="text"
-                  value={editProduct.category || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Colors (comma-separated)</label>
-                <input
-                  type="text"
-                  value={Array.isArray(editProduct.colors) ? editProduct.colors.join(', ') : editProduct.colors || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, colors: e.target.value.split(', ').filter(Boolean) })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sizes (comma-separated)</label>
-                <input
-                  type="text"
-                  value={Array.isArray(editProduct.sizes) ? editProduct.sizes.join(', ') : editProduct.sizes || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, sizes: e.target.value.split(', ').filter(Boolean) })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condition</label>
-                <input
-                  type="text"
-                  value={editProduct.condition || ''}
-                  onChange={(e) => setEditProduct({ ...editProduct, condition: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={closeModal}
-                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg text-sm hover:bg-gray-400 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="py-2 px-4 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-all duration-200 flex items-center gap-2"
-                  disabled={loading}
-                >
-                  {loading ? <i className="bx bx-loader bx-spin"></i> : <CheckCircle2 size={16} />}
-                  Save Changes
                 </button>
               </div>
             </div>

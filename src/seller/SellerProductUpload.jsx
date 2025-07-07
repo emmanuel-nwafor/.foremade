@@ -1667,7 +1667,7 @@ export default function SellerProductUpload() {
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
                 </label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {['New', 'Used - Like New', 'Used - Good', 'Used - Fair'].map((condition) => (
+                  {['New', 'Used', 'Refurbished'].map((condition) => (
                     <button
                       key={condition}
                       type="button"
@@ -1779,7 +1779,6 @@ export default function SellerProductUpload() {
               isOpen={isSuccessPopupOpen}
               onClose={() => {
                 setIsSuccessPopupOpen(false);
-                navigate('/seller/products');
               }}
               message="Product added successfully!"
               icon="bx-check-circle"

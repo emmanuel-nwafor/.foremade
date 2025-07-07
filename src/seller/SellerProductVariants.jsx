@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore';
@@ -51,13 +51,13 @@ function CustomAlert({ alerts, removeAlert }) {
 // Local hook for managing alerts
 function useAlerts() {
   const [alerts, setAlerts] = useState([]);
-  const addAlert = (message, type = 'info') => {
+  const addAlert = useCallback((message, type = 'info') => {
     const id = Date.now();
     setAlerts((prev) => [...prev, { id, message, type }]);
-  };
-  const removeAlert = (id) => {
+  }, []);
+  const removeAlert = useCallback((id) => {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
-  };
+  }, []);
   return { alerts, addAlert, removeAlert };
 }
 
@@ -123,33 +123,37 @@ export default function SellerProductVariants() {
   const fileInputRefs = useRef([]);
   const descriptionRef = useRef(null);
   const isAddingRef = useRef(false);
-  const prevVariantsRef = useRef(variants);
 
   const MAX_VARIANT_IMAGES = 4;
-  const availableColors = [
-    { name: 'Red', hex: '#ff0000' },
-    { name: 'Orange', hex: '#FFA500' },
-    { name: 'Blue', hex: '#0000ff' },
-    { name: 'Green', hex: '#008000' },
-    { name: 'Brown', hex: '#8b4513' },
-    { name: 'Black', hex: '#000000' },
-    { name: 'White', hex: '#ffffff' },
-    { name: 'Purple', hex: '#800080' },
-    { name: 'Pink', hex: '#ffc1cc' },
-    { name: 'Gray', hex: '#808080' },
-    { name: 'Yellow', hex: '#FFFF00' },
-    { name: 'Gold', hex: '#ff9a1d' },
-    { name: 'Silver', hex: '#e2f2ec' },
-  ];
-  const menClothingSizes = ['S', 'M', 'L', 'XL', 'XXL'];
-  const womenClothingSizes = ['3', '4', '6', '8', '10', '12', '14', '16', '18', '20'];
-  const footwearSizes = [
-    '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
-    '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"'
-  ];
-  const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
-  const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
-  const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
+  const availableColors = useMemo(
+    () => [
+      { name: 'Red', hex: '#ff0000' },
+      { name: 'Orange', hex: '#FFA500' },
+      { name: 'Blue', hex: '#0000ff' },
+      { name: 'Green', hex: '#008000' },
+      { name: 'Brown', hex: '#8b4513' },
+      { name: 'Black', hex: '#000000' },
+      { name: 'White', hex: '#ffffff' },
+      { name: 'Purple', hex: '#800080' },
+      { name: 'Pink', hex: '#ffc1cc' },
+      { name: 'Gray', hex: '#808080' },
+      { name: 'Yellow', hex: '#FFFF00' },
+      { name: 'Gold', hex: '#ff9a1d' },
+      { name: 'Silver', hex: '#e2f2ec' },
+    ],
+    []
+  );
+  const menClothingSizes = useMemo(() => ['S', 'M', 'L', 'XL', 'XXL'], []);
+  const womenClothingSizes = useMemo(() => ['3', '4', '6', '8', '10', '12', '14', '16', '18', '20'], []);
+  const footwearSizes = useMemo(
+    () => [
+      '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
+      '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"',
+    ],
+    []
+  );
+  const perfumeSizes = useMemo(() => ['30ml', '50ml', '60ml', '75ml', '100ml'], []);
+  const manualSizes = useMemo(() => ['Small', 'Medium', 'Large', 'X-Large'], []);
 
   // Initialize refs for variants
   useEffect(() => {
@@ -172,57 +176,52 @@ export default function SellerProductVariants() {
 
   // Fetch categories and fees
   useEffect(() => {
-    const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
-      const categoryList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setCategories(categoryList.map((cat) => cat.name));
-      if (formData.category && !categoryList.some((cat) => cat.name === formData.category)) {
-        setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '' }));
-        addAlert('Selected category was removed by admin.', 'error');
+    const unsubscribeCategories = onSnapshot(
+      collection(db, 'categories'),
+      (snapshot) => {
+        const categoryList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setCategories(categoryList.map((cat) => cat.name));
+      },
+      (error) => {
+        console.error('Error fetching categories:', error);
+        addAlert('Failed to load categories.', 'error');
       }
-    }, (error) => {
-      console.error('Error fetching categories:', error);
-      addAlert('Failed to load categories.', 'error');
-    });
+    );
 
-    const unsubscribeSubcategories = onSnapshot(collection(db, 'customSubcategories'), (snapshot) => {
-      const subcatData = {};
-      snapshot.forEach((doc) => {
-        subcatData[doc.id] = doc.data().subcategories || [];
-      });
-      setCustomSubcategories(subcatData);
-      if (formData.category && formData.subcategory && !subcatData[formData.category]?.includes(formData.subcategory)) {
-        setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '' }));
-        addAlert('Selected subcategory was removed by admin.', 'error');
-      }
-    }, (error) => {
-      console.error('Error fetching subcategories:', error);
-      addAlert('Failed to load subcategories.', 'error');
-    });
-
-    const unsubscribeSubSubcategories = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
-      const subSubcatData = {};
-      snapshot.forEach((doc) => {
-        const category = doc.id;
-        const subSubcats = doc.data();
-        subSubcatData[category] = {};
-        Object.entries(subSubcats).forEach(([subcat, subSubcatList]) => {
-          subSubcatData[category][subcat] = Array.isArray(subSubcatList) ? subSubcatList : [];
+    const unsubscribeSubcategories = onSnapshot(
+      collection(db, 'customSubcategories'),
+      (snapshot) => {
+        const subcatData = {};
+        snapshot.forEach((doc) => {
+          subcatData[doc.id] = doc.data().subcategories || [];
         });
-      });
-      setCustomSubSubcategories(subSubcatData);
-      if (
-        formData.category &&
-        formData.subcategory &&
-        formData.subSubcategory &&
-        !subSubcatData[formData.category]?.[formData.subcategory]?.includes(formData.subSubcategory)
-      ) {
-        setFormData((prev) => ({ ...prev, subSubcategory: '' }));
-        addAlert('Selected sub-subcategory was removed by admin.', 'error');
+        setCustomSubcategories(subcatData);
+      },
+      (error) => {
+        console.error('Error fetching subcategories:', error);
+        addAlert('Failed to load subcategories.', 'error');
       }
-    }, (error) => {
-      console.error('Error fetching sub-subcategories:', error);
-      addAlert('Failed to load sub-subcategories.', 'error');
-    });
+    );
+
+    const unsubscribeSubSubcategories = onSnapshot(
+      collection(db, 'customSubSubcategories'),
+      (snapshot) => {
+        const subSubcatData = {};
+        snapshot.forEach((doc) => {
+          const category = doc.id;
+          const subSubcats = doc.data();
+          subSubcatData[category] = {};
+          Object.entries(subSubcats).forEach(([subcat, subSubcatList]) => {
+            subSubcatData[category][subcat] = Array.isArray(subSubcatList) ? subSubcatList : [];
+          });
+        });
+        setCustomSubSubcategories(subSubcatData);
+      },
+      (error) => {
+        console.error('Error fetching sub-subcategories:', error);
+        addAlert('Failed to load sub-subcategories.', 'error');
+      }
+    );
 
     const fetchFeeConfig = async () => {
       try {
@@ -245,7 +244,26 @@ export default function SellerProductVariants() {
       unsubscribeSubcategories();
       unsubscribeSubSubcategories();
     };
-  }, [formData.category, formData.subcategory, formData.subSubcategory, addAlert]);
+  }, [addAlert]);
+
+  // Validate category and subcategory selections
+  useEffect(() => {
+    if (formData.category && !categories.includes(formData.category)) {
+      setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '' }));
+      addAlert('Selected category was removed by admin.', 'error');
+    }
+    if (formData.subcategory && !customSubcategories[formData.category]?.includes(formData.subcategory)) {
+      setFormData((prev) => ({ ...prev, subcategory: '', subSubcategory: '' }));
+      addAlert('Selected subcategory was removed by admin.', 'error');
+    }
+    if (
+      formData.subSubcategory &&
+      !customSubSubcategories[formData.category]?.[formData.subcategory]?.includes(formData.subSubcategory)
+    ) {
+      setFormData((prev) => ({ ...prev, subSubcategory: '' }));
+      addAlert('Selected sub-subcategory was removed by admin.', 'error');
+    }
+  }, [categories, customSubcategories, customSubSubcategories, formData, addAlert]);
 
   // Handle user authentication
   useEffect(() => {
@@ -314,7 +332,7 @@ export default function SellerProductVariants() {
     []
   );
 
-  const removeVariant = (index) => {
+  const removeVariant = useCallback((index) => {
     setVariants((prev) => prev.filter((_, i) => i !== index));
     setVariantImageFiles((prev) => prev.filter((_, i) => i !== index));
     setVariantImagePreviews((prev) => {
@@ -324,17 +342,17 @@ export default function SellerProductVariants() {
     });
     dropZoneRefs.current.splice(index, 1);
     fileInputRefs.current.splice(index, 1);
-  };
+  }, []);
 
-  const handleVariantChange = (index, field, value) => {
+  const handleVariantChange = useCallback((index, field, value) => {
     setVariants((prev) =>
       prev.map((variant, i) =>
         i === index ? { ...variant, [field]: value } : variant
       )
     );
-  };
+  }, []);
 
-  const handleImageChange = (index, files) => {
+  const handleImageChange = useCallback((index, files) => {
     const newFiles = Array.from(files).filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
@@ -358,9 +376,9 @@ export default function SellerProductVariants() {
     if (fileInputRefs.current[index]?.current) {
       fileInputRefs.current[index].current.value = '';
     }
-  };
+  }, [variantImageFiles, addAlert]);
 
-  const handleRemoveImage = (variantIndex, imageIndex) => {
+  const handleRemoveImage = useCallback((variantIndex, imageIndex) => {
     setVariantImageFiles((prev) => {
       const newFiles = [...prev];
       newFiles[variantIndex] = newFiles[variantIndex].filter((_, i) => i !== imageIndex);
@@ -373,45 +391,48 @@ export default function SellerProductVariants() {
       URL.revokeObjectURL(oldUrl);
       return newPreviews;
     });
-  };
+  }, []);
 
-  const handleDrop = (e, index) => {
+  const handleDrop = useCallback((e, index) => {
     e.preventDefault();
     e.stopPropagation();
     if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
     handleImageChange(index, e.dataTransfer.files);
-  };
+  }, [handleImageChange]);
 
-  const handleDragOver = (e, index) => {
+  const handleDragOver = useCallback((e, index) => {
     e.preventDefault();
     e.stopPropagation();
     if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.add('border-blue-500');
     }
-  };
+  }, []);
 
-  const handleDragLeave = (e, index) => {
+  const handleDragLeave = useCallback((e, index) => {
     e.preventDefault();
     e.stopPropagation();
     if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
-  };
+  }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === 'category' ? { subcategory: '', subSubcategory: '' } : {}),
-      ...(name === 'subcategory' ? { subSubcategory: '' } : {}),
-    }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
+  const handleChange = useCallback(
+    debounce((e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        ...(name === 'category' ? { subcategory: '', subSubcategory: '' } : {}),
+        ...(name === 'subcategory' ? { subSubcategory: '' } : {}),
+      }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }, 200),
+    []
+  );
 
-  const handleColorToggle = (color) => {
+  const handleColorToggle = useCallback((color) => {
     setFormData((prev) => {
       const newColors = prev.colors.includes(color)
         ? prev.colors.filter((c) => c !== color)
@@ -420,9 +441,9 @@ export default function SellerProductVariants() {
     });
     setCustomColor('');
     setShowColorDropdown(false);
-  };
+  }, []);
 
-  const handleColorInputChange = (e) => {
+  const handleColorInputChange = useCallback((e) => {
     const value = e.target.value;
     setCustomColor(value);
     if (value.trim() === '') {
@@ -435,9 +456,9 @@ export default function SellerProductVariants() {
     );
     setColorSuggestions(filtered);
     setShowColorDropdown(true);
-  };
+  }, [availableColors]);
 
-  const handleCustomColorAdd = (e) => {
+  const handleCustomColorAdd = useCallback((e) => {
     if (e.key === 'Enter' && customColor.trim()) {
       const trimmedColor = customColor.trim();
       if (trimmedColor.length > 20) {
@@ -454,25 +475,25 @@ export default function SellerProductVariants() {
       setColorSuggestions([]);
       setShowColorDropdown(false);
     }
-  };
+  }, [customColor, addAlert]);
 
-  const handleRemoveColor = (color) => {
+  const handleRemoveColor = useCallback((color) => {
     setFormData((prev) => ({
       ...prev,
       colors: prev.colors.filter((c) => c !== color),
     }));
-  };
+  }, []);
 
-  const handleTagToggle = (tag) => {
+  const handleTagToggle = useCallback((tag) => {
     setFormData((prev) => {
       const newTags = prev.tags.includes(tag)
         ? prev.tags.filter((t) => t !== tag)
         : [...prev.tags, tag];
       return { ...prev, tags: newTags };
     });
-  };
+  }, []);
 
-  const applyFormatting = (style) => {
+  const applyFormatting = useCallback((style) => {
     const textarea = descriptionRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
@@ -520,22 +541,24 @@ export default function SellerProductVariants() {
       textarea.selectionEnd = newSelectionEnd;
       textarea.focus();
     }, 0);
-  };
+  }, [formData.description]);
 
-  const getSizeOptions = () => {
-    if (formData.category === 'Clothing' && formData.subcategory) {
-      return formData.subcategory === 'Men' ? menClothingSizes : womenClothingSizes;
-    }
-    if (formData.category === 'Footwear' && formData.subcategory) {
-      return footwearSizes;
-    }
-    if (formData.category === 'Perfumes' && formData.subSubcategory?.startsWith('Oil -')) {
-      return perfumeSizes;
-    }
-    return [];
-  };
+  const getSizeOptions = useMemo(() => {
+    return () => {
+      if (formData.category === 'Clothing' && formData.subcategory) {
+        return formData.subcategory === 'Men' ? menClothingSizes : womenClothingSizes;
+      }
+      if (formData.category === 'Footwear' && formData.subcategory) {
+        return footwearSizes;
+      }
+      if (formData.category === 'Perfumes' && formData.subSubcategory?.startsWith('Oil -')) {
+        return perfumeSizes;
+      }
+      return [];
+    };
+  }, [formData.category, formData.subcategory, formData.subSubcategory]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
     if (!formData.name.trim()) newErrors.name = 'Product name is required.';
@@ -571,16 +594,16 @@ export default function SellerProductVariants() {
     });
 
     return newErrors;
-  };
+  }, [formData, variants, categories, customSubcategories, customSubSubcategories, variantImageFiles, getSizeOptions]);
 
-  const validateLocationForm = () => {
+  const validateLocationForm = useCallback(() => {
     const newLocationErrors = {};
     if (!locationData.country.trim()) newLocationErrors.country = 'Country is required.';
     if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
     return newLocationErrors;
-  };
+  }, [locationData]);
 
-  const uploadFile = async (file) => {
+  const uploadFile = useCallback(async (file) => {
     const uploadData = new FormData();
     uploadData.append('file', file);
     uploadData.append('isVideo', false);
@@ -588,7 +611,6 @@ export default function SellerProductVariants() {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
@@ -609,9 +631,9 @@ export default function SellerProductVariants() {
     } finally {
       setUploadProgress(0);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setErrors({});
     setLocationErrors({});
@@ -674,12 +696,12 @@ export default function SellerProductVariants() {
           city: locationData.city || '',
           address: locationData.address || '',
         },
-        buyerProtectionFee: feeConfig[formData.category]?.buyerProtectionRate * basePrice || 0,
-        handlingFee: feeConfig[formData.category]?.handlingRate * basePrice || 0,
+        buyerProtectionFee: feeConfig?.[formData.category]?.buyerProtectionRate * basePrice || 0,
+        handlingFee: feeConfig?.[formData.category]?.handlingRate * basePrice || 0,
         totalEstimatedPrice:
           basePrice +
-          (feeConfig[formData.category]?.buyerProtectionRate * basePrice || 0) +
-          (feeConfig[formData.category]?.handlingRate * basePrice || 0),
+          (feeConfig?.[formData.category]?.buyerProtectionRate * basePrice || 0) +
+          (feeConfig?.[formData.category]?.handlingRate * basePrice || 0),
         sellerEarnings: basePrice,
         manualSize: formData.manualSize,
       };
@@ -722,7 +744,29 @@ export default function SellerProductVariants() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    user,
+    formData,
+    locationData,
+    variants,
+    variantImageFiles,
+    feeConfig,
+    validateForm,
+    validateLocationForm,
+    uploadFile,
+    addAlert,
+    navigate,
+  ]);
+
+  const memoizedCategories = useMemo(() => categories, [categories]);
+  const memoizedSubcategories = useMemo(
+    () => customSubcategories[formData.category] || [],
+    [customSubcategories, formData.category]
+  );
+  const memoizedSubSubcategories = useMemo(
+    () => customSubSubcategories[formData.category]?.[formData.subcategory] || [],
+    [customSubSubcategories, formData.category, formData.subcategory]
+  );
 
   if (!user) {
     return (
@@ -884,17 +928,17 @@ export default function SellerProductVariants() {
                       className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                         errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                       } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex justify-between items-center transition-all duration-200`}
-                      disabled={loading || categories.length === 0}
+                      disabled={loading || memoizedCategories.length === 0}
                     >
                       <span>{formData.category || 'Select a category'}</span>
                       <i className="bx bx-chevron-down text-gray-500 dark:text-gray-400"></i>
                     </button>
                     {showCategoryDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                        {categories.length === 0 ? (
+                        {memoizedCategories.length === 0 ? (
                           <div className="p-2 text-sm text-gray-500 dark:text-gray-400">No categories available</div>
                         ) : (
-                          categories.map((cat) => (
+                          memoizedCategories.map((cat) => (
                             <button
                               key={cat}
                               type="button"
@@ -917,7 +961,7 @@ export default function SellerProductVariants() {
                       {errors.category}
                     </p>
                   )}
-                  {categories.length === 0 && (
+                  {memoizedCategories.length === 0 && (
                     <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                       <i className="bx bx-error-circle"></i>
                       Loading categories...
@@ -934,18 +978,21 @@ export default function SellerProductVariants() {
                       <input
                         type="text"
                         value={formData.subcategory}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, subcategory: e.target.value, subSubcategory: '' }))}
+                        onChange={(e) => {
+                          setFormData((prev) => ({ ...prev, subcategory: e.target.value, subSubcategory: '' }));
+                          setShowSubcategoryDropdown(true);
+                        }}
                         onFocus={() => setShowSubcategoryDropdown(true)}
                         onBlur={() => setTimeout(() => setShowSubcategoryDropdown(false), 200)}
                         placeholder="Select or type a subcategory"
                         className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                           errors.subcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                         } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading || !customSubcategories[formData.category]}
+                        disabled={loading || !memoizedSubcategories.length}
                       />
-                      {showSubcategoryDropdown && customSubcategories[formData.category] && (
+                      {showSubcategoryDropdown && memoizedSubcategories.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubcategories[formData.category]
+                          {memoizedSubcategories
                             .filter((subcat) => subcat.toLowerCase().includes(formData.subcategory.toLowerCase()))
                             .map((subcat) => (
                               <button
@@ -971,7 +1018,7 @@ export default function SellerProductVariants() {
                     </div>
                   </div>
                 )}
-                {formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                {formData.subcategory && memoizedSubSubcategories.length > 0 && (
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Sub-Subcategory <span className="text-red-500">*</span>
@@ -988,11 +1035,11 @@ export default function SellerProductVariants() {
                         className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                           errors.subSubcategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                         } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading || !customSubSubcategories[formData.category]?.[formData.subcategory]}
+                        disabled={loading}
                       />
-                      {showSubSubcategoryDropdown && customSubSubcategories[formData.category]?.[formData.subcategory] && (
+                      {showSubSubcategoryDropdown && (
                         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {customSubSubcategories[formData.category][formData.subcategory]
+                          {memoizedSubSubcategories
                             .filter((subSubcat) => subSubcat.toLowerCase().includes(formData.subSubcategory.toLowerCase()))
                             .map((subSubcat) => (
                               <button

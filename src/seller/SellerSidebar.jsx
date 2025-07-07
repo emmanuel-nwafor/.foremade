@@ -1,15 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Home, ShoppingCart, List, Image, Upload, Award, CheckSquare, Wallet, MessageSquare, Menu, X } from 'lucide-react';
 import logo from '../assets/logi.png';
 import debounce from 'lodash.debounce';
-import { signOut } from 'firebase/auth';
-import { vendorAuth } from '../firebase';
 
 export default function SellerSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-  // Remove all dropdown state and logic
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -27,75 +24,17 @@ export default function SellerSidebar() {
     debouncedSearch(e.target.value);
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(vendorAuth);
-      navigate('/login');
-    } catch (error) {
-      console.error('Sign out failed:', error);
-    }
-  };
-
   // Menu items for filtering
   const menuItems = [
-    { 
-      to: '/dashboard',
-      label: 'Dashboard',
-      icon: 'bx-home' 
-    },
-    { 
-      to: '/sellers/orders', 
-      label: 'Orders', 
-      icon: 'bx-cart', 
-      category: 'Order Management' 
-    },
-    { 
-      to: '/sellers/products', 
-      label: 'Products List', 
-      icon: 'bx-list-ul', 
-      category: 'Product Management', 
-      dropdown: 'products' 
-    },
-    { 
-      to: '/products-gallery', 
-      label: 'Products Gallery', 
-      icon: 'bx-image-alt', 
-      category: 'Product Management', 
-      dropdown: 'products' 
-    },
-    { 
-      to: '/products-upload', 
-      label: 'Upload Products', 
-      icon: 'bx-upload', 
-      category: 'Product Management', 
-      dropdown: 'products' 
-    },
-    { 
-      to: '/pro-seller-guide', 
-      label: 'Pro Seller',
-      icon: 'bxl-product-hunt', 
-      category: 'Registering with us', 
-      dropdown: 'register' 
-    }, 
-    { 
-      to: '/seller-onboarding', 
-      label: 'Standard Seller', 
-      icon: 'bx-select-multiple', 
-      category: 'Registering with us',
-      dropdown: 'register' 
-    },
-    { 
-      to: '/smile', 
-      label: 'Wallet', 
-      icon: 'bx-wallet', 
-      category: 'Your wallet' 
-    },
-    { 
-      to: '/transactions', 
-      label: 'Transactions', 
-      icon: 'bx-wallet', 
-      category: 'Your wallet' 
-    },
+    { to: '/dashboard', label: 'Dashboard', icon: Home, category: 'Dashboard' },
+    { to: '/sellers/orders', label: 'Orders', icon: ShoppingCart, category: 'Order Management' },
+    { to: '/sellers/products', label: 'Products List', icon: List, category: 'Product Management' },
+    { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
+    { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
+    { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
+    { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
+    { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
+    { to: '/transactions', label: 'Transactions', icon: Wallet, category: 'Your wallet' },
   ];
 
   // Filter menu items based on search query
@@ -107,20 +46,18 @@ export default function SellerSidebar() {
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-700text-white rounded-lg hover:bg-blue-900 transition"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-700 rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
         aria-label="Open sidebar"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <Menu className="w-6 h-6" />
       </button>
 
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 max-h-[calc(100vh)] overflow-y-auto custom-scrollbar`}
+        } md:translate-x-0 max-h-[calc(100vh)] overflow-y-auto`}
       >
         {/* Logo and Close Button */}
         <div className="p-4 border-b border-gray-700 flex justify-between items-center">
@@ -132,9 +69,7 @@ export default function SellerSidebar() {
             onClick={toggleSidebar}
             aria-label="Close sidebar"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-6 h-6" />
           </button>
         </div>
 
@@ -156,14 +91,14 @@ export default function SellerSidebar() {
           ) : (
             <>
               {/* Dashboard */}
-              {filteredMenuItems.some((item) => item.to === '/dashboard') && (
+              {filteredMenuItems.some((item) => item.category === 'Dashboard') && (
                 <Link
                   to="/dashboard"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center p-2 rounded-lg bg-gray-700 text-white font-semibold hover:bg-blue-600 transition"
                   aria-label="Dashboard"
                 >
-                  <i className="bx bx-home text-lg mr-2"></i>
+                  <Home className="w-5 h-5 mr-2" />
                   Dashboard
                 </Link>
               )}
@@ -182,7 +117,7 @@ export default function SellerSidebar() {
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
                         aria-label={item.label}
                       >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        <item.icon className="w-5 h-5 mr-2" />
                         {item.label}
                       </Link>
                     ))}
@@ -203,7 +138,7 @@ export default function SellerSidebar() {
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
                         aria-label={item.label}
                       >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        <item.icon className="w-5 h-5 mr-2" />
                         {item.label}
                       </Link>
                     ))}
@@ -224,7 +159,7 @@ export default function SellerSidebar() {
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
                         aria-label={item.label}
                       >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        <item.icon className="w-5 h-5 mr-2" />
                         {item.label}
                       </Link>
                     ))}
@@ -245,37 +180,36 @@ export default function SellerSidebar() {
                         className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
                         aria-label={item.label}
                       >
-                        <i className={`bx ${item.icon} text-lg mr-2`}></i>
+                        <item.icon className="w-5 h-5 mr-2" />
                         {item.label}
                       </Link>
                     ))}
                 </div>
               )}
-              {/* Help & Support */}
-              <div>
-                <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Help & Support</h3>
-                <Link
-                  to="/inbox"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
-                  aria-label="Inbox"
-                >
-                  <i className="bx bx-message text-lg mr-2"></i>
-                  Inbox
-                </Link>
-              </div>
+
+              {/* Chat */}
+              {filteredMenuItems.some((item) => item.category === 'Chat') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Chat</h3>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Chat')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <item.icon className="w-5 h-5 mr-2" />
+                        {item.label}
+                      </Link>
+                    ))}
+                </div>
+              )}
             </>
           )}
         </nav>
-        {/* Sign Out Button */}
-        <div className="p-4 border-t border-gray-700">
-          <button
-            onClick={handleSignOut}
-            className="w-full bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors duration-200"
-          >
-            <i className="bx bx-log-out text-lg mr-2"></i>Sign Out
-          </button>
-        </div>
       </div>
 
       {/* Overlay (Mobile Only, when sidebar is open) */}
@@ -286,30 +220,6 @@ export default function SellerSidebar() {
           aria-hidden="true"
         ></div>
       )}
-      {/* Custom Styles for Fancy Scrollbar */}
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #4b5563; /* Slate gray track */
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #93c5fd; /* Light blue thumb */
-            border-radius: 3px;
-            transition: background 0.3s;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #60a5fa; /* Brighter blue on hover */
-          }
-          .custom-scrollbar {
-            scrollbar-width: thin; /* Firefox */
-            scrollbar-color: #93c5fd #4b5563; /* Thumb and track for Firefox */
-          }
-        `}
-      </style>
     </>
   );
 }

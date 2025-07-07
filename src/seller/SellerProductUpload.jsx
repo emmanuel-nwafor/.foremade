@@ -7,7 +7,6 @@ import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
 import SellerLocationForm from './SellerLocationForm';
 import SellerProductUploadPopup from './SellerProductUploadPopup';
-import SellerProductVariants from './SellerProductVariants';
 
 // Set global Axios timeout
 axios.defaults.timeout = 60000; // 60 seconds
@@ -57,52 +56,64 @@ export default function SellerProductUpload() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
 
-  // State for form data
-  const [formData, setFormData] = useState({
-    sellerName: '',
-    name: '',
-    description: '',
-    price: '',
-    stock: '',
-    category: '',
-    subcategory: '',
-    subSubcategory: '',
-    colors: [],
-    sizes: [],
-    condition: 'New',
-    productUrl: '',
-    images: [],
-    videos: [],
-    tags: [],
-    manualSize: '',
+  // State for form data (persisted in localStorage)
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('sellerProductForm');
+    return savedData ? JSON.parse(savedData) : {
+      sellerName: '',
+      name: '',
+      description: '',
+      price: '',
+      stock: '',
+      category: '',
+      subcategory: '',
+      subSubcategory: '',
+      colors: [],
+      sizes: [],
+      condition: 'New',
+      productUrl: '',
+      images: [],
+      videos: [],
+      tags: [],
+      manualSize: '',
+    };
   });
 
   // State for location data
-  const [locationData, setLocationData] = useState({
-    country: '',
-    state: '',
-    city: '',
-    address: '',
+  const [locationData, setLocationData] = useState(() => {
+    const savedLocation = localStorage.getItem('sellerLocationForm');
+    return savedLocation ? JSON.parse(savedLocation) : {
+      country: '',
+      state: '',
+      city: '',
+      address: '',
+    };
   });
-
-  // State for variants
-  const [variants, setVariants] = useState([]);
-  const [variantImageFiles, setVariantImageFiles] = useState([]);
-  const [variantImagePreviews, setVariantImagePreviews] = useState([]);
-  const dropZoneRefs = useRef([]);
-  const fileInputRefs = useRef([]);
 
   // State for location errors
   const [locationErrors, setLocationErrors] = useState({});
 
-  // State for popup visibility
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  // State for popups
+  const [isVariantPopupOpen, setIsVariantPopupOpen] = useState(true); // Show variant popup on page load
+  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false); // Success popup after submission
 
   // State for media files and previews
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
-  const [videoFiles, setVideoFiles] = useState([]);
-  const [videoPreviews, setVideoPreviews] = useState([]);
+  const [imageFiles, setImageFiles] = useState(() => {
+    const savedImages = localStorage.getItem('sellerProductImages');
+    return savedImages ? JSON.parse(savedImages) : [];
+  });
+  const [imagePreviews, setImagePreviews] = useState(() => {
+    const savedPreviews = localStorage.getItem('sellerProductPreviews');
+    return savedPreviews ? JSON.parse(savedPreviews) : [];
+  });
+  const [videoFiles, setVideoFiles] = useState(() => {
+    const savedVideos = localStorage.getItem('sellerProductVideos');
+    return savedVideos ? JSON.parse(savedVideos) : [];
+  });
+  const [videoPreviews, setVideoPreviews] = useState(() => {
+    const savedVideoPreviews = localStorage.getItem('sellerProductVideoPreviews');
+    return savedVideoPreviews ? JSON.parse(savedVideoPreviews) : [];
+  });
 
   // Other states
   const [errors, setErrors] = useState({});
@@ -168,6 +179,11 @@ export default function SellerProductUpload() {
   const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_DURATION = 30; // 30 seconds
+
+  // Persist location data to localStorage
+  useEffect(() => {
+    localStorage.setItem('sellerLocationForm', JSON.stringify(locationData));
+  }, [locationData]);
 
   // Fetch categories, subcategories, sub-subcategories, and fees from Firestore
   useEffect(() => {
@@ -244,7 +260,7 @@ export default function SellerProductUpload() {
       unsubscribeSubcategories();
       unsubscribeSubSubcategories();
     };
-  }, [formData.category, formData.subcategory, formData.subSubcategory, addAlert]);
+  }, [formData.category, formData.subcategory, formData.subSubcategory]);
 
   // Handle user authentication
   useEffect(() => {
@@ -258,6 +274,7 @@ export default function SellerProductUpload() {
             sellerName = parsed.name || '';
           }
           setFormData((prev) => ({ ...prev, sellerName }));
+          localStorage.setItem('sellerProductForm', JSON.stringify({ ...formData, sellerName }));
         } catch (err) {
           console.error('Error parsing displayName:', err);
           addAlert('Failed to load seller profile.', 'error');
@@ -268,7 +285,7 @@ export default function SellerProductUpload() {
       }
     });
     return () => unsubscribe();
-  }, [navigate, addAlert]);
+  }, [navigate]);
 
   // Calculate fees
   useEffect(() => {
@@ -301,7 +318,17 @@ export default function SellerProductUpload() {
       totalEstimatedPrice,
       sellerEarnings,
     });
+    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
   }, [formData.price, formData.category, feeConfig]);
+
+  // Persist form data and media to localStorage
+  useEffect(() => {
+    localStorage.setItem('sellerProductForm', JSON.stringify(formData));
+    localStorage.setItem('sellerProductImages', JSON.stringify(imageFiles));
+    localStorage.setItem('sellerProductPreviews', JSON.stringify(imagePreviews));
+    localStorage.setItem('sellerProductVideos', JSON.stringify(videoFiles));
+    localStorage.setItem('sellerProductVideoPreviews', JSON.stringify(videoPreviews));
+  }, [formData, imageFiles, imagePreviews, videoFiles, videoPreviews]);
 
   // Update description preview
   useEffect(() => {
@@ -628,26 +655,6 @@ export default function SellerProductUpload() {
       newErrors.sizes = 'Select or enter at least one size for perfume products.';
     }
     if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
-
-    // Validate variants
-    variants.forEach((variant, index) => {
-      if (!variant.color.trim()) {
-        newErrors[`variant${index}_color`] = 'Color is required.';
-      }
-      if (!variant.size) {
-        newErrors[`variant${index}_size`] = 'Size is required.';
-      }
-      if (!variant.price || isNaN(variant.price) || variant.price <= 0) {
-        newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
-      }
-      if (!variant.stock || isNaN(variant.stock) || variant.stock < 0) {
-        newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity.';
-      }
-      if (variantImageFiles[index]?.length === 0) {
-        newErrors[`variant${index}_images`] = 'At least one image is required per variant.';
-      }
-    });
-
     return newErrors;
   };
 
@@ -719,11 +726,6 @@ export default function SellerProductUpload() {
       const videoUrls = videoFiles.length > 0
         ? await Promise.all(videoFiles.map((file) => uploadFile(file, true)))
         : [];
-      const variantImageUrls = await Promise.all(
-        variantImageFiles.map(async (files) => {
-          return await Promise.all(files.map((file) => uploadFile(file)));
-        })
-      );
       if (imageUrls.length === 0) {
         throw new Error('At least one image URL is required.');
       }
@@ -758,16 +760,10 @@ export default function SellerProductUpload() {
           city: locationData.city || '',
           address: locationData.address || '',
         },
-        variants: variants.map((variant, index) => ({
-          ...variant,
-          price: parseFloat(variant.price),
-          stock: parseInt(variant.stock, 10),
-          imageUrls: variantImageUrls[index] || [],
-        })),
       };
       const docRef = await addDoc(collection(db, 'products'), productData);
       console.log('Product uploaded with ID:', docRef.id);
-      setIsPopupOpen(true);
+      setIsSuccessPopupOpen(true); // Show success popup
       setFormData({
         sellerName: '',
         name: '',
@@ -796,9 +792,12 @@ export default function SellerProductUpload() {
       setImagePreviews([]);
       setVideoFiles([]);
       setVideoPreviews([]);
-      setVariants([]);
-      setVariantImageFiles([]);
-      setVariantImagePreviews([]);
+      localStorage.removeItem('sellerProductForm');
+      localStorage.removeItem('sellerLocationForm');
+      localStorage.removeItem('sellerProductImages');
+      localStorage.removeItem('sellerProductPreviews');
+      localStorage.removeItem('sellerProductVideos');
+      localStorage.removeItem('sellerProductVideoPreviews');
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (singleImageInputRef.current) singleImageInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
@@ -841,6 +840,16 @@ export default function SellerProductUpload() {
     return [];
   };
 
+  // Handle variant popup actions
+  const handleVariantYes = () => {
+    setIsVariantPopupOpen(false);
+    navigate('/products-upload-variant');
+  };
+
+  const handleVariantNo = () => {
+    setIsVariantPopupOpen(false);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
@@ -869,7 +878,7 @@ export default function SellerProductUpload() {
             <div className="relative group">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 4 images (JPEG, PNG, etc.)"></i>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload up to 8 images (JPEG, PNG, etc.)"></i>
               </label>
               <div
                 ref={dropZoneRef}
@@ -1276,8 +1285,8 @@ export default function SellerProductUpload() {
                   </h4>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <p>Category: <span className="font-semibold">{fees.productSize}</span></p>
-                    <p>Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                    <p>Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p className="hidden">Buyer Protection Fee ({(feeConfig[fees.productSize]?.buyerProtectionRate * 100).toFixed(2)}%): ₦{fees.buyerProtectionFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                    <p className="hidden">Handling Fee ({(feeConfig[fees.productSize]?.handlingRate * 100).toFixed(2)}%): ₦{fees.handlingFee.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
                     <p className="font-bold">
                       Total Estimated Price for Buyer: ₦{fees.totalEstimatedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                     </p>
@@ -1601,224 +1610,212 @@ export default function SellerProductUpload() {
               )}
             </div>
 
-            {/* Variants Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-layer text-blue-500"></i>
-                Product Variants
-              </h3>
-              <SellerProductVariants
-                variants={variants}
-                setVariants={setVariants}
-                sizes={formData.sizes} // Pass selected sizes for variants
-                errors={errors}
-                loading={loading}
-                variantImageFiles={variantImageFiles}
-                setVariantImageFiles={setVariantImageFiles}
-                variantImagePreviews={variantImagePreviews}
-                setVariantImagePreviews={setVariantImagePreviews}
-                dropZoneRefs={dropZoneRefs}
-                fileInputRefs={fileInputRefs}
-                addAlert={addAlert} // Pass addAlert for consistent error messaging
-              />
-            </div>
-
             {/* Tags Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-tag text-blue-500"></i>
+                <i className="bx bx-purchase-tag text-blue-500"></i>
                 Tags
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Suggested Tags
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select tags to improve searchability"></i>
+                Tags (Optional)
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
               </label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {suggestedTags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleTagToggle(tag)}
-                    className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                      formData.tags.includes(tag)
-                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={loading}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {authenticityTags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleTagToggle(tag)}
-                    className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                      formData.tags.includes(tag)
-                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={loading}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.tags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
-                  >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className="text-red-500 hover:text-red-700"
-                      disabled={loading}
-                      title="Remove tag"
-                    >
-                      <i className="bx bx-x"></i>
-                    </button>
+              <div className="relative mt-1">
+                <input
+                  type="text"
+                  value={formData.tags.join(', ')}
+                  onChange={(e) => {
+                    const tags = e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag);
+                    setFormData((prev) => ({ ...prev, tags }));
+                  }}
+                  placeholder="e.g., Vintage, Leather, Smartphone"
+                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {suggestedTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {suggestedTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagToggle(tag)}
+                          className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                            formData.tags.includes(tag)
+                              ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={loading}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Condition Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-check-square text-blue-500"></i>
-                Condition
-              </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product Condition
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product condition"></i>
-              </label>
-              <div className="flex gap-4 mt-2">
-                {['New', 'Used', 'Refurbished'].map((condition) => (
-                  <label key={condition} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="radio"
-                      name="condition"
-                      value={condition}
-                      checked={formData.condition === condition}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
-                      disabled={loading}
-                    />
-                    {condition}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Product URL Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-link text-blue-500"></i>
-                Product URL
-              </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product URL (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Enter a product URL for reference"></i>
-              </label>
-              <input
-                type="url"
-                name="productUrl"
-                value={formData.productUrl}
-                onChange={handleChange}
-                placeholder="e.g., https://example.com/product"
-                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                  errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                disabled={loading}
-              />
-              {errors.productUrl && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.productUrl}
-                </p>
-              )}
-            </div>
-
-            {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
-                setErrors={setLocationErrors}
-                disabled={loading}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className={`py-2 px-6 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 flex items-center gap-2 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={loading}
-              >
-                <i className="bx bx-upload"></i>
-                Upload Product
-              </button>
-            </div>
-          </form>
-
-          {/* Zoomed Media Modal */}
-          {zoomedMedia && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-              <div className="relative max-w-4xl w-full">
-                {zoomedMedia.type === 'image' ? (
-                  <img
-                    src={zoomedMedia.src}
-                    alt="Zoomed"
-                    className="w-full h-auto rounded-lg shadow-lg max-h-[80vh] object-contain"
-                  />
-                ) : (
-                  <video
-                    src={zoomedMedia.src}
-                    controls
-                    className="w-full h-auto rounded-lg shadow-lg max-h-[80vh]"
-                  />
                 )}
+              </div>
+
+              {/* Condition Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-star text-blue-500"></i>
+                  Condition
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  Product Condition <span className="text-red-500">*</span>
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
+                </label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {['New', 'Used - Like New', 'Used - Good', 'Used - Fair'].map((condition) => (
+                    <button
+                      key={condition}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, condition }))}
+                      className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                        formData.condition === condition
+                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={loading}
+                    >
+                      {condition}
+                    </button>
+                  ))}
+                </div>
+                {errors.condition && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.condition}
+                  </p>
+                )}
+              </div>
+
+              {/* Product URL Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-link text-blue-500"></i>
+                  Product URL (Optional)
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  External Product URL
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Link to external product page (optional)"></i>
+                </label>
+                <input
+                  type="url"
+                  name="productUrl"
+                  value={formData.productUrl}
+                  onChange={handleChange}
+                  placeholder="e.g., https://example.com/product"
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  disabled={loading}
+                />
+                {errors.productUrl && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.productUrl}
+                  </p>
+                )}
+              </div>
+
+              {/* Location Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-map text-blue-500"></i>
+                  Location
+                </h3>
+                <SellerLocationForm
+                  locationData={locationData}
+                  setLocationData={setLocationData}
+                  errors={locationErrors}
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end mt-8">
                 <button
-                  onClick={() => setZoomedMedia(null)}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md"
-                  title="Close"
+                  type="submit"
+                  className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={loading}
                 >
-                  <i className="bx bx-x text-xl"></i>
+                  {loading ? (
+                    <>
+                      <i className="bx bx-loader bx-spin"></i>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bx bx-upload"></i>
+                      Add Product
+                    </>
+                  )}
                 </button>
               </div>
-            </div>
-          )}
+              </div>
+            </form>
+
+            {/* Custom Alerts */}
+            <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+
+            {/* Variant Popup */}
+            <SellerProductUploadPopup
+              isOpen={isVariantPopupOpen}
+              onClose={handleVariantNo}
+              message="Does this product have variants (e.g., different sizes, colors)?"
+              icon="bx-question-mark"
+              type="question"
+              showYesNoButtons={true}
+              onYes={handleVariantYes}
+              onNo={handleVariantNo}
+            />
+
+            {/* Success Popup */}
+            <SellerProductUploadPopup
+              isOpen={isSuccessPopupOpen}
+              onClose={() => {
+                setIsSuccessPopupOpen(false);
+                navigate('/seller/products');
+              }}
+              message="Product added successfully!"
+              icon="bx-check-circle"
+              type="success"
+              showYesNoButtons={false}
+            />
+
+            {/* Zoomed Media Modal */}
+            {zoomedMedia && (
+              <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                <div className="relative max-w-4xl w-full">
+                  {zoomedMedia.type === 'image' ? (
+                    <img
+                      src={zoomedMedia.src}
+                      alt="Zoomed media"
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  ) : (
+                    <video
+                      src={zoomedMedia.src}
+                      controls
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  )}
+                  <button
+                    onClick={() => setZoomedMedia(null)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                    title="Close"
+                  >
+                    <i className="bx bx-x text-xl"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Alerts */}
-      <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-      {/* Success Popup */}
-      {isPopupOpen && (
-        <SellerProductUploadPopup
-          isOpen={isPopupOpen}
-          onClose={() => {
-            setIsPopupOpen(false);
-            navigate('/seller/products');
-          }}
-          productName={formData.name}
-        />
-      )}
-    </div>
   );
 }

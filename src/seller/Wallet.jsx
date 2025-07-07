@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where, increment } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
@@ -16,17 +16,30 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
   const adminRef = doc(db, 'wallets', 'admin');
   const fees = totalAmount - productPrice;
   try {
-    await updateDoc(walletRef, {
-      availableBalance: db.FieldValue.increment(productPrice),
-      updatedAt: serverTimestamp(),
-    });
+    const walletSnap = await getDoc(walletRef);
+    if (!walletSnap.exists()) {
+      console.log(`Creating new wallet for seller ${sellerId} with pendingBalance: ₦${productPrice}`);
+      await setDoc(walletRef, {
+        availableBalance: 0,
+        pendingBalance: productPrice,
+        updatedAt: serverTimestamp(),
+        accountDetails: null,
+      });
+    } else {
+      console.log(`Updating wallet for seller ${sellerId}: incrementing pendingBalance by ₦${productPrice}`);
+      await updateDoc(walletRef, {
+        pendingBalance: increment(productPrice),
+        updatedAt: serverTimestamp(),
+      });
+    }
     await updateDoc(adminRef, {
-      availableBalance: db.FieldValue.increment(fees),
+      availableBalance: increment(fees),
       updatedAt: serverTimestamp(),
     });
-    console.log(`Checkout successful: Added ₦${productPrice} to seller and ₦${fees} to admin`);
+    console.log(`Checkout successful: Added ₦${productPrice} to seller pendingBalance and ₦${fees} to admin availableBalance`);
   } catch (err) {
     console.error(`Checkout failed for ${sellerId}:`, err);
+    throw new Error(`Checkout failed: ${err.message}`);
   }
 };
 
@@ -39,6 +52,7 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const pendingBalanceRef = useRef(0);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -47,34 +61,24 @@ export default function Wallet() {
     }
     const fetchWallet = async () => {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
-      const walletSnap = await getDoc(walletRef);
-      if (walletSnap.exists()) {
-        const data = walletSnap.data();
-        if (data.pendingBalance && data.pendingBalance > 0) {
-          const assumedFees = data.pendingBalance * 0.04958; // ~4.958% fee
-          const newBalance = data.pendingBalance - assumedFees;
-          await updateDoc(walletRef, {
-            availableBalance: newBalance,
+      try {
+        const walletSnap = await getDoc(walletRef);
+        console.log(`Fetching wallet for ${auth.currentUser.uid}:`, walletSnap.exists() ? walletSnap.data() : 'No wallet found');
+        if (!walletSnap.exists()) {
+          console.log(`Creating new wallet for ${auth.currentUser.uid}`);
+          await setDoc(walletRef, {
+            availableBalance: 0,
             pendingBalance: 0,
             updatedAt: serverTimestamp(),
+            accountDetails: null,
           });
-          setBalance(newBalance);
-          setPendingBalance(0);
-        } else {
-          setBalance(data.availableBalance || 0);
-          setPendingBalance(data.pendingBalance || 0);
         }
-      } else {
-        await setDoc(walletRef, {
-          availableBalance: 0,
-          pendingBalance: 0,
-          updatedAt: serverTimestamp(),
-          accountDetails: null,
-        });
-        setBalance(0);
-        setPendingBalance(0);
+        setLoading(false);
+      } catch (err) {
+        console.error(`Error fetching wallet for ${auth.currentUser.uid}:`, err);
+        setError('Failed to load wallet: ' + err.message);
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchWallet();
 
@@ -82,10 +86,15 @@ export default function Wallet() {
     const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log(`Snapshot received for ${auth.currentUser.uid}:`, data);
         setBalance(data.availableBalance || 0);
         setPendingBalance(data.pendingBalance || 0);
         updateChartData(data.availableBalance || 0, data.pendingBalance || 0);
-        console.log(`Balance updated to ₦${data.availableBalance || 0}, Pending: ₦${data.pendingBalance || 0}`);
+      } else {
+        console.log(`No wallet document found for ${auth.currentUser.uid} in snapshot`);
+        setBalance(0);
+        setPendingBalance(0);
+        updateChartData(0, 0);
       }
     }, (err) => {
       console.error('Wallet snapshot error:', err);
@@ -97,13 +106,7 @@ export default function Wallet() {
       where('userId', '==', auth.currentUser.uid),
       where('type', '==', 'Withdrawal')
     );
-    const unsubscribeTransactions = onSnapshot(transactionQuery, (snapshot) => {
-      let totalWithdrawals = 0;
-      snapshot.forEach((doc) => {
-        totalWithdrawals += doc.data().amount || 0;
-      });
-      updateChartData(balance, pendingBalance, totalWithdrawals);
-    }, (err) => {
+    const unsubscribeTransactions = onSnapshot(transactionQuery, () => {}, (err) => {
       console.error('Transaction snapshot error:', err);
       setError('Failed to fetch transaction data: ' + err.message);
     });
@@ -113,6 +116,31 @@ export default function Wallet() {
       unsubscribeTransactions();
     };
   }, [navigate, auth.currentUser?.uid]);
+
+  // Auto-transfer pendingBalance to availableBalance after 10-15 seconds
+  useEffect(() => {
+    if (pendingBalance > 0 && pendingBalance !== pendingBalanceRef.current) {
+      console.log(`Pending balance changed to ₦${pendingBalance}, scheduling transfer to availableBalance`);
+      const delay = Math.floor(Math.random() * (15000 - 10000 + 1)) + 10000; // Random 10-15s
+      const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+      const timeout = setTimeout(async () => {
+        try {
+          console.log(`Transferring ₦${pendingBalance} from pendingBalance to availableBalance for ${auth.currentUser.uid}`);
+          await updateDoc(walletRef, {
+            availableBalance: increment(pendingBalance),
+            pendingBalance: 0,
+            updatedAt: serverTimestamp(),
+          });
+          console.log(`Transfer complete: ₦${pendingBalance} moved to availableBalance`);
+        } catch (err) {
+          console.error(`Transfer failed for ${auth.currentUser.uid}:`, err);
+          setError(`Failed to transfer pending balance: ${err.message} (Check Firebase version or Firestore rules)`);
+        }
+      }, delay);
+      pendingBalanceRef.current = pendingBalance;
+      return () => clearTimeout(timeout);
+    }
+  }, [pendingBalance]);
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -125,18 +153,19 @@ export default function Wallet() {
       return;
     }
     if (amountNum > balance) {
-      setError('Insufficient balance.');
+      setError('Insufficient available balance.');
       setLoading(false);
       return;
     }
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
     try {
       const payload = {
         sellerId: auth.currentUser.uid,
         amount: amountNum,
         transactionReference: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
-      console.log('Sending withdrawal request to:', 'https://foremade-backend.onrender.com/initiate-seller-payout', payload);
-      const response = await axios.post('https://foremade-backend.onrender.com/initiate-seller-payout', payload, {
+      console.log('Sending withdrawal request to:', `${BACKEND_URL}/initiate-seller-payout`, payload);
+      const response = await axios.post(`${BACKEND_URL}/initiate-seller-payout`, payload, {
         timeout: 10000,
       });
       if (response.data.status === 'success') {
@@ -162,15 +191,14 @@ export default function Wallet() {
     return {};
   };
 
-  // Chart data update function
-  const updateChartData = (available = balance, pending = pendingBalance, totalWithdrawals = 0) => {
+  const updateChartData = (availableBalance = balance, pendingBalance = 0) => {
     const labels = ['Current State'];
     setChartData({
       labels,
       datasets: [
         {
           label: 'Available Balance',
-          data: [available],
+          data: [availableBalance],
           fill: false,
           backgroundColor: '#3490dc',
           borderColor: '#2563EB',
@@ -179,19 +207,10 @@ export default function Wallet() {
         },
         {
           label: 'Pending Balance',
-          data: [pending],
+          data: [pendingBalance],
           fill: false,
           backgroundColor: '#f6ad55',
           borderColor: '#c08640',
-          tension: 0.4,
-          borderWidth: 2,
-        },
-        {
-          label: 'Total Withdrawals',
-          data: [totalWithdrawals],
-          fill: false,
-          backgroundColor: '#718096',
-          borderColor: '#4a5568',
           tension: 0.4,
           borderWidth: 2,
         },
@@ -265,7 +284,7 @@ export default function Wallet() {
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold mt-1 sm:mt-2">₦{balance.toLocaleString()}</p>
               </div>
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-2 sm:p-4 md:p-6 text-white">
-                <span className="text-xs sm:text-sm font-light">Pending Withdrawals</span>
+                <span className="text-xs sm:text-sm font-light">Pending Transactions</span>
                 <h3 className="text-sm sm:text-lg md:text-xl font-semibold mt-1 sm:mt-2">Pending Balance</h3>
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold mt-1 sm:mt-2">₦{pendingBalance.toLocaleString()}</p>
               </div>

@@ -12,7 +12,6 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
           title="Approve product for sale"
         >
           {loading ? <Loader size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-          Approve
         </button>
       )}
       {currentStatus !== 'rejected' && (
@@ -23,7 +22,6 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
           title="Reject product"
         >
           {loading ? <Loader size={16} className="animate-spin" /> : <XCircle size={16} />}
-          Reject
         </button>
       )}
       <button
@@ -33,7 +31,6 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
         title="Delete product permanently"
       >
         {loading ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
-        Delete
       </button>
       <button
         onClick={(e) => { e.stopPropagation(); onEdit(productId); }}
@@ -42,7 +39,6 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
         title="Edit product details"
       >
         {loading ? <Loader size={16} className="animate-spin" /> : <Edit2 size={16} />}
-        Edit
       </button>
     </div>
   );

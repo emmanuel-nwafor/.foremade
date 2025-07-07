@@ -15,6 +15,7 @@ import RecentlyViewed from '../components/product/RecentlyViewed';
 import NewsletterSignup from '../components/home/NewsletterSignup';
 import CategoryGrid from '../components/home/CategoryGrid';
 import ForemadeInvestorDeck from '../components/home/ForemadeInvestorDeck';
+import ManufacturerPick from '../components/product/FeaturedProducts';
 
 const Home = () => {
   // Track if user is new visitor
@@ -174,8 +175,12 @@ const Home = () => {
       
       {/* Enhanced Buyer Banner - showing products to buy */}
       <BuyerBanner />
-      {/* <TopStores /> */}
-      
+
+      {/* Manufacturer's Pick - inserted between banners */}
+      <div className="my-8 px-2 sm:px-4 lg:px-8">
+        <ManufacturerPick />
+      </div>
+
       {/* Enhanced Seller Banner - encouraging selling */}
       <SellerBanner />
       

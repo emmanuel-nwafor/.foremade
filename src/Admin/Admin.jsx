@@ -3,7 +3,7 @@ import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import MediaPreview from './MediaPreview';
-import AdminActionButtons from './AdminActionButtons';
+import AdminActionButtons from '/src/admin/AdminActionbuttons';
 import axios from 'axios';
 import { Camera, User, ShoppingBag, Edit2, CheckCircle2, XCircle } from 'lucide-react';
 

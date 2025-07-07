@@ -10,7 +10,7 @@ const TRUST_BADGES = [
 
 const TESTIMONIAL = {
   quote: '“I always find what I need on Foremade, and the delivery is super fast. Highly recommended!”',
-  name: 'Chinedu E., Abuja',
+  name: 'Michael S., New York',
   avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
 };
 

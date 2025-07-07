@@ -212,10 +212,13 @@ export default function Wallet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gray-100">
+     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-2 sm:p-4 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-t-2 border-b-2 border-blue-600"></div>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
+          </div>
         </div>
       </div>
     );
@@ -235,7 +238,7 @@ export default function Wallet() {
               {error && <div className="mt-1 sm:mt-2 md:mt-4 p-1 sm:p-2 md:p-3 bg-red-100 text-red-700 rounded-lg text-sm sm:text-base">{error}</div>}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-2 sm:mb-4 md:mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-2 sm:mb-4 md:mb-6">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-2 sm:p-4 md:p-6 text-white">
                 <span className="text-[10px] sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
                 <h3 className="text-sm sm:text-lg md:text-xl font-semibold mt-1 sm:mt-2">Available Balance</h3>

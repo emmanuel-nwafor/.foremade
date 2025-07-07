@@ -78,6 +78,12 @@ export default function SellerSidebar() {
       icon: 'bx-wallet', 
       category: 'Your wallet' 
     },
+    { 
+      to: '/transactions', 
+      label: 'Transactions', 
+      icon: 'bx-wallet', 
+      category: 'Your wallet' 
+    },
   ];
 
   // Filter menu items based on search query
@@ -89,7 +95,7 @@ export default function SellerSidebar() {
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-transparent backdrop-blur-sm text-white rounded-lg hover:bg-blue-900 transition"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-transparent bg-blue-700 text-white rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
         aria-label="Open sidebar"
       >
@@ -132,7 +138,7 @@ export default function SellerSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-3">
+        <nav className="flex-1 p-2 space-y-3">
           {searchQuery && filteredMenuItems.length === 0 ? (
             <p className="text-gray-400 text-sm px-2">No menu items found</p>
           ) : (

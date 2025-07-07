@@ -1,6 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const MAX_VARIANT_IMAGES = 4;
+
+// Custom debounce function
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 export default function SellerProductVariants({
   variants = [],
@@ -14,46 +23,76 @@ export default function SellerProductVariants({
   setVariantImagePreviews,
   dropZoneRefs,
   fileInputRefs,
-  maxVariantImages,
+  addAlert,
+  maxVariantImages = MAX_VARIANT_IMAGES,
 }) {
   const [localVariants, setLocalVariants] = useState(variants);
   const [zoomedMedia, setZoomedMedia] = useState(null);
+  const isAddingRef = useRef(false); // Prevent multiple rapid addVariant calls
 
-  // Sync localVariants with props.variants
+  // Sync localVariants with variants and initialize refs
   useEffect(() => {
     setLocalVariants(variants || []);
-  }, [variants]);
+    // Ensure refs are initialized for each variant
+    dropZoneRefs.current = Array(variants.length)
+      .fill()
+      .map((_, i) => dropZoneRefs.current[i] || { current: null });
+    fileInputRefs.current = Array(variants.length)
+      .fill()
+      .map((_, i) => fileInputRefs.current[i] || { current: null });
+  }, [variants, dropZoneRefs, fileInputRefs]);
 
   // Update parent state when localVariants change
   useEffect(() => {
     setVariants(localVariants);
   }, [localVariants, setVariants]);
 
-  // Initialize refs for each variant
+  // Cleanup object URLs on unmount
   useEffect(() => {
-    dropZoneRefs.current = variants.map(() => dropZoneRefs.current.find((ref) => !ref) || { current: null });
-    fileInputRefs.current = variants.map(() => fileInputRefs.current.find((ref) => !ref) || { current: null });
-  }, [variants.length, dropZoneRefs, fileInputRefs]);
+    return () => {
+      variantImagePreviews.forEach((previews) =>
+        previews.forEach((url) => URL.revokeObjectURL(url))
+      );
+    };
+  }, [variantImagePreviews]);
 
-  const addVariant = () => {
-    setLocalVariants((prev) => [
-      ...prev,
-      {
-        color: '',
-        size: '',
-        price: '',
-        stock: '',
-        images: [],
-      },
-    ]);
-    setVariantImageFiles((prev) => [...prev, []]);
-    setVariantImagePreviews((prev) => [...prev, []]);
-  };
+  const addVariant = useCallback(
+    debounce(() => {
+      if (isAddingRef.current) return; // Prevent multiple executions
+      isAddingRef.current = true;
+
+      setLocalVariants((prev) => [
+        ...prev,
+        {
+          color: '',
+          size: sizes[0] || '', // Default to first size if available
+          price: '',
+          stock: '',
+          images: [],
+        },
+      ]);
+      setVariantImageFiles((prev) => [...prev, []]);
+      setVariantImagePreviews((prev) => [...prev, []]);
+      dropZoneRefs.current.push({ current: null });
+      fileInputRefs.current.push({ current: null });
+
+      setTimeout(() => {
+        isAddingRef.current = false;
+      }, 300); // Reset after debounce period
+    }, 300),
+    [sizes, setVariantImageFiles, setVariantImagePreviews]
+  );
 
   const removeVariant = (index) => {
     setLocalVariants((prev) => prev.filter((_, i) => i !== index));
     setVariantImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setVariantImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setVariantImagePreviews((prev) => {
+      const oldPreviews = prev[index] || [];
+      oldPreviews.forEach((url) => URL.revokeObjectURL(url));
+      return prev.filter((_, i) => i !== index);
+    });
+    dropZoneRefs.current.splice(index, 1);
+    fileInputRefs.current.splice(index, 1);
   };
 
   const handleVariantChange = (index, field, value) => {
@@ -68,8 +107,8 @@ export default function SellerProductVariants({
     const newFiles = Array.from(files).filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
-    if (variantImageFiles[index].length + newFiles.length > maxVariantImages) {
-      alert(`Maximum ${maxVariantImages} images allowed per variant.`);
+    if ((variantImageFiles[index]?.length || 0) + newFiles.length > maxVariantImages) {
+      addAlert(`Maximum ${maxVariantImages} images allowed per variant.`, 'error');
       return;
     }
     setVariantImageFiles((prev) => {
@@ -98,7 +137,9 @@ export default function SellerProductVariants({
     });
     setVariantImagePreviews((prev) => {
       const newPreviews = [...prev];
+      const oldUrl = newPreviews[variantIndex][imageIndex];
       newPreviews[variantIndex] = newPreviews[variantIndex].filter((_, i) => i !== imageIndex);
+      URL.revokeObjectURL(oldUrl);
       return newPreviews;
     });
   };
@@ -144,7 +185,7 @@ export default function SellerProductVariants({
               onClick={() => removeVariant(index)}
               className="text-red-500 hover:text-red-700"
               disabled={loading}
-              title="Remove variant"
+              aria-label={`Remove variant ${index + 1}`}
             >
               <i className="bx bx-trash text-lg"></i>
             </button>
@@ -153,7 +194,8 @@ export default function SellerProductVariants({
           {/* Variant Image Upload */}
           <div className="relative group mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-              Variant Images (up to {maxVariantImages})
+              Variant Images (up to {maxVariantImages}) <span className="text-red-500">*</span>
+              <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${maxVariantImages} images (max 5MB each)`}></i>
             </label>
             <div
               ref={(el) => (dropZoneRefs.current[index] = { current: el })}
@@ -200,6 +242,7 @@ export default function SellerProductVariants({
                         className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
                         disabled={loading}
                         title="Remove image"
+                        aria-label={`Remove image ${imgIndex + 1} from variant ${index + 1}`}
                       >
                         <i className="bx bx-x text-sm"></i>
                       </button>
@@ -229,7 +272,7 @@ export default function SellerProductVariants({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Color
+                Color <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -252,7 +295,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Size
+                Size <span className="text-red-500">*</span>
               </label>
               <select
                 value={variant.size}
@@ -280,7 +323,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Price (₦)
+                Price (₦) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -305,7 +348,7 @@ export default function SellerProductVariants({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Stock
+                Stock <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -337,6 +380,7 @@ export default function SellerProductVariants({
           loading ? 'opacity-50 cursor-not-allowed' : ''
         }`}
         disabled={loading}
+        aria-label="Add new variant"
       >
         <i className="bx bx-plus"></i>
         Add Variant
@@ -355,6 +399,7 @@ export default function SellerProductVariants({
               onClick={() => setZoomedMedia(null)}
               className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md"
               title="Close"
+              aria-label="Close zoomed image"
             >
               <i className="bx bx-x text-xl"></i>
             </button>

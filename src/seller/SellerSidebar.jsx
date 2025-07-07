@@ -107,7 +107,7 @@ export default function SellerSidebar() {
     <>
       {/* Hamburger Menu Button (Mobile Only) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-transparent bg-blue-700 text-white rounded-lg hover:bg-blue-900 transition"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-700text-white rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
         aria-label="Open sidebar"
       >

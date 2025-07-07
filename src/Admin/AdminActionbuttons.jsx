@@ -12,12 +12,11 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
           title="Approve product for sale"
         >
           {loading ? <Loader size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-          Approve
         </button>
       )}
-      {currentStatus !== 'not_approved' && (
+      {currentStatus !== 'rejected' && (
         <button
-          onClick={(e) => { e.stopPropagation(); onStatusChange(productId, 'not_approved'); }}
+          onClick={(e) => { e.stopPropagation(); onStatusChange(productId, 'rejected'); }}
           disabled={loading}
           className="py-2 px-4 m-1 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-md"
           title="Reject product"
@@ -32,7 +31,6 @@ function AdminActionButtons({ productId, currentStatus, onStatusChange, onDelete
         title="Delete product permanently"
       >
         {loading ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
-        {/* Delete */}
       </button>
       <button
         onClick={(e) => { e.stopPropagation(); onEdit(productId); }}

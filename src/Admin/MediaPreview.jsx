@@ -1,33 +1,59 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Video as VideoIcon, Edit2, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, X, Edit2, Check } from 'lucide-react';
 
-function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, onUpdateProduct }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, onUpdateProduct }) {
+  const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProduct, setEditedProduct] = useState({
     ...product,
-    imageUrls: product.imageUrls || [],
-    videoUrls: product.videoUrls || [],
+    variants: variants.length
+      ? variants.map((variant) => ({
+          ...variant,
+          imageUrls: variant.imageUrls || [],
+          price: variant.price || 0,
+          stock: variant.stock || 0,
+          color: variant.color || '',
+          size: variant.size || '',
+        }))
+      : [],
+    imageUrls: product.imageUrls || imageUrls || [],
   });
-  const allMedia = [
-    ...editedProduct.imageUrls.map((url) => ({ type: 'image', url })),
-    ...editedProduct.videoUrls.map((url) => ({ type: 'video', url })),
-  ].filter((media) => media.url); // Filter out invalid URLs
 
-  if (!allMedia.length) {
+  // Use variant images if variants exist, otherwise fall back to product-level imageUrls
+  const currentVariant = variants.length ? editedProduct.variants[currentVariantIndex] || { imageUrls: [] } : null;
+  const allMedia = variants.length
+    ? currentVariant.imageUrls.map((url) => ({ type: 'image', url })).filter((media) => media.url)
+    : editedProduct.imageUrls.map((url) => ({ type: 'image', url })).filter((media) => media.url);
+
+  if (!allMedia.length && !isEditing) {
     return (
-      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1"></p>
+      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1">
+        No media available.
+      </p>
     );
   }
 
-  const handlePrev = (e) => {
+  const handlePrevMedia = (e) => {
     e.stopPropagation();
-    setCurrentIndex((prev) => (prev === 0 ? allMedia.length - 1 : prev - 1));
+    setCurrentMediaIndex((prev) => (prev === 0 ? allMedia.length - 1 : prev - 1));
   };
 
-  const handleNext = (e) => {
+  const handleNextMedia = (e) => {
     e.stopPropagation();
-    setCurrentIndex((prev) => (prev === allMedia.length - 1 ? 0 : prev + 1));
+    setCurrentMediaIndex((prev) => (prev === allMedia.length - 1 ? 0 : prev + 1));
+  };
+
+  const handlePrevVariant = (e) => {
+    e.stopPropagation();
+    setCurrentVariantIndex((prev) => (prev === 0 ? editedProduct.variants.length - 1 : prev - 1));
+    setCurrentMediaIndex(0);
+  };
+
+  const handleNextVariant = (e) => {
+    e.stopPropagation();
+    setCurrentVariantIndex((prev) => (prev === editedProduct.variants.length - 1 ? 0 : prev + 1));
+    setCurrentMediaIndex(0);
   };
 
   const handleEditToggle = () => {
@@ -35,8 +61,17 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
     if (!isEditing) {
       setEditedProduct({
         ...product,
-        imageUrls: product.imageUrls || [],
-        videoUrls: product.videoUrls || [],
+        variants: variants.length
+          ? variants.map((variant) => ({
+              ...variant,
+              imageUrls: variant.imageUrls || [],
+              price: variant.price || 0,
+              stock: variant.stock || 0,
+              color: variant.color || '',
+              size: variant.size || '',
+            }))
+          : [],
+        imageUrls: product.imageUrls || imageUrls || [],
       });
     }
   };
@@ -48,75 +83,125 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
     }));
   };
 
-  const handleUrlChange = (index, value, mediaType) => {
-    const newUrls = [...(mediaType === 'image' ? editedProduct.imageUrls : editedProduct.videoUrls)];
-    newUrls[index] = value;
+  const handleVariantFieldChange = (variantIndex, field, value) => {
     setEditedProduct((prev) => ({
       ...prev,
-      [mediaType === 'image' ? 'imageUrls' : 'videoUrls']: newUrls,
+      variants: prev.variants.map((variant, index) =>
+        index === variantIndex ? { ...variant, [field]: value } : variant
+      ),
     }));
   };
 
-  const handleAddMedia = (mediaType) => {
+  const handleUrlChange = (variantIndex, mediaIndex, value) => {
+    if (!variants.length) {
+      // Handle product-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        imageUrls: prev.imageUrls.map((url, i) => (i === mediaIndex ? value : url)),
+      }));
+    } else {
+      // Handle variant-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        variants: prev.variants.map((variant, index) =>
+          index === variantIndex
+            ? { ...variant, imageUrls: variant.imageUrls.map((url, i) => (i === mediaIndex ? value : url)) }
+            : variant
+        ),
+      }));
+    }
+  };
+
+  const handleAddMedia = (variantIndex) => {
+    if (!variants.length) {
+      // Add to product-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        imageUrls: [...prev.imageUrls, ''],
+      }));
+    } else {
+      // Add to variant-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        variants: prev.variants.map((variant, index) =>
+          index === variantIndex ? { ...variant, imageUrls: [...variant.imageUrls, ''] } : variant
+        ),
+      }));
+    }
+  };
+
+  const handleRemoveMedia = (variantIndex, mediaIndex) => {
+    if (!variants.length) {
+      // Remove from product-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        imageUrls: prev.imageUrls.filter((_, i) => i !== mediaIndex),
+      }));
+    } else {
+      // Remove from variant-level imageUrls
+      setEditedProduct((prev) => ({
+        ...prev,
+        variants: prev.variants.map((variant, index) =>
+          index === variantIndex
+            ? { ...variant, imageUrls: variant.imageUrls.filter((_, i) => i !== mediaIndex) }
+            : variant
+        ),
+      }));
+    }
+    if (currentMediaIndex >= allMedia.length - 1) setCurrentMediaIndex(0);
+  };
+
+  const handleAddVariant = () => {
     setEditedProduct((prev) => ({
       ...prev,
-      [mediaType === 'image' ? 'imageUrls' : 'videoUrls']: [...prev[mediaType === 'image' ? 'imageUrls' : 'videoUrls'], ''],
+      variants: [...prev.variants, { color: '', size: '', price: 0, stock: 0, imageUrls: [] }],
     }));
   };
 
-  const handleRemoveMedia = (index, mediaType) => {
-    const newUrls = [...(mediaType === 'image' ? editedProduct.imageUrls : editedProduct.videoUrls)].filter((_, i) => i !== index);
+  const handleRemoveVariant = (variantIndex) => {
     setEditedProduct((prev) => ({
       ...prev,
-      [mediaType === 'image' ? 'imageUrls' : 'videoUrls']: newUrls,
+      variants: prev.variants.filter((_, index) => index !== variantIndex),
     }));
-    if (currentIndex >= allMedia.length - 1) setCurrentIndex(0);
+    if (currentVariantIndex >= editedProduct.variants.length - 1) setCurrentVariantIndex(0);
   };
 
   const handleSaveEdits = () => {
     if (onUpdateProduct) {
       onUpdateProduct({
         ...editedProduct,
+        variants: editedProduct.variants.map((variant) => ({
+          ...variant,
+          price: parseFloat(variant.price) || 0,
+          stock: parseInt(variant.stock) || 0,
+          imageUrls: variant.imageUrls.filter((url) => url.trim()),
+        })),
         imageUrls: editedProduct.imageUrls.filter((url) => url.trim()),
-        videoUrls: editedProduct.videoUrls.filter((url) => url.trim()),
-        price: parseFloat(editedProduct.price) || 0,
-        stock: parseInt(editedProduct.stock) || 0,
       });
     }
     setIsEditing(false);
   };
 
-  const currentMedia = allMedia[currentIndex];
+  const currentMedia = allMedia[currentMediaIndex];
 
   return (
     <div className={`relative ${isModal ? 'h-full' : 'h-64'} p-2 rounded-xl overflow-hidden shadow-md`}>
       <div className="w-full h-full relative">
-        {currentMedia.type === 'image' && (
+        {currentMedia && (
           <img
             src={currentMedia.url}
-            alt={`${product.name || 'Product'} image`}
+            alt={`${product.name || 'Product'} ${variants.length ? `variant ${currentVariantIndex + 1}` : ''} image`}
             className="w-full h-full object-cover rounded-xl transition-transform duration-300 hover:scale-105"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/150'; // Fallback image
+              e.target.src = 'https://via.placeholder.com/150';
               console.error(`Failed to load image: ${currentMedia.url}`);
-            }}
-          />
-        )}
-        {currentMedia.type === 'video' && (
-          <video
-            src={currentMedia.url}
-            controls
-            className="w-full h-full object-cover rounded-xl"
-            onError={(e) => {
-              e.target.poster = 'https://via.placeholder.com/150'; // Fallback poster
-              console.error(`Failed to load video: ${currentMedia.url}`);
             }}
           />
         )}
         {allMedia.length > 1 && isModal && (
           <>
             <button
-              onClick={handlePrev}
+              onClick={handlePrevMedia}
               className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-900 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition-all duration-200 focus:outline-none"
               title="Previous media"
               aria-label="Previous media"
@@ -124,7 +209,7 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
               <ChevronLeft size={20} />
             </button>
             <button
-              onClick={handleNext}
+              onClick={handleNextMedia}
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-900 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition-all duration-200 focus:outline-none"
               title="Next media"
               aria-label="Next media"
@@ -135,9 +220,9 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
               {allMedia.map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => setCurrentIndex(index)}
+                  onClick={() => setCurrentMediaIndex(index)}
                   className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    index === currentIndex ? 'bg-blue-500 w-3' : 'bg-gray-400 hover:bg-gray-500'
+                    index === currentMediaIndex ? 'bg-blue-500 w-3' : 'bg-gray-400 hover:bg-gray-500'
                   }`}
                   aria-label={`Go to media ${index + 1}`}
                 ></button>
@@ -145,9 +230,29 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
             </div>
           </>
         )}
+        {variants.length > 1 && isModal && (
+          <>
+            <button
+              onClick={handlePrevVariant}
+              className="absolute left-2 top-1/4 -translate-y-1/2 bg-gray-900 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition-all duration-200 focus:outline-none"
+              title="Previous variant"
+              aria-label="Previous variant"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={handleNextVariant}
+              className="absolute right-2 top-1/4 -translate-y-1/2 bg-gray-900 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition-all duration-200 focus:outline-none"
+              title="Next variant"
+              aria-label="Next variant"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </>
+        )}
         <div className="absolute top-2 right-2 bg-gray-900 bg-opacity-70 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
-          {currentMedia.type === 'image' ? <ImageIcon size={12} /> : <VideoIcon size={12} />}
-          {currentIndex + 1}/{allMedia.length}
+          <ImageIcon size={12} />
+          {variants.length ? `Variant ${currentVariantIndex + 1}/${editedProduct.variants.length} | ` : ''}Image {currentMediaIndex + 1}/{allMedia.length}
         </div>
         {isModal && (
           <div className="absolute top-2 left-2">
@@ -197,47 +302,11 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Price (₦)</label>
-              <input
-                type="number"
-                value={editedProduct.price || ''}
-                onChange={(e) => handleFieldChange('price', e.target.value)}
-                className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Stock</label>
-              <input
-                type="number"
-                value={editedProduct.stock || ''}
-                onChange={(e) => handleFieldChange('stock', e.target.value)}
-                className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
-            <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Category</label>
               <input
                 type="text"
                 value={editedProduct.category || ''}
                 onChange={(e) => handleFieldChange('category', e.target.value)}
-                className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Colors (comma-separated)</label>
-              <input
-                type="text"
-                value={Array.isArray(editedProduct.colors) ? editedProduct.colors.join(', ') : editedProduct.colors || ''}
-                onChange={(e) => handleFieldChange('colors', e.target.value.split(', ').filter(Boolean))}
-                className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Sizes (comma-separated)</label>
-              <input
-                type="text"
-                value={Array.isArray(editedProduct.sizes) ? editedProduct.sizes.join(', ') : editedProduct.sizes || ''}
-                onChange={(e) => handleFieldChange('sizes', e.target.value.split(', ').filter(Boolean))}
                 className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               />
             </div>
@@ -251,18 +320,6 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Rating</label>
-              <input
-                type="number"
-                value={editedProduct.rating || ''}
-                onChange={(e) => handleFieldChange('rating', e.target.value)}
-                className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                min="0"
-                max="5"
-                step="0.1"
-              />
-            </div>
-            <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Tags (comma-separated)</label>
               <input
                 type="text"
@@ -271,62 +328,127 @@ function MediaPreview({ imageUrls = [], videoUrls = [], isModal, product = {}, o
                 className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Images</label>
-              {editedProduct.imageUrls.map((url, index) => (
-                <div key={index} className="flex items-center gap-2 mt-1">
-                  <input
-                    type="text"
-                    value={url || ''}
-                    onChange={(e) => handleUrlChange(index, e.target.value, 'image')}
-                    className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                    placeholder="Enter image URL"
-                  />
-                  <button
-                    onClick={() => handleRemoveMedia(index, 'image')}
-                    className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-all duration-200"
-                    title="Remove image"
-                    aria-label="Remove image"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => handleAddMedia('image')}
-                className="mt-2 text-blue-600 hover:underline text-sm flex items-center gap-1"
-              >
-                <ImageIcon size={14} /> Add Image
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Videos</label>
-              {editedProduct.videoUrls.map((url, index) => (
-                <div key={index} className="flex items-center gap-2 mt-1">
-                  <input
-                    type="text"
-                    value={url || ''}
-                    onChange={(e) => handleUrlChange(index, e.target.value, 'video')}
-                    className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                    placeholder="Enter video URL"
-                  />
-                  <button
-                    onClick={() => handleRemoveMedia(index, 'video')}
-                    className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-all duration-200"
-                    title="Remove video"
-                    aria-label="Remove video"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => handleAddMedia('video')}
-                className="mt-2 text-blue-600 hover:underline text-sm flex items-center gap-1"
-              >
-                <VideoIcon size={14} /> Add Video
-              </button>
-            </div>
+            {variants.length ? (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Variants</h4>
+                {editedProduct.variants.map((variant, variantIndex) => (
+                  <div key={variantIndex} className="mb-4 p-2 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400">Variant {variantIndex + 1}</h5>
+                      <button
+                        onClick={() => handleRemoveVariant(variantIndex)}
+                        className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-all duration-200"
+                        title="Remove variant"
+                        aria-label="Remove variant"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Color</label>
+                        <input
+                          type="text"
+                          value={variant.color || ''}
+                          onChange={(e) => handleVariantFieldChange(variantIndex, 'color', e.target.value)}
+                          className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Size</label>
+                        <input
+                          type="text"
+                          value={variant.size || ''}
+                          onChange={(e) => handleVariantFieldChange(variantIndex, 'size', e.target.value)}
+                          className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Price (₦)</label>
+                        <input
+                          type="number"
+                          value={variant.price || ''}
+                          onChange={(e) => handleVariantFieldChange(variantIndex, 'price', e.target.value)}
+                          className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Stock</label>
+                        <input
+                          type="number"
+                          value={variant.stock || ''}
+                          onChange={(e) => handleVariantFieldChange(variantIndex, 'stock', e.target.value)}
+                          className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Images</label>
+                        {variant.imageUrls.map((url, index) => (
+                          <div key={index} className="flex items-center gap-2 mt-1">
+                            <input
+                              type="text"
+                              value={url || ''}
+                              onChange={(e) => handleUrlChange(variantIndex, index, e.target.value)}
+                              className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                              placeholder="Enter image URL"
+                            />
+                            <button
+                              onClick={() => handleRemoveMedia(variantIndex, index)}
+                              className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-all duration-200"
+                              title="Remove image"
+                              aria-label="Remove image"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => handleAddMedia(variantIndex)}
+                          className="mt-2 text-blue-600 hover:underline text-sm flex items-center gap-1"
+                        >
+                          <ImageIcon size={14} /> Add Image
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={handleAddVariant}
+                  className="mt-2 text-blue-600 hover:underline text-sm flex items-center gap-1"
+                >
+                  <ImageIcon size={14} /> Add Variant
+                </button>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Images</h4>
+                {editedProduct.imageUrls.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={url || ''}
+                      onChange={(e) => handleUrlChange(0, index, e.target.value)}
+                      className="w-full p-1 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Enter image URL"
+                    />
+                    <button
+                      onClick={() => handleRemoveMedia(0, index)}
+                      className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-all duration-200"
+                      title="Remove image"
+                      aria-label="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => handleAddMedia(0)}
+                  className="mt-2 text-blue-600 hover:underline text-sm flex items-center gap-1"
+                >
+                  <ImageIcon size={14} /> Add Image
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

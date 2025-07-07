@@ -40,11 +40,13 @@ export default function SellerProductGallery() {
                 const videoUrls = Array.isArray(data.videoUrls)
                   ? data.videoUrls.filter(url => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
                   : [];
+                const variants = Array.isArray(data.variants) ? data.variants : [];
                 return {
                   id: doc.id,
                   ...data,
                   imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
                   videoUrls,
+                  variants,
                   uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date()
                 };
               });
@@ -151,49 +153,63 @@ export default function SellerProductGallery() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-xl transition duration-300 animate-slide-in focus:ring-2 focus:ring-blue-300 outline-none cursor-pointer group"
-                  tabIndex={0}
-                  onClick={() => {
-                    setShowModal(true);
-                    setModalContent(product);
-                  }}
-                  title="View product media"
-                >
-                  <div className="relative aspect-[4/3] mb-4 overflow-hidden">
-                    {product.imageUrls[0] && (
-                      <img
-                        src={product.imageUrls[0]}
-                        alt={product.name || 'Product Image'}
-                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300 hover:opacity-90"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500">Image N/A</span></div>';
-                        }}
-                      />
-                    )}
-                    {product.videoUrls[0] && (
-                      <VideoIcon className="absolute bottom-2 right-2 w-8 h-8 text-blue-600 bg-white rounded-full p-1 shadow" title="Video available" />
-                    )}
+              filteredProducts.map((product) => {
+                const displayImage = product.variants?.length > 0 && product.variants[0].imageUrls?.length > 0
+                  ? product.variants[0].imageUrls[0]
+                  : product.imageUrls[0];
+                return (
+                  <div
+                    key={product.id}
+                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-xl transition duration-300 animate-slide-in focus:ring-2 focus:ring-blue-300 outline-none cursor-pointer group"
+                    tabIndex={0}
+                    onClick={() => {
+                      setShowModal(true);
+                      setModalContent(product);
+                    }}
+                    title="View product media"
+                  >
+                    <div className="relative aspect-[4/3] mb-4 overflow-hidden">
+                      {displayImage ? (
+                        <img
+                          src={displayImage}
+                          alt={product.name || 'Product Image'}
+                          className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300 hover:opacity-90"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500">Image N/A</span></div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-500">Image N/A</span>
+                        </div>
+                      )}
+                      {product.videoUrls[0] && (
+                        <VideoIcon className="absolute bottom-2 right-2 w-8 h-8 text-blue-600 bg-white rounded-full p-1 shadow" title="Video available" />
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
+                    <p className="text-gray-600 text-sm mb-1">
+                      Price: {product.variants?.length > 0
+                        ? `₦${Math.min(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG')} - ₦${Math.max(...product.variants.map((v) => v.price || 0)).toLocaleString('en-NG')}`
+                        : `₦${(product.price || 0).toLocaleString('en-NG')}`}
+                    </p>
+                    <p className="text-gray-600 text-sm mb-1">Variants: {product.variants?.length || 0}</p>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      product.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                      product.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
+                    </span>
+                    <p className="text-gray-500 text-xs mt-1">
+                      Uploaded: {product.uploadDate.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                    <Link to={`/seller/edit-product/${product.id}`} className="mt-4 inline-flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition" title="Edit Product">
+                      <Edit2 className="w-4 h-4" /> Edit
+                    </Link>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
-                  <p className="text-gray-600 text-sm mb-1">Price: ₦{product.price || 0}</p>
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                    product.status === 'pending' ? 'bg-orange-100 text-orange-800' :
-                    product.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
-                  </span>
-                  <p className="text-gray-500 text-xs mt-1">
-                    Uploaded: {product.uploadDate.toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                  <Link to={`/seller/edit-product/${product.id}`} className="mt-4 inline-flex items-center gap-1 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition" title="Edit Product">
-                    <Edit2 className="w-4 h-4" /> Edit
-                  </Link>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="flex flex-col items-center justify-center mt-10 mb-10 animate-slide-in col-span-full">
                 <ImageIcon className="w-24 h-24 mb-4 text-blue-200" />

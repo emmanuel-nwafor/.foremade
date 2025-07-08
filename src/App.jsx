@@ -42,6 +42,7 @@ import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
 import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
 import AdminSellerWallet from '/src/admin/AdminSellerWallet';
+import AdminManager from '/src/admin/AdminManager';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -108,6 +109,7 @@ const Layout = ({ children }) => {
     '/transactions',
     '/products-upload-variant',
     '/dashboard',
+    '/admin/manager'
   ].includes(location.pathname);
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
@@ -259,6 +261,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AdminSellerWallet />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manager"
+              element={
+                <ProtectedRoute>
+                  <AdminManager />
                 </ProtectedRoute>
               }
             />

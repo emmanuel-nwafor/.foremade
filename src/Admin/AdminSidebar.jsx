@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X } from 'lucide-react';
 import logo from '/src/assets/logi.png';
 
 export default function AdminSidebar() {
@@ -19,17 +20,17 @@ export default function AdminSidebar() {
   };
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: 'bx-home-alt-2', label: 'Dashboard' },
-    { path: '/admin/users', icon: 'bx-user', label: 'Manage Users' },
-    { path: '/admin/sellers-wallet', icon: 'bx bx-cog', label: 'Account Management' },
-    { path: '/admin/sellers/payouts', icon: 'bx-money-withdraw', label: 'Approve Payments' },
-    { path: '/admin/products', icon: 'bx-package', label: 'Manage Products' },
-    { path: '/admin/edit/categories', icon: 'bx-category', label: 'Categories' },
-    { path: '/admin/edit/fees', icon: 'bx-calculator', label: 'Edit Fees' },
-    { path: '/admin/notifications', icon: 'bx-notification', label: 'Notifications' },
-    { path: '/admin/edit/banners', icon: 'bx-image', label: 'Edit Banners & Others' },
-    { path: '/admin/edit/daily-deals', icon: 'bx-purchase-tag', label: 'Daily Deals' },
-
+    { path: '/admin/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/admin/users', icon: Users, label: 'Manage Users' },
+    { path: '/admin/sellers-wallet', icon: Settings, label: 'Account Management' },
+    { path: '/admin/sellers/payouts', icon: DollarSign, label: 'Approve Payments' },
+    { path: '/admin/products', icon: Package, label: 'Manage Products' },
+    { path: '/admin/edit/categories', icon: List, label: 'Categories' },
+    { path: '/admin/edit/fees', icon: Calculator, label: 'Edit Fees' },
+    { path: '/admin/notifications', icon: Bell, label: 'Notifications' },
+    { path: '/admin/edit/banners', icon: Image, label: 'Edit Banners & Others' },
+    { path: '/admin/edit/daily-deals', icon: Tag, label: 'Daily Deals' },
+    { path: '/admin/manager', icon: Home, label: 'Admin Manager' },
   ];
 
   return (
@@ -40,7 +41,7 @@ export default function AdminSidebar() {
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg focus:outline-none hover:bg-blue-700 transition-colors"
         aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
       >
-        <i className={`bx ${isSidebarOpen ? 'bx-x' : 'bx-menu'} text-2xl`}></i>
+        {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Sidebar */}
@@ -67,7 +68,7 @@ export default function AdminSidebar() {
                       : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                   }`}
                 >
-                  <i className={`bx ${item.icon} text-xl mr-3`}></i>
+                  <item.icon className="w-5 h-5 mr-3" />
                   <span className="text-sm font-medium">{item.label}</span>
                 </Link>
               </li>

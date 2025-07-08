@@ -87,7 +87,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
     setIsProcessing(true);
     try {
       const amountInCents = Math.round(totalPrice * 100);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
       let attempts = 3;
       let lastError = null;
 
@@ -536,7 +536,7 @@ const Checkout = () => {
   const sendOrderConfirmationEmail = async (order) => {
     try {
       setIsEmailSending(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
       console.log('Backend URL:', backendUrl);
       console.log('Sending order confirmation email with payload:', {
         orderId: order.paymentId || 'unknown',
@@ -624,7 +624,7 @@ const Checkout = () => {
   const sendSellerOrderNotifications = async (sellers, sellerOrderIds, currency, shippingDetails) => {
     try {
       setIsEmailSending(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
       
       for (const [sellerId, items] of Object.entries(sellers)) {
         const sellerOrderId = sellerOrderIds.find(id => id.includes(sellerId)) || `order-${Date.now()}-${sellerId}`;

@@ -2,7 +2,19 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-export default function BuyerBanner() {
+const TRUST_BADGES = [
+  { icon: 'bx bx-shield', label: 'Buyer Protection' },
+  { icon: 'bx bx-package', label: 'Fast Delivery' },
+  { icon: 'bx bx-credit-card', label: 'Secure Payment' },
+];
+
+const TESTIMONIAL = {
+  quote: '“I always find what I need on Foremade, and the delivery is super fast. Highly recommended!”',
+  name: 'Chinedu E., Abuja',
+  avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+};
+
+export default function EnhancedBuyerBanner() {
   const slides = [
     {
       image: 'https://pngimg.com/uploads/vacuum_cleaner/vacuum_cleaner_PNG3.png',
@@ -16,8 +28,6 @@ export default function BuyerBanner() {
       button: 'Explore Now',
       secondaryButton: 'View Deals',
       link: '/products',
-      bgClass: 'bg-gradient-to-br from-blue-900 via-blue-950 to-slate-900',
-      accentColor: 'bg-blue-500 text-white hover:bg-blue-600'
     },
     {
       image: 'https://pngimg.com/uploads/tv/tv_PNG39223.png',
@@ -31,8 +41,6 @@ export default function BuyerBanner() {
       button: 'Browse Electronics',
       secondaryButton: 'View Brands',
       link: '/category/electronics',
-      bgClass: 'bg-gradient-to-br from-gray-900 to-blue-900',
-      accentColor: 'bg-blue-500 text-white hover:bg-blue-600'
     }
   ];
 
@@ -41,11 +49,9 @@ export default function BuyerBanner() {
 
   useEffect(() => {
     if (!autoplay) return;
-    
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
-    }, 5000);
-    
+    }, 6000);
     return () => clearInterval(timer);
   }, [current, slides.length, autoplay]);
 
@@ -56,119 +62,79 @@ export default function BuyerBanner() {
   };
 
   return (
-    <div className="relative overflow-hidden my-2 sm:my-4 lg:my-6 mx-2 sm:mx-4 lg:mx-6 rounded-xl border border-neutral-700/50 h-[200px] xs:h-[220px] sm:h-[280px] lg:h-[400px]">
-      {/* Background with overlay */}
-      <div className="absolute inset-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500 opacity-20 sm:opacity-30"
+    <div className="relative overflow-hidden my-4 mx-2 sm:mx-4 lg:mx-6 rounded-2xl border border-blue-800/30 h-[240px] xs:h-[260px] sm:h-[320px] lg:h-[440px] shadow-xl">
+      {/* Animated Gradient Background */}
+      <div className="absolute inset-0 z-0">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-400/60 to-amber-200 animate-gradient-x"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.7 }}
+          transition={{ duration: 1 }}
+        />
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 sm:opacity-30 transition-all duration-700 scale-110"
           style={{ backgroundImage: `url(${slides[current].image})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-l from-[#112d4e] via-[#112d4e]/95 to-[#112d4e]/80 sm:to-[#112d4e]/50" />
-        <div className="absolute inset-0 backdrop-blur-sm" />
+        <div className="absolute inset-0 backdrop-blur-md" />
       </div>
-
+      {/* Glass Card Overlay */}
       <motion.div className="relative z-10 h-full flex items-center w-full">
-        <div className="w-full mx-auto px-3 xs:px-4 sm:px-6 lg:px-12 xl:px-16">
-          <div className="max-w-4xl lg:max-w-5xl ml-auto space-y-2 xs:space-y-3 sm:space-y-4 lg:space-y-6">
-            {/* Tag and Heading group */}
-            <div className="space-y-1 xs:space-y-2 sm:space-y-3">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="hidden sm:inline-block px-3 py-1 rounded-full bg-blue-600/20 
-                  text-xs font-medium text-blue-300 border border-blue-500/30"
-              >
+        <div className="w-full mx-auto px-3 xs:px-4 sm:px-8 lg:px-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8 sm:gap-10 py-6 sm:py-10 flex-wrap">
+          {/* Left: Main Content */}
+          <div className="max-w-2xl w-full space-y-4 sm:space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="inline-flex items-center h-7 px-4 rounded-full bg-gradient-to-r from-blue-600/30 to-blue-400/20 border border-blue-500/30 mb-1"
+            >
+              <span className="text-xs font-medium text-blue-100 tracking-wide">
                 {slides[current].tagline}
-              </motion.div>
-
-              <motion.h2 
-                className="text-lg xs:text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {slides[current].text}
-              </motion.h2>
-
-              <motion.p 
-                className="text-xs xs:text-sm sm:hidden text-blue-100/80 max-w-xs"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {slides[current].description}
-              </motion.p>
-            </div>
-
-            {/* Features - Mobile: simplified, Desktop: full */}
-            <div className="space-y-3 sm:space-y-4 w-full">
-              {/* Mobile features - simplified */}
-              <div className="flex sm:hidden gap-4 xs:gap-6">
-                {slides[current].features.slice(0, 2).map((feature, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center space-x-2"
-                  >
-                    <i className={`${feature.icon} text-sm xs:text-base text-blue-400`} />
-                    <span className="text-xs xs:text-sm text-gray-200">{feature.text}</span>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Desktop features - full */}
-              <div className="hidden sm:flex gap-6 lg:gap-8 w-full">
-                {slides[current].features.map((feature, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center space-x-3"
-                  >
-                    <i className={`${feature.icon} text-xl lg:text-2xl text-blue-400`} />
-                    <div>
-                      <div className="text-sm lg:text-base font-medium text-white">{feature.text}</div>
-                      <div className="text-xs lg:text-sm text-gray-300">{feature.desc}</div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Desktop description */}
-              <motion.p 
-                className="hidden sm:block text-sm lg:text-base text-blue-100/80 max-w-2xl"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {slides[current].description}
-              </motion.p>
-            </div>
-
-            {/* CTA buttons */}
-            <div className="flex gap-2 xs:gap-3 sm:gap-4 pt-1 xs:pt-2">
-              <Link to={slides[current].link} className="px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 shadow-lg flex items-center justify-center">
+              </span>
+            </motion.div>
+            <motion.h2
+              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight text-white drop-shadow-lg"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {slides[current].text}
+            </motion.h2>
+            {/* Description only on larger screens */}
+            <motion.p
+              className="hidden sm:block text-base sm:text-lg text-white/90 max-w-lg mt-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {slides[current].description}
+            </motion.p>
+            <div className="flex gap-3 mt-4">
+              <Link to={slides[current].link} className="px-6 py-2 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg hover:from-blue-400 hover:to-blue-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 animate-pulse">
                 {slides[current].button}
-              </Link>
-              <Link to="/deals" className="hidden xs:block px-3 xs:px-4 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 text-xs xs:text-sm sm:text-base rounded-lg font-semibold border border-gray-600 text-gray-200 hover:bg-white/10 transition-all duration-200 flex items-center justify-center">
-                {slides[current].secondaryButton}
               </Link>
             </div>
           </div>
+          {/* Right: Testimonial */}
+          <motion.div
+            className="hidden sm:flex flex-col items-center justify-center bg-white/30 backdrop-blur-lg rounded-2xl p-6 shadow-lg max-w-xs ml-0 sm:ml-8 mt-8 sm:mt-0 border border-blue-100/30"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <img src={TESTIMONIAL.avatar} alt={TESTIMONIAL.name} className="w-16 h-16 rounded-full border-4 border-blue-300 shadow mb-3" />
+            <p className="text-base text-gray-900 font-medium italic mb-2 text-center">{TESTIMONIAL.quote}</p>
+            <span className="text-xs text-gray-700 font-semibold">{TESTIMONIAL.name}</span>
+          </motion.div>
         </div>
       </motion.div>
-
       {/* Navigation dots */}
-      <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-0 right-0 flex justify-center gap-2 sm:gap-3">
+      <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-20">
         {slides.map((slide, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
             className="group"
+            aria-label={`Go to slide ${index + 1}`}
           >
-            <span className={`block w-2 h-2 xs:w-2.5 xs:h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${
-              current === index 
-                ? 'bg-blue-400 scale-110 shadow-lg shadow-blue-400/50' 
+            <span className={`block w-3 h-3 rounded-full transition-all duration-200 ${
+              current === index
+                ? 'bg-blue-400 scale-125 shadow-lg shadow-blue-400/50'
                 : 'bg-white/40 group-hover:bg-white/60 group-hover:scale-105'
             }`} />
           </button>

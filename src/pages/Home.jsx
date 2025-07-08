@@ -15,6 +15,7 @@ import RecentlyViewed from '../components/product/RecentlyViewed';
 import NewsletterSignup from '../components/home/NewsletterSignup';
 import CategoryGrid from '../components/home/CategoryGrid';
 import ForemadeInvestorDeck from '../components/home/ForemadeInvestorDeck';
+import ManufacturerPick from '../components/product/FeaturedProducts';
 
 const Home = () => {
   // Track if user is new visitor
@@ -174,15 +175,38 @@ const Home = () => {
       
       {/* Enhanced Buyer Banner - showing products to buy */}
       <BuyerBanner />
-      {/* <TopStores /> */}
-      
+
+      {/* Manufacturer's Pick - inserted between banners */}
+      <div className="my-8 px-2 sm:px-4 lg:px-8">
+        <ManufacturerPick />
+      </div>
+
       {/* Enhanced Seller Banner - encouraging selling */}
       <SellerBanner />
       
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
 
-  
+      {/* Privacy Policies and Terms & Conditions Links */}
+      <div className="bg-gray-50 py-6 border-t border-gray-200">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex flex-row justify-center items-center gap-4 text-sm text-gray-600">
+            <Link 
+              to="/privacy-policy" 
+              className="hover:text-blue-600 transition-colors duration-200 underline"
+            >
+              Privacy Policy
+            </Link>
+            <span className="text-gray-400">|</span>
+            <Link 
+              to="/terms-conditions" 
+              className="hover:text-blue-600 transition-colors duration-200 underline"
+            >
+              Terms & Conditions
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* This is for spacing the nav on mobile */}
       <div className="h-20"></div>

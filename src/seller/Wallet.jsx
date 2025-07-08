@@ -4,6 +4,7 @@ import { auth, db } from '/src/firebase';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where, increment } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
+import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
@@ -58,7 +59,6 @@ export default function Wallet() {
       navigate('/login');
       return;
     }
-
     const fetchWallet = async () => {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       try {
@@ -80,7 +80,6 @@ export default function Wallet() {
         setLoading(false);
       }
     };
-
     fetchWallet();
 
     const walletRef = doc(db, 'wallets', auth.currentUser.uid);
@@ -158,14 +157,15 @@ export default function Wallet() {
       setLoading(false);
       return;
     }
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
     try {
       const payload = {
         sellerId: auth.currentUser.uid,
         amount: amountNum,
         transactionReference: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
-      console.log('Sending withdrawal request to:', 'https://foremade-backend.onrender.com/initiate-seller-payout', payload);
-      const response = await axios.post('https://foremade-backend.onrender.com/initiate-seller-payout', payload, {
+      console.log('Sending withdrawal request to:', `${BACKEND_URL}/initiate-seller-payout`, payload);
+      const response = await axios.post(`${BACKEND_URL}/initiate-seller-payout`, payload, {
         timeout: 10000,
       });
       if (response.data.status === 'success') {
@@ -262,19 +262,21 @@ export default function Wallet() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="flex flex-1">
-        <div className="md:block md:w-64 lg:w-72 bg-gray-100 transition-all duration-300">
+        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg" onClick={() => {}} aria-label="Open sidebar">
+          <i className="bx bx-menu text-xl"></i>
+        </button>
+        <div className="md:block md:w-64 lg:w-72 bg-gray-50 transition-all duration-300">
           <SellerSidebar />
         </div>
-
-        <div className="flex-1 p-2 sm:p-4 md:p-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-2 sm:mb-4 md:mb-6">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Smile Wallet</h1>
-              {error && <div className="mt-1 sm:mt-2 md:mt-4 p-1 sm:p-2 md:p-3 bg-red-100 text-red-700 rounded-lg text-sm sm:text-base">{error}</div>}
+        <div className="flex-1 p-3 sm:p-4 md:p-8">
+          <div className="max-w-xl mx-auto w-full">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <WalletIcon className="w-7 h-7 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-blue-900">My Wallet</h1>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 md:gap-6 mb-2 sm:mb-4 md:mb-6">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-2 sm:p-4 md:p-6 text-white">
                 <span className="text-[10px] sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
@@ -287,53 +289,39 @@ export default function Wallet() {
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold mt-1 sm:mt-2">₦{pendingBalance.toLocaleString()}</p>
               </div>
             </div>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full sm:w-auto bg-blue-600 text-white px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 rounded-lg hover:bg-blue-700 text-sm sm:text-base md:text-lg font-medium"
-            >
-              Withdraw
-            </button>
-
-            {isModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-2 sm:p-4 md:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-2 sm:mb-3 md:mb-4">Request Withdrawal</h2>
-                  {error && <div className="mb-1 sm:mb-2 md:mb-4 p-1 sm:p-2 bg-red-100 text-red-700 rounded-lg">{error}</div>}
-                  <form onSubmit={handleWithdraw}>
-                    <div className="mb-2 sm:mb-3 md:mb-4">
-                      <label className="block text-sm sm:text-base md:text-lg font-medium text-gray-700">Withdrawal Amount (₦)</label>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="mt-1 p-1 sm:p-2 md:p-2 w-full border rounded-lg text-sm sm:text-base"
-                        required
-                      />
-                    </div>
-                    <div className="flex justify-end gap-1 sm:gap-2 md:gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setIsModalOpen(false)}
-                        className="px-2 sm:px-3 md:px-4 py-1 sm:py-1 md:py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm sm:text-base"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className={`px-2 sm:px-3 md:px-4 py-1 sm:py-1 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${loading ? 'opacity-50 cursor-not-allowed' : ''} text-sm sm:text-base`}
-                        disabled={loading}
-                      >
-                        Submit
-                      </button>
-                    </div>
-                  </form>
-                </div>
+            {/* Withdrawal Form */}
+            <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ArrowDownCircle className="w-5 h-5 text-green-600" />
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Request Withdrawal</h2>
               </div>
-            )}
-
-            <div className="mt-2 sm:mt-4 md:mt-6 h-32 sm:h-48 md:h-64 bg-white p-1 sm:p-2 md:p-4 rounded-lg shadow">
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 mb-1 sm:mb-2 md:mb-4">Statistics</h2>
+              <div className="mb-4">
+                <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount (₦)</label>
+                <input
+                  id="withdraw-amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="mt-1 p-2 w-full border border-blue-200 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-200 text-base"
+                  required
+                  aria-label="Withdrawal Amount"
+                  min="1"
+                  step="any"
+                />
+                <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: ₦1. Withdrawals are subject to admin approval and may take up to 24 hours.</p>
+              </div>
+              <button
+                type="submit"
+                className={`w-full mt-2 sm:mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition text-base ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={loading}
+                aria-label="Request Withdrawal"
+              >
+                Request Withdrawal
+              </button>
+            </form>
+            {/* Statistics Chart */}
+            <div className="mt-6 h-48 sm:h-64 bg-white p-3 rounded-lg shadow">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">Statistics</h2>
               <div className="h-full">
                 <Line data={chartData} options={chartOptions} />
               </div>

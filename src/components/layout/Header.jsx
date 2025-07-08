@@ -545,6 +545,31 @@ const Header = () => {
               <i className="bx bx-x text-2xl text-[#112040]"></i>
             </button>
             <div className="flex flex-col space-y-3">
+              {/* Add main navigation links for all users */}
+              <div className="flex justify-evenly w-full">
+                <Link
+                  to="/products"
+                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Shop
+                </Link>
+                <Link
+                  to="/products-upload"
+                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Sell
+                </Link>
+                <Link
+                  to="/smile"
+                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  Smile
+                </Link>
+              </div>
+              {/* Auth/Profile section */}
               {!user && (
                 <div className="flex items-center justify-center mt-6 bg-[#112040] text-white px-4 py-3 rounded-lg text-sm hover:bg-[#112040]/80">
                   <Link to="/login" className="mx-2" onClick={() => setSidebarOpen(false)}>
@@ -565,6 +590,7 @@ const Header = () => {
                   My Profile
                 </Link>
               )}
+              {/* Categories */}
               {categories.map((category) => (
                 <Link
                   key={category}

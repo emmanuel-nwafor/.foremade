@@ -110,7 +110,8 @@ export default function AdminPayoutMonitor() {
     setLoading(true);
     try {
       console.log('Attempting approval for amount:', amount);
-      const response = await axios.post('https://foremade-backend.onrender.com/approve-payout', { transactionId, sellerId });
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId });
       addAlert(response.data.message, 'success');
       console.log('Approval response:', response.data);
     } catch (error) {
@@ -125,7 +126,8 @@ export default function AdminPayoutMonitor() {
   const handleReject = async (transactionId, sellerId) => {
     setLoading(true);
     try {
-      const response = await axios.post('https://foremade-backend.onrender.com/reject-payout', { transactionId, sellerId });
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const response = await axios.post(`${BACKEND_URL}/reject-payout`, { transactionId, sellerId });
       addAlert(response.data.message, 'success');
     } catch (error) {
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');

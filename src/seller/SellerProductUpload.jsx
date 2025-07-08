@@ -143,6 +143,38 @@ export default function SellerProductUpload() {
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
 
+  // Stepper state
+  const [currentStep, setCurrentStep] = useState(1);
+  const steps = [
+    { label: 'Media', key: 1 },
+    { label: 'Details', key: 2 },
+    { label: 'Pricing', key: 3 },
+    { label: 'Location', key: 4 },
+  ];
+
+  // Helper to determine if a section is complete
+  const isSectionComplete = (stepKey) => {
+    if (stepKey === 1) return imageFiles.length > 0;
+    if (stepKey === 2) return formData.name && formData.description && formData.sellerName;
+    if (stepKey === 3) return formData.price && formData.stock;
+    if (stepKey === 4) return locationData.country && locationData.state;
+    return false;
+  };
+
+  // Auto-advance stepper as user completes sections
+  useEffect(() => {
+    if (isSectionComplete(1) && currentStep < 2) setCurrentStep(2);
+    if (isSectionComplete(2) && currentStep < 3) setCurrentStep(3);
+    if (isSectionComplete(3) && currentStep < 4) setCurrentStep(4);
+  }, [imageFiles, formData.name, formData.description, formData.sellerName, formData.price, formData.stock, locationData.country, locationData.state]);
+
+  // Stepper click handler
+  const handleStepClick = (stepKey) => {
+    if (stepKey < currentStep) setCurrentStep(stepKey);
+  };
+
+  console.log(showSizeWarning);
+
   // Refs for file inputs
   const fileInputRef = useRef(null);
   const singleImageInputRef = useRef(null);
@@ -865,15 +897,15 @@ export default function SellerProductUpload() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
       <SellerSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start">
+      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-8 max-w-4xl mx-auto">
         <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add a New Product
           </h2>
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* Image Upload Section */}
             <div className="relative group">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">

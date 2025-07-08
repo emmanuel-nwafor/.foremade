@@ -252,8 +252,8 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="bg-[#112D4E] hidden sm:flex text-white py-2 px-4">
-        <div className="flex items-center w-full max-w-8xl mx-auto">
+      <div className="bg-[#112D4E] hidden sm:flex text-white py-2 w-full">
+        <div className="flex items-center w-full max-w-7xl">
           {/* Logo */}
           <Link to="/">
             <img
@@ -273,49 +273,6 @@ const Header = () => {
             <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
               Smile
             </Link>
-            
-            <div className="relative group">
-              <button
-                onClick={toggleMoreDropdown}
-                onBlur={handleMoreDropdownBlur}
-                className="hover:text-gray-300 text-xs sm:text-sm focus:outline-none"
-              >
-                More <i className="bx bx-chevron-down"></i>
-              </button>
-              
-              {moreDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  <Link
-                    to="/daily-deals"
-                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                    onClick={() => setMoreDropdownOpen(false)}
-                  >
-                    Daily Deals
-                  </Link>
-                  <Link
-                    to="/brand-outlet"
-                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                    onClick={() => setMoreDropdownOpen(false)}
-                  >
-                    Brand Outlet
-                  </Link>
-                  <Link
-                    to="/gift-cards"
-                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                    onClick={() => setMoreDropdownOpen(false)}
-                  >
-                    Gift Cards
-                  </Link>
-                  <Link
-                    to="/help-contact"
-                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                    onClick={() => setMoreDropdownOpen(false)}
-                  >
-                    Help & Contact
-                  </Link>
-                </div>
-              )}
-            </div>
           </div>
           {/* User Actions */}
           <div className="flex items-center space-x-3 flex-shrink-0 ml-auto">
@@ -358,7 +315,7 @@ const Header = () => {
       </div>
 
       {/* Mobile Header */}
-      <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40"
+      <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex justify-between items-center fixed top-0 left-0 right-0 z-40"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <Link to="/">

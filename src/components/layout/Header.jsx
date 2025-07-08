@@ -315,14 +315,20 @@ const Header = () => {
       </div>
 
       {/* Mobile Header */}
-      <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex justify-between items-center fixed top-0 left-0 right-0 z-40"
+      <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <Link to="/">
-          <img src={logo} className="h-10" alt="Foremade" />
-        </Link>
-        <div className="flex items-center space-x-4">
-          <Link to="/cart" className="relative">
+        {/* Left: Logo */}
+        <div className="flex items-center min-w-0">
+          <Link to="/">
+            <img src={logo} className="h-10" alt="Foremade" />
+          </Link>
+        </div>
+        {/* Center: Filler */}
+        <div className="flex-1 min-w-0"></div>
+        {/* Right: Icons */}
+        <div className="flex items-center justify-end flex-1 min-w-0">
+          <Link to="/cart" className="relative flex items-center justify-center">
             <i className="bx bx-cart-alt text-xl text-white"></i>
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -330,7 +336,7 @@ const Header = () => {
               </span>
             )}
           </Link>
-          <button onClick={() => setSidebarOpen(true)} className="focus:outline-none">
+          <button onClick={() => setSidebarOpen(true)} className="ml-4 mr-4 flex items-center justify-center focus:outline-none">
             <i className="bx bx-menu text-2xl"></i>
           </button>
         </div>

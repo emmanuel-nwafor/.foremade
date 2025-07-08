@@ -127,6 +127,28 @@ const Product = () => {
   }, [fetchFavorites]);
 
   useEffect(() => {
+    // Reset all relevant state when id changes
+    setProduct(null);
+    setSellerLocation('');
+    setSimilarProducts([]);
+    setRecentSearches([]);
+    setLoading(true);
+    setQuantity(1);
+    setFavorites([]);
+    setShowFullDescription(false);
+    setReviewRating(0);
+    setReviewComment('');
+    setShowAllReviews(false);
+    setShowReviewForm(false);
+    setMainMedia('');
+    setCurrentMediaIndex(0);
+    setSlideDirection('right');
+    setIsVideoPlaying(false);
+    setIsDailyDeal(false);
+    setDiscountPercentage(0);
+    setSelectedColor('');
+    setSelectedSize('');
+
     const fetchProduct = async () => {
       try {
         console.log('Fetching product ID:', id);
@@ -288,72 +310,11 @@ const Product = () => {
         if (err.message.includes('Product not found') || err.message.includes('Invalid product ID') || err.message.includes('Product not approved')) {
           navigate('/products');
         }
-      }
-    };
-
-    const fetchRecentSearches = async () => {
-      try {
-        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-        if (recent.length === 0) {
-          setRecentSearches([]);
-          return;
-        }
-        const products = [];
-        for (const item of recent) {
-          if (item.status !== 'approved') continue;
-          const productRef = doc(db, 'products', item.id);
-          const productSnap = await getDoc(productRef);
-          if (productSnap.exists()) {
-            const data = productSnap.data();
-            if (data.status !== 'approved') continue;
-            let imageUrl =
-              data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
-                ? data.imageUrl
-                : Array.isArray(data.imageUrls) &&
-                  data.imageUrls[0] &&
-                  typeof data.imageUrls[0] === 'string' &&
-                  data.imageUrls[0].startsWith('https://res.cloudinary.com/')
-                ? data.imageUrls[0]
-                : 'https://via.placeholder.com/600';
-            const category = data.category?.trim().toLowerCase() || 'uncategorized';
-            const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-            products.push({
-              id: productSnap.id,
-              name: data.name || 'Unnamed Product',
-              price: data.price || 0,
-              stock: data.stock || 0,
-              category,
-              colors: data.colors || [],
-              sizes: requiresSizes ? data.sizes || [] : [],
-              condition: data.condition || 'New',
-              imageUrl,
-              tags: data.tags || [],
-              seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
-              rating: data.rating || Math.random() * 2 + 3,
-              status: data.status || 'pending',
-            });
-          }
-        }
-        setRecentSearches(products);
-      } catch (err) {
-        console.error('Error fetching recent searches:', err);
-        addAlert('Failed to load recent searches.', 'error', 3000);
-        setRecentSearches([]);
-      }
-    };
-
-    const fetchAllData = async () => {
-      try {
-        await Promise.all([fetchProduct(), fetchRecentSearches()]);
-      } catch (err) {
-        console.error('Error in fetchAllData:', err);
       } finally {
         setLoading(false);
       }
     };
-    window.scrollTo(0, 0);
-    setLoading(true);
-    fetchAllData();
+    fetchProduct();
   }, [id, navigate]);
 
   useEffect(() => {
@@ -781,14 +742,14 @@ const Product = () => {
                 <div className="price-section">
                   {isDailyDeal ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-green-600">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 overflow-x-auto">
+                        <span className="text-2xl font-bold text-green-600 whitespace-nowrap">
                           <PriceFormatter price={totalPrice} />
                         </span>
-                        <span className="text-lg text-gray-500 line-through">
+                        <span className="text-lg text-gray-500 line-through whitespace-nowrap">
                           <PriceFormatter price={originalPrice} />
                         </span>
-                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium whitespace-nowrap">
                           {discountPercentage}% OFF
                         </span>
                       </div>
@@ -926,7 +887,7 @@ const Product = () => {
                     onClick={toggleFavorite}
                     className={`p-3 rounded-lg border-2 transition-colors ${
                       favorites.includes(product.id)
-                        ? 'bg-red-50 border-red-300 text-red-600'
+                        ? 'bg-gray-100 border-gray-400 text-gray-600'
                         : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
                     }`}
                   >

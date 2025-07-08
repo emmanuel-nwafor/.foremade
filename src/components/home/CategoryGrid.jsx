@@ -9,6 +9,21 @@ const slugify = (name) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+// Add category path mapping for Shop by Category
+const categoryPathMap = {
+  'Shoes': 'footwear',
+  'Fashion': 'clothing',
+  'Phones': 'computers-laptops',
+  'Laptops': 'computers-laptops',
+  'Gaming': 'game-console',
+  // Add more as needed
+};
+
+// Helper to get mapped category path
+const getCategoryPath = (category) => {
+  return `/category/${categoryPathMap[category] || slugify(category)}`;
+};
+
 const categories = [
   "Shoes",
   "Fashion",
@@ -63,7 +78,7 @@ const CategoryGrid = () => {
         {categories.map((name, index) => (
           <Link
             key={name}
-            to={`/category/${slugify(name)}`}
+            to={getCategoryPath(name)}
             className="text-center group"
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}

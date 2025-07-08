@@ -682,6 +682,7 @@ const Product = () => {
                     controls
                     autoPlay={isVideoPlaying}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '0.75rem' }}
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Video N/A</span></div>';
@@ -692,6 +693,7 @@ const Product = () => {
                     src={mainMedia}
                     alt={product.name}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '0.75rem' }}
                     onError={(e) => {
                       e.target.src = 'https://via.placeholder.com/600';
                     }}
@@ -708,6 +710,7 @@ const Product = () => {
                       className={`thumbnail w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                         currentMediaIndex === index ? 'border-blue-500' : 'border-gray-200'
                       }`}
+                      style={{ minWidth: '4rem', minHeight: '4rem', maxWidth: '100%', objectFit: 'cover' }}
                       onClick={() => handleMediaClick(media, index)}
                       onError={(e) => {
                         e.target.src = 'https://via.placeholder.com/600';
@@ -721,6 +724,7 @@ const Product = () => {
                       className={`thumbnail w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                         currentMediaIndex === imageMedia.length + index ? 'border-blue-500' : 'border-gray-200'
                       }`}
+                      style={{ minWidth: '4rem', minHeight: '4rem', maxWidth: '100%', objectFit: 'cover' }}
                       onClick={() => handleMediaClick(video, imageMedia.length + index)}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -732,19 +736,19 @@ const Product = () => {
             </div>
 
             {/* Product Info Section */}
-            <div className="space-y-4">
-              <div className="product-info-card">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+            <div className="space-y-4 min-w-0">
+              <div className="product-info-card min-w-0">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 break-words">{product.name}</h1>
                 
                 {/* Tags */}
                 {product.tags && product.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3 overflow-x-auto scrollbar-hide">
                     {product.tags.map((tag, index) => (
                       <span
                         key={index}
                         className={`px-2 py-1 text-xs rounded-full border ${
                           tagStyles[tag.toLowerCase()] || tagStyles.default
-                        }`}
+                        } break-words`}
                       >
                         {tag}
                       </span>
@@ -801,7 +805,7 @@ const Product = () => {
                 </div>
 
                 {/* Product Info Badges */}
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4 min-w-0 overflow-x-auto scrollbar-hide">
                   <div className="info-badge bg-blue-100 text-blue-700 border border-blue-200">
                     {/* Package icon */}
                     <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
@@ -859,7 +863,7 @@ const Product = () => {
                 {product.sizes && product.sizes.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Size:</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 min-w-0">
                       {product.sizes.map((size, index) => (
                         <button
                           key={index}
@@ -867,7 +871,7 @@ const Product = () => {
                             selectedSize === size
                               ? 'selected border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                          } break-words`}
                           onClick={() => setSelectedSize(size)}
                         >
                           {size}
@@ -910,7 +914,7 @@ const Product = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 mb-4">
+                <div className="flex gap-3 mb-4 flex-wrap min-w-0">
                   <button
                     onClick={handleAddToCart}
                     disabled={product.stock === 0}
@@ -940,10 +944,11 @@ const Product = () => {
           </div>
 
           {/* Description Section */}
-          <div className="mt-8 product-info-card">
+          <div className="mt-8 product-info-card min-w-0">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Description</h2>
             <div 
-              className="formatted-description text-gray-700 leading-relaxed"
+              className="formatted-description text-gray-700 leading-relaxed break-words"
+              style={{ wordBreak: 'break-word' }}
               dangerouslySetInnerHTML={{
                 __html: formatDescription(showFullDescription ? product.description : truncatedDescription)
               }}
@@ -959,7 +964,7 @@ const Product = () => {
           </div>
 
           {/* Reviews Section */}
-          <div className="mt-8 product-info-card">
+          <div className="mt-8 product-info-card min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">Reviews</h2>
               <button
@@ -1062,11 +1067,11 @@ const Product = () => {
         </div>
 
         {/* Similar Products Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-4 space-y-6">
+        <div className="lg:col-span-1 min-w-0">
+          <div className="sticky top-4 space-y-6 min-w-0">
             {/* Similar Products */}
             {similarProducts.length > 0 && (
-              <div className="product-info-card">
+              <div className="product-info-card min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Similar Products</h3>
                 <div className="space-y-4">
                   {similarProducts.map((similarProduct) => (
@@ -1109,7 +1114,7 @@ const Product = () => {
 
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
-              <div className="product-info-card">
+              <div className="product-info-card min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Recently Viewed</h3>
                 <div className="space-y-4">
                   {recentSearches.slice(0, 3).map((recentProduct) => (
@@ -1146,8 +1151,8 @@ const Product = () => {
       </div>
 
       {/* Sticky Cart for Mobile */}
-      {/* <div className="sticky-cart md:hidden">
-        <div className="flex items-center justify-between">
+      <div className="sticky-cart md:hidden min-w-0">
+        <div className="flex items-center justify-between min-w-0 flex-wrap">
           <div>
             <div className="text-lg font-bold text-gray-800">
               <PriceFormatter price={totalPrice} />
@@ -1166,7 +1171,7 @@ const Product = () => {
             {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </button>
         </div>
-      </div> */}
+      </div>
 
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>

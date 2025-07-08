@@ -207,9 +207,6 @@ const Home = () => {
           </div>
         </div>
       </div>
-
-      {/* This is for spacing the nav on mobile */}
-      <div className="h-20"></div>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar';
 
@@ -61,8 +61,40 @@ export default function AdminPayoutMonitor() {
     }
 
     const q = query(collection(db, 'transactions'), where('status', '==', 'Pending'), where('type', '==', 'Withdrawal'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setTransactions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const transactionData = [];
+      for (const docSnapshot of snapshot.docs) {
+        const txn = { id: docSnapshot.id, ...docSnapshot.data() };
+        // Fetch seller details from sellers collection
+        const sellerRef = doc(db, 'sellers', txn.userId);
+        try {
+          const sellerSnap = await getDoc(sellerRef);
+          if (sellerSnap.exists()) {
+            const sellerData = sellerSnap.data();
+            txn.sellerName = sellerData.fullName || 'Unknown';
+            txn.accountNumber = sellerData.accountNumber || 'N/A';
+            // Fetch bank name from banks collection using bankCode
+            if (sellerData.bankCode) {
+              const bankRef = doc(db, 'banks', sellerData.bankCode);
+              const bankSnap = await getDoc(bankRef);
+              txn.bankName = bankSnap.exists() ? bankSnap.data().name || 'N/A' : 'N/A';
+            } else {
+              txn.bankName = 'N/A';
+            }
+          } else {
+            txn.sellerName = 'Unknown';
+            txn.bankName = 'N/A';
+            txn.accountNumber = 'N/A';
+          }
+        } catch (error) {
+          console.error(`Failed to fetch seller or bank data for ${txn.userId}:`, error);
+          txn.sellerName = 'Unknown';
+          txn.bankName = 'N/A';
+          txn.accountNumber = 'N/A';
+        }
+        transactionData.push(txn);
+      }
+      setTransactions(transactionData);
     }, (error) => {
       addAlert('Failed to fetch transactions.', 'error');
       console.error('Firestore listener error:', error);
@@ -77,7 +109,7 @@ export default function AdminPayoutMonitor() {
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
     try {
-      console.log('Attempting approval for amount:', amount); // Log the amount
+      console.log('Attempting approval for amount:', amount);
       const response = await axios.post('https://foremade-backend.onrender.com/approve-payout', { transactionId, sellerId });
       addAlert(response.data.message, 'success');
       console.log('Approval response:', response.data);
@@ -122,6 +154,15 @@ export default function AdminPayoutMonitor() {
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Seller ID:</span> {txn.userId}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Seller Name:</span> {txn.sellerName}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Bank Name:</span> {txn.bankName}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Account Number:</span> {txn.accountNumber}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Amount:</span> ₦{txn.amount.toFixed(2)}

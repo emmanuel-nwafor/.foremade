@@ -87,7 +87,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
     setIsProcessing(true);
     try {
       const amountInCents = Math.round(totalPrice * 100);
-      const backendUrl = import.meta.env.VITE_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       let attempts = 3;
       let lastError = null;
 
@@ -621,6 +621,97 @@ const Checkout = () => {
     }
   };
 
+  const sendSellerOrderNotifications = async (sellers, sellerOrderIds, currency, shippingDetails) => {
+    try {
+      setIsEmailSending(true);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      
+      for (const [sellerId, items] of Object.entries(sellers)) {
+        const sellerOrderId = sellerOrderIds.find(id => id.includes(sellerId)) || `order-${Date.now()}-${sellerId}`;
+        const sellerSubtotal = items.reduce(
+          (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
+          0
+        );
+        const totalAmount = currency === 'GBP' ? sellerSubtotal * conversionRateNgnToGbp : sellerSubtotal;
+
+        const payload = {
+          orderId: sellerOrderId,
+          sellerId,
+          items: items.map(item => ({
+            productId: item.productId || 'unknown',
+            quantity: item.quantity || 1,
+            price: item.product?.totalPrice || 0,
+            name: item.product?.name || 'Unknown Product',
+            imageUrls: Array.isArray(item.product?.imageUrls) ? item.product.imageUrls : [placeholder],
+          })),
+          total: totalAmount,
+          currency,
+          shippingDetails: {
+            name: shippingDetails.name || 'Unknown',
+            address: shippingDetails.address || 'Unknown',
+            city: shippingDetails.city || '',
+            postalCode: shippingDetails.postalCode || '',
+            country: shippingDetails.country || '',
+            phone: shippingDetails.phone || '',
+          },
+        };
+
+        console.log('Sending seller notification email with payload:', {
+          orderId: sellerOrderId,
+          sellerId,
+          items: payload.items,
+          total: totalAmount,
+          currency,
+          shippingDetails: payload.shippingDetails,
+        });
+
+        let attempts = 2;
+        let lastError = null;
+
+        while (attempts > 0) {
+          try {
+            const response = await axios.post(`${backendUrl}/send-seller-order-notification`, payload, {
+              timeout: 10000,
+            });
+            console.log(`Seller notification email sent successfully for seller ${sellerId}:`, response.data);
+            break;
+          } catch (err) {
+            lastError = err;
+            attempts--;
+            if (attempts === 0 || err.response?.status !== 400) {
+              throw err;
+            }
+            console.warn(`Retrying seller email send for ${sellerId} (${attempts} attempts left)...`);
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+        if (attempts === 0) {
+          throw lastError || new Error(`Failed to send seller email for ${sellerId} after retries`);
+        }
+      }
+    } catch (err) {
+      console.error('Error sending seller notification emails:', {
+        message: err.message,
+        status: err.response?.status,
+        responseData: err.response?.data,
+        stack: err.stack,
+      });
+      console.log('Logging to Sentry:', err);
+      toast.warn('Order placed successfully, but failed to notify some sellers. They may receive notifications later.', {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+      if (debugMode) {
+        toast.error(`Debug: Seller email send failed - ${err.message} (${JSON.stringify(err.response?.data)})`, {
+          position: 'bottom-right',
+          autoClose: 5000,
+        });
+      }
+    } finally {
+      setIsEmailSending(false);
+    }
+  };
+
   const handlePaymentSuccess = useCallback(
     async (paymentData) => {
       try {
@@ -664,7 +755,7 @@ const Checkout = () => {
 
         let lastOrder = null;
         const walletUpdates = [];
-        const sellerOrderIds = []; // Store seller-specific order IDs
+        const sellerOrderIds = [];
 
         await runTransaction(db, async (transaction) => {
           const productRefs = cart.map((item) => doc(db, 'products', item.productId));
@@ -738,7 +829,7 @@ const Checkout = () => {
             };
             const sellerOrderId = `${orderId}-${sellerId}`;
             orders.push({ order, orderId: sellerOrderId });
-            sellerOrderIds.push(sellerOrderId); // Store for email
+            sellerOrderIds.push(sellerOrderId);
 
             const pendingBalance = (exists ? data?.pendingBalance || 0 : 0) + sellerShare;
             walletUpdates.push({ sellerId, amount: sellerShare });
@@ -807,11 +898,11 @@ const Checkout = () => {
           await setDoc(userDocRef, formData, { merge: true });
         }
 
+        // Send buyer confirmation email
         if (lastOrder && sellerOrderIds.length > 0) {
-          // Use the first seller's orderId for the email
           await sendOrderConfirmationEmail({
             ...lastOrder,
-            paymentId: sellerOrderIds[0], // Use seller-specific orderId
+            paymentId: sellerOrderIds[0],
             items: cart.map((item) => ({
               productId: item.productId || 'unknown',
               quantity: item.quantity || 0,
@@ -822,6 +913,9 @@ const Checkout = () => {
             })),
           });
         }
+
+        // Send seller notification emails
+        await sendSellerOrderNotifications(sellers, sellerOrderIds, currency, formData);
 
         await clearCart(auth.currentUser?.uid);
         setCart([]);

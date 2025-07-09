@@ -127,33 +127,9 @@ const Product = () => {
     return () => unsubscribe();
   }, [fetchFavorites]);
 
-  // Reset all state when product ID changes
-  const resetState = useCallback(() => {
-    setProduct(null);
-    setSellerLocation('');
-    setSimilarProducts([]);
-    setRecentSearches([]);
-    setLoading(true);
-    setQuantity(1);
-    setShowFullDescription(false);
-    setReviewRating(0);
-    setReviewComment('');
-    setShowAllReviews(false);
-    setShowReviewForm(false);
-    setMainMedia('');
-    setCurrentMediaIndex(0);
-    setSlideDirection('right');
-    setIsVideoPlaying(false);
-    setIsDailyDeal(false);
-    setDiscountPercentage(0);
-    setSelectedColor('');
-    setSelectedSize('');
-  }, []);
+
 
   useEffect(() => {
-    // Reset state when id changes
-    resetState();
-
     // Scroll to top when product changes
     window.scrollTo(0, 0);
 
@@ -344,7 +320,7 @@ const Product = () => {
       // Cancel any pending operations
       setLoading(false);
     };
-  }, [id, navigate, resetState]);
+  }, [id, navigate]);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -364,16 +340,7 @@ const Product = () => {
     }
   }, []);
 
-  // Handle browser back/forward navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      // Reset state when browser navigation occurs
-      resetState();
-    };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [resetState]);
 
   useEffect(() => {
     if (!product || product.imageUrls.length <= 1 || isVideoPlaying) return;
@@ -1096,10 +1063,6 @@ const Product = () => {
                         key={similarProduct.id}
                         to={`/product/${similarProduct.id}`}
                         className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                        onClick={() => {
-                          // Force component reset when navigating to similar product
-                          resetState();
-                        }}
                       >
                         <div className="flex gap-3">
                           <img
@@ -1143,10 +1106,6 @@ const Product = () => {
                         key={recentProduct.id}
                         to={`/product/${recentProduct.id}`}
                         className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                        onClick={() => {
-                          // Force component reset when navigating to recent product
-                          resetState();
-                        }}
                       >
                         <div className="flex gap-3">
                           <img

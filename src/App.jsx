@@ -9,6 +9,7 @@ import { db } from './firebase';
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
+import ScrollToTopButton from './components/common/ScrollToTopButton';
 
 import ChatInterface from '/src/components/chat/ChatInterface';
 import SellerChat from '/src/seller/SellerChat';
@@ -38,17 +39,17 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
-import Admin from '/src/admin/Admin';
-import AdminDashboard from '/src/admin/AdminDashboard';
+import Admin from '/src/Admin/Admin.jsx';
+import AdminDashboard from '/src/Admin/AdminDashboard.jsx';
 import AdminNotifications from '/src/Admin/AdminNotifications.jsx';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
-import AdminEditFees from '/src/admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
-import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
-import AdminSellerWallet from '/src/admin/AdminSellerWallet';
-import AdminManager from '/src/admin/AdminManager';
+import AdminUsers from '/src/Admin/AdminUsers';
+import AdminPayoutMonitor from '/src/Admin/AdminPayoutMonitor';
+import AdminEditFees from '/src/Admin/AdminEditFees';
+import AdminEditBannerAndOthers from '/src/Admin/AdminEditBannerAndOthers';
+import AdminEditDeals from '/src/Admin/AdminEditDeals';
+import AdminCategoryEdit from '/src/Admin/AdminCategoryEdit';
+import AdminSellerWallet from '/src/Admin/AdminSellerWallet';
+import AdminManager from '/src/Admin/AdminManager';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -81,6 +82,38 @@ import ProRefundPolicy from './pages/ProRefundPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import SellerAgreement from './pages/SellerAgreement';
 import ShippingPolicy from './pages/ShippingPolicy';
+
+// ScrollToTop component to handle scroll to top on route changes
+function ScrollToTop() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Scroll to top with smooth behavior
+    const scrollToTop = () => {
+      // Check if the browser supports smooth scrolling
+      if ('scrollBehavior' in document.documentElement.style) {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback for older browsers
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Add a small delay to ensure the page has loaded
+    const timer = setTimeout(scrollToTop, 100);
+    
+    // Also scroll immediately for better responsiveness
+    scrollToTop();
+    
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+  
+  return null;
+}
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -175,21 +208,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
-function ScrollToTop() {
-  const location = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
-  return null;
-}
-
 function AppRoutes() {
   const location = useLocation();
   return (
     <AuthProvider>
-      <CurrencyProvider>
-        <Layout>
-          <Routes>
+              <CurrencyProvider>
+          <Layout>
+            <Routes>
             {/* All your routes here, replacing the old <Routes> block */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -213,7 +238,7 @@ function AppRoutes() {
             <Route path="/seller-chat/:chatId" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
             <Route path="/admin/sellers-wallet" element={<ProtectedRoute adminOnly={true}><AdminSellerWallet /></ProtectedRoute>} />
             <Route path="/admin/manager" element={<ProtectedRoute adminOnly={true}><AdminManager /></ProtectedRoute>} />
-            <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute adminOnly={true}><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
             <Route path="/admin/sellers/payouts" element={<ProtectedRoute adminOnly={true}><AdminPayoutMonitor /></ProtectedRoute>} />
@@ -269,7 +294,9 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AppRoutes />
+      <ScrollToTopButton />
     </BrowserRouter>
   );
 }

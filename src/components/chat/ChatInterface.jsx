@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { auth, db } from '../firebase';
+import { auth, db } from '/src/firebase';
 import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import ChatTemplates from './ChatTemplates';
 import Spinner from '../components/common/Spinner';

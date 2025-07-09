@@ -169,7 +169,7 @@ export default function SellerEditProduct() {
         <div className="flex-1 ml-0 md:ml-64 p-4">
           <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-400 to-blue-700 animate-pulse"></div>
+              <i className="bx bx-loader bx-spin text-2xl"></i>
               <p className="mt-4 text-xl font-semibold text-gray-800">Loading...</p>
             </div>
           </div>

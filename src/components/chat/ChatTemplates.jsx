@@ -1,48 +1,53 @@
 import React from 'react';
 
-const chatterTemplates = {
-  buyer: {
-    'Acknowledged Receipt': "Hi, just confirming that I've received the item. Thank you!",
-    'Not As Described': "Hi, I received the item but it's a bit different from what I expected. The [describe issue] isn't quite as shown.",
-    'Significantly Not as Described': "Hello, I've received the item, but it's significantly different from the description. It doesn't match the images or details listed.",
-    'Product is Damaged': "Hi, the item I received is damaged. It looks like it got affected during delivery. Please advise on next steps.",
-    'Not Received': "Hi, I haven't received my item yet. The delivery window has passed.",
-    'Marked Delivered But Not Received': "My order says it's been delivered, but I didn't receive anything.",
-    'No Shipping Update': "Hi, I placed an order and haven't seen any shipping updates. Has the item been sent?",
-    'Request Photos': "Could you please share some photos of the actual item?",
-    'Thank You': "Thank you for your help!",
-    'Following Up': "Hi, just following up on my previous message. Any updates?"
-  },
+export const templates = {
   seller: {
-    'Order Confirmation': "Thanks for your order! We've received it and are preparing your item for dispatch. You'll receive tracking details once it ships.",
-    'Item Dispatched': "Hi! Your order has been dispatched via [Courier Name]. Tracking number: [Tracking ID]. Let us know when it arrives!",
-    'Confirm Delivery': "Hi, just checking in to confirm if you've received your item. We hope everything's in order!",
-    'Response: Minor Issue': "Thanks for reaching out. Sorry to hear that. Could you please share a photo of the issue? We'll look into it right away.",
-    'Response: Significant Issue': "We're really sorry about this. Please send us a photo or video of what you received so we can escalate it for review. If confirmed, a refund or return can be processed.",
-    'Response: Damaged': "Oh no! We're really sorry to hear that. Please send us photos of the damage (including packaging if possible), and we'll help sort this out quickly.",
-    'Response: Not Received': "Thanks for reaching out. Let me check the tracking and follow up with the courier. We'll update you shortly.",
-    'Response: Marked Delivered': "We're sorry to hear that. Sometimes items may be left with a neighbour or reception. Could you kindly check? If not, we'll raise this with the courier and update you.",
-    'Response: No Tracking Update': "Thanks for checking in. Let me confirm the dispatch status and get back to you shortly. We'll ensure this is resolved quickly.",
-    'Apology': "We sincerely apologize for the inconvenience caused.",
-    'Processing Refund': "We're processing your refund now. You should see it in 3-5 business days.",
-    'Escalating Issue': "I'm escalating this to our senior team for immediate resolution."
+    orderConfirmation: 'Your order has been confirmed and will ship soon!',
+    shippingUpdate: 'Your order has been shipped. Tracking ID: [TRACKING_ID].',
+    issueResponse: 'We’re sorry for the inconvenience. Please share more details so we can assist you.',
+    refundProcessed: 'Your refund has been processed and will reflect in 3-5 business days.',
+    productInquiry: 'Thank you for your inquiry! Can you specify which product details you need?',
+    deliveryDelay: 'We apologize for the delay. Your order is expected to arrive by [DATE].',
+    outOfStock: 'The item is currently out of stock. We’ll notify you when it’s available.',
+    orderReceived: 'We’ve received your order and are processing it now.',
+    paymentIssue: 'There was an issue with your payment. Please verify your payment details.',
+    productDamaged: 'Please send us images of the damaged product so we can process a replacement.',
+    thankYou: 'Thank you for shopping with us! Let us know if you need further assistance.',
+    customRequest: 'We’ve noted your custom request. We’ll get back to you shortly.'
+  },
+  buyer: {
+    orderStatus: 'Can you provide an update on my order status?',
+    shippingQuery: 'When will my order be shipped?',
+    productQuestion: 'Can you share more details about the product?',
+    returnRequest: 'I’d like to request a return for my order.',
+    paymentIssue: 'I’m having trouble with the payment. Can you assist?',
+    deliveryIssue: 'My order hasn’t arrived yet. Can you check on it?',
+    productDamage: 'The product I received is damaged. How can I proceed?',
+    refundStatus: 'Can you confirm the status of my refund?',
+    cancelOrder: 'I’d like to cancel my order. Is that possible?',
+    sizeIssue: 'The product doesn’t fit. Can I exchange it?',
+    qualityConcern: 'I’m not satisfied with the product quality. Can we discuss this?',
+    customRequest: 'I have a special request regarding my order. Can you help?'
   }
 };
 
 const ChatTemplates = ({ role, onSelect, selectedTemplate }) => {
   return (
-    <select
-      value={selectedTemplate}
-      onChange={(e) => onSelect(e.target.value)}
-      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-    >
-      <option value="">Choose a message...</option>
-      {Object.keys(chatterTemplates[role]).map((key) => (
-        <option key={key} value={key}>
-          {key}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        value={selectedTemplate}
+        onChange={(e) => onSelect(e.target.value)}
+        className="w-full p-2 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+        aria-label="Select a message template"
+      >
+        <option value="">Select a message template</option>
+        {Object.keys(templates[role] || {}).map((key) => (
+          <option key={key} value={key}>
+            {templates[role][key]}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 };
 

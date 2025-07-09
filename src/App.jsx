@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { CurrencyProvider } from './CurrencyContext';
+import { CurrencyProvider } from '/src/CurrencyContext';
+
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -9,9 +10,8 @@ import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
 
-import ChatInterface from './components/chat/ChatInterface';
-import SellerChat from './seller/SellerChat';
-
+import ChatInterface from '/src/components/chat/ChatInterface';
+import SellerChat from '/src/seller/SellerChat';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import Login from './auth/Login';
@@ -38,17 +38,17 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
-import Admin from './admin/Admin';
-import AdminDashboard from './admin/AdminDashboard';
-import AdminNotifications from './admin/AdminNotifications';
-import AdminUsers from './admin/AdminUsers';
-import AdminPayoutMonitor from './admin/AdminPayoutMonitor';
-import AdminEditFees from './admin/AdminEditFees';
-import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers';
-import AdminEditDeals from './admin/AdminEditDeals';
-import AdminCategoryEdit from './admin/AdminCategoryEdit';
-import AdminSellerWallet from './admin/AdminSellerWallet';
-import AdminManager from './admin/AdminManager';
+import Admin from '/src/admin/Admin';
+import AdminDashboard from '/src/admin/AdminDashboard';
+import AdminNotifications from '/src/admin/AdminNotifications.jsx';
+import AdminUsers from '/src/admin/AdminUsers';
+import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
+import AdminEditFees from '/src/admin/AdminEditFees';
+import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
+import AdminEditDeals from '/src/admin/AdminEditDeals';
+import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
+import AdminSellerWallet from '/src/admin/AdminSellerWallet';
+import AdminManager from '/src/admin/AdminManager';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -94,7 +94,7 @@ const Layout = ({ children }) => {
     '/settings',
     '/products-gallery',
     '/products-upload',
-    '/seller/edit-product',
+    '/seller/edit-product/:productId',
     '/admin',
     '/admin/payouts',
     '/admin/dashboard',
@@ -116,23 +116,20 @@ const Layout = ({ children }) => {
     '/transactions',
     '/products-upload-variant',
     '/dashboard',
-    '/chat',
-    '/seller-chat',
-  ].some((path) => location.pathname === path || location.pathname.startsWith(path));
+    // '/chat',
+  ].some((path) => location.pathname === path || location.pathname.startsWith(path.replace(':productId', '')));
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
 
   return (
     <>
       {!hideHeaderFooter && <TopNavigation />}
-      {!hideHeaderFooter && <Header />}
-      <main
-        className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white"
-        style={{
-          paddingTop: 'calc(56px + env(safe-area-inset-top))',
-          paddingBottom: 'env(safe-area-inset-bottom)'
-        }}
-      >
+      {!hideHeaderFooter && (
+        <div className="flex justify-between items-center bg-white dark:bg-gray-900">
+          <Header />
+        </div>
+      )}
+      <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
         {children}
       </main>
       {showFooter && <Footer />}
@@ -194,113 +191,11 @@ function App() {
         <CurrencyProvider>
           <Layout>
             <Routes>
-              <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/add-phone" element={<AddPhone />} />
-              <Route path="/recover-password" element={<ForgetPassword />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/empowerment-hub" element={<EmpowermentHub />} />
-              <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
-              <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<Product />} />
-              <Route path="/best-selling" element={<BestSelling />} />
-              <Route path="/electronics" element={<Electronics />} />
-              <Route path="/tablet-phones" element={<TabletsPhones />} />
-              <Route path="/smart-watches" element={<SmartWatches />} />
-              <Route path="/health-beauty" element={<HealthBeauty />} />
-              <Route path="/computer-accessories" element={<ComputerAccessories />} />
-              <Route path="/games-fun" element={<GamesFun />} />
-              <Route path="/drinks" element={<Drinks />} />
-              <Route path="/home-kitchen" element={<HomeKitchen />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/privacy-policy/:type" element={<AllPolicies />} />
-              <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
-              <Route path="/pages/other-products/:category" element={<OtherProductsPage />} />
-              <Route path="/stores" element={<Store />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/category/:categoryName" element={<CategoryPage />} />
-              <Route path="/pro-seller-form" element={<ProSellerForm />} />
-              <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
-              <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/pro-refund-policy" element={<ProRefundPolicy />} />
-              <Route path="/terms-conditions" element={<TermsAndConditions />} />
-              <Route path="/seller-agreement" element={<SellerAgreement />} />
-              <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="/sellers-guide" element={<HowItWorks />} />
-
-              {/* Protected Routes */}
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/orders"
-                element={
-                  <ProtectedRoute>
-                    <Orders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/address"
-                element={
-                  <ProtectedRoute>
-                    <Address />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/setting"
-                element={
-                  <ProtectedRoute>
-                    <Setting />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/chat/:orderId"
-                element={
-                  <ProtectedRoute>
-                    <ChatInterface />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/seller-chat"
-                element={
-                  <ProtectedRoute>
-                    <SellerChat />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/seller-chat/:chatId"
-                element={
-                  <ProtectedRoute>
-                    <SellerChat />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/pro-seller-form" element={<ProSellerForm />} />
               <Route
                 path="/smile"
                 element={
@@ -382,6 +277,10 @@ function App() {
                 }
               />
               <Route
+                path="/recover-password"
+                element={<ForgetPassword />}
+              />
+              <Route
                 path="/transactions"
                 element={
                   <ProtectedRoute>
@@ -389,20 +288,45 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               <Route
-                path="/seller/edit-product/:productId"
+                path="/chat/:orderId"
                 element={
                   <ProtectedRoute>
-                    <SellerEditProduct />
+                    <ChatInterface />
                   </ProtectedRoute>
                 }
               />
-              {/* Admin Routes */}
               <Route
-                path="/admin"
+                path="/seller-chat"
+                element={
+                  <ProtectedRoute>
+                    <SellerChat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/seller-chat/:chatId"
+                element={
+                  <ProtectedRoute>
+                    <SellerChat />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/sellers-wallet"
                 element={
                   <ProtectedRoute adminOnly={true}>
-                    <Admin />
+                    <AdminSellerWallet />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/manager"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <AdminManager />
                   </ProtectedRoute>
                 }
               />
@@ -423,18 +347,10 @@ function App() {
                 }
               />
               <Route
-                path="/admin/sellers-wallet"
+                path="/admin/products"
                 element={
                   <ProtectedRoute adminOnly={true}>
-                    <AdminSellerWallet />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/manager"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminManager />
+                    <Admin />
                   </ProtectedRoute>
                 }
               />
@@ -486,6 +402,42 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/" element={<Home />} />
+              <Route path="/support" element={<Support />} />
+              <Route path="/empowerment-hub" element={<EmpowermentHub />} />
+              <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
+              <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<Product />} />
+              <Route path="/best-selling" element={<BestSelling />} />
+              <Route path="/electronics" element={<Electronics />} />
+              <Route path="/tablet-phones" element={<TabletsPhones />} />
+              <Route path="/smart-watches" element={<SmartWatches />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/privacy-policy/:type" element={<AllPolicies />} />
+              <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
+              <Route path="/pages/other-products/:category" element={<OtherProductsPage />} />
+              <Route path="/stores" element={<Store />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/address" element={<Address />} />
+              <Route path="/setting" element={<Setting />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/category/:categoryName" element={<CategoryPage />} />
+              <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+              <Route path="/pro-refund-policy" element={<ProRefundPolicy />} />
+              <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
+              <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/terms-conditions" element={<TermsAndConditions />} />
+              <Route path="/seller-agreement" element={<SellerAgreement />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

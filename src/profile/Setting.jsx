@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db } from '/src/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Sidebar from './Sidebar';
-import Spinner from '../components/common/Spinner';
+import { User, Upload, Lock, Settings, LogOut, X, Save, Bell, Moon, Sun, Eye, EyeOff } from 'lucide-react';
+import Sidebar from '/src/profile/Sidebar';
+import Spinner from '/src/components/common/Spinner';
 
-export default function Settings() {
+export default function Setting() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userData, setUserData] = useState({
@@ -44,6 +45,7 @@ export default function Settings() {
         const docSnap = await getDoc(userDoc);
         if (!docSnap.exists()) {
           setError('User profile not found.');
+          setLoading(false);
           return;
         }
         const firestoreData = docSnap.data();
@@ -101,7 +103,7 @@ export default function Settings() {
         setPreviewImage(imageUrl);
         localStorage.setItem('profileImage', imageUrl);
         window.dispatchEvent(new Event('profileImageUpdated'));
-        toast.success('Profile image updated successfully! 🎉');
+        toast.success('Profile image updated successfully!');
       };
       reader.readAsDataURL(file);
     } catch (err) {
@@ -142,7 +144,7 @@ export default function Settings() {
       await updatePassword(user, newPassword);
       setCurrentPassword('');
       setNewPassword('');
-      toast.success('Password updated successfully! 🔒');
+      toast.success('Password updated successfully!');
     } catch (err) {
       console.error('Error changing password:', err);
       if (err.code === 'auth/wrong-password') {
@@ -194,7 +196,7 @@ export default function Settings() {
 
       localStorage.setItem('userData', JSON.stringify(userData));
       window.dispatchEvent(new Event('userDataUpdated'));
-      toast.success('Profile updated successfully! 💾');
+      toast.success('Profile updated successfully!');
     } catch (err) {
       console.error('Error saving profile:', err);
       setError('Failed to save profile. Please try again.');
@@ -212,7 +214,7 @@ export default function Settings() {
       setPreviewImage(null);
       window.dispatchEvent(new Event('profileImageUpdated'));
       navigate('/login');
-      toast.success('Logged out successfully! 🚪');
+      toast.success('Logged out successfully!');
     } catch (err) {
       console.error('Error logging out:', err);
       setError('Failed to log out. Please try again.');
@@ -263,7 +265,7 @@ export default function Settings() {
           onClick={() => setError('')}
           className="mt-6 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors"
         >
-          Retry 🔄
+          Retry
         </button>
       </div>
     );
@@ -274,16 +276,18 @@ export default function Settings() {
       <div className="flex flex-col md:flex-row gap-4">
         <Sidebar />
         <div className="md:w-3/4">
-          <h1 className="text-3xl font-bold mb-6">Settings ⚙️</h1>
+          <h1 className="text-3xl font-bold mb-6">Settings</h1>
           <div className="rounded-lg p-6 bg-gray-50 dark:bg-gray-800 shadow-md">
-            <h3 className="text-lg font-semibold mb-3">Profile Picture 🖼️</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <User size={20} /> Profile Picture
+            </h3>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow">
                 {getAvatar()}
               </div>
               <div className="flex flex-col gap-2">
                 <label className="cursor-pointer text-blue-600 hover:text-blue-400 flex items-center gap-1">
-                  <i className="bx bx-upload"></i> Choose Image 📸
+                  <Upload size={16} /> Choose Image
                   <input
                     type="file"
                     accept="image/*"
@@ -295,7 +299,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3">Personal Information 📋</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <User size={20} /> Personal Information
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="text-gray-500 dark:text-gray-300">Name</label>
@@ -365,7 +371,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3">Security 🔒</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Lock size={20} /> Security
+            </h3>
             <div className="mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -382,7 +390,7 @@ export default function Settings() {
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-300"
                     >
-                      <i className={`bx ${showCurrentPassword ? 'bx-hide' : 'bx-show'} text-lg`}></i>
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
@@ -400,7 +408,7 @@ export default function Settings() {
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-300"
                     >
-                      <i className={`bx ${showNewPassword ? 'bx-hide' : 'bx-show'} text-lg`}></i>
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
@@ -410,11 +418,13 @@ export default function Settings() {
                 onClick={handlePasswordChange}
                 className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-800 transition-colors"
               >
-                Change Password 🔑
+                Change Password
               </button>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3">Preferences ⚙️</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Settings size={20} /> Preferences
+            </h3>
             <div className="mb-6">
               <div className="flex items-center justify-between">
                 <label className="text-gray-500 dark:text-gray-300">Email Notifications</label>
@@ -431,30 +441,33 @@ export default function Settings() {
                   onClick={toggleTheme}
                   className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg shadow hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                 >
-                  {theme === 'light' ? 'Switch to Dark 🌙' : 'Switch to Light ☀️'}
+                  {theme === 'light' ? <Moon size={16} className="inline mr-1" /> : <Sun size={16} className="inline mr-1" />}
+                  {theme === 'light' ? 'Switch to Dark' : 'Switch to Light'}
                 </button>
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3">Account Actions 🚀</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <User size={20} /> Account Actions
+            </h3>
             <div className="flex flex-wrap gap-4 mb-6">
               <button
                 onClick={handleLogout}
-                className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-800 transition-colors"
+                className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-800 transition-colors flex items-center gap-1"
               >
-                Log Out 🚪
+                <LogOut size={16} /> Log Out
               </button>
               <Link
                 to="/profile"
-                className="px-6 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 rounded-lg shadow-md hover:from-gray-400 hover:to-gray-500 transition-colors dark:from-gray-600 dark:to-gray-700 dark:text-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800"
+                className="px-6 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 rounded-lg shadow-md hover:from-gray-400 hover:to-gray-500 transition-colors dark:from-gray-600 dark:to-gray-700 dark:text-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800 flex items-center gap-1"
               >
-                Cancel ❌
+                <X size={16} /> Cancel
               </Link>
               <button
                 onClick={handleSave}
-                className="px-3 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transition-colors"
+                className="px-3 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transition-colors flex items-center gap-1"
               >
-                Save Changes 💾
+                <Save size={16} /> Save Changes
               </button>
             </div>
             {error && <p className="text-red-600 dark:text-red-400 mt-2">{error}</p>}

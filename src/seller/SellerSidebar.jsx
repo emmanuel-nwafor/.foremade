@@ -35,6 +35,7 @@ export default function SellerSidebar() {
     { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
     { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
     { to: '/transactions', label: 'Transactions', icon: Wallet, category: 'Your wallet' },
+    { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
   ];
 
   // Filter menu items based on search query

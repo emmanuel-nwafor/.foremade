@@ -179,7 +179,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col"
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden"
       onClick={trackProductView}
       tabIndex={0}
       aria-label={product.name}
@@ -189,11 +189,11 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
           Deal! -{discountPercentage}%
         </span>
       )}
-      <div className="relative h-[200px] overflow-hidden rounded-t-lg">
+      <div className="relative h-[200px] overflow-hidden rounded-t-lg min-w-0">
         <img
           src={imageFailed ? FALLBACK_IMAGE : imageUrl}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover max-w-full max-h-full"
           onError={() => {
             if (!imageFailed) {
               console.warn('Image load error:', { productId: product.id, imageUrl, name: product.name });
@@ -213,9 +213,9 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
           <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
-      <div className="flex flex-col justify-between flex-grow p-3">
+      <div className="flex flex-col justify-between flex-grow p-3 min-w-0 overflow-hidden">
         <div>
-          <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1" title={product.name}>
+          <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1 break-words truncate" title={product.name}>
             {truncateText(product.name)}
           </h3>
           {!isDailyDeal && sellerUsername && (

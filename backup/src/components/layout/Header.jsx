@@ -198,7 +198,7 @@ const Header = () => {
   return (
     <header className="bg-white">
       <div className="hidden sm:block border-b border-gray-200 text-white py-2 bg-[#112D4E]">
-        <div className="container mx-auto px-4 flex flex-col justify-between sm:flex-row sm:justify-between sm:items-center">
+        <div className="container mx-auto flex flex-col justify-between sm:flex-row sm:justify-between sm:items-center">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
             {user ? (
               <div className="flex items-center gap-3">

@@ -127,6 +127,28 @@ const Product = () => {
   }, [fetchFavorites]);
 
   useEffect(() => {
+    // Reset all relevant state when id changes
+    setProduct(null);
+    setSellerLocation('');
+    setSimilarProducts([]);
+    setRecentSearches([]);
+    setLoading(true);
+    setQuantity(1);
+    setFavorites([]);
+    setShowFullDescription(false);
+    setReviewRating(0);
+    setReviewComment('');
+    setShowAllReviews(false);
+    setShowReviewForm(false);
+    setMainMedia('');
+    setCurrentMediaIndex(0);
+    setSlideDirection('right');
+    setIsVideoPlaying(false);
+    setIsDailyDeal(false);
+    setDiscountPercentage(0);
+    setSelectedColor('');
+    setSelectedSize('');
+
     const fetchProduct = async () => {
       try {
         console.log('Fetching product ID:', id);
@@ -288,72 +310,11 @@ const Product = () => {
         if (err.message.includes('Product not found') || err.message.includes('Invalid product ID') || err.message.includes('Product not approved')) {
           navigate('/products');
         }
-      }
-    };
-
-    const fetchRecentSearches = async () => {
-      try {
-        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-        if (recent.length === 0) {
-          setRecentSearches([]);
-          return;
-        }
-        const products = [];
-        for (const item of recent) {
-          if (item.status !== 'approved') continue;
-          const productRef = doc(db, 'products', item.id);
-          const productSnap = await getDoc(productRef);
-          if (productSnap.exists()) {
-            const data = productSnap.data();
-            if (data.status !== 'approved') continue;
-            let imageUrl =
-              data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
-                ? data.imageUrl
-                : Array.isArray(data.imageUrls) &&
-                  data.imageUrls[0] &&
-                  typeof data.imageUrls[0] === 'string' &&
-                  data.imageUrls[0].startsWith('https://res.cloudinary.com/')
-                ? data.imageUrls[0]
-                : 'https://via.placeholder.com/600';
-            const category = data.category?.trim().toLowerCase() || 'uncategorized';
-            const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-            products.push({
-              id: productSnap.id,
-              name: data.name || 'Unnamed Product',
-              price: data.price || 0,
-              stock: data.stock || 0,
-              category,
-              colors: data.colors || [],
-              sizes: requiresSizes ? data.sizes || [] : [],
-              condition: data.condition || 'New',
-              imageUrl,
-              tags: data.tags || [],
-              seller: data.seller || { name: 'Unknown Seller', id: data.sellerId || '' },
-              rating: data.rating || Math.random() * 2 + 3,
-              status: data.status || 'pending',
-            });
-          }
-        }
-        setRecentSearches(products);
-      } catch (err) {
-        console.error('Error fetching recent searches:', err);
-        addAlert('Failed to load recent searches.', 'error', 3000);
-        setRecentSearches([]);
-      }
-    };
-
-    const fetchAllData = async () => {
-      try {
-        await Promise.all([fetchProduct(), fetchRecentSearches()]);
-      } catch (err) {
-        console.error('Error in fetchAllData:', err);
       } finally {
         setLoading(false);
       }
     };
-    window.scrollTo(0, 0);
-    setLoading(true);
-    fetchAllData();
+    fetchProduct();
   }, [id, navigate]);
 
   useEffect(() => {
@@ -682,6 +643,7 @@ const Product = () => {
                     controls
                     autoPlay={isVideoPlaying}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '0.75rem' }}
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.parentElement.innerHTML += '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-sm">Video N/A</span></div>';
@@ -692,6 +654,7 @@ const Product = () => {
                     src={mainMedia}
                     alt={product.name}
                     className={slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'}
+                    style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '0.75rem' }}
                     onError={(e) => {
                       e.target.src = 'https://via.placeholder.com/600';
                     }}
@@ -708,6 +671,7 @@ const Product = () => {
                       className={`thumbnail w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                         currentMediaIndex === index ? 'border-blue-500' : 'border-gray-200'
                       }`}
+                      style={{ minWidth: '4rem', minHeight: '4rem', maxWidth: '100%', objectFit: 'cover' }}
                       onClick={() => handleMediaClick(media, index)}
                       onError={(e) => {
                         e.target.src = 'https://via.placeholder.com/600';
@@ -721,6 +685,7 @@ const Product = () => {
                       className={`thumbnail w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                         currentMediaIndex === imageMedia.length + index ? 'border-blue-500' : 'border-gray-200'
                       }`}
+                      style={{ minWidth: '4rem', minHeight: '4rem', maxWidth: '100%', objectFit: 'cover' }}
                       onClick={() => handleMediaClick(video, imageMedia.length + index)}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -732,19 +697,19 @@ const Product = () => {
             </div>
 
             {/* Product Info Section */}
-            <div className="space-y-4">
-              <div className="product-info-card">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+            <div className="space-y-4 min-w-0">
+              <div className="product-info-card min-w-0">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 break-words">{product.name}</h1>
                 
                 {/* Tags */}
                 {product.tags && product.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3 overflow-x-auto scrollbar-hide">
                     {product.tags.map((tag, index) => (
                       <span
                         key={index}
                         className={`px-2 py-1 text-xs rounded-full border ${
                           tagStyles[tag.toLowerCase()] || tagStyles.default
-                        }`}
+                        } break-words`}
                       >
                         {tag}
                       </span>
@@ -777,14 +742,14 @@ const Product = () => {
                 <div className="price-section">
                   {isDailyDeal ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-green-600">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 overflow-x-auto">
+                        <span className="text-2xl font-bold text-green-600 whitespace-nowrap">
                           <PriceFormatter price={totalPrice} />
                         </span>
-                        <span className="text-lg text-gray-500 line-through">
+                        <span className="text-lg text-gray-500 line-through whitespace-nowrap">
                           <PriceFormatter price={originalPrice} />
                         </span>
-                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium whitespace-nowrap">
                           {discountPercentage}% OFF
                         </span>
                       </div>
@@ -801,7 +766,7 @@ const Product = () => {
                 </div>
 
                 {/* Product Info Badges */}
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4 min-w-0 overflow-x-auto scrollbar-hide">
                   <div className="info-badge bg-blue-100 text-blue-700 border border-blue-200">
                     {/* Package icon */}
                     <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
@@ -859,7 +824,7 @@ const Product = () => {
                 {product.sizes && product.sizes.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Size:</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 min-w-0">
                       {product.sizes.map((size, index) => (
                         <button
                           key={index}
@@ -867,7 +832,7 @@ const Product = () => {
                             selectedSize === size
                               ? 'selected border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                          } break-words`}
                           onClick={() => setSelectedSize(size)}
                         >
                           {size}
@@ -910,7 +875,7 @@ const Product = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 mb-4">
+                <div className="flex gap-3 mb-4 flex-wrap min-w-0">
                   <button
                     onClick={handleAddToCart}
                     disabled={product.stock === 0}
@@ -922,7 +887,7 @@ const Product = () => {
                     onClick={toggleFavorite}
                     className={`p-3 rounded-lg border-2 transition-colors ${
                       favorites.includes(product.id)
-                        ? 'bg-red-50 border-red-300 text-red-600'
+                        ? 'bg-gray-100 border-gray-400 text-gray-600'
                         : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
                     }`}
                   >
@@ -940,10 +905,11 @@ const Product = () => {
           </div>
 
           {/* Description Section */}
-          <div className="mt-8 product-info-card">
+          <div className="mt-8 product-info-card min-w-0">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Description</h2>
             <div 
-              className="formatted-description text-gray-700 leading-relaxed"
+              className="formatted-description text-gray-700 leading-relaxed break-words"
+              style={{ wordBreak: 'break-word' }}
               dangerouslySetInnerHTML={{
                 __html: formatDescription(showFullDescription ? product.description : truncatedDescription)
               }}
@@ -959,7 +925,7 @@ const Product = () => {
           </div>
 
           {/* Reviews Section */}
-          <div className="mt-8 product-info-card">
+          <div className="mt-8 product-info-card min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800">Reviews</h2>
               <button
@@ -1062,11 +1028,11 @@ const Product = () => {
         </div>
 
         {/* Similar Products Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-4 space-y-6">
+        <div className="lg:col-span-1 min-w-0">
+          <div className="sticky top-4 space-y-6 min-w-0">
             {/* Similar Products */}
             {similarProducts.length > 0 && (
-              <div className="product-info-card">
+              <div className="product-info-card min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Similar Products</h3>
                 <div className="space-y-4">
                   {similarProducts.map((similarProduct) => (
@@ -1109,7 +1075,7 @@ const Product = () => {
 
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
-              <div className="product-info-card">
+              <div className="product-info-card min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Recently Viewed</h3>
                 <div className="space-y-4">
                   {recentSearches.slice(0, 3).map((recentProduct) => (
@@ -1146,8 +1112,8 @@ const Product = () => {
       </div>
 
       {/* Sticky Cart for Mobile */}
-      {/* <div className="sticky-cart md:hidden">
-        <div className="flex items-center justify-between">
+      <div className="sticky-cart md:hidden min-w-0">
+        <div className="flex items-center justify-between min-w-0 flex-wrap">
           <div>
             <div className="text-lg font-bold text-gray-800">
               <PriceFormatter price={totalPrice} />
@@ -1166,7 +1132,7 @@ const Product = () => {
             {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </button>
         </div>
-      </div> */}
+      </div>
 
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>

@@ -36,17 +36,17 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
-import Admin from '/src/admin/Admin';
-import AdminDashboard from '/src/admin/AdminDashboard';
-import AdminNotifications from '/src/admin/AdminNotifications.jsx';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
-import AdminEditFees from '/src/admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
-import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
-import AdminSellerWallet from '/src/admin/AdminSellerWallet';
-import AdminManager from '/src/admin/AdminManager';
+import Admin from './Admin/Admin';
+import AdminDashboard from './Admin/AdminDashboard';
+import AdminNotifications from './Admin/AdminNotifications.jsx';
+import AdminUsers from './Admin/AdminUsers';
+import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
+import AdminEditFees from './Admin/AdminEditFees';
+import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './Admin/AdminEditDeals';
+import AdminCategoryEdit from './Admin/AdminCategoryEdit';
+import AdminSellerWallet from './Admin/AdminSellerWallet';
+import AdminManager from './Admin/AdminManager';
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -122,12 +122,14 @@ const Layout = ({ children }) => {
   return (
     <>
       {!hideHeaderFooter && <TopNavigation />}
-      {!hideHeaderFooter && (
-        <div className="flex justify-between items-center px-4 py-2 bg-white dark:bg-gray-900">
-          <Header />
-        </div>
-      )}
-      <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
+      {!hideHeaderFooter && <Header />}
+      <main
+        className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white"
+        style={{
+          paddingTop: 'calc(56px + env(safe-area-inset-top))',
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }}
+      >
         {children}
       </main>
       {showFooter && <Footer />}

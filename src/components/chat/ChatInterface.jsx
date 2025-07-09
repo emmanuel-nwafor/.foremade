@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { auth, db } from '/src/firebase';
-import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDocs, getDoc } from 'firebase/firestore';
-import ChatTemplates from '/src/components/chat/ChatterTemplates';
+import { auth, db } from './firebase';
+import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import ChatTemplates from './ChatTemplates';
 
 function canSendImage(messages) {
   if (messages.length === 0) return false;
@@ -34,7 +34,7 @@ const ChatInterface = () => {
         return;
       }
 
-      if (!orderId || !state?.sellerId || !state?.productName) {
+      if (!orderId || !state?.sellerId || !state?.productName || state?.role !== 'buyer') {
         toast.error('Invalid chat request.');
         navigate('/orders');
         return;

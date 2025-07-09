@@ -10,6 +10,10 @@ import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
 
+import ChatInterface from '/src/components/chat/ChatInterface'
+import SellerChat from '/src/seller/SellerChat';
+
+
 import Home from './pages/Home';
 import Products from './pages/Products';
 import Login from './auth/Login';
@@ -196,6 +200,11 @@ function App() {
               <Route path="/add-phone" element={<AddPhone />} />
               <Route path="/sellers-guide" element={<HowItWorks />} />
               <Route path="/pro-seller-form" element={<ProSellerForm />} />
+
+              <Route path="/chat/:orderId" element={<ChatInterface />} />
+              <Route path="/seller-chat" element={<SellerChat />} />
+              <Route path="/seller-chat/:chatId" element={<SellerChat />} />
+
               <Route
                 path="/smile"
                 element={

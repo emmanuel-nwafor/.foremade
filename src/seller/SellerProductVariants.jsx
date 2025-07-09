@@ -535,6 +535,8 @@ export default function SellerProductVariants() {
     };
   }, [formData.category, formData.subcategory, formData.subSubcategory]);
 
+
+  // ============== Form validation ============== //
   const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
@@ -542,7 +544,7 @@ export default function SellerProductVariants() {
     if (!formData.category || !categories.includes(formData.category))
       newErrors.category = 'Select a valid category.';
     if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
-      newErrors.subcategory = 'Select a valid subcategory.';
+      newErrors.subcategory = 'You are free man.';
     if (
       customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 &&
       !formData.subSubcategory
@@ -579,6 +581,8 @@ export default function SellerProductVariants() {
     if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
     return newLocationErrors;
   }, [locationData]);
+
+  // ================ Closed form validation ================ //
 
   const uploadFile = useCallback(async (file) => {
     const uploadData = new FormData();

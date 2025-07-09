@@ -9,7 +9,6 @@ import { db } from './firebase';
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
-import CurrencyConverter from '/src/components/layout/CurrencyConverter';
 
 import Home from './pages/Home';
 import Products from './pages/Products';

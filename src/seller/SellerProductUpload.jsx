@@ -644,61 +644,50 @@ export default function SellerProductUpload() {
     }, 0);
   };
 
-  // =========== Form Validation =============  //
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
-    if (!formData.name.trim()) newErrors.name = 'Product name is required.';
-    if (!formData.price || isNaN(formData.price) || formData.price <= 0)
-      newErrors.price = 'Enter a valid price greater than 0.';
-    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
-      newErrors.stock = 'Enter a valid stock quantity (0 or more).';
-    if (!formData.category || !categories.includes(formData.category))
-      newErrors.category = 'Select a valid category.';
-    if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
-      newErrors.subcategory = 'Select a valid subcategory.';
-    if (
-      customSubSubcategories[formData.category]?.[formData.subcategory] &&
-      !formData.subSubcategory
-    )
-      newErrors.subSubcategory = 'Select a sub-subcategory.';
-    if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
-    if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
-    if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
-    if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
-    if (
-      formData.category === 'Clothing' &&
-      formData.subcategory &&
-      formData.sizes.length === 0
-    ) {
-      newErrors.sizes = 'Select or enter at least one size for clothing products.';
-    }
-    if (
-      formData.category === 'Footwear' &&
-      formData.subcategory &&
-      formData.sizes.length === 0
-    ) {
-      newErrors.sizes = 'Select or enter at least one size for footwear products.';
-    }
-    if (
-      formData.category === 'Perfumes' &&
-      formData.subcategory &&
-      formData.sizes.length === 0
-    ) {
-      newErrors.sizes = 'Select or enter at least one size for perfume products.';
-    }
-    if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
-    return newErrors;
-  };
+// =========== Form Validation ============= //
+const validateForm = () => {
+  const newErrors = {};
+  if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
+  if (!formData.name.trim()) newErrors.name = 'Product name is required.';
+  if (!formData.price || isNaN(formData.price) || formData.price <= 0)
+    newErrors.price = 'Enter a valid price greater than 0.';
+  if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
+    newErrors.stock = 'Enter a valid stock quantity (0 or more).';
+  if (!formData.category || !categories.includes(formData.category))
+    newErrors.category = 'Select a valid category.';
+  if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
+  if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
+  if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
+  if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
+  if (
+    formData.category === 'Clothing' &&
+    formData.subcategory &&
+    formData.sizes.length === 0
+  ) {
+    newErrors.sizes = 'Select or enter at least one size for clothing products.';
+  }
+  if (
+    formData.category === 'Footwear' &&
+    formData.subcategory &&
+    formData.sizes.length === 0
+  ) {
+    newErrors.sizes = 'Select or enter at least one size for footwear products.';
+  }
+  if (
+    formData.category === 'Perfumes' &&
+    formData.subcategory &&
+    formData.sizes.length === 0
+  ) {
+    newErrors.sizes = 'Select or enter at least one size for perfume products.';
+  }
+  if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
+  return newErrors;
+};
 
-  const validateLocationForm = () => {
-    const newLocationErrors = {};
-    if (!locationData.country.trim()) newLocationErrors.country = 'Country is required.';
-    if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
-    return newLocationErrors;
-  };
-
-  // ========== Closed form validation ========= //
+const validateLocationForm = () => {
+  const newLocationErrors = {};
+  return newLocationErrors;
+};
 
   const uploadFile = async (file, isVideo = false) => {
     const uploadData = new FormData();
@@ -903,7 +892,7 @@ export default function SellerProductUpload() {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
       <SellerSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-8 max-w-4xl mx-auto">
-        <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add a New Product
@@ -1798,7 +1787,7 @@ export default function SellerProductUpload() {
             <CustomAlert alerts={alerts} removeAlert={removeAlert} />
 
             {/* Variant Popup */}
-            <SellerProductUploadPopup
+            {/* <SellerProductUploadPopup
               isOpen={isVariantPopupOpen}
               onClose={handleVariantNo}
               message="Does this product have variants (e.g., different sizes, colors)?"
@@ -1807,7 +1796,7 @@ export default function SellerProductUpload() {
               showYesNoButtons={true}
               onYes={handleVariantYes}
               onNo={handleVariantNo}
-            />
+            /> */}
 
             {/* Success Popup */}
             <SellerProductUploadPopup

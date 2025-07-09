@@ -40,7 +40,7 @@ import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
 import Admin from '/src/admin/Admin';
 import AdminDashboard from '/src/admin/AdminDashboard';
-import AdminNotifications from '/src/admin/AdminNotifications.jsx';
+import AdminNotifications from '/src/Admin/AdminNotifications.jsx';
 import AdminUsers from '/src/admin/AdminUsers';
 import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
 import AdminEditFees from '/src/admin/AdminEditFees';

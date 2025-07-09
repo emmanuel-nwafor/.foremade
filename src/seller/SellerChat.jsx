@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { auth, db } from '/src/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot, doc, getDoc, addDoc } from 'firebase/firestore';
 import ChatTemplates from '/src/components/chat/ChatTemplates';
-import Spinner from '../components/common/Spinner';
+import Spinner from '/src/components/common/Spinner';
 
 function canSendImage(messages) {
   if (messages.length === 0) return false;

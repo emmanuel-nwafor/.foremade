@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import Sidebar from '/src/profile/Sidebar';
-import Spinner from '../components/common/Spinner';
+import Spinner from '/src/components/common/Spinner';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);

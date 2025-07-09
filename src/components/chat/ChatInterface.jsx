@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { auth, db } from '../firebase';
 import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import ChatTemplates from './ChatTemplates';
+import Spinner from '../components/common/Spinner';
 
 function canSendImage(messages) {
   if (messages.length === 0) return false;
@@ -198,7 +199,12 @@ const ChatInterface = () => {
   };
 
   if (loading) {
-    return <div className="container mx-auto px-4 py-8 text-center text-gray-600">Loading...</div>;
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <Spinner />
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
   }
 
   if (!isValidOrder) {

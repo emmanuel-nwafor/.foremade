@@ -284,7 +284,7 @@ export default function WhatsAppChatTemplates() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+              {/* Message Input */}
       <div className="bg-[#e2e8f0] px-4 py-3 border-t border-gray-200">
         {/* Template Selector */}
         <div className="mb-3">
@@ -302,6 +302,21 @@ export default function WhatsAppChatTemplates() {
           </select>
         </div>
 
+        {/* Support Option - Show when no template is selected */}
+        {!selectedTemplate && (
+          <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div className="text-sm">
+                <p className="font-medium text-orange-800 mb-1">No custom messages allowed</p>
+                <p className="text-orange-700">If your message isn't covered by the templates above, please contact our support team for assistance.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Image Preview */}
         {selectedImage && imagePreview && (
           <div className="mb-3 p-2 bg-white rounded-lg border border-gray-200">
@@ -315,17 +330,29 @@ export default function WhatsAppChatTemplates() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleSendMessage}
-            disabled={!selectedTemplate || isTyping}
-            className={`flex-1 py-2 px-4 rounded-full font-medium transition-all ${
-              selectedTemplate && !isTyping
-                ? 'bg-[#0a4d9f] text-white shadow-sm hover:bg-[#083d7f]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isTyping ? 'Sending...' : 'Send Message'}
-          </button>
+          {selectedTemplate ? (
+            <button
+              onClick={handleSendMessage}
+              disabled={isTyping}
+              className={`flex-1 py-2 px-4 rounded-full font-medium transition-all ${
+                !isTyping
+                  ? 'bg-[#0a4d9f] text-white shadow-sm hover:bg-[#083d7f]'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isTyping ? 'Sending...' : 'Send Message'}
+            </button>
+          ) : (
+            <button
+              onClick={() => window.location.href = '/support'}
+              className="flex-1 py-2 px-4 rounded-full font-medium bg-orange-500 text-white shadow-sm hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Contact Support
+            </button>
+          )}
           
           {/* Image Upload */}
           {canSendImage(messages) && (

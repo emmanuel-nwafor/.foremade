@@ -22,6 +22,7 @@ const Header = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [categoryMoreOpen, setCategoryMoreOpen] = useState(false);
+  const [mobileCategoryMoreOpen, setMobileCategoryMoreOpen] = useState(false);
 
   const categories = [
     "Camera & Photography",
@@ -192,6 +193,10 @@ const Header = () => {
 
   const toggleCategoryMore = () => {
     setCategoryMoreOpen(!categoryMoreOpen);
+  };
+
+  const toggleMobileCategoryMore = () => {
+    setMobileCategoryMoreOpen(!mobileCategoryMoreOpen);
   };
 
   const handleMoreDropdownBlur = () => {
@@ -546,24 +551,24 @@ const Header = () => {
             </button>
             <div className="flex flex-col space-y-3">
               {/* Add main navigation links for all users */}
-              <div className="flex justify-evenly w-full">
+              <div className="flex justify-center gap-2 w-full mb-4">
                 <Link
                   to="/products"
-                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
                   onClick={() => setSidebarOpen(false)}
                 >
                   Shop
                 </Link>
                 <Link
                   to="/products-upload"
-                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
                   onClick={() => setSidebarOpen(false)}
                 >
                   Sell
                 </Link>
                 <Link
                   to="/smile"
-                  className="flex-1 text-center text-[#112040] hover:text-amber-500 text-base py-2 border-b border-[#112040]/10 font-semibold"
+                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
                   onClick={() => setSidebarOpen(false)}
                 >
                   Smile
@@ -591,16 +596,44 @@ const Header = () => {
                 </Link>
               )}
               {/* Categories */}
-              {categories.map((category) => (
-                <Link
-                  key={category}
-                  to={`/category/${slugify(category)}`}
-                  className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  {category}
-                </Link>
-              ))}
+              <div className="space-y-1">
+                {categories.slice(0, 8).map((category) => (
+                  <Link
+                    key={category}
+                    to={`/category/${slugify(category)}`}
+                    className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10 block"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    {category}
+                  </Link>
+                ))}
+                {/* Categories "More" dropdown for mobile sidebar */}
+                <div className="relative">
+                  <button
+                    onClick={toggleMobileCategoryMore}
+                    className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10 w-full text-left flex items-center justify-between"
+                  >
+                    More <i className="bx bx-chevron-down"></i>
+                  </button>
+                  {mobileCategoryMoreOpen && (
+                    <div className="mt-2 space-y-1">
+                      {categories.slice(8).map((category) => (
+                        <Link
+                          key={category}
+                          to={`/category/${slugify(category)}`}
+                          className="text-[#112040] hover:text-amber-500 text-sm py-2 pl-4 border-b border-[#112040]/10 block"
+                          onClick={() => {
+                            setSidebarOpen(false);
+                            setMobileCategoryMoreOpen(false);
+                          }}
+                        >
+                          {category}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

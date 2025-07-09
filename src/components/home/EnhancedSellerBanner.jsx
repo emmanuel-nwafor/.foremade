@@ -10,7 +10,7 @@ const TRUST_BADGES = [
 
 const TESTIMONIAL = {
   quote: '“Foremade helped me turn my side hustle into a real business. The dashboard and support are world-class!”',
-  name: 'Ada O., Lagos',
+  name: 'Sarah M., London',
   avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
 };
 
@@ -40,7 +40,7 @@ export default function EnhancedSellerBanner() {
       ],
       button: 'Learn More',
       secondaryButton: 'View Features',
-      link: '/products',
+      link: '/pro-seller-guide',
     }
   ];
 

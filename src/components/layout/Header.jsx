@@ -253,29 +253,33 @@ const Header = () => {
     <header className="w-full">
       {/* Desktop Header */}
       <div className="bg-[#112D4E] hidden sm:flex text-white py-2 w-full">
-        <div className="flex items-center w-full max-w-7xl">
-          {/* Logo */}
-          <Link to="/">
-            <img
-              src={logo}
-              className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
-              alt="Foremade"
-            />
-          </Link>
-          {/* Navigation Links */}
-          <div className="flex ml-5 items-center space-x-4 mt-2">
-            <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
-              Shop
-            </Link>
-            <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">
-              Sell
-            </Link>
-            <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
-              Smile
+        <div className="flex items-center w-full max-w-7xl mx-auto">
+          {/* Left: Logo */}
+          <div className="flex items-center flex-shrink-0">
+            <Link to="/">
+              <img
+                src={logo}
+                className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
+                alt="Foremade"
+              />
             </Link>
           </div>
-          {/* User Actions */}
-          <div className="flex items-center space-x-3 flex-shrink-0 ml-auto">
+          {/* Center: Navigation Links */}
+          <div className="flex-1 flex justify-center items-center">
+            <div className="flex items-center space-x-4">
+              <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
+                Shop
+              </Link>
+              <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">
+                Sell
+              </Link>
+              <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
+                Smile
+              </Link>
+            </div>
+          </div>
+          {/* Right: User Actions */}
+          <div className="flex items-center space-x-3 flex-shrink-0">
             {user ? (
               <Link to="/profile" className="hover:text-gray-300 text-sm whitespace-nowrap">
                 Hi, {getDisplayName()}
@@ -303,7 +307,7 @@ const Header = () => {
               <i className="bx bx-search text-xl"></i>
             </Link>
             <Link to="/cart" className="relative">
-              <i className="bx bx-cart-alt text-xl text-white"></i>
+              <i className="bx bx-cart-alt text-xl text-white mr-7"></i>
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   {cartCount}

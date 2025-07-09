@@ -204,7 +204,7 @@ const Header = () => {
     <header className="w-full">
       {/* Desktop Header */}
       <div className="bg-[#112D4E] hidden sm:flex text-white py-2 px-4">
-        <div className="flex items-center w-full max-w-7xl mx-auto">
+        <div className="flex items-center w-full max-w-8xl mx-auto">
           {/* Logo */}
           <Link to="/">
             <img

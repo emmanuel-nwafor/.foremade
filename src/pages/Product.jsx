@@ -6,7 +6,7 @@ import { addToCart } from '/src/utils/cartUtils';
 import CustomAlert, { useAlerts } from '/src/components/common/CustomAlert';
 import ProductCard from '/src/components/home/ProductCard';
 import SkeletonLoader from '/src/components/common/SkeletonLoader';
-import dailyDealsImage from '/src/assets/images/daily-deals.png'; // Imported your daily deals image
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 
 const Product = () => {
   const { id } = useParams();
@@ -676,7 +676,6 @@ const Product = () => {
             {/* Media Section */}
             <div>
               <div className="relative main-media-container">
-                {/* Removed daily deal image overlay */}
                 {mainMedia.includes('.mp4') ? (
                   <video
                     src={mainMedia}
@@ -704,7 +703,8 @@ const Product = () => {
                   {imageMedia.map((media, index) => (
                     <img
                       key={index}
-                      src={media}alt={`${product.name} ${index + 1}`}
+                      src={media}
+                      alt={`${product.name} ${index + 1}`}
                       className={`thumbnail w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                         currentMediaIndex === index ? 'border-blue-500' : 'border-gray-200'
                       }`}
@@ -779,10 +779,10 @@ const Product = () => {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-green-600">
-                          ₦{totalPrice.toLocaleString()}
+                          <PriceFormatter price={totalPrice} />
                         </span>
                         <span className="text-lg text-gray-500 line-through">
-                          ₦{originalPrice.toLocaleString()}
+                          <PriceFormatter price={originalPrice} />
                         </span>
                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
                           {discountPercentage}% OFF
@@ -792,7 +792,7 @@ const Product = () => {
                     </div>
                   ) : (
                     <div className="text-2xl font-bold text-gray-800">
-                      ₦{totalPrice.toLocaleString()}
+                      <PriceFormatter price={totalPrice} />
                     </div>
                   )}
                   <div className="text-sm text-gray-500 mt-1">
@@ -1089,7 +1089,7 @@ const Product = () => {
                             {similarProduct.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            ₦{similarProduct.price.toLocaleString()}
+                            <PriceFormatter price={similarProduct.price} />
                           </p>
                           <div className="flex items-center gap-1 mt-1">
                             <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -1132,7 +1132,7 @@ const Product = () => {
                             {recentProduct.name}
                           </h4>
                           <p className="text-xs text-gray-600">
-                            ₦{recentProduct.price.toLocaleString()}
+                            <PriceFormatter price={recentProduct.price} />
                           </p>
                         </div>
                       </div>
@@ -1146,11 +1146,11 @@ const Product = () => {
       </div>
 
       {/* Sticky Cart for Mobile */}
-      <div className="sticky-cart md:hidden">
+      {/* <div className="sticky-cart md:hidden">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-bold text-gray-800">
-              ₦{totalPrice.toLocaleString()}
+              <PriceFormatter price={totalPrice} />
             </div>
             {isDailyDeal && (
               <div className="text-sm text-green-600">
@@ -1166,7 +1166,7 @@ const Product = () => {
             {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </button>
         </div>
-      </div>
+      </div> */}
 
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>

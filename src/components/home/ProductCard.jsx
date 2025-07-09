@@ -1,9 +1,11 @@
-import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
+import { User, Heart } from 'lucide-react';
 import AddToCartButton from '/src/components/cart/AddToCartButton';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
 
@@ -207,7 +209,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
           className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
           aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
         >
-          <i className={`bx ${isFavorited ? 'bxs-heart' : 'bx-heart'} text-xl ${isFavorited ? 'text-gray-600' : ''}`} />
+          <Heart className={`w-5 h-5 ${isFavorited ? 'text-gray-600 fill-gray-600' : 'text-gray-600'}`} />
           <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
@@ -218,7 +220,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
           </h3>
           {!isDailyDeal && sellerUsername && (
             <div className="flex items-center text-sm text-gray-600 mb-2">
-              <i className="bx bx-user text-blue-600 mr-1"></i>
+              <User className="w-4 h-4 text-blue-600 mr-1" />
               <span className="line-clamp-1" title={sellerUsername}>
                 {truncateText(sellerUsername, 20)}
               </span>
@@ -227,9 +229,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         </div>
         <div className="mt-auto">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-blue-600">
-              ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
-            </span>
+            <PriceFormatter price={totalPrice} />
             <AddToCartButton productId={product.id} isIconOnly={true} />
           </div>
         </div>

@@ -644,6 +644,7 @@ export default function SellerProductUpload() {
     }, 0);
   };
 
+  // =========== Form Validation =============  //
   const validateForm = () => {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
@@ -696,6 +697,8 @@ export default function SellerProductUpload() {
     if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
     return newLocationErrors;
   };
+
+  // ========== Closed form validation ========= //
 
   const uploadFile = async (file, isVideo = false) => {
     const uploadData = new FormData();

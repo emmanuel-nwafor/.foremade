@@ -40,7 +40,7 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
-import Admin from './Admin/Admin';
+import Admin from './admin/Admin';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminNotifications from './admin/AdminNotifications.jsx';
 import AdminUsers from './admin/AdminUsers';

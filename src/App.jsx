@@ -212,9 +212,9 @@ function AppRoutes() {
   const location = useLocation();
   return (
     <AuthProvider>
-              <CurrencyProvider>
-          <Layout>
-            <Routes>
+      <CurrencyProvider>
+        <Layout>
+          <Routes>
             {/* All your routes here, replacing the old <Routes> block */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

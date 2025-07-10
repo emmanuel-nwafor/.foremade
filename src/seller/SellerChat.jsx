@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import ChatTemplates, { templates } from '/src/components/chat/ChatTemplates';
-import Spinner from '/src/components/common/Spinner';
 import SellerSidebar from '/src/seller/SellerSidebar';
 
 function canSendImage(messages) {
@@ -263,8 +262,8 @@ const SellerChat = () => {
         <SellerSidebar />
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-            <Spinner />
-            <span>Loading chats...</span>
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
           </div>
         </div>
       </div>

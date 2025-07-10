@@ -7,6 +7,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth scrolling for the entire application */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Ensure proper scrolling on mobile devices */
+@media (max-width: 768px) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 * {
   font-family: "Poppins", sans-serif;  
   margin: 0;

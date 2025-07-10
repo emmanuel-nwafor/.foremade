@@ -1063,6 +1063,8 @@ const Product = () => {
                         key={similarProduct.id}
                         to={`/product/${similarProduct.id}`}
                         className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
                         <div className="flex gap-3">
                           <img
@@ -1106,6 +1108,8 @@ const Product = () => {
                         key={recentProduct.id}
                         to={`/product/${recentProduct.id}`}
                         className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
                         <div className="flex gap-3">
                           <img

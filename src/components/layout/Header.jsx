@@ -514,7 +514,13 @@ const Header = () => {
       {showBackButton && (
         <div className="w-full flex justify-start mt-2 px-2 sm:px-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/');
+              }
+            }}
             className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-200 text-blue-700 text-sm font-medium focus:outline-none"
             aria-label="Go back"
           >

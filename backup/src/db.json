@@ -1,0 +1,335 @@
+{
+  "categories": [
+    { "id": 1, "name": "Fashion", "icon": "bx-closet", "path": "/fashion" },
+    { "id": 2, "name": "Electronics", "icon": "bx-chip", "path": "/electronics" },
+    { "id": 3, "name": "Motors", "icon": "bx-car", "path": "/motors" },
+    { "id": 4, "name": "Collectibles", "icon": "bx-collection", "path": "/collectibles" },
+    { "id": 5, "name": "Sports", "icon": "bx-football", "path": "/sports" },
+    { "id": 6, "name": "Health & Beauty", "icon": "bx-heart-circle", "path": "/health-beauty" },
+    { "id": 7, "name": "Home & Garden", "icon": "bx-home-heart", "path": "/home-garden" },
+    { "id": 8, "name": "Deals", "icon": "bx-bolt-circle", "path": "/deals" },
+    { "id": 9, "name": "Local", "icon": "bx-map", "path": "/local" },
+    { "id": 10, "name": "Selling", "icon": "bx-camera", "path": "/sell" }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "VIGOR ESSENTIAL",
+      "price": 24000,
+      "rating": 5.0,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe3c328521a.webp",
+      "categoryId": 6,
+      "description": "In modern society, mental or physical stress has serious damage to human health. As stress lingers, it may lead to momentary suppression of immune function usually characterized as increase of heart rate, blood pressure, muscular tension, irritability and depression. Vigor Essential utilizes the benefits of science and nature to create a rapid and safe vitality enhancement with all-natural ingredients such as Bombyx Mori L, Trapang Peptidoglycolipid and Cordyceps Militaris. Bombyx Mori L boosts libido and withstands the aging of cells, Trepang Peptidoglycolipid is an effective anti-fatigue and anti-virus substance. The combination of Bombyx Mori L and Trepan Peptidoglycolipid with other ingredients make Vigor Essential rich in amino acid and vitamins and a good premier tonic for virility and vigor. Effective for prostate health treatment for prostate enlargement.",
+      "stock": 50,
+      "sellerId": 3,
+      "reviews": []
+    },
+    {
+      "id": 2,
+      "name": "MEMORY 24/7",
+      "price": 32900,
+      "rating": 5.0,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe3a4b3a47d.webp",
+      "categoryId": 6,
+      "description": "Memory 24/7 Dietary Supplement is specially formulated to contain the standardized 24% Ginkgo Flavone Glycosides which is obtained from Ginkgo Biloba Extract. It also contains Omega-3 (DHA & EPA). Powered by DUOCAP™ Technology, the Fish Oil is kept in the outer capsule while Ginkgo Biloba Extract is stored in the inner capsule which allow these ingredients to be released at different time for best absorption. The combination of Gingko Biloba Extract and Fish Oil helps to maintain normal brain function, enhance memory, energy & mood, promote circulation and support the immune system.",
+      "stock": 60,
+      "sellerId": 3,
+      "reviews": []
+    },
+    {
+      "id": 3,
+      "name": "GINSENG COFFEE",
+      "price": 28000,
+      "rating": 4.8,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe38c2b422f.webp",
+      "categoryId": 6,
+      "description": "KEDI Ginseng Coffee is a unique blend of the finest coffee beans and high-quality Ginseng extract, specially processed and packed to preserve the original essence, giving you a delicious taste and a refreshing experience. The combination of coffee and Ginseng extract doubles the function of energy boosting. It provides you with the benefits of both coffee and Ginseng while enjoying the taste of coffee. Whether you are a coffee lover or simply want to enjoy the benefits of Ginseng or coffee, KEDI Ginseng Coffee can be your go-to option. Its finely-ground powder dissolves in just 3 seconds making it easy and convenient to fit into your busy schedule wherever you find yourself.",
+      "stock": 50,
+      "sellerId": 3,
+      "reviews": [
+        { "id": 1, "userId": 1, "rating": 5, "comment": "Amazing product!", "date": "2025-04-20" },
+        { "id": 2, "userId": 2, "rating": 4.5, "comment": "Great for mornings.", "date": "2025-04-21" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "COLON CLEANSER TEA",
+      "price": 16500,
+      "rating": 4.7,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe378f6bdf7.webp",
+      "categoryId": 6,
+      "description": "Every day, your body is attacked by toxins found in your food and environment. These toxins help bad bacteria to flourish in your colon and crowd out good bacteria. This result in a toxic overload that can leave you feeling bloated, sluggish and foggy with a toxic hangover. The active ingredients of Colon Cleanser include Semen Myristicae, Mulberry, Green Tea, Semen Armeniacae Amarum and Amorphophyllus Konjal. It is effective in detoxifing the body and regulating bowel movement, it also serves as a protector and cleanser for the digestive system.",
+      "stock": 30,
+      "sellerId": 3,
+      "reviews": [
+        { "id": 3, "userId": 3, "rating": 4.8, "comment": "Really works!", "date": "2025-04-22" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "REVIVE",
+      "price": 43000,
+      "rating": 4.6,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe35401ae7c.webp",
+      "categoryId": 6,
+      "description": "Sex is probably one of the most enjoyable part of one’s life. However, more than half of all men that are over 40 years old have difficulties getting or maintaining erection. This could be referred to as impotency or erectile dysfunction (ED). It occurs with younger men as well. Re-vive is an herbal tonic that boosts sexual performance. Scientifically, research has proven that this product boosts the excitability of impulses from the brain and local nerves, hence allowing blood to flow in and fill the spaces within the tissue. It enhances the relaxation of the Corpora cavernosa and delays the lengthen period of the Tunica albuginea, thereby increasing libido and sustaining erection, firm enough for sexual satisfaction, making sex more appealing and boosting your confidence. With Re-vive, you will be on the right track to a better moment of intimacy.",
+      "stock": 100,
+      "sellerId": 3,
+      "reviews": []
+    },
+    {
+      "id": 6,
+      "name": "NEOLIFE Vegan D with V3",
+      "price": 21000,
+      "rating": 4.5,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb35d9ba8b2.webp",
+      "categoryId": 6,
+      "description": "Naturally sourced, whole-food based vitamin D2 and D3 are required for the maintenance of strong bones and normal immune function. Research indicates that vitamin D contributes to the absorption of calcium and phosphorous, which play a role in the development and maintenance of strong bones and teeth, as well as normal muscle function. It also contributes to the normal function of the immune system. Made entirely without animal sourced ingredients of any kind, NeoLife Vegan D fulfils the strict sourcing criteria expected by vegetarian/vegan users. The Immune System – Normal Muscle Function – Calcium Absorption for the development and maintenance of Strong Bones. Vitamin D is a fat-soluble vitamin that plays a key role in overall health.Research indicates that vitamin D contributes to normal: Function of the immune system Blood calcium levels. Also helps in the absorption and use of calcium and phosphorous. Calcium intake, when combined with sufficient vitamin D, a healthy diet and regular exercise, may reduce the risk of developing Osteoporosis Development and maintenance of strong bones and teeth Muscle function. Cell division It is challenging to get enough of this important nutrient through diet and sunlight alone and in fact, in Africa it has been found that approximately 60% of the population has inadequate vitamin D. The good news is that vitamin D supplementation can be an effective way to fill this gap and give your body the vitamin D it needs.NeoLife Vegan D is a plant-sourced and whole-food proprietary supplement to help you get your daily dose of vitamin D-fence! Proprietary whole-food sourced with Vitamin D2 and D3. Vitamin D2 is sourced from yeast and superior quality mushrooms (Agaricus bisporus), one of nature’s most concentrated whole-food sources of vitamin D2. Vitamin D3 is naturally sourced from Reindeer Lichen which is free from allergens and gluten and is one of the only completely vegan sources of vitamin D3.Research indicates that vitamin D contributes to the absorption of calcium and phosphorous, which play a role in the development and maintenance of strong bones and teeth, as well as normal muscle function. It also contributes to the normal function of the immune system Key Features Naturally sourced, whole-food based vitamin D2 and D3 are required for the maintenance of strong bones and normal immune function.",
+      "stock": 80,
+      "sellerId": 3,
+      "reviews": []
+    },
+    {
+      "id": 7,
+      "name": "VIZIO 55” 4K",
+      "price": 500000,
+      "rating": 4.9,
+      "image": "http://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3a207ba51.webp",
+      "categoryId": 2,
+      "description": "Experience movies and shows like never before with the VIZIO 55” 4K Ultra HD TV. This television combines advanced technology with sleek design, delivering breathtaking picture quality and an immersive viewing experience. Specifications: Screen Size: 55 inches Resolution: 4K Ultra HD (3840 x 2160) Panel Type: LED Smart TV: Yes (VIZIO Smartcast) HDR Support: HDR10, Dolby Vision",
+      "stock": 20,
+      "sellerId": 1,
+      "reviews": []
+    },
+    {
+      "id": 8,
+      "name": "Fitbit Versa 4",
+      "price": 45000,
+      "rating": 4.4,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb393f83e85.webp",
+      "categoryId": 1,
+      "description": "The Fitbit Versa 4 is designed for those who prioritize their health and wellness. Packed with advanced features and a sleek design, this smartwatch helps you track your fitness goals, monitor your heart rate, and stay connected—all from your wrist. Whether you're hitting the gym or heading to the office, the Versa 4 keeps you motivated and organized.",
+      "stock": 60,
+      "sellerId": 2,
+      "reviews": []
+    },
+    {
+      "id": 9,
+      "name": "Electric Kettles",
+      "price": 65000,
+      "rating": 4.3,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3897bc174.webp",
+      "categoryId": 2,
+      "description": "The Electric Kettle is the perfect kitchen companion for tea lovers and busy households. Designed for quick boiling and convenience, this kettle offers a sleek and modern design, making it a stylish addition to your kitchen countertop. Enjoy your favorite hot beverages or prepare instant meals effortlessly!",
+      "stock": 90,
+      "sellerId": 1,
+      "reviews": []
+    },
+    {
+      "id": 10,
+      "name": "Ear Headphones",
+      "price": 50000,
+      "rating": 4.2,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb37cec1288.webp",
+      "categoryId": 2,
+      "description": "The RadioShack Speaker brings your music to life with dynamic audio quality and a versatile design. Perfect for home use or on-the-go, this speaker combines classic aesthetics with modern technology to deliver an exceptional listening experience.",
+      "stock": 40,
+      "sellerId": 1,
+      "reviews": []
+    },
+    {
+      "id": 11,
+      "name": "Men's Italian Loafer",
+      "price": 32000,
+      "rating": 4.7,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3684bcd5b.webp",
+      "categoryId": 1,
+      "description": "Men's Italian Loafer Oxford Bright Plaid Fringed Leather Corporate Shoes Black",
+      "stock": 10,
+      "sellerId": 2,
+      "reviews": []
+    },
+    {
+      "id": 12,
+      "name": "Hp EliteBook 845 G7",
+      "price": 580000,
+      "rating": 4.5,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3550315f2.webp",
+      "categoryId": 2,
+      "description": "Hp EliteBook 845 G7 - Ryzen 5 Pro 4650U/AMD 2.3 - 16GB RAM/512GB SSD WIN 11 PRO+BAG",
+      "stock": 70,
+      "sellerId": 1,
+      "reviews": []
+    },
+    {
+      "id": 13,
+      "name": "Disaar-moisturizing Body Oil",
+      "price": 16000,
+      "rating": 4.6,
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-12-67fa706257013.webp",
+      "categoryId": 1,
+      "description": "Disaar Moisturizing Vitamin C Body Oil Gel For All Skin 200ml",
+      "stock": 45,
+      "sellerId": 2,
+      "reviews": []
+    }
+  ],
+  "deals": [
+    { "id": 1, "name": "50% Off Electronics", "image": "/assets/images/deal1.jpg" },
+    { "id": 2, "name": "Fashion Clearance", "image": "/assets/images/deal2.jpg" },
+    { "id": 3, "name": "Health & Beauty Specials", "image": "/assets/images/deal3.jpg" },
+    { "id": 4, "name": "Gadget Deals", "image": "/assets/images/deal4.jpg" }
+  ],
+  "stores": [
+    {
+      "id": 1,
+      "name": "Appfur",
+      "image": "https://pngimg.com/uploads/iphone16/small/iphone16_PNG6.png",
+      "productCount": 3,
+      "rating": 4.8,
+      "reviewCount": 0,
+      "products": [
+        { "id": 8, "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb393f83e85.webp", "price": 45000 },
+        { "id": 11, "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb37cec1288.webp", "price": 448500 },
+        { "id": 13, "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb393f83e85.webp", "price": 148500 }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Foremade",
+      "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-15-67fe3a4b3a47d.webp",
+      "productCount": 4,
+      "rating": 4.5,
+      "reviewCount": 0,
+      "products": [
+        { "id": 7, "image": "http://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3a207ba51.webp", "price": 748500 },
+        { "id": 9, "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3897bc174.webp", "price": 133500 },
+        { "id": 10, "image": "https://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3a207ba51.webp", "price": 88500 }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "HYNOLYN HEALTH SERVICES",
+      "image": "/assets/images/store3.jpg",
+      "productCount": 6,
+      "rating": 4.6,
+      "reviewCount": 0,
+      "products": [
+        { "id": 1, "image": "http://foremade.com/storage/app/public/product/thumbnail/2025-04-12-67fa706257013.webp", "price": 16500 },
+        { "id": 2, "image": "http://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb35d9ba8b2.webp", "price": 16000 },
+        { "id": 3, "image": "http://foremade.com/storage/app/public/product/thumbnail/2025-04-13-67fb3550315f2.webp", "price": 1048500 }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "email": "user1@example.com",
+      "password": "hashedpassword1",
+      "name": "John Doe",
+      "role": "buyer",
+      "address": "123 Main St, City, Country",
+      "createdAt": "2025-04-20"
+    },
+    {
+      "id": 2,
+      "email": "user2@example.com",
+      "password": "hashedpassword2",
+      "name": "Jane Smith",
+      "role": "buyer",
+      "address": "456 Oak St, City, Country",
+      "createdAt": "2025-04-21"
+    },
+    {
+      "id": 3,
+      "email": "seller1@example.com",
+      "password": "hashedpassword3",
+      "name": "TechTrend Seller",
+      "role": "seller",
+      "address": "789 Pine St, City, Country",
+      "createdAt": "2025-04-22"
+    },
+    {
+      "id": 4,
+      "email": "seller2@example.com",
+      "password": "hashedpassword4",
+      "name": "Fashion Hub Seller",
+      "role": "seller",
+      "address": "101 Elm St, City, Country",
+      "createdAt": "2025-04-23"
+    }
+  ],
+  "cart": [
+    {
+      "id": 1,
+      "userId": 1,
+      "items": [
+        { "productId": 1, "quantity": 2 },
+        { "productId": 3, "quantity": 1 }
+      ]
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "items": [
+        { "productId": 6, "quantity": 1 }
+      ]
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "userId": 1,
+      "sellerId": 3,
+      "items": [
+        { "productId": 2, "quantity": 1, "price": 16000 }
+      ],
+      "total": 16000,
+      "status": "shipped",
+      "createdAt": "2025-04-22",
+      "shippingAddress": "123 Main St, City, Country"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "sellerId": 1,
+      "items": [
+        { "productId": 7, "quantity": 2, "price": 748500 }
+      ],
+      "total": 1497000,
+      "status": "processing",
+      "createdAt": "2025-04-23",
+      "shippingAddress": "456 Oak St, City, Country"
+    }
+  ],
+  "sellers": [
+    {
+      "id": 1,
+      "userId": 3,
+      "storeName": "Foremade",
+      "description": "Leading tech products provider.",
+      "rating": 4.8
+    },
+    {
+      "id": 2,
+      "userId": 4,
+      "storeName": "Appfur",
+      "description": "Trendy fashion for all.",
+      "rating": 4.5
+    },
+    {
+      "id": 3,
+      "userId": 4,
+      "storeName": "HYNOLYN HEALTH SERVICES",
+      "description": "Your health and wellness partner.",
+      "rating": 4.6
+    },
+    {
+      "id": 4,
+      "userId": 4,
+      "storeName": "Appfur",
+      "description": "Everything for your lifestyle.",
+      "rating": 4.7
+    }
+  ]
+}

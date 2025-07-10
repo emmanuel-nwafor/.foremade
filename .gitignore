@@ -1,0 +1,36 @@
+<<<<<<< HEAD
+=======
+backend/.env
+>>>>>>> 00c46689ea679a10b20265d39942f1e95bde37c5
+# Ignore all .env files anywhere
+*.env
+**/*.env
+
+# Ignore backend entirely
+backend/
+Backend/
+server/
+Server/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore node modules
+node_modules/
+
+# Ignore log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore build outputs
+dist/
+build/
+
+# Ignore IDE/editor folders
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+.vercel

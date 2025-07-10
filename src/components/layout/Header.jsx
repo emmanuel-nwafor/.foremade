@@ -279,7 +279,7 @@ const Header = () => {
             </div>
           </div>
           {/* Right: User Actions */}
-          <div className="flex items-center space-x-3 flex-shrink-0">
+          <div className="flex items-center gap-4 ml-4">
             {user ? (
               <Link to="/profile" className="hover:text-gray-300 text-sm whitespace-nowrap">
                 Hi, {getDisplayName()}
@@ -295,7 +295,7 @@ const Header = () => {
                 </Link>
               </div>
             )}
-            <Link to="/notifications" className="relative">
+            <Link to="/notifications" className="relative flex items-center justify-center">
               <i className="bx bx-bell text-xl"></i>
               {notificationCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -303,16 +303,16 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <Link to="/search" className="lg:hidden">
-              <i className="bx bx-search text-xl"></i>
-            </Link>
-            <Link to="/cart" className="relative">
-              <i className="bx bx-cart-alt text-xl text-white mr-7"></i>
+            <Link to="/cart" className="relative flex items-center justify-center">
+              <i className="bx bx-cart-alt text-xl text-white"></i>
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
+            </Link>
+            <Link to="/search" className="lg:hidden">
+              <i className="bx bx-search text-xl"></i>
             </Link>
           </div>
         </div>

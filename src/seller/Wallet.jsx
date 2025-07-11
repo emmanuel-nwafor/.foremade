@@ -258,7 +258,7 @@ export default function Wallet() {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <SellerSidebar />
-        <div className="flex-1 p-4 sm:p-6 md:p-8 flex justify-center items-center">
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
             <span>Loading...</span>

@@ -19,7 +19,7 @@ export default function CurrencyConverter() {
   ];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       <Globe className="w-4 h-4 text-gray-600 dark:text-gray-300" />
       {loading ? (
         <span className="text-xs text-gray-600 dark:text-gray-300">Loading...</span>
@@ -27,7 +27,7 @@ export default function CurrencyConverter() {
         <select
           value={currency}
           onChange={(e) => changeCurrency(e.target.value)}
-          className="p-1 rounded-md bg-gray-100 dark:bg-gray-700 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-md bg-gray-100 dark:bg-gray-700 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           aria-label="Select currency"
         >
           {(availableCurrencies.length > 0 ? availableCurrencies : fallbackCurrencies).map((cur) => (

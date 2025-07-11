@@ -26,87 +26,31 @@ export const CurrencyProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchLocationAndCurrency = async () => {
-      let userCountry = 'US'; // Default to US (USD)
+      let userCountry = 'US'; // Default
       let userCurrency = 'USD';
 
-      console.log('Starting currency detection...');
-
-      // Check Firestore for user/seller country
-      if (auth.currentUser) {
-        try {
-          console.log('Checking Firestore for user:', auth.currentUser.uid);
-          const userRef = doc(db, 'users', auth.currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists() && userSnap.data().country) {
-            userCountry = userSnap.data().country.toUpperCase();
-            console.log('User country from Firestore:', userCountry);
-          } else {
-            const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
-            const sellerSnap = await getDoc(sellerRef);
-            if (sellerSnap.exists() && sellerSnap.data().country) {
-              userCountry = sellerSnap.data().country.toUpperCase();
-              console.log('Seller country from Firestore:', userCountry);
-            }
-          }
-        } catch (error) {
-          console.error('Firestore error:', error.message);
-        }
-      } else {
-        // Fallback to browser geolocation
-        console.log('No user logged in, using ipapi.co for geolocation');
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          try {
-            const response = await axios.get('https://ipapi.co/json/', { timeout: 5000 });
-            userCountry = response.data.country_code?.toUpperCase() || 'US';
-            console.log(`Geolocation attempt ${attempt} country:`, userCountry);
-            break;
-          } catch (error) {
-            console.error(`Geolocation attempt ${attempt} error:`, error.message);
-            if (attempt === 1) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          }
-        }
+      console.log('Starting currency detection via IP...');
+      try {
+        const response = await axios.get('https://ipapi.co/json/', { timeout: 5000 });
+        userCountry = response.data.country_code?.toUpperCase() || 'US';
+        console.log('Country from IP:', userCountry);
+      } catch (error) {
+        console.error('IP geolocation error:', error.message);
       }
 
-      // Comprehensive country-to-currency map
+      // Country-to-currency map
       const countryCurrencyMap = {
-        NG: 'NGN', // Nigeria
-        GB: 'GBP', // United Kingdom
-        US: 'USD', // United States
-        JP: 'JPY', // Japan
-        GH: 'GHS', // Ghana
-        DE: 'EUR', // Germany
-        FR: 'EUR', // France
-        IT: 'EUR', // Italy
-        ES: 'EUR', // Spain
-        CA: 'CAD', // Canada
-        AU: 'AUD', // Australia
-        CN: 'CNY', // China
-        IN: 'INR', // India
-        BR: 'BRL', // Brazil
-        ZA: 'ZAR', // South Africa
-        KE: 'KES', // Kenya
-        MX: 'MXN', // Mexico
-        RU: 'RUB', // Russia
-        SG: 'SGD', // Singapore
-        AE: 'AED', // UAE
-        SA: 'SAR', // Saudi Arabia
-        KR: 'KRW', // South Korea
-        NZ: 'NZD', // New Zealand
-        CH: 'CHF', // Switzerland
-        SE: 'SEK', // Sweden
-        NO: 'NOK', // Norway
-        DK: 'DKK', // Denmark
-        EG: 'EGP', // Egypt
-        TR: 'TRY', // Turkey
-        // Extend for other countries as needed
+        NG: 'NGN', GB: 'GBP', US: 'USD', JP: 'JPY', GH: 'GHS', DE: 'EUR', FR: 'EUR',
+        IT: 'EUR', ES: 'EUR', CA: 'CAD', AU: 'AUD', CN: 'CNY', IN: 'INR', BR: 'BRL',
+        ZA: 'ZAR', KE: 'KES', MX: 'MXN', RU: 'RUB', SG: 'SGD', AE: 'AED', SA: 'SAR',
+        KR: 'KRW', NZ: 'NZD', CH: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK', EG: 'EGP',
+        TR: 'TRY'
       };
       userCurrency = countryCurrencyMap[userCountry] || 'USD';
-      console.log('Selected currency:', userCurrency);
+      console.log('Set currency to:', userCurrency);
       setCurrency(userCurrency);
 
-      // Fetch exchange rates and currencies
+      // Fetch exchange rates
       try {
         console.log('Fetching exchange rates...');
         const ratesRef = doc(db, 'currencyRates', 'latest');
@@ -133,15 +77,13 @@ export const CurrencyProvider = ({ children }) => {
           setRates(newRates);
           setAvailableCurrencies(currencyList);
           console.log('Fetched rates from API:', newRates);
-          console.log('Available currencies:', currencyList.length);
         }
       } catch (error) {
         console.error('Exchange rate fetch error:', error.message);
-        // Fallback to minimal rates
         setRates({ NGN: 1, USD: 0.00062, GBP: 0.00048, JPY: 0.099, GHS: 0.0096, EUR: 0.00058 });
       } finally {
         setLoading(false);
-        console.log('Currency detection complete, loading:', false);
+        console.log('Currency detection complete');
       }
     };
 
@@ -150,19 +92,11 @@ export const CurrencyProvider = ({ children }) => {
 
   const convertPrice = (priceInNGN) => {
     if (!rates[currency]) {
-      console.warn(`Rate not found for currency: ${currency}, using NGN`);
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'NGN',
-        minimumFractionDigits: 2,
-      }).format(priceInNGN);
+      console.warn(`Rate not found for ${currency}, using NGN`);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'NGN' }).format(priceInNGN);
     }
     const convertedPrice = priceInNGN * rates[currency];
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-    }).format(convertedPrice);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(convertedPrice);
   };
 
   const changeCurrency = (newCurrency) => {
@@ -170,7 +104,7 @@ export const CurrencyProvider = ({ children }) => {
       console.log('Changing currency to:', newCurrency);
       setCurrency(newCurrency);
     } else {
-      console.warn(`No rate available for currency: ${newCurrency}`);
+      console.warn(`No rate for ${newCurrency}`);
     }
   };
 

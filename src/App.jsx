@@ -1,16 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CurrencyProvider } from '/src/CurrencyContext';
-
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
-
+import { useEffect } from 'react';
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
 import ScrollToTopButton from './components/common/ScrollToTopButton';
-
 import ChatInterface from '/src/components/chat/ChatInterface';
 import SellerChat from '/src/seller/SellerChat';
 import Home from './pages/Home';
@@ -88,9 +83,7 @@ function ScrollToTop() {
   const location = useLocation();
   
   useEffect(() => {
-    // Scroll to top with smooth behavior
     const scrollToTop = () => {
-      // Check if the browser supports smooth scrolling
       if ('scrollBehavior' in document.documentElement.style) {
         window.scrollTo({
           top: 0,
@@ -98,17 +91,11 @@ function ScrollToTop() {
           behavior: 'smooth'
         });
       } else {
-        // Fallback for older browsers
         window.scrollTo(0, 0);
       }
     };
-
-    // Add a small delay to ensure the page has loaded
     const timer = setTimeout(scrollToTop, 100);
-    
-    // Also scroll immediately for better responsiveness
     scrollToTop();
-    
     return () => clearTimeout(timer);
   }, [location.pathname]);
   
@@ -149,7 +136,6 @@ const Layout = ({ children }) => {
     '/transactions',
     '/products-upload-variant',
     '/dashboard',
-    // '/chat',
   ].some((path) => location.pathname === path || location.pathname.startsWith(path.replace(':productId', '')));
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
@@ -170,26 +156,10 @@ const Layout = ({ children }) => {
   );
 };
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children }) => {
   const { loading, user } = useAuth() || { loading: true, user: null };
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoadingAdmin, setIsLoadingAdmin] = useState(adminOnly);
 
-  useEffect(() => {
-    if (adminOnly && user) {
-      const checkAdmin = async () => {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        setIsAdmin(userSnap.exists() && userSnap.data().isAdmin === true);
-        setIsLoadingAdmin(false);
-      };
-      checkAdmin();
-    } else {
-      setIsLoadingAdmin(false);
-    }
-  }, [user, adminOnly]);
-
-  if (loading || isLoadingAdmin) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
@@ -201,10 +171,6 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return children;
 };
 
@@ -212,10 +178,9 @@ function AppRoutes() {
   const location = useLocation();
   return (
     <AuthProvider>
-              <CurrencyProvider>
-          <Layout>
-            <Routes>
-            {/* All your routes here, replacing the old <Routes> block */}
+      <CurrencyProvider>
+        <Layout>
+          <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/add-phone" element={<AddPhone />} />
@@ -236,17 +201,19 @@ function AppRoutes() {
             <Route path="/chat/:orderId" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
             <Route path="/seller-chat" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
             <Route path="/seller-chat/:chatId" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
-            <Route path="/admin/sellers-wallet" element={<ProtectedRoute adminOnly={true}><AdminSellerWallet /></ProtectedRoute>} />
-            <Route path="/admin/manager" element={<ProtectedRoute adminOnly={true}><AdminManager /></ProtectedRoute>} />
-            <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute adminOnly={true}><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/products" element={<ProtectedRoute adminOnly={true}><Admin /></ProtectedRoute>} />
-            <Route path="/admin/sellers/payouts" element={<ProtectedRoute adminOnly={true}><AdminPayoutMonitor /></ProtectedRoute>} />
-            <Route path="/admin/edit/fees" element={<ProtectedRoute adminOnly={true}><AdminEditFees /></ProtectedRoute>} />
-            <Route path="/admin/edit/categories" element={<ProtectedRoute adminOnly={true}><AdminCategoryEdit /></ProtectedRoute>} />
-            <Route path="/admin/notifications" element={<ProtectedRoute adminOnly={true}><AdminNotifications /></ProtectedRoute>} />
-            <Route path="/admin/edit/banners" element={<ProtectedRoute adminOnly={true}><AdminEditBannerAndOthers /></ProtectedRoute>} />
-            <Route path="/admin/edit/daily-deals" element={<ProtectedRoute adminOnly={true}><AdminEditDeals /></ProtectedRoute>} />
+          
+            <Route path="/admin/sellers-wallet" element={<ProtectedRoute><AdminSellerWallet /></ProtectedRoute>} />
+            <Route path="/admin/manager" element={<ProtectedRoute><AdminManager /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/products" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin/sellers/payouts" element={<ProtectedRoute><AdminPayoutMonitor /></ProtectedRoute>} />
+            <Route path="/admin/edit/fees" element={<ProtectedRoute><AdminEditFees /></ProtectedRoute>} />
+            <Route path="/admin/edit/categories" element={<ProtectedRoute><AdminCategoryEdit /></ProtectedRoute>} />
+            <Route path="/admin/notifications" element={<ProtectedRoute><AdminNotifications /></ProtectedRoute>} />
+            <Route path="/admin/edit/banners" element={<ProtectedRoute><AdminEditBannerAndOthers /></ProtectedRoute>} />
+            <Route path="/admin/edit/daily-deals" element={<ProtectedRoute><AdminEditDeals /></ProtectedRoute>} />
+           
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />

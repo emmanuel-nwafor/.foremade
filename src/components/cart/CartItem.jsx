@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '/src/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { useCurrency } from '/src/CurrencyContext';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 
 const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
+  const { convertPrice } = useCurrency();
   const [mainImage, setMainImage] = useState('https://via.placeholder.com/200?text=No+Image');
   const [product, setProduct] = useState(null);
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
@@ -52,7 +55,6 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
               : [];
             setMainImage(imageUrls.length > 0 ? imageUrls[0] : 'https://via.placeholder.com/200?text=No+Image');
 
-            // Check for active daily deal
             const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
             const activeDeal = dealsSnapshot.docs
               .map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -132,16 +134,16 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
         {isDailyDeal && (
           <div className="flex items-center gap-2">
             <p className="text-xs text-blue-600 font-medium">
-              ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <PriceFormatter price={totalPrice} />
             </p>
             <p className="text-xs text-gray-500 line-through">
-              ₦{calculateTotalPrice(product.price, item.quantity, 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <PriceFormatter price={calculateTotalPrice(product.price, item.quantity, 0)} />
             </p>
           </div>
         )}
         {!isDailyDeal && (
           <p className="text-xs text-gray-600">
-            ₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <PriceFormatter price={totalPrice} />
           </p>
         )}
         <p className="text-xs text-gray-600">

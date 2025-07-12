@@ -2,16 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '/src/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { useCurrency } from '/src/CurrencyContext';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 
 const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
+  const { convertPrice } = useCurrency();
   const navigate = useNavigate();
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
-  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
+  const [minimumPurchase, setMinimumPurchase] = useState(25000);
 
   useEffect(() => {
     const fetchConfigs = async () => {
       try {
-        // Fetch fee configuration
         const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
         const feeSnap = await getDoc(feeRef);
         if (feeSnap.exists()) {
@@ -20,7 +22,6 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
           setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
         }
 
-        // Fetch minimum purchase amount
         const minRef = doc(db, 'settings', 'minimumPurchase');
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
@@ -65,8 +66,6 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
     fetchConfigs();
   }, [cartItems]);
 
-  console.log(propTotalPrice);
-
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
@@ -81,10 +80,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const belowMinimumPrice = totalPrice < minimumPurchase;
 
-  // Shipping is free within Nigeria
   const shipping = 0;
-
-  // Grand total with applied discounts
   const grandTotal = totalPrice + shipping;
 
   const handleCheckout = () => {
@@ -107,13 +103,15 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
           item.isDailyDeal && (
             <div key={index} className="flex justify-between text-xs text-green-600">
               <span>Discount on {item.product.name}</span>
-              <span>-₦{((item.product.price * item.discountPercentage / 100) * item.quantity).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+              <span>
+                -<PriceFormatter price={((item.product.price * item.discountPercentage / 100) * item.quantity)} />
+              </span>
             </div>
           )
         ))}
         <div className="flex justify-between">
           <span>Subtotal</span>
-          <span>₦{totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+          <span><PriceFormatter price={totalPrice} /></span>
         </div>
         <div className="flex justify-between">
           <span>Shipping</span>
@@ -121,14 +119,12 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
         </div>
         <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
           <span>Grand Total</span>
-          <span>₦{grandTotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+          <span><PriceFormatter price={grandTotal} /></span>
         </div>
       </div>
-
-      {/* Error Messages */}
       {belowMinimumPrice && (
         <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-          ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
+          ❌ Minimum purchase amount is <PriceFormatter price={minimumPurchase} /> to checkout.
         </p>
       )}
       {totalItems > 20 && (
@@ -136,7 +132,6 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
           ❌ Maximum basket size is 20 items.
         </p>
       )}
-
       <div className="mt-4 flex gap-3">
         <button
           onClick={handleCheckout}

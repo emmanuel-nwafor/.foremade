@@ -12,7 +12,7 @@ import PaystackCheckout from './PaystackCheckout';
 import cards from '/src/assets/card.png';
 import placeholder from '/src/assets/placeholder.png';
 import { useCurrency } from '/src/CurrencyContext';
-import PriceFormatter from './PriceFormatter';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 import 'boxicons/css/boxicons.min.css';
 
 const customToastStyle = {

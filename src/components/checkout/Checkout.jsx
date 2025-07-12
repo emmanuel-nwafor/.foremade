@@ -11,6 +11,8 @@ import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
 import cards from '/src/assets/card.png';
 import placeholder from '/src/assets/placeholder.png';
+import { useCurrency } from '/src/CurrencyContext';
+import PriceFormatter from './PriceFormatter';
 import 'boxicons/css/boxicons.min.css';
 
 const customToastStyle = {
@@ -188,7 +190,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
           }`}
           aria-label="Pay Now"
         >
-          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          {loading ? 'Processing...' : `Pay <PriceFormatter price={totalPrice} />`}
         </button>
         <button
           type="button"
@@ -205,6 +207,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
 };
 
 const Checkout = () => {
+  const { convertPrice, currency } = useCurrency();
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [loadingState, setLoadingState] = useState(true);
@@ -232,7 +235,7 @@ const Checkout = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState(null);
-  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
+  const [minimumPurchase, setMinimumPurchase] = useState(25000);
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
 
@@ -246,7 +249,6 @@ const Checkout = () => {
         setLoadingState(true);
         const user = auth.currentUser;
 
-        // Fetch minimum purchase amount
         const minRef = doc(db, 'settings', 'minimumPurchase');
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
@@ -492,15 +494,13 @@ const Checkout = () => {
     (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < minimumPurchase; // Updated to use dynamic minimumPurchase
-  const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
-  const conversionRateNgnToGbp = 0.00048;
-  const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
+  const belowMinimumPrice = subtotalNgn < minimumPurchase;
+  const totalAmount = currency === 'GBP' ? subtotalNgn * 0.00048 : subtotalNgn;
 
   useEffect(() => {
-    console.log('Subtotal NGN:', subtotalNgn.toLocaleString('en-NG', { minimumFractionDigits: 2 }));
-    console.log('Total Amount:', totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), '(', currency, ')');
-  }, [subtotalNgn, totalAmount, currency]);
+    console.log('Subtotal NGN:', convertPrice(subtotalNgn));
+    console.log('Total Amount:', convertPrice(totalAmount), '(', currency, ')');
+  }, [subtotalNgn, totalAmount, currency, convertPrice]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -632,7 +632,7 @@ const Checkout = () => {
           (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
           0
         );
-        const totalAmount = currency === 'GBP' ? sellerSubtotal * conversionRateNgnToGbp : sellerSubtotal;
+        const totalAmount = currency === 'GBP' ? sellerSubtotal * 0.00048 : sellerSubtotal;
 
         const payload = {
           orderId: sellerOrderId,
@@ -727,7 +727,7 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error(`Total amount must be at least ₦${minimumPurchase.toLocaleString('en-NG')} to proceed.`, { position: 'top-right', autoClose: 3000 });
+          toast.error(`Total amount must be at least <PriceFormatter price={minimumPurchase} /> to proceed.`, { position: 'top-right', autoClose: 3000 });
           return;
         }
 
@@ -804,7 +804,7 @@ const Checkout = () => {
               (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
               0
             );
-            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * 0.00048 : sellerSubtotalNgn;
 
             const order = {
               id: orderId,
@@ -898,7 +898,6 @@ const Checkout = () => {
           await setDoc(userDocRef, formData, { merge: true });
         }
 
-        // Send buyer confirmation email
         if (lastOrder && sellerOrderIds.length > 0) {
           await sendOrderConfirmationEmail({
             ...lastOrder,
@@ -914,7 +913,6 @@ const Checkout = () => {
           });
         }
 
-        // Send seller notification emails
         await sendSellerOrderNotifications(sellers, sellerOrderIds, currency, formData);
 
         await clearCart(auth.currentUser?.uid);
@@ -1300,10 +1298,7 @@ const Checkout = () => {
                   <div className="flex-1">
                     <h3 className="text-base font-semibold text-gray-800">{item.product?.name || 'Unknown'}</h3>
                     <p className="text-sm text-gray-600">
-                      {currency}{' '}
-                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      <PriceFormatter price={((item.product?.totalPrice || 0) * (item.quantity || 0))} />
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <label htmlFor={`quantity-${item.productId}`} className="text-sm text-gray-600">
@@ -1368,18 +1363,13 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'} (x{item.quantity || 0})
                     </span>
                     <span>
-                      {currency}{' '}
-                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                      <PriceFormatter price={((item.product?.totalPrice || 0) * (item.quantity || 0))} />
                     </span>
                   </div>
                 ))}
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>
-                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </span>
+                  <span><PriceFormatter price={subtotalNgn} /></span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
@@ -1387,14 +1377,12 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
-                  <span>
-                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </span>
+                  <span><PriceFormatter price={subtotalNgn} /></span>
                 </div>
               </div>
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
+                  ❌ Minimum purchase amount is <PriceFormatter price={minimumPurchase} /> to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -1425,65 +1413,68 @@ const Checkout = () => {
                     <strong>Country:</strong> {formData.country || 'Not provided'}
                   </p>
                 </div>
-              </div>
-              {isAuthenticated && formValidity.isValid && cart.length > 0 && !belowMinimumPrice && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <i className="bx bx-credit-card text-blue-600" />
-                    Payment Details
-                  </h2>
-                  {formData.country === 'United Kingdom' ? (
-                    <Elements stripe={stripePromise}>
-                      <StripeCheckoutForm
-                        totalPrice={subtotalNgn * conversionRateNgnToGbp}
-                        formData={formData}
-                        onSuccess={(paymentIntent) => setShowConfirmModal(true)}
-                        onCancel={handleCancel}
-                        currency={currency}
-                        setIsProcessing={setIsProcessing}
-                      />
-                    </Elements>
-                  ) : formData.country === 'Nigeria' ? (
-                    <PaystackCheckout
-                      email={formData.email}
-                      amount={subtotalNgn * 100}
-                      onSuccess={(paymentData) => setShowConfirmModal(true)}
-                      onClose={handleCancel}
-                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}
-                      buttonText="Pay Now"
-                      className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
-                        !formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-blue-900 hover:bg-blue-800'
-                      }`}
-                      iconClass="bx bx-cart mr-2"
-                      sellerId={cart[0]?.product?.sellerId || 'default-seller-id'}
+                {formData.country === 'United Kingdom' ? (
+                  <Elements stripe={stripePromise}>
+                    <StripeCheckoutForm
+                      totalPrice={totalAmount}
+                      formData={formData}
+                      onSuccess={handlePaymentSuccess}
+                      onCancel={handleCancel}
+                      currency={currency}
+                      setIsProcessing={setIsProcessing}
                     />
-                  ) : (
-                    <p className="text-red-600 text-sm">Please select a valid country.</p>
-                  )}
-                </div>
+                  </Elements>
+                ) : (
+                  <PaystackCheckout
+                    totalPrice={totalAmount}
+                    formData={formData}
+                    onSuccess={handlePaymentSuccess}
+                    onCancel={handleCancel}
+                    currency={currency}
+                    setIsProcessing={setIsProcessing}
+                  />
+                )}
+              </div>
+              <button
+                onClick={() => setShowConfirmModal(true)}
+                className={`mt-6 w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
+                  belowMinimumPrice || !formValidity.isValid || totalItems > 20 || isProcessing || isEmailSending
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+                disabled={belowMinimumPrice || !formValidity.isValid || totalItems > 20 || isProcessing || isEmailSending}
+                aria-label="Confirm Order"
+              >
+                {isProcessing || isEmailSending ? 'Processing...' : 'Confirm Order'}
+              </button>
+              {belowMinimumPrice && (
+                <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
+                  ❌ Minimum purchase amount is <PriceFormatter price={minimumPurchase} /> to checkout.
+                </p>
               )}
-              {!isAuthenticated && (
-                <div className="mt-4 text-sm text-red-600">
-                  Please{' '}
-                  <Link to="/login" className="text-blue-600 hover:underline">
-                    log in
-                  </Link>{' '}
-                  to proceed with payment.
-                </div>
+              {totalItems > 20 && (
+                <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
+                  ❌ Maximum basket size is 20 items.
+                </p>
               )}
             </div>
           </div>
         </div>
       )}
-      <ConfirmationModal isOpen={showConfirmModal} onConfirm={handlePaymentSuccess} onCancel={handleCancel} />
-      {debugMode && (
-        <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-          <h3 className="font-bold mb-2">Debug Logs</h3>
-          <pre>{JSON.stringify({ cart, formData, formErrors, imageLoading, imageErrors, minimumPurchase }, null, 2)}</pre>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onConfirm={() => {
+          if (formData.country === 'United Kingdom') {
+            const stripeForm = document.querySelector('form');
+            if (stripeForm) {
+              stripeForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+          } else {
+            handlePaymentSuccess({ reference: `paystack-${Date.now()}` });
+          }
+        }}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

@@ -71,6 +71,7 @@ import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
 import ProSellerGuide from './seller/ProSellerGuide';
+import ProSellerFullGuide from './seller/ProSellerFullGuide';
 import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import ProRefundPolicy from './pages/ProRefundPolicy';
@@ -243,6 +244,7 @@ function AppRoutes() {
             <Route path="/about" element={<AboutUs />} />
             <Route path="/category/:categoryName" element={<CategoryPage />} />
             <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+            <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
             <Route path="/pro-refund-policy" element={<ProRefundPolicy />} />
             <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
             <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />

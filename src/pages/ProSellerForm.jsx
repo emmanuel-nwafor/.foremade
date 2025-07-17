@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
+import { useAuth } from '../contexts/AuthContext';
 
 const initialFormData = {
   businessName: '',
@@ -40,26 +41,57 @@ const ProSellerForm = () => {
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [banks, setBanks] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [banksLoading, setBanksLoading] = useState(true);
   const { alerts, addAlert, removeAlert } = useAlerts();
+  const { user } = useAuth();
 
   // Fetch categories and banks on mount
   useEffect(() => {
-    // Fetch categories (simulate or replace with real endpoint)
+    let didCancel = false;
+    setCategoriesLoading(true);
+    setBanksLoading(true);
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
-        setCategories(data);
-        console.log('Fetched categories:', data);
+        if (!didCancel) {
+          setCategories(data);
+          setCategoriesLoading(false);
+        }
       })
-      .catch(err => console.error('Error fetching categories:', err));
-    // Fetch banks
-    fetch('/fetch-banks')
+      .catch(err => {
+        if (!didCancel) {
+          setCategories([
+            { name: 'Electronics' },
+            { name: 'Fashion' },
+            { name: 'Home & Living' },
+            { name: 'Beauty' },
+            { name: 'Sports' },
+            { name: 'Automotive' },
+            { name: 'Books' },
+            { name: 'Toys' },
+            { name: 'Groceries' },
+            { name: 'Health' },
+          ]);
+          setCategoriesLoading(false);
+        }
+      });
+    fetch(`${backendUrl}/fetch-banks`)
       .then(res => res.json())
       .then(data => {
-        setBanks(data);
-        console.log('Fetched banks:', data);
+        if (!didCancel) {
+          setBanks(data);
+          setBanksLoading(false);
+        }
       })
-      .catch(err => console.error('Error fetching banks:', err));
+      .catch(err => {
+        if (!didCancel) {
+          setBanks([]);
+          setBanksLoading(false);
+        }
+      });
+    return () => { didCancel = true; };
   }, []);
 
   const handleInputChange = (field, value) => {
@@ -117,11 +149,16 @@ const ProSellerForm = () => {
       };
       console.log('Submitting Pro Seller Application:', submissionData);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      let idToken = null;
+      if (user) {
+        idToken = await user.getIdToken();
+      }
       const response = await fetch(`${backendUrl}/api/pro-seller`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
         },
         body: JSON.stringify(submissionData),
       });
@@ -153,7 +190,8 @@ const ProSellerForm = () => {
     try {
       const payload = { country: formData.country === 'Nigeria' ? 'NG' : formData.country, regNumber: formData.regNumber };
       console.log('Verifying reg number:', payload);
-      const res = await fetch('/verify-business-reg-number', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/verify-business-reg-number`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -181,15 +219,16 @@ const ProSellerForm = () => {
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
       console.log('Verifying bank account:', payload);
-      const res = await fetch('/verify-bank-account', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
       console.log('Bank account verification response:', data);
-      if (res.ok && data.accountName) {
-        setFormData(prev => ({ ...prev, accountVerified: true, accountVerifying: false, accountError: '', accountName: data.accountName }));
+      if (res.ok && (data.accountName || data.account_name)) {
+        setFormData(prev => ({ ...prev, accountVerified: true, accountVerifying: false, accountError: '', accountName: data.accountName || data.account_name }));
       } else {
         setFormData(prev => ({ ...prev, accountVerified: false, accountVerifying: false, accountError: data.message || 'Verification failed.', accountName: '' }));
       }
@@ -303,7 +342,9 @@ const ProSellerForm = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Product Line <span className="text-red-500">*</span></label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {categories.length > 0 ? (
+                  {categoriesLoading ? (
+                    <span className="text-gray-400 italic">Loading categories...</span>
+                  ) : categories.length > 0 ? (
                     categories.map((cat, idx) => (
                       <label key={cat.value || cat.code || cat.name || idx} className="flex items-center space-x-2 bg-orange-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-orange-100 transition">
                         <input
@@ -322,7 +363,7 @@ const ProSellerForm = () => {
                       </label>
                     ))
                   ) : (
-                    <span className="text-gray-400 italic">Loading categories...</span>
+                    <span className="text-gray-400 italic">No categories available.</span>
                   )}
                 </div>
                 {errors.productLines && <p className="text-red-500 text-xs mt-1">{errors.productLines}</p>}
@@ -340,9 +381,15 @@ const ProSellerForm = () => {
                   className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.bankName ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">Select Bank</option>
-                  {banks.map((bank, idx) => (
-                    <option key={bank.code || idx} value={bank.code}>{bank.name}</option>
-                  ))}
+                  {banksLoading ? (
+                    <option value="">Loading banks...</option>
+                  ) : banks.length > 0 ? (
+                    banks.map((bank, idx) => (
+                      <option key={bank.code || idx} value={bank.code}>{bank.name}</option>
+                    ))
+                  ) : (
+                    <option value="">No banks available.</option>
+                  )}
                 </select>
                 {errors.bankName && <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>}
               </div>
@@ -416,36 +463,57 @@ const ProSellerForm = () => {
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex items-center justify-center py-8 px-2 sm:px-4">
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-      <div className="w-full max-w-lg mx-auto">
+      <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 md:px-8">
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-orange-100 dark:border-gray-800 overflow-hidden">
-          <div className="px-6 pt-8 pb-2 sm:px-10">
-            <div className="flex items-center justify-between mb-8">
-              <h1 className="text-3xl font-extrabold text-orange-700 dark:text-orange-400 tracking-tight">Pro Seller Registration</h1>
-              <CheckCircle className="w-9 h-9 text-orange-500" />
+          <div className="px-4 sm:px-8 md:px-12 pt-10 pb-4 md:pt-14 md:pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-orange-700 dark:text-orange-400 tracking-tight">Pro Seller Registration</h1>
+              <CheckCircle className="w-9 h-9 text-orange-500 self-center" />
             </div>
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center mb-10">
+            {/* Mobile Stepper */}
+            <div className="block sm:hidden mb-10">
+              <div className="flex items-center w-full mb-2">
+                {steps.map((step, idx) => (
+                  <React.Fragment key={step.label}>
+                    <div className="flex-1 flex flex-col items-center">
+                      <div className={`w-7 h-7 flex items-center justify-center rounded-full border-2 text-sm font-bold
+                        ${idx < currentStep - 1 ? 'border-orange-600 bg-orange-100 text-orange-600' : idx === currentStep - 1 ? 'border-orange-700 bg-orange-200 text-orange-700' : 'border-gray-200 bg-gray-100 text-gray-400'}`}>{idx + 1}</div>
+                    </div>
+                    {idx < steps.length - 1 && (
+                      <div className={`flex-1 h-1 mx-1 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200'}`}></div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="flex justify-between w-full px-1">
+                {steps.map((step, idx) => (
+                  <span key={step.label} className={`text-[10px] font-semibold uppercase tracking-wide text-center flex-1 ${idx === currentStep - 1 ? 'text-orange-700' : 'text-gray-400'}`}>{step.label}</span>
+                ))}
+              </div>
+            </div>
+            {/* Desktop Stepper */}
+            <div className="hidden sm:flex items-center justify-center mb-10 gap-4">
               {steps.map((step, idx) => (
                 <React.Fragment key={step.label}>
                   <div className={`flex flex-col items-center ${idx < currentStep - 1 ? 'text-orange-600' : idx === currentStep - 1 ? 'text-orange-700 font-bold dark:text-orange-300' : 'text-gray-300 dark:text-gray-600'}`}>
                     <div className={`w-9 h-9 flex items-center justify-center rounded-full border-4 ${idx < currentStep - 1 ? 'border-orange-600 bg-orange-100' : idx === currentStep - 1 ? 'border-orange-700 bg-orange-200 dark:bg-orange-900' : 'border-gray-200 bg-gray-100 dark:bg-gray-800'} text-lg font-bold`}>{idx + 1}</div>
-                    <span className="text-xs mt-2 font-semibold tracking-wide uppercase">{step.label}</span>
+                    <span className="text-xs mt-2 font-semibold tracking-wide uppercase whitespace-nowrap">{step.label}</span>
                   </div>
                   {idx < steps.length - 1 && <div className={`flex-1 h-1 mx-2 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>}
                 </React.Fragment>
               ))}
             </div>
             <form onSubmit={e => { e.preventDefault(); handleContinue(); }}>
-              <div className="max-h-[55vh] overflow-y-auto pb-2 custom-scrollbar">
+              <div className="max-h-[60vh] md:max-h-[65vh] overflow-y-auto pb-4 custom-scrollbar px-1 md:px-2">
                 {renderStepContent()}
               </div>
               {/* Sticky Button Footer */}
               <div className="sticky bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent px-0 pt-6 pb-4 mt-8 border-t border-orange-100 dark:border-gray-800 shadow-2xl flex flex-col items-center gap-2">
-                <div className="flex w-full gap-4">
+                <div className="flex flex-col sm:flex-row w-full gap-3 sm:gap-4">
                   {currentStep > 1 && (
-                    <button type="button" onClick={handleBack} className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200">Back</button>
+                    <button type="button" onClick={handleBack} className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200">Back</button>
                   )}
-                  <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed">
                     {isSubmitting ? 'Submitting...' : currentStep < 4 ? 'Continue' : 'Submit'}
                   </button>
                 </div>

@@ -122,7 +122,7 @@ export default function ProSellerGuide() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Link to="/pro-seller-form" className="learn-more-anim group text-orange-500 text-lg font-semibold px-6 py-2 rounded-full border border-orange-200 shadow hover:shadow-lg flex items-center justify-end w-fit">
+              <Link to="/pro-seller-guide-full" className="learn-more-anim group text-orange-500 text-lg font-semibold px-6 py-2 rounded-full border border-orange-200 shadow hover:shadow-lg flex items-center justify-end w-fit">
                 <span className="flex items-center justify-center">
                   Learn more
                   <ArrowRight className="ml-2 w-5 h-5 arrow-anim group-hover:text-white transition-transform duration-200 sway" />

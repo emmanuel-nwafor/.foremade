@@ -387,7 +387,7 @@ export default function SellerOnboarding() {
             <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your dashboard?</p>
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => navigate('/smile')}
+                onClick={() => navigate('/seller-dashboard')}
                 className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Yes

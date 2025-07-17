@@ -287,12 +287,12 @@ export default function Wallet() {
               <CurrencyConverter />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-9 sm:p-10 text-white">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 sm:p-5 text-white">
                 <span className="text-xs sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
                 <h3 className="text-lg sm:text-xl font-semibold mt-2">Available Balance</h3>
                 <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={balance} /></p>
               </div>
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-9 sm:p-10 text-white">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 sm:p-5 text-white">
                 <span className="text-xs sm:text-sm font-light">Pending Transactions</span>
                 <h3 className="text-lg sm:text-xl font-semibold mt-2">Pending Balance</h3>
                 <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={pendingBalance} /></p>

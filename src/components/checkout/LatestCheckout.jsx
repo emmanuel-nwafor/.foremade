@@ -13,7 +13,6 @@ import cards from '/src/assets/card.png';
 import placeholder from '/src/assets/placeholder.png';
 import { useCurrency } from '/src/CurrencyContext';
 import PriceFormatter from '/src/components/layout/PriceFormatter';
-import AnimatedStepper from '/src/components/common/AnimatedStepper';
 import 'boxicons/css/boxicons.min.css';
 
 const customToastStyle = {
@@ -35,6 +34,19 @@ const preloadImage = (url, timeout = 5000) => {
     setTimeout(() => resolve(false), timeout);
   });
 };
+
+const ProgressBar = () => (
+  <div className="flex justify-between mb-8">
+    {['Cart', 'Shipping', 'Payment', 'Confirmation'].map((step, index) => (
+      <div key={step} className="flex-1 text-center">
+        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${index < 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+          {index + 1}
+        </div>
+        <p className="text-sm mt-2 text-gray-600">{step}</p>
+      </div>
+    ))}
+  </div>
+);
 
 const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) => (
   isOpen && (
@@ -141,6 +153,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
         code: err.code,
         response: err.response?.data,
       });
+      console.log('Logging to Sentry:', err);
       toast.error(
         err.code === 'ECONNABORTED'
           ? 'Payment timed out. Please try again or check your connection.'
@@ -223,18 +236,11 @@ const Checkout = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState(null);
   const [minimumPurchase, setMinimumPurchase] = useState(25000);
-  const [currentStep, setCurrentStep] = useState(0); // 0=Cart, 1=Shipping, 2=Payment, 3=Confirmation
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
-  const steps = ['Cart', 'Shipping', 'Payment', 'Confirmation'];
 
   useEffect(() => {
     localStorage.setItem('checkoutFormData', JSON.stringify(formData));
-    // Validate form to update currentStep
-    const validation = validateForm();
-    if (validation.isValid && currentStep < 1) {
-      setCurrentStep(1); // Move to Shipping if form is valid
-    }
   }, [formData]);
 
   useEffect(() => {
@@ -345,6 +351,8 @@ const Checkout = () => {
         }
       } catch (err) {
         console.error('Error loading cart or user data:', err);
+        console.log('Logging to Sentry:', err);
+        setCart([]);
         toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
       } finally {
         setLoadingState(false);
@@ -430,6 +438,7 @@ const Checkout = () => {
         );
       } catch (err) {
         console.error('Error updating cart:', err);
+        console.log('Logging to Sentry:', err);
         toast.error('Failed to update cart.', { position: 'top-right', autoClose: 3000 });
       }
     };
@@ -475,6 +484,7 @@ const Checkout = () => {
       toast.info('Quantity updated.', { position: 'top-right', autoClose: 2000 });
     } catch (err) {
       console.error('Error updating quantity:', err);
+      console.log('Logging to Sentry:', err);
       toast.error('Failed to update quantity.', { position: 'top-right', autoClose: 3000 });
     }
   };
@@ -527,6 +537,16 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      console.log('Backend URL:', backendUrl);
+      console.log('Sending order confirmation email with payload:', {
+        orderId: order.paymentId || 'unknown',
+        email: order.shippingDetails?.email || 'unknown',
+        items: order.items,
+        total: order.totalAmount || 0,
+        currency: order.currency || 'unknown',
+        shippingDetails: order.shippingDetails || {},
+      });
+
       const payload = {
         orderId: order.paymentId || `fallback-${Date.now()}`,
         email: order.shippingDetails?.email || formData.email,
@@ -585,6 +605,7 @@ const Checkout = () => {
         responseData: err.response?.data,
         stack: err.stack,
       });
+      console.log('Logging to Sentry:', err);
       toast.warn('Order placed successfully, but failed to send confirmation email. Please check your email later.', {
         position: 'top-right',
         autoClose: 5000,
@@ -675,6 +696,7 @@ const Checkout = () => {
         responseData: err.response?.data,
         stack: err.stack,
       });
+      console.log('Logging to Sentry:', err);
       toast.warn('Order placed successfully, but failed to notify some sellers. They may receive notifications later.', {
         position: 'top-right',
         autoClose: 5000,
@@ -709,10 +731,10 @@ const Checkout = () => {
           return;
         }
 
-        setCurrentStep(2); // Move to Payment step
         console.log('Payment data:', paymentData);
         if (!paymentData || (!paymentData.id && !paymentData.reference)) {
           console.warn('Invalid payment data:', paymentData);
+          console.log('Logging to Sentry:', new Error('Invalid payment data received'));
         }
 
         const userId = auth.currentUser?.uid || 'anonymous';
@@ -765,6 +787,16 @@ const Checkout = () => {
             sellerId: Object.keys(sellers)[index],
           }));
 
+          console.log(
+            'Seller wallets before update:',
+            sellerWallets.map((wallet) => ({
+              sellerId: wallet.sellerId,
+              exists: wallet.exists,
+              pendingBalance: wallet.data?.pendingBalance || 0,
+              availableBalance: wallet.data?.availableBalance || 0,
+            }))
+          );
+
           const orders = [];
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
             const sellerItems = sellers[sellerId];
@@ -811,11 +843,21 @@ const Checkout = () => {
               },
               { merge: true }
             );
+
+            console.log(`Updated wallet for seller ${sellerId}:`, {
+              pendingBalance,
+              availableBalance: exists ? data?.availableBalance || 0 : 0,
+            });
           });
 
           orders.forEach(({ order, orderId }) => {
             const orderRef = doc(db, 'orders', orderId);
-            transaction.set(orderRef, order);
+            try {
+              transaction.set(orderRef, order);
+            } catch (err) {
+              console.error(`Error saving order ${orderId}:`, err);
+              throw err;
+            }
             lastOrder = order;
           });
 
@@ -849,6 +891,7 @@ const Checkout = () => {
             };
           })
         );
+        console.log('Seller wallets after update:', updatedWallets);
 
         if (auth.currentUser && formData.saveInfo) {
           const userDocRef = doc(db, 'users', auth.currentUser.uid);
@@ -874,7 +917,7 @@ const Checkout = () => {
 
         await clearCart(auth.currentUser?.uid);
         setCart([]);
-        setCurrentStep(3); // Move to Confirmation step
+
         toast.success(
           <div>
             <strong>Payment Successful!</strong>
@@ -890,13 +933,13 @@ const Checkout = () => {
         navigate('/order-confirmation', { state: { order: { ...lastOrder, items: cart } } });
       } catch (err) {
         console.error('Checkout error:', err);
+        console.log('Logging to Sentry:', err);
         toast.error(err.message || 'Failed to place order. Please try again.', { position: 'top-right', autoClose: 3000 });
         if (debugMode) {
           toast.error(`Debug: ${err.message}`, { position: 'bottom-right', autoClose: 5000 });
         }
       } finally {
         setShowConfirmModal(false);
-        setIsProcessing(false);
       }
     },
     [cart, subtotalNgn, belowMinimumPrice, formData, totalAmount, navigate, totalItems, currency, debugMode, minimumPurchase]
@@ -919,6 +962,7 @@ const Checkout = () => {
           : item
       )
     );
+    console.log('Cart item image updated:', { itemId, url, direction: index > currentIndex ? 'right' : 'left' });
   };
 
   const handleImageLoad = (productId, isThumbnail) => {
@@ -927,6 +971,7 @@ const Checkout = () => {
       [productId]: isThumbnail ? prev[productId] : false,
     }));
     setImageErrors((prev) => ({ ...prev, [productId]: false }));
+    console.log(`Image ${isThumbnail ? 'thumbnail' : 'main'} loaded for productId: ${productId}`);
   };
 
   const handleImageError = (e, productId) => {
@@ -976,7 +1021,7 @@ const Checkout = () => {
           .image-zoom:hover { transform: scale(1.05); transition: transform 0.3s ease; }
         `}
       </style>
-      <AnimatedStepper steps={steps} currentStep={currentStep} />
+      <ProgressBar />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <i className="bx bx-cart text-blue-600" />
@@ -1215,6 +1260,15 @@ const Checkout = () => {
               <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="bx bx-package text-blue-600" />
                 Cart Items
+                <span
+                  className="ml-2 text-xs text-gray-500 cursor-help relative group"
+                  aria-label="Prices include tax, buyer protection, and handling fees."
+                >
+                  <i className="bx bx-info-circle" />
+                  <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-2 -top-10 left-0 w-48 z-10">
+                    Prices include tax, buyer protection, and handling fees.
+                  </span>
+                </span>
               </h2>
               {cart.map((item) => (
                 <div key={item.productId} className="flex items-start gap-4 mb-4 border-b pb-4">

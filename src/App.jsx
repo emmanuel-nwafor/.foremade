@@ -34,6 +34,7 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
+
 import Admin from '/src/admin/Admin.jsx';
 import AdminDashboard from '/src/admin/AdminDashboard.jsx';
 import AdminNotifications from '/src/admin/AdminNotifications.jsx';
@@ -45,6 +46,7 @@ import AdminEditDeals from '/src/admin/AdminEditDeals';
 import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
 import AdminSellerWallet from '/src/admin/AdminSellerWallet';
 import AdminManager from '/src/admin/AdminManager';
+
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -204,7 +206,7 @@ function AppRoutes() {
           
             <Route path="/admin/sellers-wallet" element={<ProtectedRoute><AdminSellerWallet /></ProtectedRoute>} />
             <Route path="/admin/manager" element={<ProtectedRoute><AdminManager /></ProtectedRoute>} />
-            <Route path="/admin/dashboard" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/admin/sellers/payouts" element={<ProtectedRoute><AdminPayoutMonitor /></ProtectedRoute>} />

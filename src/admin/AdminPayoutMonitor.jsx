@@ -43,8 +43,8 @@ export default function AdminPayoutMonitor() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [otpInputs, setOtpInputs] = useState({}); // Track OTP input and transferCode for each transaction
-  const [otpLoading, setOtpLoading] = useState({}); // Track loading state for OTP submission
+  const [otpInputs, setOtpInputs] = useState({});
+  const [otpLoading, setOtpLoading] = useState({});
 
   useEffect(() => {
     const handleAuthChange = (user) => {
@@ -62,7 +62,6 @@ export default function AdminPayoutMonitor() {
       return;
     }
 
-    // Include both Pending and pending_otp transactions
     const q = query(
       collection(db, 'transactions'),
       where('type', '==', 'Withdrawal'),
@@ -72,7 +71,7 @@ export default function AdminPayoutMonitor() {
       const transactionData = [];
       for (const docSnapshot of snapshot.docs) {
         const txn = { id: docSnapshot.id, ...docSnapshot.data() };
-        const sellerRef = doc(db, 'sellers', txn.userId);
+        const sellerRef = doc(db, 'sellers', txn.userId); // Changed txn.userId
         try {
           const sellerSnap = await getDoc(sellerRef);
           if (sellerSnap.exists()) {
@@ -111,11 +110,11 @@ export default function AdminPayoutMonitor() {
     };
   }, [navigate, addAlert]);
 
-  const handleApprove = async (transactionId, sellerId, amount) => {
+  const handleApprove = async (transactionId, userId, amount) => {
     setLoading(true);
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId });
+      const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, userId }); // Changed sellerId to userId
       addAlert(response.data.message, 'success');
       if (response.data.transferCode) {
         setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
@@ -129,11 +128,11 @@ export default function AdminPayoutMonitor() {
     }
   };
 
-  const handleReject = async (transactionId, sellerId) => {
+  const handleReject = async (transactionId, userId) => {
     setLoading(true);
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(`${BACKEND_URL}/reject-payout`, { transactionId, sellerId });
+      const response = await axios.post(`${BACKEND_URL}/reject-payout`, { transactionId, userId }); // Changed sellerId to userId
       addAlert(response.data.message, 'success');
     } catch (error) {
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');
@@ -160,19 +159,19 @@ export default function AdminPayoutMonitor() {
         return newInputs;
       });
     } catch (error) {
-      const errorMsg = error.response?.data?.details || 'OTP verification failed';
+      const errorMsg = error.response?.data?.details || error.response?.data?.error || 'OTP verification failed';
+      console.error('OTP verification error:', error.response?.data || error); // Debug log
       addAlert(errorMsg, 'error');
-      console.error('OTP verification error:', error.response?.data || error.message);
     } finally {
       setOtpLoading((prev) => ({ ...prev, [transactionId]: false }));
     }
   };
 
-  const handleResendOtp = async (transactionId, sellerId) => {
+  const handleResendOtp = async (transactionId, userId) => {
     setOtpLoading((prev) => ({ ...prev, [transactionId]: true }));
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(`${BACKEND_URL}/resend-otp`, { transactionId, sellerId });
+      const response = await axios.post(`${BACKEND_URL}/resend-otp`, { transactionId, userId }); // Changed sellerId to userId
       addAlert(response.data.message, 'success');
       setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
     } catch (error) {
@@ -203,7 +202,7 @@ export default function AdminPayoutMonitor() {
                     <span className="font-medium">Transaction ID:</span> {txn.id}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">Seller ID:</span> {txn.userId}
+                    <span className="font-medium">User ID:</span> {txn.userId} {/* Changed Seller ID to User ID */}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Seller Name:</span> {txn.sellerName}
@@ -226,7 +225,7 @@ export default function AdminPayoutMonitor() {
                   {txn.status === 'Pending' && (
                     <div className="mt-4 flex gap-2">
                       <button
-                        onClick={() => handleApprove(txn.id, txn.userId, txn.amount)}
+                        onClick={() => handleApprove(txn.id, txn.userId, txn.amount)} // Changed txn.userId
                         className={`py-2 px-4 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center gap-2 ${
                           loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
@@ -236,7 +235,7 @@ export default function AdminPayoutMonitor() {
                         Approve
                       </button>
                       <button
-                        onClick={() => handleReject(txn.id, txn.userId)}
+                        onClick={() => handleReject(txn.id, txn.userId)} // Changed txn.userId
                         className={`py-2 px-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2 ${
                           loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
@@ -274,7 +273,7 @@ export default function AdminPayoutMonitor() {
                           Submit OTP
                         </button>
                         <button
-                          onClick={() => handleResendOtp(txn.id, txn.userId)}
+                          onClick={() => handleResendOtp(txn.id, txn.userId)} // Changed txn.userId
                           className={`py-2 px-4 bg-yellow-600 text-white rounded-lg shadow-md hover:bg-yellow-700 flex items-center gap-2 ${
                             otpLoading[txn.id] ? 'opacity-50 cursor-not-allowed' : ''
                           }`}

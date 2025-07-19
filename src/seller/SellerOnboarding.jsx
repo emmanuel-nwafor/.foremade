@@ -33,6 +33,7 @@ export default function SellerOnboarding() {
       if (!formData.idNumber.trim()) newErrors.idNumber = 'Enter a valid ID number.';
       if (!formData.iban.match(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/)) newErrors.iban = 'Enter a valid IBAN.';
       if (!formData.email.match(/\S+@\S+\.\S+/)) newErrors.email = 'Enter a valid email.';
+      if (!formData.bankName.trim()) newErrors.bankName = 'Bank name is required.';
     }
     return newErrors;
   };
@@ -98,22 +99,28 @@ export default function SellerOnboarding() {
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
       if (response.data.error) throw new Error(response.data.error);
 
+      if (formData.country === 'United Kingdom') {
+        // Redirect to Stripe onboarding URL
+        window.location.href = response.data.redirectUrl;
+        return;
+      }
+
+      // For Nigeria, save seller data to Firestore
       const currentDate = new Date().toISOString();
       const sellerData = {
         fullName: formData.fullName,
         country: formData.country,
-        idNumber: formData.country === 'United Kingdom' ? formData.idNumber : '',
-        bankName: formData.country === 'Nigeria' ? banks.find((b) => b.code === formData.bankCode)?.name : formData.bankName,
+        idNumber: '',
+        bankName: banks.find((b) => b.code === formData.bankCode)?.name || '',
         bankCode: formData.country === 'Nigeria' ? formData.bankCode : '',
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
-        iban: formData.country === 'United Kingdom' ? formData.iban : '',
-        email: formData.country === 'United Kingdom' ? formData.email : '',
+        iban: '',
+        email: '',
         paystackRecipientCode: response.data.recipientCode || '',
         createdAt: currentDate,
         updatedAt: currentDate,
       };
 
-      // Save to sellers collection
       await setDoc(doc(db, 'sellers', auth.currentUser.uid), sellerData, { merge: true });
 
       // Update user role and onboarding status
@@ -125,7 +132,7 @@ export default function SellerOnboarding() {
 
       console.log(`Onboarding successful for ${auth.currentUser.uid}, role set to seller`);
       alert('Onboarding successful!');
-      navigate('/smile');
+      navigate('/seller-dashboard');
     } catch (error) {
       console.error(`Onboarding failed for ${auth.currentUser.uid}:`, error);
       setError('Failed to onboard: ' + (error.response?.data?.error || error.message));
@@ -394,7 +401,7 @@ export default function SellerOnboarding() {
             <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your dashboard?</p>
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => navigate('/smile')}
+                onClick={() => navigate('/seller-dashboard')}
                 className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
                 aria-label="Go to Dashboard"
               >

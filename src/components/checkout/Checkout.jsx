@@ -11,9 +11,6 @@ import Spinner from '/src/components/common/Spinner';
 import PaystackCheckout from './PaystackCheckout';
 import cards from '/src/assets/card.png';
 import placeholder from '/src/assets/placeholder.png';
-import { useCurrency } from '/src/CurrencyContext';
-import PriceFormatter from '/src/components/layout/PriceFormatter';
-import AnimatedStepper from '/src/components/common/AnimatedStepper';
 import 'boxicons/css/boxicons.min.css';
 
 const customToastStyle = {
@@ -35,6 +32,19 @@ const preloadImage = (url, timeout = 5000) => {
     setTimeout(() => resolve(false), timeout);
   });
 };
+
+const ProgressBar = () => (
+  <div className="flex justify-between mb-8">
+    {['Cart', 'Shipping', 'Payment', 'Confirmation'].map((step, index) => (
+      <div key={step} className="flex-1 text-center">
+        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${index < 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+          {index + 1}
+        </div>
+        <p className="text-sm mt-2 text-gray-600">{step}</p>
+      </div>
+    ))}
+  </div>
+);
 
 const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) => (
   isOpen && (
@@ -141,6 +151,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
         code: err.code,
         response: err.response?.data,
       });
+      console.log('Logging to Sentry:', err);
       toast.error(
         err.code === 'ECONNABORTED'
           ? 'Payment timed out. Please try again or check your connection.'
@@ -177,7 +188,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
           }`}
           aria-label="Pay Now"
         >
-          {loading ? 'Processing...' : `Pay <PriceFormatter price={totalPrice} />`}
+          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
         </button>
         <button
           type="button"
@@ -194,7 +205,6 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
 };
 
 const Checkout = () => {
-  const { convertPrice, currency } = useCurrency();
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [loadingState, setLoadingState] = useState(true);
@@ -222,19 +232,12 @@ const Checkout = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState(null);
-  const [minimumPurchase, setMinimumPurchase] = useState(25000);
-  const [currentStep, setCurrentStep] = useState(0); // 0=Cart, 1=Shipping, 2=Payment, 3=Confirmation
+  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
-  const steps = ['Cart', 'Shipping', 'Payment', 'Confirmation'];
 
   useEffect(() => {
     localStorage.setItem('checkoutFormData', JSON.stringify(formData));
-    // Validate form to update currentStep
-    const validation = validateForm();
-    if (validation.isValid && currentStep < 1) {
-      setCurrentStep(1); // Move to Shipping if form is valid
-    }
   }, [formData]);
 
   useEffect(() => {
@@ -243,6 +246,7 @@ const Checkout = () => {
         setLoadingState(true);
         const user = auth.currentUser;
 
+        // Fetch minimum purchase amount
         const minRef = doc(db, 'settings', 'minimumPurchase');
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
@@ -345,6 +349,8 @@ const Checkout = () => {
         }
       } catch (err) {
         console.error('Error loading cart or user data:', err);
+        console.log('Logging to Sentry:', err);
+        setCart([]);
         toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
       } finally {
         setLoadingState(false);
@@ -430,6 +436,7 @@ const Checkout = () => {
         );
       } catch (err) {
         console.error('Error updating cart:', err);
+        console.log('Logging to Sentry:', err);
         toast.error('Failed to update cart.', { position: 'top-right', autoClose: 3000 });
       }
     };
@@ -475,6 +482,7 @@ const Checkout = () => {
       toast.info('Quantity updated.', { position: 'top-right', autoClose: 2000 });
     } catch (err) {
       console.error('Error updating quantity:', err);
+      console.log('Logging to Sentry:', err);
       toast.error('Failed to update quantity.', { position: 'top-right', autoClose: 3000 });
     }
   };
@@ -484,13 +492,15 @@ const Checkout = () => {
     (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
     0
   );
-  const belowMinimumPrice = subtotalNgn < minimumPurchase;
-  const totalAmount = currency === 'GBP' ? subtotalNgn * 0.00048 : subtotalNgn;
+  const belowMinimumPrice = subtotalNgn < minimumPurchase; // Updated to use dynamic minimumPurchase
+  const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
+  const conversionRateNgnToGbp = 0.00048;
+  const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
 
   useEffect(() => {
-    console.log('Subtotal NGN:', convertPrice(subtotalNgn));
-    console.log('Total Amount:', convertPrice(totalAmount), '(', currency, ')');
-  }, [subtotalNgn, totalAmount, currency, convertPrice]);
+    console.log('Subtotal NGN:', subtotalNgn.toLocaleString('en-NG', { minimumFractionDigits: 2 }));
+    console.log('Total Amount:', totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), '(', currency, ')');
+  }, [subtotalNgn, totalAmount, currency]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -527,6 +537,16 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      console.log('Backend URL:', backendUrl);
+      console.log('Sending order confirmation email with payload:', {
+        orderId: order.paymentId || 'unknown',
+        email: order.shippingDetails?.email || 'unknown',
+        items: order.items,
+        total: order.totalAmount || 0,
+        currency: order.currency || 'unknown',
+        shippingDetails: order.shippingDetails || {},
+      });
+
       const payload = {
         orderId: order.paymentId || `fallback-${Date.now()}`,
         email: order.shippingDetails?.email || formData.email,
@@ -585,6 +605,7 @@ const Checkout = () => {
         responseData: err.response?.data,
         stack: err.stack,
       });
+      console.log('Logging to Sentry:', err);
       toast.warn('Order placed successfully, but failed to send confirmation email. Please check your email later.', {
         position: 'top-right',
         autoClose: 5000,
@@ -611,7 +632,7 @@ const Checkout = () => {
           (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
           0
         );
-        const totalAmount = currency === 'GBP' ? sellerSubtotal * 0.00048 : sellerSubtotal;
+        const totalAmount = currency === 'GBP' ? sellerSubtotal * conversionRateNgnToGbp : sellerSubtotal;
 
         const payload = {
           orderId: sellerOrderId,
@@ -675,6 +696,7 @@ const Checkout = () => {
         responseData: err.response?.data,
         stack: err.stack,
       });
+      console.log('Logging to Sentry:', err);
       toast.warn('Order placed successfully, but failed to notify some sellers. They may receive notifications later.', {
         position: 'top-right',
         autoClose: 5000,
@@ -705,14 +727,14 @@ const Checkout = () => {
           return;
         }
         if (belowMinimumPrice) {
-          toast.error(`Total amount must be at least <PriceFormatter price={minimumPurchase} /> to proceed.`, { position: 'top-right', autoClose: 3000 });
+          toast.error(`Total amount must be at least ₦${minimumPurchase.toLocaleString('en-NG')} to proceed.`, { position: 'top-right', autoClose: 3000 });
           return;
         }
 
-        setCurrentStep(2); // Move to Payment step
         console.log('Payment data:', paymentData);
         if (!paymentData || (!paymentData.id && !paymentData.reference)) {
           console.warn('Invalid payment data:', paymentData);
+          console.log('Logging to Sentry:', new Error('Invalid payment data received'));
         }
 
         const userId = auth.currentUser?.uid || 'anonymous';
@@ -765,6 +787,16 @@ const Checkout = () => {
             sellerId: Object.keys(sellers)[index],
           }));
 
+          console.log(
+            'Seller wallets before update:',
+            sellerWallets.map((wallet) => ({
+              sellerId: wallet.sellerId,
+              exists: wallet.exists,
+              pendingBalance: wallet.data?.pendingBalance || 0,
+              availableBalance: wallet.data?.availableBalance || 0,
+            }))
+          );
+
           const orders = [];
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
             const sellerItems = sellers[sellerId];
@@ -772,7 +804,7 @@ const Checkout = () => {
               (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
               0
             );
-            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * 0.00048 : sellerSubtotalNgn;
+            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
 
             const order = {
               id: orderId,
@@ -811,11 +843,21 @@ const Checkout = () => {
               },
               { merge: true }
             );
+
+            console.log(`Updated wallet for seller ${sellerId}:`, {
+              pendingBalance,
+              availableBalance: exists ? data?.availableBalance || 0 : 0,
+            });
           });
 
           orders.forEach(({ order, orderId }) => {
             const orderRef = doc(db, 'orders', orderId);
-            transaction.set(orderRef, order);
+            try {
+              transaction.set(orderRef, order);
+            } catch (err) {
+              console.error(`Error saving order ${orderId}:`, err);
+              throw err;
+            }
             lastOrder = order;
           });
 
@@ -849,12 +891,14 @@ const Checkout = () => {
             };
           })
         );
+        console.log('Seller wallets after update:', updatedWallets);
 
         if (auth.currentUser && formData.saveInfo) {
           const userDocRef = doc(db, 'users', auth.currentUser.uid);
           await setDoc(userDocRef, formData, { merge: true });
         }
 
+        // Send buyer confirmation email
         if (lastOrder && sellerOrderIds.length > 0) {
           await sendOrderConfirmationEmail({
             ...lastOrder,
@@ -870,11 +914,12 @@ const Checkout = () => {
           });
         }
 
+        // Send seller notification emails
         await sendSellerOrderNotifications(sellers, sellerOrderIds, currency, formData);
 
         await clearCart(auth.currentUser?.uid);
         setCart([]);
-        setCurrentStep(3); // Move to Confirmation step
+
         toast.success(
           <div>
             <strong>Payment Successful!</strong>
@@ -890,13 +935,13 @@ const Checkout = () => {
         navigate('/order-confirmation', { state: { order: { ...lastOrder, items: cart } } });
       } catch (err) {
         console.error('Checkout error:', err);
+        console.log('Logging to Sentry:', err);
         toast.error(err.message || 'Failed to place order. Please try again.', { position: 'top-right', autoClose: 3000 });
         if (debugMode) {
           toast.error(`Debug: ${err.message}`, { position: 'bottom-right', autoClose: 5000 });
         }
       } finally {
         setShowConfirmModal(false);
-        setIsProcessing(false);
       }
     },
     [cart, subtotalNgn, belowMinimumPrice, formData, totalAmount, navigate, totalItems, currency, debugMode, minimumPurchase]
@@ -919,6 +964,7 @@ const Checkout = () => {
           : item
       )
     );
+    console.log('Cart item image updated:', { itemId, url, direction: index > currentIndex ? 'right' : 'left' });
   };
 
   const handleImageLoad = (productId, isThumbnail) => {
@@ -927,6 +973,7 @@ const Checkout = () => {
       [productId]: isThumbnail ? prev[productId] : false,
     }));
     setImageErrors((prev) => ({ ...prev, [productId]: false }));
+    console.log(`Image ${isThumbnail ? 'thumbnail' : 'main'} loaded for productId: ${productId}`);
   };
 
   const handleImageError = (e, productId) => {
@@ -976,7 +1023,7 @@ const Checkout = () => {
           .image-zoom:hover { transform: scale(1.05); transition: transform 0.3s ease; }
         `}
       </style>
-      <AnimatedStepper steps={steps} currentStep={currentStep} />
+      <ProgressBar />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <i className="bx bx-cart text-blue-600" />
@@ -1215,6 +1262,15 @@ const Checkout = () => {
               <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="bx bx-package text-blue-600" />
                 Cart Items
+                <span
+                  className="ml-2 text-xs text-gray-500 cursor-help relative group"
+                  aria-label="Prices include tax, buyer protection, and handling fees."
+                >
+                  <i className="bx bx-info-circle" />
+                  <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-2 -top-10 left-0 w-48 z-10">
+                    Prices include tax, buyer protection, and handling fees.
+                  </span>
+                </span>
               </h2>
               {cart.map((item) => (
                 <div key={item.productId} className="flex items-start gap-4 mb-4 border-b pb-4">
@@ -1244,7 +1300,10 @@ const Checkout = () => {
                   <div className="flex-1">
                     <h3 className="text-base font-semibold text-gray-800">{item.product?.name || 'Unknown'}</h3>
                     <p className="text-sm text-gray-600">
-                      <PriceFormatter price={((item.product?.totalPrice || 0) * (item.quantity || 0))} />
+                      {currency}{' '}
+                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <label htmlFor={`quantity-${item.productId}`} className="text-sm text-gray-600">
@@ -1309,13 +1368,18 @@ const Checkout = () => {
                       {item.product?.name || 'Unknown'} (x{item.quantity || 0})
                     </span>
                     <span>
-                      <PriceFormatter price={((item.product?.totalPrice || 0) * (item.quantity || 0))} />
+                      {currency}{' '}
+                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 ))}
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span><PriceFormatter price={subtotalNgn} /></span>
+                  <span>
+                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
@@ -1323,12 +1387,14 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
-                  <span><PriceFormatter price={subtotalNgn} /></span>
+                  <span>
+                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is <PriceFormatter price={minimumPurchase} /> to checkout.
+                  ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -1359,68 +1425,65 @@ const Checkout = () => {
                     <strong>Country:</strong> {formData.country || 'Not provided'}
                   </p>
                 </div>
-                {formData.country === 'United Kingdom' ? (
-                  <Elements stripe={stripePromise}>
-                    <StripeCheckoutForm
-                      totalPrice={totalAmount}
-                      formData={formData}
-                      onSuccess={handlePaymentSuccess}
-                      onCancel={handleCancel}
-                      currency={currency}
-                      setIsProcessing={setIsProcessing}
-                    />
-                  </Elements>
-                ) : (
-                  <PaystackCheckout
-                    totalPrice={totalAmount}
-                    formData={formData}
-                    onSuccess={handlePaymentSuccess}
-                    onCancel={handleCancel}
-                    currency={currency}
-                    setIsProcessing={setIsProcessing}
-                  />
-                )}
               </div>
-              <button
-                onClick={() => setShowConfirmModal(true)}
-                className={`mt-6 w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
-                  belowMinimumPrice || !formValidity.isValid || totalItems > 20 || isProcessing || isEmailSending
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-                disabled={belowMinimumPrice || !formValidity.isValid || totalItems > 20 || isProcessing || isEmailSending}
-                aria-label="Confirm Order"
-              >
-                {isProcessing || isEmailSending ? 'Processing...' : 'Confirm Order'}
-              </button>
-              {belowMinimumPrice && (
-                <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is <PriceFormatter price={minimumPurchase} /> to checkout.
-                </p>
+              {isAuthenticated && formValidity.isValid && cart.length > 0 && !belowMinimumPrice && (
+                <div className="mt-6">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="bx bx-credit-card text-blue-600" />
+                    Payment Details
+                  </h2>
+                  {formData.country === 'United Kingdom' ? (
+                    <Elements stripe={stripePromise}>
+                      <StripeCheckoutForm
+                        totalPrice={subtotalNgn * conversionRateNgnToGbp}
+                        formData={formData}
+                        onSuccess={(paymentIntent) => setShowConfirmModal(true)}
+                        onCancel={handleCancel}
+                        currency={currency}
+                        setIsProcessing={setIsProcessing}
+                      />
+                    </Elements>
+                  ) : formData.country === 'Nigeria' ? (
+                    <PaystackCheckout
+                      email={formData.email}
+                      amount={subtotalNgn * 100}
+                      onSuccess={(paymentData) => setShowConfirmModal(true)}
+                      onClose={handleCancel}
+                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}
+                      buttonText="Pay Now"
+                      className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
+                        !formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-blue-900 hover:bg-blue-800'
+                      }`}
+                      iconClass="bx bx-cart mr-2"
+                      sellerId={cart[0]?.product?.sellerId || 'default-seller-id'}
+                    />
+                  ) : (
+                    <p className="text-red-600 text-sm">Please select a valid country.</p>
+                  )}
+                </div>
               )}
-              {totalItems > 20 && (
-                <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Maximum basket size is 20 items.
-                </p>
+              {!isAuthenticated && (
+                <div className="mt-4 text-sm text-red-600">
+                  Please{' '}
+                  <Link to="/login" className="text-blue-600 hover:underline">
+                    log in
+                  </Link>{' '}
+                  to proceed with payment.
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
-      <ConfirmationModal
-        isOpen={showConfirmModal}
-        onConfirm={() => {
-          if (formData.country === 'United Kingdom') {
-            const stripeForm = document.querySelector('form');
-            if (stripeForm) {
-              stripeForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-            }
-          } else {
-            handlePaymentSuccess({ reference: `paystack-${Date.now()}` });
-          }
-        }}
-        onCancel={handleCancel}
-      />
+      <ConfirmationModal isOpen={showConfirmModal} onConfirm={handlePaymentSuccess} onCancel={handleCancel} />
+        {debugMode && (
+          <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+            <h3 className="font-bold mb-2">Debug Logs</h3>
+            <pre>{JSON.stringify({ cart, formData, formErrors, imageLoading, imageErrors, minimumPurchase }, null, 2)}</pre>
+          </div>
+        )}
     </div>
   );
 };

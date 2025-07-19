@@ -43,6 +43,8 @@ export default function AdminPayoutMonitor() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [otpInputs, setOtpInputs] = useState({}); // Track OTP input for each transaction
+  const [otpLoading, setOtpLoading] = useState({}); // Track loading state for OTP submission
 
   useEffect(() => {
     const handleAuthChange = (user) => {
@@ -60,12 +62,16 @@ export default function AdminPayoutMonitor() {
       return;
     }
 
-    const q = query(collection(db, 'transactions'), where('status', '==', 'Pending'), where('type', '==', 'Withdrawal'));
+    // Include both Pending and pending_otp transactions
+    const q = query(
+      collection(db, 'transactions'),
+      where('type', '==', 'Withdrawal'),
+      where('status', 'in', ['Pending', 'pending_otp'])
+    );
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const transactionData = [];
       for (const docSnapshot of snapshot.docs) {
         const txn = { id: docSnapshot.id, ...docSnapshot.data() };
-        // Fetch seller details from sellers collection
         const sellerRef = doc(db, 'sellers', txn.userId);
         try {
           const sellerSnap = await getDoc(sellerRef);
@@ -73,7 +79,6 @@ export default function AdminPayoutMonitor() {
             const sellerData = sellerSnap.data();
             txn.sellerName = sellerData.fullName || 'Unknown';
             txn.accountNumber = sellerData.accountNumber || 'N/A';
-            // Fetch bank name from banks collection using bankCode
             if (sellerData.bankCode) {
               const bankRef = doc(db, 'banks', sellerData.bankCode);
               const bankSnap = await getDoc(bankRef);
@@ -109,11 +114,11 @@ export default function AdminPayoutMonitor() {
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
     try {
-      console.log('Attempting approval for amount:', amount);
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
       const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId });
       addAlert(response.data.message, 'success');
-      console.log('Approval response:', response.data);
+      // Store transferCode for OTP input
+      setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
     } catch (error) {
       const errorMsg = error.response?.data?.details || 'Approval failed. Please check your Paystack balance.';
       addAlert(errorMsg, 'error');
@@ -133,6 +138,31 @@ export default function AdminPayoutMonitor() {
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (transactionId) => {
+    setOtpLoading((prev) => ({ ...prev, [transactionId]: true }));
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const { otp, transferCode } = otpInputs[transactionId] || {};
+      if (!otp || !transferCode) {
+        addAlert('Missing OTP or transfer code', 'error');
+        return;
+      }
+      const response = await axios.post(`${BACKEND_URL}/verify-transfer-otp`, { transactionId, otp });
+      addAlert(response.data.message, 'success');
+      // Clear OTP input after success
+      setOtpInputs((prev) => {
+        const newInputs = { ...prev };
+        delete newInputs[transactionId];
+        return newInputs;
+      });
+    } catch (error) {
+      const errorMsg = error.response?.data?.details || 'OTP verification failed';
+      addAlert(errorMsg, 'error');
+    } finally {
+      setOtpLoading((prev) => ({ ...prev, [transactionId]: false }));
     }
   };
 
@@ -172,28 +202,62 @@ export default function AdminPayoutMonitor() {
                   <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Date:</span> {new Date(txn.createdAt?.toDate()).toLocaleString()}
                   </p>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => handleApprove(txn.id, txn.userId, txn.amount)}
-                      className={`py-2 px-4 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center gap-2 ${
-                        loading ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      disabled={loading}
-                    >
-                      <i className="bx bx-check"></i>
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(txn.id, txn.userId)}
-                      className={`py-2 px-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2 ${
-                        loading ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      disabled={loading}
-                    >
-                      <i className="bx bx-x"></i>
-                      Reject
-                    </button>
-                  </div>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Status:</span> {txn.status}
+                  </p>
+                  {txn.status === 'Pending' && (
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={() => handleApprove(txn.id, txn.userId, txn.amount)}
+                        className={`py-2 px-4 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center gap-2 ${
+                          loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={loading}
+                      >
+                        <i className="bx bx-check"></i>
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(txn.id, txn.userId)}
+                        className={`py-2 px-4 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2 ${
+                          loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={loading}
+                      >
+                        <i className="bx bx-x"></i>
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                  {txn.status === 'pending_otp' && (
+                    <div className="mt-4">
+                      <p className="text-gray-700 dark:text-gray-300">Enter OTP sent to your email:</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={otpInputs[txn.id]?.otp || ''}
+                          onChange={(e) =>
+                            setOtpInputs((prev) => ({
+                              ...prev,
+                              [txn.id]: { ...prev[txn.id], otp: e.target.value },
+                            }))
+                          }
+                          placeholder="Enter OTP"
+                          className="p-2 border rounded-lg dark:bg-gray-600 dark:text-gray-200"
+                        />
+                        <button
+                          onClick={() => handleOtpSubmit(txn.id)}
+                          className={`py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2 ${
+                            otpLoading[txn.id] ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={otpLoading[txn.id]}
+                        >
+                          <i className="bx bx-send"></i>
+                          Submit OTP
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

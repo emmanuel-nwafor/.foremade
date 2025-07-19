@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
@@ -11,7 +10,7 @@ import {
   setPersistence,
   browserSessionPersistence,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
@@ -72,20 +71,37 @@ export default function Login() {
     try {
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
+      let userData;
+
       if (userSnapshot.exists()) {
-        const userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.removeItem('socialEmail'); // Cleanup
-        const firstName = userData.name.split(' ')[0];
-        setSuccessMessage(`Welcome back, ${firstName}!`);
-        setTimeout(() => {
-          setLoadingGoogle(false);
-          setLoadingFacebook(false);
-          navigate('/profile');
-        }, 2000);
+        userData = userSnapshot.data();
       } else {
-        setEmailError('No account found. Please sign up.');
+        // Create user document for social login if it doesn't exist
+        const adminEmails = ['echinecherem729@gmail.com', 'emitexc.e.o1@gmail.com'];
+        const role = adminEmails.includes(user.email) ? 'Admin' : 'Buyer';
+        const displayName = user.displayName || '';
+        const [firstName, lastName] = displayName.split(' ').length > 1 ? displayName.split(' ') : [displayName, ''];
+        userData = {
+          uid: user.uid,
+          email: user.email,
+          firstName: firstName || user.email.split('@')[0],
+          lastName: lastName || '',
+          username: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000),
+          phoneNumber: user.phoneNumber || '',
+          role,
+        };
+        await setDoc(userDoc, userData);
       }
+
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.removeItem('socialEmail'); // Cleanup
+      const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
+      setSuccessMessage(`Welcome back, ${firstName}!`);
+      setTimeout(() => {
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
+        navigate(userData.role === 'Admin' ? '/admin-dashboard' : '/profile');
+      }, 2000);
     } catch (err) {
       setEmailError(getFriendlyErrorMessage(err));
       setLoadingGoogle(false);
@@ -132,11 +148,11 @@ export default function Login() {
         const userData = userSnapshot.data();
         localStorage.setItem('userData', JSON.stringify(userData));
         localStorage.removeItem('socialEmail'); // Cleanup
-        const firstName = userData.name.split(' ')[0];
+        const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
         setSuccessMessage(`Welcome, ${firstName}!`);
         setTimeout(() => {
           setLoadingEmail(false);
-          navigate('/profile');
+          navigate(userData.role === 'Admin' ? '/admin-dashboard' : '/profile');
         }, 2000);
       } else {
         setEmailError('No account found. Contact your admin.');

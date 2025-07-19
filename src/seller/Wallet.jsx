@@ -68,6 +68,7 @@ export default function Wallet() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(null);
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const pendingBalanceRef = useRef(0);
 
@@ -76,14 +77,17 @@ export default function Wallet() {
       navigate('/login');
       return;
     }
-    const fetchWallet = async () => {
+    
+    // Fetch wallet and onboarding status
+    const fetchWalletAndStatus = async () => {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+      const userRef = doc(db, 'users', auth.currentUser.uid);
       try {
+        // Fetch wallet
         const walletSnap = await getDoc(walletRef);
         console.log(`Fetching wallet for ${auth.currentUser.uid}:`, walletSnap.exists() ? walletSnap.data() : 'No wallet');
         if (!walletSnap.exists()) {
           console.log(`Creating wallet for ${auth.currentUser.uid}`);
-          const userRef = doc(db, 'users', auth.currentUser.uid);
           const userSnap = await getDoc(userRef);
           const accountDetails = userSnap.exists() && userSnap.data().accountDetails ? userSnap.data().accountDetails : {
             accountNumber: `MOCK${Math.random().toString().slice(2, 12)}`,
@@ -97,15 +101,23 @@ export default function Wallet() {
             accountDetails,
           });
         }
+
+        // Fetch onboarding status
+        const userSnap = await getDoc(userRef);
+        const onboarded = userSnap.exists() && userSnap.data().isOnboarded === true;
+        console.log(`Seller ${auth.currentUser.uid} onboarding status: ${onboarded ? 'onboarded' : 'not onboarded'}`);
+        setIsOnboarded(onboarded);
+
         setLoading(false);
       } catch (err) {
-        console.error(`Error fetching wallet for ${auth.currentUser.uid}:`, err);
-        setError('Failed to load wallet: ' + err.message);
+        console.error(`Error fetching wallet or status for ${auth.currentUser.uid}:`, err);
+        setError('Failed to load wallet or status: ' + err.message);
         setLoading(false);
       }
     };
-    fetchWallet();
+    fetchWalletAndStatus();
 
+    // Wallet snapshot listener
     const walletRef = doc(db, 'wallets', auth.currentUser.uid);
     const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -125,6 +137,7 @@ export default function Wallet() {
       setError('Failed to update wallet: ' + err.message);
     });
 
+    // Transaction snapshot listener
     const transactionQuery = query(
       collection(db, 'transactions'),
       where('userId', '==', auth.currentUser.uid),
@@ -169,6 +182,15 @@ export default function Wallet() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Check onboarding status
+    if (!isOnboarded) {
+      console.log(`Withdrawal blocked: Seller ${auth.currentUser.uid} is not onboarded`);
+      setIsModalOpen(true);
+      setLoading(false);
+      return;
+    }
+
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       setError('Enter a valid amount.');
@@ -271,7 +293,7 @@ export default function Wallet() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <div className="flex flex-1">
-        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg" onClick={() => {}} aria-label="Open sidebar">
+        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" onClick={() => {}} aria-label="Open sidebar">
           <i className="bx bx-menu text-xl"></i>
         </button>
         <div className="hidden md:block md:w-64 lg:w-72 bg-gray-50 transition-all duration-300">
@@ -284,15 +306,29 @@ export default function Wallet() {
                 <WalletIcon className="w-7 h-7 text-blue-600" />
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">My Wallet</h1>
               </div>
-              <CurrencyConverter />
+              <div className="flex items-center gap-4">
+                <CurrencyConverter />
+                {isOnboarded !== null && (
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      isOnboarded
+                        ? 'text-green-600 bg-green-100'
+                        : 'text-red-600 bg-red-100'
+                    }`}
+                  >
+                    {isOnboarded ? 'status: onboarded' : 'please onboard'}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 sm:p-5 text-white">
+            <div className="grid grid-cols-1 sm:grid-cols-2 Pragmatic Play Demo Slots
+2 gap-4 mb-6">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 sm:p-5 text-white shadow-md">
                 <span className="text-xs sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
                 <h3 className="text-lg sm:text-xl font-semibold mt-2">Available Balance</h3>
                 <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={balance} /></p>
               </div>
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 sm:p-5 text-white">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 sm:p-5 text-white shadow-md">
                 <span className="text-xs sm:text-sm font-light">Pending Transactions</span>
                 <h3 className="text-lg sm:text-xl font-semibold mt-2">Pending Balance</h3>
                 <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={pendingBalance} /></p>
@@ -310,7 +346,7 @@ export default function Wallet() {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 p-2 w-full border border-blue-200 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-200 text-base"
+                  className="mt-1 p-2 w-full border border-blue-200 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-200 text-base transition"
                   required
                   aria-label="Withdrawal Amount"
                   min="1"
@@ -334,6 +370,30 @@ export default function Wallet() {
                 <Line data={chartData} options={chartOptions} />
               </div>
             </div>
+            {isModalOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Required</h3>
+                  <p className="text-gray-600 mb-4">Please onboard as a seller to withdraw funds.</p>
+                  <div className="flex justify-end gap-4">
+                    <button
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                      aria-label="Close modal"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => navigate('/seller-onboarding')}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      aria-label="Go to onboarding"
+                    >
+                      Onboard Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

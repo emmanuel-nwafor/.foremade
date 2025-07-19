@@ -45,9 +45,10 @@ export default function SellerOnboarding() {
           navigate('/login');
           return;
         }
-        const sellerRef = doc(db, 'sellers', auth.currentUser.uid);
-        const sellerSnap = await getDoc(sellerRef);
-        if (sellerSnap.exists()) {
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().isOnboarded) {
+          console.log(`User ${auth.currentUser.uid} already onboarded`);
           setShowModal(true);
           return;
         }
@@ -56,6 +57,7 @@ export default function SellerOnboarding() {
           setBanks(response.data);
         }
       } catch (err) {
+        console.error(`Initialization error for ${auth.currentUser.uid}:`, err);
         setError('Initialization error: ' + err.message);
       } finally {
         setLoading(false);
@@ -68,29 +70,6 @@ export default function SellerOnboarding() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const createRecipient = async (bankCode, accountNumber, name) => {
-    const response = await axios.post(
-      'https://api.paystack.co/transferrecipient',
-      {
-        type: 'nuban',
-        name,
-        account_number: accountNumber,
-        bank_code: bankCode,
-        currency: 'NGN',
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-    if (!response.data.status) {
-      throw new Error('Failed to create transfer recipient');
-    }
-    return response.data.data.recipient_code;
   };
 
   const handleSubmit = async (e) => {
@@ -115,16 +94,12 @@ export default function SellerOnboarding() {
         bankName: formData.country === 'United Kingdom' ? formData.bankName : undefined,
         idNumber: formData.country === 'United Kingdom' ? formData.idNumber : undefined,
       };
+      console.log(`Submitting onboarding for ${auth.currentUser.uid}:`, payload);
       const response = await axios.post('https://foremade-backend.onrender.com/onboard-seller', payload);
       if (response.data.error) throw new Error(response.data.error);
 
-      let recipientCode = null;
-      if (formData.country === 'Nigeria') {
-        recipientCode = await createRecipient(formData.bankCode, formData.accountNumber, formData.fullName);
-      }
-
       const currentDate = new Date().toISOString();
-      await setDoc(doc(db, 'sellers', auth.currentUser.uid), {
+      const sellerData = {
         fullName: formData.fullName,
         country: formData.country,
         idNumber: formData.country === 'United Kingdom' ? formData.idNumber : '',
@@ -133,14 +108,26 @@ export default function SellerOnboarding() {
         accountNumber: formData.country === 'Nigeria' ? formData.accountNumber : '',
         iban: formData.country === 'United Kingdom' ? formData.iban : '',
         email: formData.country === 'United Kingdom' ? formData.email : '',
-        paystackRecipientCode: recipientCode || '',
+        paystackRecipientCode: response.data.recipientCode || '',
         createdAt: currentDate,
+        updatedAt: currentDate,
+      };
+
+      // Save to sellers collection
+      await setDoc(doc(db, 'sellers', auth.currentUser.uid), sellerData, { merge: true });
+
+      // Update user role and onboarding status
+      await setDoc(doc(db, 'users', auth.currentUser.uid), {
+        role: 'seller',
+        isOnboarded: true,
         updatedAt: currentDate,
       }, { merge: true });
 
+      console.log(`Onboarding successful for ${auth.currentUser.uid}, role set to seller`);
       alert('Onboarding successful!');
-      navigate('/seller-dashboard');
+      navigate('/smile');
     } catch (error) {
+      console.error(`Onboarding failed for ${auth.currentUser.uid}:`, error);
       setError('Failed to onboard: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
@@ -180,18 +167,18 @@ export default function SellerOnboarding() {
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
       <SellerSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-200">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
               <i className="bx bxs-bank text-blue-500 mr-2"></i>
               Seller Onboarding
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Set up your seller account to start selling.
+              Set up your seller account to start selling on FOREMADE.
             </p>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Full Name <span className="text-red-500">*</span>
@@ -202,10 +189,12 @@ export default function SellerOnboarding() {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                  className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                     errors.fullName ? 'border-red-500' : ''
                   }`}
                   disabled={loading}
+                  placeholder="e.g., John Doe"
+                  aria-label="Full Name"
                 />
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bx bx-user"></i>
@@ -221,8 +210,9 @@ export default function SellerOnboarding() {
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
-                className="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                className="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                 disabled={loading}
+                aria-label="Country"
               >
                 <option value="Nigeria">Nigeria</option>
                 <option value="United Kingdom">UK</option>
@@ -238,10 +228,11 @@ export default function SellerOnboarding() {
                     name="bankCode"
                     value={formData.bankCode}
                     onChange={handleChange}
-                    className={`mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                    className={`mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                       errors.bankCode ? 'border-red-500' : ''
                     }`}
                     disabled={loading}
+                    aria-label="Bank Name"
                   >
                     <option value="">Select a bank</option>
                     {banks.map((bank) => (
@@ -263,10 +254,11 @@ export default function SellerOnboarding() {
                       value={formData.accountNumber}
                       onChange={handleChange}
                       placeholder="e.g., 0123456789"
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                         errors.accountNumber ? 'border-red-500' : ''
                       }`}
                       disabled={loading}
+                      aria-label="Account Number"
                     />
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <i className="bx bx-bank"></i>
@@ -288,10 +280,12 @@ export default function SellerOnboarding() {
                       name="idNumber"
                       value={formData.idNumber}
                       onChange={handleChange}
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      placeholder="e.g., AB123456C"
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                         errors.idNumber ? 'border-red-500' : ''
                       }`}
                       disabled={loading}
+                      aria-label="ID Number"
                     />
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <i className="bx bx-id-card"></i>
@@ -310,10 +304,11 @@ export default function SellerOnboarding() {
                       value={formData.bankName}
                       onChange={handleChange}
                       placeholder="e.g., Barclays"
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                         errors.bankName ? 'border-red-500' : ''
                       }`}
                       disabled={loading}
+                      aria-label="Bank Name"
                     />
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <i className="bx bx-bank"></i>
@@ -332,10 +327,11 @@ export default function SellerOnboarding() {
                       value={formData.iban}
                       onChange={handleChange}
                       placeholder="e.g., GB33BUKB20201555555555"
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                         errors.iban ? 'border-red-500' : ''
                       }`}
                       disabled={loading}
+                      aria-label="IBAN"
                     />
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <i className="bx bx-credit-card"></i>
@@ -354,10 +350,11 @@ export default function SellerOnboarding() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="e.g., seller@example.com"
-                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      className={`w-full p-3 pl-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
                         errors.email ? 'border-red-500' : ''
                       }`}
                       disabled={loading}
+                      aria-label="Email"
                     />
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <i className="bx bx-envelope"></i>
@@ -373,9 +370,19 @@ export default function SellerOnboarding() {
                 loading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               disabled={loading}
+              aria-label="Complete Onboarding"
             >
-              <i className="bx bx-check"></i>
-              Complete Onboarding
+              {loading ? (
+                <>
+                  <i className="bx bx-loader bx-spin"></i>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <i className="bx bx-check"></i>
+                  Complete Onboarding
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -387,14 +394,16 @@ export default function SellerOnboarding() {
             <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your dashboard?</p>
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => navigate('/seller-dashboard')}
-                className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                onClick={() => navigate('/smile')}
+                className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+                aria-label="Go to Dashboard"
               >
                 Yes
               </button>
               <button
                 onClick={() => setShowModal(false)}
-                className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition duration-200"
+                aria-label="Close Modal"
               >
                 No
               </button>

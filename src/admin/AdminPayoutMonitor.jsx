@@ -43,7 +43,7 @@ export default function AdminPayoutMonitor() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [otpInputs, setOtpInputs] = useState({}); // Track OTP input for each transaction
+  const [otpInputs, setOtpInputs] = useState({}); // Track OTP input and transferCode for each transaction
   const [otpLoading, setOtpLoading] = useState({}); // Track loading state for OTP submission
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function AdminPayoutMonitor() {
       unsubscribeAuth();
       unsubscribe && unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, addAlert]);
 
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
@@ -117,8 +117,9 @@ export default function AdminPayoutMonitor() {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
       const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId });
       addAlert(response.data.message, 'success');
-      // Store transferCode for OTP input
-      setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
+      if (response.data.transferCode) {
+        setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
+      }
     } catch (error) {
       const errorMsg = error.response?.data?.details || 'Approval failed. Please check your Paystack balance.';
       addAlert(errorMsg, 'error');
@@ -136,6 +137,7 @@ export default function AdminPayoutMonitor() {
       addAlert(response.data.message, 'success');
     } catch (error) {
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');
+      console.error('Rejection error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -145,14 +147,13 @@ export default function AdminPayoutMonitor() {
     setOtpLoading((prev) => ({ ...prev, [transactionId]: true }));
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const { otp, transferCode } = otpInputs[transactionId] || {};
-      if (!otp || !transferCode) {
-        addAlert('Missing OTP or transfer code', 'error');
+      const { otp } = otpInputs[transactionId] || {};
+      if (!otp) {
+        addAlert('Missing OTP', 'error');
         return;
       }
       const response = await axios.post(`${BACKEND_URL}/verify-transfer-otp`, { transactionId, otp });
       addAlert(response.data.message, 'success');
-      // Clear OTP input after success
       setOtpInputs((prev) => {
         const newInputs = { ...prev };
         delete newInputs[transactionId];
@@ -161,6 +162,23 @@ export default function AdminPayoutMonitor() {
     } catch (error) {
       const errorMsg = error.response?.data?.details || 'OTP verification failed';
       addAlert(errorMsg, 'error');
+      console.error('OTP verification error:', error.response?.data || error.message);
+    } finally {
+      setOtpLoading((prev) => ({ ...prev, [transactionId]: false }));
+    }
+  };
+
+  const handleResendOtp = async (transactionId, sellerId) => {
+    setOtpLoading((prev) => ({ ...prev, [transactionId]: true }));
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const response = await axios.post(`${BACKEND_URL}/resend-otp`, { transactionId, sellerId });
+      addAlert(response.data.message, 'success');
+      setOtpInputs((prev) => ({ ...prev, [transactionId]: { transferCode: response.data.transferCode, otp: '' } }));
+    } catch (error) {
+      const errorMsg = error.response?.data?.details || 'Failed to resend OTP';
+      addAlert(errorMsg, 'error');
+      console.error('Resend OTP error:', error.response?.data || error.message);
     } finally {
       setOtpLoading((prev) => ({ ...prev, [transactionId]: false }));
     }
@@ -254,6 +272,16 @@ export default function AdminPayoutMonitor() {
                         >
                           <i className="bx bx-send"></i>
                           Submit OTP
+                        </button>
+                        <button
+                          onClick={() => handleResendOtp(txn.id, txn.userId)}
+                          className={`py-2 px-4 bg-yellow-600 text-white rounded-lg shadow-md hover:bg-yellow-700 flex items-center gap-2 ${
+                            otpLoading[txn.id] ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={otpLoading[txn.id]}
+                        >
+                          <i className="bx bx-refresh"></i>
+                          Resend OTP
                         </button>
                       </div>
                     </div>

@@ -5,12 +5,12 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, col
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
-import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import CurrencyConverter from '/src/components/layout/CurrencyConverter';
 import PriceFormatter from '/src/components/layout/PriceFormatter';
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
+ChartJS.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 const handleCheckout = async (sellerId, productPrice, totalAmount) => {
   console.log(`Checkout for seller ${sellerId}: price ₦${productPrice}, total ₦${totalAmount}`);
@@ -83,7 +83,6 @@ export default function Wallet() {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       const userRef = doc(db, 'users', auth.currentUser.uid);
       try {
-        // Fetch wallet
         const walletSnap = await getDoc(walletRef);
         console.log(`Fetching wallet for ${auth.currentUser.uid}:`, walletSnap.exists() ? walletSnap.data() : 'No wallet');
         if (!walletSnap.exists()) {
@@ -102,7 +101,6 @@ export default function Wallet() {
           });
         }
 
-        // Fetch onboarding status
         const userSnap = await getDoc(userRef);
         const onboarded = userSnap.exists() && userSnap.data().isOnboarded === true;
         console.log(`Seller ${auth.currentUser.uid} onboarding status: ${onboarded ? 'onboarded' : 'not onboarded'}`);
@@ -140,13 +138,19 @@ export default function Wallet() {
     // Transaction snapshot listener
     const transactionQuery = query(
       collection(db, 'transactions'),
-      where('userId', '==', auth.currentUser.uid),
+      where('sellerId', '==', auth.currentUser.uid),
       where('type', '==', 'Withdrawal')
     );
-    const unsubscribeTransactions = onSnapshot(transactionQuery, () => {}, (err) => {
-      console.error('Transaction snapshot error:', err);
-      setError('Failed to fetch transactions: ' + err.message);
-    });
+    const unsubscribeTransactions = onSnapshot(
+      transactionQuery,
+      (snapshot) => {
+        console.log(`Received ${snapshot.docs.length} withdrawal transactions for seller ${auth.currentUser.uid}`);
+      },
+      (err) => {
+        console.error('Transaction snapshot error:', err);
+        setError(`Failed to fetch transactions: ${err.message}`);
+      }
+    );
 
     return () => {
       unsubscribeWallet();
@@ -183,7 +187,6 @@ export default function Wallet() {
     setError('');
     setLoading(true);
 
-    // Check onboarding status
     if (!isOnboarded) {
       console.log(`Withdrawal blocked: Seller ${auth.currentUser.uid} is not onboarded`);
       setIsModalOpen(true);
@@ -237,27 +240,14 @@ export default function Wallet() {
   };
 
   const updateChartData = (availableBalance = balance, pendingBalance = 0) => {
-    const labels = ['Current State'];
     setChartData({
-      labels,
+      labels: ['Available Balance', 'Pending Balance'],
       datasets: [
         {
-          label: 'Available Balance',
-          data: [availableBalance],
-          fill: false,
-          backgroundColor: '#3490dc',
-          borderColor: '#2563EB',
-          tension: 0.4,
-          borderWidth: 2,
-        },
-        {
-          label: 'Pending Balance',
-          data: [pendingBalance],
-          fill: false,
-          backgroundColor: '#f6ad55',
-          borderColor: '#c08640',
-          tension: 0.4,
-          borderWidth: 2,
+          data: [availableBalance, pendingBalance],
+          backgroundColor: ['#2563EB', '#c08640'],
+          borderColor: ['#2563EB', '#c08640'],
+          borderWidth: 1,
         },
       ],
     });
@@ -266,14 +256,15 @@ export default function Wallet() {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'Amount' } },
-      x: { title: { display: true, text: 'Wallet Overview' } }
-    },
     plugins: {
-      legend: { position: 'top' },
-      title: { display: true, text: 'Wallet Wave Statistics' }
-    }
+      legend: { position: 'top', labels: { font: { size: 12 } } },
+      title: { display: true, text: 'Wallet Balance Overview', font: { size: 16 } },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.label}: ₦${context.raw.toFixed(2)}`
+        }
+      }
+    },
   };
 
   if (loading) {
@@ -291,110 +282,122 @@ export default function Wallet() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="flex flex-1">
-        <button className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition" onClick={() => {}} aria-label="Open sidebar">
-          <i className="bx bx-menu text-xl"></i>
-        </button>
-        <div className="hidden md:block md:w-64 lg:w-72 bg-gray-50 transition-all duration-300">
-          <SellerSidebar />
-        </div>
-        <div className="flex-1 p-4 sm:p-6 md:p-8">
-          <div className="max-w-6xl mx-auto w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-              <div className="flex items-center gap-3">
-                <WalletIcon className="w-7 h-7 text-blue-600" />
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">My Wallet</h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <CurrencyConverter />
-                {isOnboarded !== null && (
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      isOnboarded
-                        ? 'text-green-600 bg-green-100'
-                        : 'text-red-600 bg-red-100'
-                    }`}
-                  >
-                    {isOnboarded ? 'status: onboarded' : 'please onboard'}
-                  </span>
-                )}
-              </div>
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+      <SellerSidebar />
+      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-6 md:p-8 lg:p-10">
+        <div className="max-w-4xl mx-auto w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <WalletIcon className="w-8 h-8 text-blue-600" />
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">My Wallet</h1>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 Pragmatic Play Demo Slots
-2 gap-4 mb-6">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 sm:p-5 text-white shadow-md">
-                <span className="text-xs sm:text-sm font-light">Wallet ID: {auth.currentUser.uid}</span>
-                <h3 className="text-lg sm:text-xl font-semibold mt-2">Available Balance</h3>
-                <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={balance} /></p>
-              </div>
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 sm:p-5 text-white shadow-md">
-                <span className="text-xs sm:text-sm font-light">Pending Transactions</span>
-                <h3 className="text-lg sm:text-xl font-semibold mt-2">Pending Balance</h3>
-                <p className="text-2xl sm:text-3xl font-bold mt-2 bg-white p-1 rounded-lg"><PriceFormatter price={pendingBalance} /></p>
-              </div>
+            <div className="flex items-center gap-4">
+              <CurrencyConverter />
+              {isOnboarded !== null && (
+                <span
+                  className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    isOnboarded
+                      ? 'text-green-600 bg-green-100'
+                      : 'text-red-600 bg-red-100'
+                  }`}
+                >
+                  {isOnboarded ? 'Status: Onboarded' : 'Please Onboard'}
+                </span>
+              )}
             </div>
-            <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <ArrowDownCircle className="w-5 h-5 text-green-600" />
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Request Withdrawal</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
+              <div className="absolute top-2 right-2 opacity-30">
+                <WalletIcon className="w-16 h-16" />
               </div>
-              <div className="mb-4">
-                <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount</label>
+              <span className="text-xs font-light">Wallet ID: {auth.currentUser.uid}</span>
+              <h3 className="text-lg font-semibold mt-2">Available Balance</h3>
+              <p className="text-2xl font-bold mt-2 bg-white p-2 rounded-lg text-blue-900">
+                <PriceFormatter price={balance} />
+              </p>
+            </div>
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
+              <div className="absolute top-2 right-2 opacity-30">
+                <WalletIcon className="w-16 h-16" />
+              </div>
+              <span className="text-xs font-light">Pending Transactions</span>
+              <h3 className="text-lg font-semibold mt-2">Pending Balance</h3>
+              <p className="text-2xl font-bold mt-2 bg-white p-2 rounded-lg text-orange-900">
+                <PriceFormatter price={pendingBalance} />
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleWithdraw} className="bg-white border border-gray-100 rounded-2xl shadow-md p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowDownCircle className="w-5 h-5 text-green-600" />
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Request Withdrawal</h2>
+            </div>
+            <div className="mb-4">
+              <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-1">Withdrawal Amount</label>
+              <div className="relative">
                 <input
                   id="withdraw-amount"
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 p-2 w-full border border-blue-200 rounded focus:outline-blue-400 focus:ring-2 focus:ring-blue-200 text-base transition"
+                  className="p-3 pl-10 w-full border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-base transition"
                   required
                   aria-label="Withdrawal Amount"
                   min="1"
                   step="any"
                 />
-                <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: 1. Withdrawals subject to admin approval, may take up to 24 hours.</p>
+                <i className="bx bx-money absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
               </div>
-              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-              <button
-                type="submit"
-                className={`w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={loading}
-                aria-label="Request Withdrawal"
-              >
-                Request Withdrawal
-              </button>
-            </form>
-            <div className="mt-6 h-64 sm:h-80 bg-white p-4 rounded-lg shadow">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Statistics</h2>
-              <div className="h-full">
-                <Line data={chartData} options={chartOptions} />
-              </div>
+              <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: ₦1. Withdrawals subject to admin approval, may take up to 24 hours.</p>
             </div>
-            {isModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Required</h3>
-                  <p className="text-gray-600 mb-4">Please onboard as a seller to withdraw funds.</p>
-                  <div className="flex justify-end gap-4">
-                    <button
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                      aria-label="Close modal"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => navigate('/seller-onboarding')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      aria-label="Go to onboarding"
-                    >
-                      Onboard Now
-                    </button>
-                  </div>
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            <button
+              type="submit"
+              className={`w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition flex items-center justify-center gap-2 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={loading}
+              aria-label="Request Withdrawal"
+            >
+              <i className="bx bx-wallet"></i>
+              Request Withdrawal
+              {loading && <i className="bx bx-loader-alt animate-spin"></i>}
+            </button>
+          </form>
+          <div className="mt-6 bg-white p-4 sm:p-6 rounded-lg shadow-md">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i className="bx bx-wallet text-blue-600"></i>
+              Wallet Balance
+            </h2>
+            <div className="h-64 sm:h-80">
+              <Doughnut data={chartData} options={chartOptions} />
+            </div>
+          </div>
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Required</h3>
+                <p className="text-gray-600 mb-4">Please onboard as a seller to withdraw funds.</p>
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                    aria-label="Close modal"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => navigate('/seller-onboarding')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    aria-label="Go to onboarding"
+                  >
+                    Onboard Now
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

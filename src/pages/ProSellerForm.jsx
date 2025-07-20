@@ -3,6 +3,7 @@ import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 const initialFormData = {
   businessName: '',
@@ -167,6 +168,10 @@ const ProSellerForm = () => {
       if (!response.ok) {
         throw new Error(result.message || 'Submission failed');
       }
+      if (result.redirectUrl) {
+        window.location.href = result.redirectUrl;
+        return;
+      }
       addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
       setFormData(initialFormData);
       setCurrentStep(1);
@@ -198,14 +203,10 @@ const ProSellerForm = () => {
       });
       const data = await res.json();
       console.log('Reg number verification response:', data);
-      if (res.ok && data.businessName) {
-        if (data.businessName.trim().toLowerCase() === formData.businessName.trim().toLowerCase()) {
-          setFormData(prev => ({ ...prev, regVerified: true, regVerifying: false, regError: '' }));
-        } else {
-          setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: 'Business name does not match registration.' }));
-        }
+      if (res.ok && data.status === 'success' && data.data && data.data.isValid) {
+        setFormData(prev => ({ ...prev, regVerified: true, regVerifying: false, regError: '' }));
       } else {
-        setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: data.message || 'Verification failed.' }));
+        setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: (data.data && data.data.message) || data.message || 'Verification failed.' }));
       }
     } catch (err) {
       setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: 'Network or server error.' }));
@@ -416,7 +417,11 @@ const ProSellerForm = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <input type="checkbox" checked={formData.agree} onChange={e => handleInputChange('agree', e.target.checked)} />
-                <label className="text-sm text-gray-700">I agree to the Pro Seller Terms & Conditions <span className="text-red-500">*</span></label>
+                <label className="text-sm text-gray-700">
+                  I agree to the
+                  <Link to="/terms-conditions" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-800 ml-1">Pro Seller Terms & Conditions</Link>
+                  <span className="text-red-500">*</span>
+                </label>
                 {errors.agree && <p className="text-red-500 text-xs mt-1">{errors.agree}</p>}
               </div>
             </div>

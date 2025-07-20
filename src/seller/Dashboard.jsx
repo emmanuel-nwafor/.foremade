@@ -209,6 +209,9 @@ export default function Dashboard() {
             <Link to="/smile" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-700 text-white font-semibold shadow-sm hover:bg-gray-800 focus:outline-gray-400 focus:ring-2 focus:ring-gray-300 transition" title="Withdraw Funds">
               <Wallet className="w-5 h-5" /> Withdraw Funds
             </Link>
+            <Link to="/seller/product-bump" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
+              <Package className="w-5 h-5" /> Product Bump
+            </Link>
           </div>
           {/* Stats Cards - Responsive grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
@@ -255,6 +258,14 @@ export default function Dashboard() {
                   <Doughnut data={doughnutData} options={chartOptions} />
                 </div>
               </div>
+            </div>
+          </div>
+          {/* Analytics Section */}
+          <div className="mt-8">
+            <div className="flex justify-end mt-4">
+              <Link to="/seller/pro-analytics" className="inline-block px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold shadow">
+                See More Analytics
+              </Link>
             </div>
           </div>
         </div>

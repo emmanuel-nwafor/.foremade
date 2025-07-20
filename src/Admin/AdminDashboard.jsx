@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import AdminSidebar from './AdminSidebar';
+import AdminSidebar from '../Admin/AdminSidebar';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+import { toast } from 'react-toastify';
+import { auth } from '/src/firebase';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -11,6 +13,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, admins: 0, products: 0, approvedProducts: 0, rejectedProducts: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pendingProSellers, setPendingProSellers] = useState([]);
+  const [approvedProSellers, setApprovedProSellers] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -39,6 +44,61 @@ export default function AdminDashboard() {
 
     fetchStats();
   }, []);
+
+  // Fetch pending pro seller requests from backend API
+  const fetchPendingProSellers = async () => {
+    setPendingLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const idToken = await user.getIdToken();
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/admin/pro-seller-approvals`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setPendingProSellers(data.approvals || []);
+      } else {
+        toast.error(data.message || 'Failed to fetch pro seller requests');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to fetch pro seller requests');
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingProSellers();
+  }, []);
+
+  // Approve or reject a pro seller request
+  const handleApproveReject = async (proSellerId, approve) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const idToken = await user.getIdToken();
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/admin/approve-pro-seller`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ proSellerId, approve }),
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        toast.success(data.message || (approve ? 'Pro seller approved' : 'Pro seller rejected'));
+        fetchPendingProSellers();
+      } else {
+        toast.error(data.message || 'Action failed');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Action failed');
+    }
+  };
 
   // Bar Chart Data
   const barData = {
@@ -157,6 +217,43 @@ export default function AdminDashboard() {
                 <p className="text-2xl font-bold text-orange-600">{stats.rejectedProducts}</p>
               </div>
               <i className="bx bx-x-circle text-3xl text-orange-500"></i>
+            </div>
+          </div>
+          {/* Pro Seller Requests Section (API) */}
+          <div className="mb-10">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Pro Seller Requests</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 overflow-x-auto">
+              {pendingLoading ? (
+                <div className="text-gray-500">Loading...</div>
+              ) : pendingProSellers.length === 0 ? (
+                <div className="text-gray-500">No pending requests.</div>
+              ) : (
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 text-left">ProSeller ID</th>
+                      <th className="px-2 py-1 text-left">User ID</th>
+                      <th className="px-2 py-1 text-left">Status</th>
+                      <th className="px-2 py-1 text-left">Created</th>
+                      <th className="px-2 py-1 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingProSellers.map(req => (
+                      <tr key={req.proSellerId} className="border-b">
+                        <td className="px-2 py-1">{req.proSellerId}</td>
+                        <td className="px-2 py-1">{req.userId}</td>
+                        <td className="px-2 py-1">{req.status}</td>
+                        <td className="px-2 py-1">{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}</td>
+                        <td className="px-2 py-1 space-x-2">
+                          <button onClick={() => handleApproveReject(req.proSellerId, true)} className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
+                          <button onClick={() => handleApproveReject(req.proSellerId, false)} className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Reject</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

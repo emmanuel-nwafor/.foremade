@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const Support = () => {
   const [activeTab, setActiveTab] = useState('contact');
@@ -13,6 +14,7 @@ const Support = () => {
     message: ''
   });
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth ? useAuth() : { user: null };
 
   // FAQ data
   const faqItems = [
@@ -66,17 +68,28 @@ const Support = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real application, you would send the form data to your API
-      console.log("Support form submitted:", formData);
-      
-      toast.success("Your message has been sent! Our support team will get back to you soon.");
-      
-      // Reset form
+      // Real API call
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      console.log('Submitting to:', `${backendUrl}/api/support-request`, formData);
+      let idToken = null;
+      if (user) {
+        idToken = await user.getIdToken();
+      }
+      const response = await fetch(`${backendUrl}/api/support-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
+        body: JSON.stringify(formData),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to send message. Please try again later.');
+      }
+      toast.success('Your message has been sent! Our support team will get back to you soon.');
       setFormData({
         name: '',
         email: '',
@@ -85,7 +98,7 @@ const Support = () => {
       });
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error("Failed to send message. Please try again later.");
+      toast.error(error.message || "Failed to send message. Please try again later.");
     } finally {
       setLoading(false);
     }

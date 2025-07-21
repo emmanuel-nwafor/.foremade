@@ -72,6 +72,10 @@ export default function AdminPayoutMonitor() {
   };
 
   const handleApprove = async (transactionId, sellerId) => {
+    if (!transactionId || !sellerId) {
+      addAlert('Cannot approve: Missing transaction or seller ID', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -92,6 +96,10 @@ export default function AdminPayoutMonitor() {
   };
 
   const handleReject = async (transactionId, sellerId) => {
+    if (!transactionId || !sellerId) {
+      addAlert('Cannot reject: Missing transaction or seller ID', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -126,6 +134,7 @@ export default function AdminPayoutMonitor() {
           id: doc.id,
           ...doc.data(),
         }));
+        console.log('Fetched transactions:', transactionData); // Debug log
         setTransactions(transactionData);
         setFilteredTransactions(
           transactionData.filter(
@@ -186,7 +195,7 @@ export default function AdminPayoutMonitor() {
               <AnimatePresence>
                 {filteredTransactions.map((txn, index) => (
                   <motion.div
-                    key={txn.id}
+                    key={txn.id || `txn-${index}`}
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -50 }}
@@ -196,10 +205,10 @@ export default function AdminPayoutMonitor() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-medium">Transaction ID:</span> {txn.id}
+                          <span className="font-medium">Transaction ID:</span> {txn.id || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-medium">Seller ID:</span> {txn.sellerId}
+                          <span className="font-medium">Seller ID:</span> {txn.sellerId || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
                           <span className="font-medium">Type:</span> {txn.type || 'N/A'}
@@ -208,7 +217,7 @@ export default function AdminPayoutMonitor() {
                           <span className="font-medium">Status:</span>{' '}
                           <span
                             className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              txn.status === 'Pending' || txn.status === 'pending_otp'
+                              txn.status === 'Pending'
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : txn.status === 'Approved'
                                 ? 'bg-green-100 text-green-800'
@@ -246,13 +255,13 @@ export default function AdminPayoutMonitor() {
                         <span className="font-medium">Reason:</span> {txn.failureReason}
                       </p>
                     )}
-                    {(txn.status === 'Pending' || txn.status === 'pending_otp') && (
+                    {txn.status === 'Pending' && (
                       <div className="mt-4 flex gap-2">
                         <button
                           onClick={() => handleApprove(txn.id, txn.sellerId)}
-                          disabled={loading}
+                          disabled={loading || !txn.id || !txn.sellerId}
                           className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 ${
-                            loading ? 'opacity-50 cursor-not-allowed' : ''
+                            loading || !txn.id || !txn.sellerId ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
                           <i className="bx bx-check"></i>
@@ -260,9 +269,9 @@ export default function AdminPayoutMonitor() {
                         </button>
                         <button
                           onClick={() => handleReject(txn.id, txn.sellerId)}
-                          disabled={loading}
+                          disabled={loading || !txn.id || !txn.sellerId}
                           className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 ${
-                            loading ? 'opacity-50 cursor-not-allowed' : ''
+                            loading || !txn.id || !txn.sellerId ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
                           <i className="bx bx-x"></i>

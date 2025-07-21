@@ -35,17 +35,17 @@ import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
 
-import Admin from './Admin/Admin.jsx';
-import AdminDashboard from './Admin/AdminDashboard.jsx';
-import AdminNotifications from './Admin/AdminNotifications.jsx';
-import AdminUsers from './Admin/AdminUsers.jsx';
-import AdminPayoutMonitor from './Admin/AdminPayoutMonitor.jsx';
-import AdminEditFees from './Admin/AdminEditFees.jsx';
+import Admin from './admin/Admin.jsx';
+import AdminDashboard from './admin/AdminDashboard.jsx';
+import AdminNotifications from './admin/AdminNotifications.jsx';
+import AdminUsers from './admin/AdminUsers.jsx';
+import AdminPayoutMonitor from './admin/AdminPayoutMonitor.jsx';
+import AdminEditFees from './admin/adminEditFees.jsx';
 import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers.jsx';
-import AdminEditDeals from './Admin/AdminEditDeals.jsx';
-import AdminCategoryEdit from './Admin/AdminCategoryEdit.jsx';
-import AdminSellerWallet from './Admin/AdminSellerWallet.jsx';
-import AdminManager from './Admin/AdminManager.jsx';
+import AdminEditDeals from './admin/AdminEditDeals.jsx';
+import AdminCategoryEdit from './admin/AdminCategoryEdit.jsx';
+import AdminSellerWallet from './admin/AdminSellerWallet.jsx';
+import AdminManager from './admin/AdminManager.jsx';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';

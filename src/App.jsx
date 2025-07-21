@@ -41,7 +41,7 @@ import AdminNotifications from './admin/AdminNotifications.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
 import AdminPayoutMonitor from './admin/AdminPayoutMonitor.jsx';
 import AdminEditFees from './admin/adminEditFees.jsx';
-import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers.jsx';
+import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers.jsx';
 import AdminEditDeals from './admin/AdminEditDeals.jsx';
 import AdminCategoryEdit from './admin/AdminCategoryEdit.jsx';
 import AdminSellerWallet from './admin/AdminSellerWallet.jsx';

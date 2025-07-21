@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
-import { auth, db } from '/src/firebase';
+import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -19,33 +19,39 @@ const getFriendlyErrorMessage = (error) => {
   }
 };
 
-const generateUsername = (firstName, lastName, email) => {
-  if (firstName && lastName) {
-    return `${firstName.toLowerCase().replace(/\s/g, '')}${lastName.toLowerCase().replace(/\s/g, '')}${Math.floor(Math.random() * 1000)}`;
-  }
-  return email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000);
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part?.trim());
+  const firstPart = nameParts[0]?.slice(0, 4).toLowerCase() || 'user';
+  const secondPart = nameParts[1]?.slice(0, 3).toLowerCase() || '';
+  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
 };
 
 export default function Register() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    password: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [phoneNumberError, setPhoneNumberError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [loadingEmail, setLoadingEmail] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingFacebook, setLoadingFacebook] = useState(false);
   const [signupAttempts, setSignupAttempts] = useState(0);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
       console.error('Missing VITE_RECAPTCHA_SITE_KEY');
-      setErrors({ form: 'reCAPTCHA config error' });
+      setEmailError('reCAPTCHA config error');
       return;
     }
 
@@ -59,7 +65,7 @@ export default function Register() {
       script.onerror = () => {
         console.error('reCAPTCHA script failed');
         if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
-        else setErrors({ form: 'Failed to load reCAPTCHA. Check network.' });
+        else setEmailError('Failed to load reCAPTCHA. Check network.');
       };
       document.body.appendChild(script);
 
@@ -75,7 +81,7 @@ export default function Register() {
             .catch(err => {
               console.error('reCAPTCHA execute error:', err);
               if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
-              else setErrors({ form: 'reCAPTCHA token failed. Try again.' });
+              else setEmailError('reCAPTCHA token failed. Try again.');
             });
         });
       };
@@ -92,58 +98,144 @@ export default function Register() {
   useEffect(() => {
     getRedirectResult(auth)
       .then(result => {
-        if (result) handleGoogleSignIn(result.user);
+        if (result) handleSocialSignIn(result.user);
       })
       .catch(err => {
-        setErrors({ form: getFriendlyErrorMessage(err) });
-        setLoading(false);
+        setEmailError(getFriendlyErrorMessage(err));
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
       });
   }, []);
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required.';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required.';
-    if (!formData.email) {
-      newErrors.email = 'Email is required.';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address.';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required.';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters.';
-    }
-    if (formData.phoneNumber && !/^\+\d{7,15}$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Invalid phone (e.g., +1234567890).';
-    }
-    if (!recaptchaToken) {
-      newErrors.form = 'reCAPTCHA failed. Try again.';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const validatePassword = password => {
+    const hasLength = password.length >= 6;
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[_@!+=#$%^&*()[\]{}|;:,.<>?~`/-]/.test(password);
+    return {
+      isValid: hasLength && hasLetter && hasNumber && hasSpecialChar,
+      errors: [
+        !hasLength && 'Password needs 6+ chars.',
+        !hasLetter && 'Password needs a letter.',
+        !hasNumber && 'Password needs a number.',
+        !hasSpecialChar && 'Password needs a special char (e.g., _, @, !).',
+      ].filter(Boolean),
+    };
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
+  const validatePhoneNumber = phoneNumber => {
+    if (!phoneNumber.trim()) return true;
+    return /^\+\d{7,15}$/.test(phoneNumber);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSocialSignIn = async user => {
+    try {
+      const fullName = user.displayName || user.email.split('@')[0];
+      const [firstNameFromSocial, ...rest] = fullName.split(' ');
+      const lastNameFromSocial = rest.join(' ');
+      const username = generateUsername(firstNameFromSocial, lastNameFromSocial);
+
+      const userDocRef = doc(db, 'users', user.uid);
+      const userSnapshot = await getDoc(userDocRef);
+
+      let userData;
+      if (!userSnapshot.exists()) {
+        userData = {
+          email: user.email,
+          name: `${firstNameFromSocial} ${lastNameFromSocial}`,
+          username,
+          address: '',
+          phoneNumber: '',
+          createdAt: new Date().toISOString(),
+          uid: user.uid,
+          profileImage: user.photoURL || null,
+        };
+        await setDoc(userDocRef, userData);
+        
+        await addDoc(collection(db, 'notifications'), {
+          type: 'user_signup',
+          message: `New user signed up: ${user.email}`,
+          createdAt: new Date(),
+          details: { user_id: user.uid, email: user.email },
+        });
+        await updateProfile(user, { displayName: username });
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+          console.log('Verification email sent:', user.email);
+        }
+      } else {
+        userData = userSnapshot.data();
+      }
+
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('socialEmail', user.email);
+      const firstName = firstNameFromSocial || userData.name.split(' ')[0];
+      setSuccessMessage(`Welcome, ${firstName}! Please log in with Google.`);
+      setTimeout(() => {
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
+        navigate('/login', { state: { email: user.email } });
+      }, 3000);
+    } catch (err) {
+      console.error('Social sign-in error:', err);
+      setEmailError(getFriendlyErrorMessage(err));
+      setLoadingGoogle(false);
+      setLoadingFacebook(false);
+    }
+  };
+
+  const handleRegister = async e => {
     e.preventDefault();
-    setErrors({});
+    setFirstNameError('');
+    setLastNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
-    setLoading(true);
+    setLoadingEmail(true);
 
     if (signupAttempts >= 9) {
-      setErrors({ form: 'Too many attempts. Try later.' });
-      setLoading(false);
+      setEmailError('Too many attempts. Try later.');
+      setLoadingEmail(false);
       return;
     }
 
-    if (!validateForm()) {
-      setLoading(false);
+    let hasError = false;
+    if (!firstName.trim()) {
+      setFirstNameError('First name required.');
+      hasError = true;
+    }
+    if (!lastName.trim()) {
+      setLastNameError('Last name required.');
+      hasError = true;
+    }
+    if (!validateEmail(email)) {
+      setEmailError('Invalid email.');
+      hasError = true;
+    }
+    if (!password) {
+      setPasswordError('Password required.');
+      hasError = true;
+    } else {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        setPasswordError(passwordValidation.errors[0]);
+        hasError = true;
+      }
+    }
+    if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
+      setPhoneNumberError('Invalid phone (e.g., +1234567890).');
+      hasError = true;
+    }
+    if (!recaptchaToken) {
+      setEmailError('reCAPTCHA failed. Try again.');
+      hasError = true;
+    }
+
+    if (hasError) {
+      setLoadingEmail(false);
       setSignupAttempts(prev => prev + 1);
       return;
     }
@@ -158,152 +250,97 @@ export default function Register() {
       console.log('reCAPTCHA response:', response.data);
 
       if (!response.data.success || response.data.score < 0.5) {
-        setErrors({ form: 'reCAPTCHA failed. Are you a bot?' });
-        setLoading(false);
+        setEmailError('reCAPTCHA failed. Are you a bot?');
+        setLoadingEmail(false);
         setSignupAttempts(prev => prev + 1);
         return;
       }
 
       await setPersistence(auth, browserSessionPersistence);
-      const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const username = generateUsername(formData.firstName, formData.lastName, formData.email);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const username = generateUsername(firstName, lastName);
       await updateProfile(user, { displayName: username });
+
       await sendEmailVerification(user);
+      console.log('Verification email sent:', user.email);
 
-      const payload = {
-        uid: user.uid,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+      const userData = {
+        email: user.email,
+        name: `${firstName} ${lastName}`,
         username,
-        phoneNumber: formData.phoneNumber,
+        address: '',
+        phoneNumber: phoneNumber.trim() || '',
+        createdAt: new Date().toISOString(),
+        uid: user.uid,
+        profileImage: null,
       };
+      await setDoc(doc(db, 'users', user.uid), userData);
 
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const registerResponse = await axios.post(`${BACKEND_URL}/register`, payload);
+      // Add notification for user sign-up
+      await addDoc(collection(db, 'notifications'), {
+        type: 'user_signup',
+        message: `New user signed up: ${user.email}`,
+        createdAt: new Date(),
+        details: { user_id: user.uid, email: user.email },
+      });
 
-      if (registerResponse.data.redirectUrl) {
-        setSuccessMessage(`Welcome, ${formData.firstName}! Verify your email at ${formData.email}.`);
-        await addDoc(collection(db, 'notifications'), {
-          type: 'user_signup',
-          message: `New user signed up: ${user.email}`,
-          createdAt: new Date(),
-          details: { user_id: user.uid, email: user.email },
-        });
-        setSignupAttempts(0);
-        setTimeout(() => {
-          setLoading(false);
-          navigate(registerResponse.data.redirectUrl);
-        }, 2000);
-      } else {
-        throw new Error('No redirect URL provided');
-      }
+      localStorage.setItem('userData', JSON.stringify(userData));
+      setSuccessMessage(`Welcome, ${firstName}! Verify your email at ${email}.`);
+      setSignupAttempts(0);
+      setTimeout(() => {
+        setLoadingEmail(false);
+        navigate('/login');
+      }, 7000);
     } catch (err) {
       console.error('Registration error:', err);
-      let errorMessage = 'Registration failed. Please try again.';
-      if (err.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email already in use. Log in instead.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email format.';
-      } else if (err.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak.';
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
+      setLoadingEmail(false);
+      const errorMessage = err.response?.data?.error || getFriendlyErrorMessage(err);
+      if (errorMessage.includes('email')) setEmailError(errorMessage);
+      else if (errorMessage.includes('password')) setPasswordError(errorMessage);
+      else {
+        setFirstNameError(errorMessage);
+        setLastNameError(errorMessage);
       }
-      setErrors({ form: errorMessage });
-      setLoading(false);
       setSignupAttempts(prev => prev + 1);
     }
   };
 
-  const handleGoogleSignIn = async (user) => {
-    setErrors({});
+  const handleGoogleSignIn = async () => {
+    setFirstNameError('');
+    setLastNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
-    setLoading(true);
-
+    setLoadingGoogle(true);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      if (!user) {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
-      const fullName = user.displayName || user.email.split('@')[0];
-      const [firstNameFromSocial, ...rest] = fullName.split(' ');
-      const lastNameFromSocial = rest.join(' ');
-      const username = generateUsername(firstNameFromSocial, lastNameFromSocial, user.email);
-
-      const userDocRef = doc(db, 'users', user.uid);
-      const userSnapshot = await getDoc(userDocRef);
-
-      let userData;
-      if (!userSnapshot.exists()) {
-        userData = {
-          email: user.email,
-          firstName: firstNameFromSocial,
-          lastName: lastNameFromSocial,
-          username,
-          phoneNumber: '',
-          createdAt: new Date().toISOString(),
-          uid: user.uid,
-          profileImage: user.photoURL || null,
-        };
-        const payload = {
-          uid: user.uid,
-          email: user.email,
-          firstName: firstNameFromSocial,
-          lastName: lastNameFromSocial,
-          username,
-          phoneNumber: '',
-        };
-
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-        const registerResponse = await axios.post(`${BACKEND_URL}/register`, payload);
-        await setDoc(userDocRef, userData);
-        await addDoc(collection(db, 'notifications'), {
-          type: 'user_signup',
-          message: `New user signed up: ${user.email}`,
-          createdAt: new Date(),
-          details: { user_id: user.uid, email: user.email },
-        });
-        await updateProfile(user, { displayName: username });
-        if (!user.emailVerified) {
-          await sendEmailVerification(user);
-          console.log('Verification email sent:', user.email);
-        }
-
-        if (registerResponse.data.redirectUrl) {
-          localStorage.setItem('userData', JSON.stringify(userData));
-          setSuccessMessage(`Welcome, ${firstNameFromSocial}! Verify your email at ${user.email}.`);
-          setTimeout(() => {
-            setLoading(false);
-            navigate(registerResponse.data.redirectUrl);
-          }, 2000);
-        } else {
-          throw new Error('No redirect URL provided');
-        }
-      } else {
-        userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
-        setSuccessMessage(`Welcome back, ${userData.firstName}!`);
-        setTimeout(() => {
-          setLoading(false);
-          navigate(userData.role === 'Admin' ? '/admin-dashboard' : '/profile');
-        }, 2000);
-      }
+      await signInWithRedirect(auth, provider);
     } catch (err) {
-      console.error('Google sign-in error:', err);
-      setErrors({ form: getFriendlyErrorMessage(err) });
-      setLoading(false);
+      setLoadingGoogle(false);
+      setEmailError(getFriendlyErrorMessage(err));
     }
   };
 
   const handleFacebookSignIn = async () => {
-    setErrors({});
+    setFirstNameError('');
+    setLastNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setPhoneNumberError('');
     setSuccessMessage('');
-    setLoading(false);
-    setErrors({ form: 'Facebook sign-in is not supported. Please use email or Google registration.' });
+    setLoadingFacebook(true);
+    const provider = new FacebookAuthProvider();
+    provider.setCustomParameters({ display: 'popup' });
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      setLoadingFacebook(false);
+      setEmailError(getFriendlyErrorMessage(err));
+    }
   };
 
   return (
@@ -322,107 +359,100 @@ export default function Register() {
           <p className="text-gray-600 mb-6">
             Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Sign In</Link>
           </p>
-          {errors.form && (
-            <p className="text-red-600 text-xs mb-4">
-              {errors.form}{' '}
-              {errors.form.includes('already in use') && (
-                <Link to="/login" className="text-blue-600 hover:underline">Click here to login</Link>
-              )}
-            </p>
-          )}
-          {successMessage && <p className="text-green-600 text-xs mb-4">{successMessage}</p>}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div className="flex space-x-4 mb-4">
               <div className="relative w-1/2">
                 <input
                   type="text"
                   id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${errors.firstName ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${firstNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                   autoComplete="given-name"
                   required
                 />
                 <label
                   htmlFor="firstName"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${formData.firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${firstName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
                 >
                   First Name
                 </label>
-                {errors.firstName && <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>}
+                {firstNameError && <p className="text-red-600 text-xs mt-1">{firstNameError}</p>}
               </div>
               <div className="relative w-1/2">
                 <input
                   type="text"
                   id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${errors.lastName ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  className={`w-full p-3 border rounded-lg transition-all duration-300 ${lastNameError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                   autoComplete="family-name"
                   required
                 />
                 <label
                   htmlFor="lastName"
-                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${formData.lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
+                  className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${lastName ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
                 >
                   Last Name
                 </label>
-                {errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
+                {lastNameError && <p className="text-red-600 text-xs mt-1">{lastNameError}</p>}
               </div>
             </div>
             <div className="relative">
               <input
                 type="email"
                 id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${errors.email ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${emailError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="email"
                 required
               />
               <label
                 htmlFor="email"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${formData.email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${email ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Email
               </label>
-              {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+              {emailError && (
+                <p className="text-red-600 text-xs mt-1">
+                  {emailError}{' '}
+                  {emailError.includes('already in use') && (
+                    <Link to="/login" className="text-blue-600 hover:underline">Click here to login</Link>
+                  )}
+                </p>
+              )}
             </div>
             <div className="relative">
               <input
                 type="tel"
                 id="phoneNumber"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${errors.phoneNumber ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                value={phoneNumber}
+                onChange={e => setPhoneNumber(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${phoneNumberError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="tel"
               />
               <label
                 htmlFor="phoneNumber"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${formData.phoneNumber ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${phoneNumber ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Phone Number
               </label>
-              {errors.phoneNumber && <p className="text-red-600 text-xs mt-1">{errors.phoneNumber}</p>}
+              {phoneNumberError && <p className="text-red-600 text-xs mt-1">{phoneNumberError}</p>}
             </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={`w-full p-3 border rounded-lg transition-all duration-300 ${errors.password ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${passwordError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
                 autoComplete="new-password"
                 required
               />
               <label
                 htmlFor="password"
-                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${formData.password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
+                className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${password ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}
               >
                 Password
               </label>
@@ -432,34 +462,35 @@ export default function Register() {
               >
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
-              {errors.password && <p className="text-red-600 text-xs mt-1">{errors.password}</p>}
+              {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             </div>
+            {successMessage && <p className="text-green-600 text-xs mb-4">{successMessage}</p>}
             <button
               type="submit"
               className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
-              disabled={loading}
+              disabled={loadingEmail}
             >
-              {loading ? 'Registering...' : 'Sign Up'}
+              {loadingEmail ? 'Registering...' : 'Sign Up'}
             </button>
           </form>
           <div className="mt-6 text-center">
             <p className="text-gray-600 mb-4">Or continue with</p>
             <div className="flex justify-center space-x-4">
               <button
-                onClick={() => handleGoogleSignIn()}
+                onClick={handleGoogleSignIn}
                 className="bg-white border border-gray-300 p-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
-                disabled={loading}
+                disabled={loadingGoogle}
               >
                 <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
-                {loading ? 'Processing...' : 'Google'}
+                {loadingGoogle ? 'Processing...' : 'Google'}
               </button>
               <button
                 onClick={handleFacebookSignIn}
                 className="bg-white border border-gray-300 p-3 rounded-lg flex items-center justify-center hover:bg-gray-100 transition duration-200"
-                disabled={loading}
+                disabled={loadingFacebook}
               >
                 <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
-                {loading ? 'Processing...' : 'Facebook'}
+                {loadingFacebook ? 'Processing...' : 'Facebook'}
               </button>
             </div>
             <p className="text-gray-500 text-xs mt-4">

@@ -82,8 +82,10 @@ export default function AdminPayoutMonitor() {
       );
       addAlert(response.data.message);
     } catch (error) {
-      console.error('Approve error:', error.message);
-      addAlert(`Failed to approve payout: ${error.response?.data?.error || error.message}`, 'error');
+      console.error('Approve error:', error.message, { transactionId, sellerId, details: error.response?.data?.details });
+      const errorMessage = error.response?.data?.error || error.message;
+      const errorDetails = error.response?.data?.details ? JSON.stringify(error.response.data.details) : '';
+      addAlert(`Failed to approve payout: ${errorMessage}${errorDetails ? ` (Details: ${errorDetails})` : ''}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -100,8 +102,10 @@ export default function AdminPayoutMonitor() {
       );
       addAlert(response.data.message);
     } catch (error) {
-      console.error('Reject error:', error.message);
-      addAlert(`Failed to reject payout: ${error.response?.data?.error || error.message}`, 'error');
+      console.error('Reject error:', error.message, { transactionId, sellerId, details: error.response?.data?.details });
+      const errorMessage = error.response?.data?.error || error.message;
+      const errorDetails = error.response?.data?.details ? JSON.stringify(error.response.data.details) : '';
+      addAlert(`Failed to reject payout: ${errorMessage}${errorDetails ? ` (Details: ${errorDetails})` : ''}`, 'error');
     } finally {
       setLoading(false);
     }

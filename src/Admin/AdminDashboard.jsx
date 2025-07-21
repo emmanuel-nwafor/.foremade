@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import AdminSidebar from '../Admin/AdminSidebar';
+import AdminSidebar from './AdminSidebar';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { toast } from 'react-toastify';

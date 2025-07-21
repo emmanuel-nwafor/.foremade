@@ -46,6 +46,7 @@ import AdminEditDeals from './admin/AdminEditDeals.jsx';
 import AdminCategoryEdit from './admin/AdminCategoryEdit.jsx';
 import AdminSellerWallet from './admin/AdminSellerWallet.jsx';
 import AdminManager from './admin/AdminManager.jsx';
+import AdminTransactions from './admin/AdminTransactions.jsx';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -210,6 +211,7 @@ function AppRoutes() {
             <Route path="/chat/:orderId" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
             <Route path="/seller-chat" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
             <Route path="/seller-chat/:chatId" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
+        
             <Route path="/seller/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
             <Route path="/seller/product-bump" element={<ProtectedRoute><ProductBump /></ProtectedRoute>} />
             <Route path="/seller/pro-analytics" element={<ProtectedRoute><ProSellerAnalytics /></ProtectedRoute>} />
@@ -226,7 +228,8 @@ function AppRoutes() {
             <Route path="/admin/edit/banners" element={<ProtectedRoute><AdminEditBannerAndOthers /></ProtectedRoute>} />
             <Route path="/admin/edit/daily-deals" element={<ProtectedRoute><AdminEditDeals /></ProtectedRoute>} />
             <Route path="/admin/pro-seller-requests" element={<ProtectedRoute><AdminProSellerRequests /></ProtectedRoute>} />
-           
+            <Route path="/admin/transactions" element={<ProtectedRoute><AdminTransactions /></ProtectedRoute>} />
+
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
             <Route path="/empowerment-hub" element={<EmpowermentHub />} />

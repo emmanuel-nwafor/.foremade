@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '/src/firebase';
-import { query, collection, onSnapshot, where, getDoc, doc } from 'firebase/firestore';
+import { query, collection, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar'; // Adjust path as needed
-import { Wallet as WalletIcon, X as CloseIcon } from 'lucide-react';
+import { History as HistoryIcon } from 'lucide-react';
 import debounce from 'lodash.debounce';
 
 function CustomAlert({ alerts, removeAlert }) {
@@ -38,89 +38,6 @@ function CustomAlert({ alerts, removeAlert }) {
   );
 }
 
-function SellerDetailsModal({ isOpen, onClose, sellerId }) {
-  const [sellerData, setSellerData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!isOpen || !sellerId) return;
-
-    const fetchSellerData = async () => {
-      setLoading(true);
-      try {
-        const sellerRef = doc(db, 'sellers', sellerId);
-        const sellerSnap = await getDoc(sellerRef);
-        if (sellerSnap.exists()) {
-          setSellerData(sellerSnap.data());
-        } else {
-          setError('Seller not found');
-        }
-      } catch (err) {
-        console.error('Seller fetch error:', err.message, { sellerId });
-        setError('Failed to fetch seller details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSellerData();
-  }, [sellerId, isOpen]);
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Seller Details</h3>
-              <button onClick={onClose} className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">
-                <CloseIcon className="w-6 h-6" />
-              </button>
-            </div>
-            {loading ? (
-              <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-            ) : error ? (
-              <p className="text-red-600 dark:text-red-400">{error}</p>
-            ) : sellerData ? (
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <p><span className="font-medium">Seller ID:</span> {sellerData.sellerId || 'N/A'}</p>
-                <p><span className="font-medium">Full Name:</span> {sellerData.fullName || 'N/A'}</p>
-                <p><span className="font-medium">Email:</span> {sellerData.email || 'N/A'}</p>
-                <p><span className="font-medium">Country:</span> {sellerData.country || 'N/A'}</p>
-                <p><span className="font-medium">Bank Name:</span> {sellerData.bankName || 'N/A'}</p>
-                <p><span className="font-medium">Account Number:</span> {sellerData.accountNumber || 'N/A'}</p>
-                {sellerData.country === 'Nigeria' && (
-                  <p><span className="font-medium">Paystack Recipient Code:</span> {sellerData.paystackRecipientCode || 'N/A'}</p>
-                )}
-                {sellerData.country === 'United Kingdom' && (
-                  <>
-                    <p><span className="font-medium">IBAN:</span> {sellerData.iban || 'N/A'}</p>
-                    <p><span className="font-medium">Stripe Account ID:</span> {sellerData.stripeAccountId || 'N/A'}</p>
-                  </>
-                )}
-                <p><span className="font-medium">Created At:</span> {sellerData.createdAt ? new Date(sellerData.createdAt).toLocaleString() : 'N/A'}</p>
-              </div>
-            ) : null}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
 function useAlerts() {
   const [alerts, setAlerts] = useState([]);
   const addAlert = useCallback((message, type = 'success') => {
@@ -134,14 +51,13 @@ function useAlerts() {
   return { alerts, addAlert, removeAlert };
 }
 
-export default function AdminPayoutMonitor() {
+export default function AdminTransactions() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedSellerId, setSelectedSellerId] = useState(null);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -153,54 +69,6 @@ export default function AdminPayoutMonitor() {
 
   const handleSearchChange = (e) => {
     debouncedSearch(e.target.value);
-  };
-
-  const handleApprove = async (transactionId, sellerId) => {
-    if (!transactionId || !sellerId) {
-      addAlert('Cannot approve: Missing transaction or seller ID', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(
-        `${BACKEND_URL}/approve-payout`,
-        { transactionId, sellerId },
-        { timeout: 15000 }
-      );
-      addAlert(response.data.message);
-    } catch (error) {
-      console.error('Approve error:', error.message, { transactionId, sellerId, details: error.response?.data?.details });
-      const errorMessage = error.response?.data?.error || error.message;
-      const errorDetails = error.response?.data?.details ? JSON.stringify(error.response.data.details) : '';
-      addAlert(`Failed to approve payout: ${errorMessage}${errorDetails ? ` (Details: ${errorDetails})` : ''}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReject = async (transactionId, sellerId) => {
-    if (!transactionId || !sellerId) {
-      addAlert('Cannot reject: Missing transaction or seller ID', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(
-        `${BACKEND_URL}/reject-payout`,
-        { transactionId, sellerId },
-        { timeout: 15000 }
-      );
-      addAlert(response.data.message);
-    } catch (error) {
-      console.error('Reject error:', error.message, { transactionId, sellerId, details: error.response?.data?.details });
-      const errorMessage = error.response?.data?.error || error.message;
-      const errorDetails = error.response?.data?.details ? JSON.stringify(error.response.data.details) : '';
-      addAlert(`Failed to reject payout: ${errorMessage}${errorDetails ? ` (Details: ${errorDetails})` : ''}`, 'error');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleDelete = async (transactionId) => {
@@ -227,10 +95,6 @@ export default function AdminPayoutMonitor() {
     }
   };
 
-  const handleTransactionClick = (sellerId) => {
-    setSelectedSellerId(sellerId);
-  };
-
   useEffect(() => {
     if (!auth.currentUser) {
       addAlert('Please log in.', 'error');
@@ -238,7 +102,7 @@ export default function AdminPayoutMonitor() {
       return;
     }
 
-    const q = query(collection(db, 'transactions'), where('status', 'in', ['Pending']));
+    const q = query(collection(db, 'transactions'));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -246,7 +110,7 @@ export default function AdminPayoutMonitor() {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log('Fetched pending transactions:', transactionData); // Debug log
+        console.log('Fetched all transactions:', transactionData); // Debug log
         setTransactions(transactionData);
         setFilteredTransactions(
           transactionData.filter(
@@ -278,8 +142,8 @@ export default function AdminPayoutMonitor() {
         <div className="max-w-7xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 lg:p-10">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 flex items-center gap-2">
-              <WalletIcon className="w-8 h-8" />
-              Payout Monitor
+              <HistoryIcon className="w-8 h-8" />
+              Transaction History
             </h2>
           </div>
           <div className="mb-6">
@@ -300,7 +164,7 @@ export default function AdminPayoutMonitor() {
               transition={{ duration: 0.3 }}
               className="text-gray-600 dark:text-gray-400 text-center py-8"
             >
-              No pending transactions found.
+              No transactions found.
             </motion.p>
           ) : (
             <motion.div className="grid gap-4 lg:grid-cols-2">
@@ -312,8 +176,7 @@ export default function AdminPayoutMonitor() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -50 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => handleTransactionClick(txn.sellerId)}
+                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
@@ -329,7 +192,17 @@ export default function AdminPayoutMonitor() {
                         <p className="text-sm text-gray-600 dark:text-gray-300">
                           <span className="font-medium">Status:</span>{' '}
                           <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800`}
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                              txn.status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : txn.status === 'Approved'
+                                ? 'bg-green-100 text-green-800'
+                                : txn.status === 'Rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : txn.status === 'Failed'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
                           >
                             {txn.status || 'N/A'}
                           </span>
@@ -351,6 +224,9 @@ export default function AdminPayoutMonitor() {
                             </p>
                           </>
                         )}
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="font-medium">Country:</span> {txn.country || 'N/A'}
+                        </p>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
@@ -362,54 +238,24 @@ export default function AdminPayoutMonitor() {
                         <span className="font-medium">Reason:</span> {txn.failureReason}
                       </p>
                     )}
-                    {txn.status === 'Pending' ? (
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleApprove(txn.id, txn.sellerId); }}
-                          disabled={loading || !txn.id || !txn.sellerId}
-                          className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 ${
-                            loading || !txn.id || !txn.sellerId ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          <i className="bx bx-check"></i>
-                          Approve
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleReject(txn.id, txn.sellerId); }}
-                          disabled={loading || !txn.id || !txn.sellerId}
-                          className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 ${
-                            loading || !txn.id || !txn.sellerId ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          <i className="bx bx-x"></i>
-                          Reject
-                        </button>
-                      </div>
-                    ) : (txn.status === 'Approved' || txn.status === 'Rejected') && (
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(txn.id); }}
-                          disabled={loading || !txn.id}
-                          className={`px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center gap-2 ${
-                            loading || !txn.id ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          <i className="bx bx-trash"></i>
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={() => handleDelete(txn.id)}
+                        disabled={loading || !txn.id}
+                        className={`px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center gap-2 ${
+                          loading || !txn.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <i className="bx bx-trash"></i>
+                        Delete
+                      </button>
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
           )}
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-          <SellerDetailsModal
-            isOpen={!!selectedSellerId}
-            onClose={() => setSelectedSellerId(null)}
-            sellerId={selectedSellerId}
-          />
         </div>
       </motion.div>
     </div>

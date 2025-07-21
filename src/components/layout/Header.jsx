@@ -252,13 +252,13 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-8 items-center">
+      <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-[70px] items-center">
         {/* Logo at extreme left */}
-        <div className="flex items-center flex-shrink-0 pl-4 pr-2 h-8">
+        <div className="flex items-center flex-shrink-0 pl-3 pr-2 h-8">
           <Link to="/">
             <img
               src={logo}
-              className="h-8 w-auto"
+              className="h-[45px] w-auto"
               alt="Foremade"
             />
           </Link>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { auth } from '/src/firebase';
-import AdminSidebar from '../Admin/AdminSidebar';
+import AdminSidebar from './AdminSidebar';
 
 export default function AdminProSellerRequests() {
   const [allProSellers, setAllProSellers] = useState([]);

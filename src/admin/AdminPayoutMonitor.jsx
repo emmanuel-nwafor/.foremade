@@ -5,7 +5,7 @@ import { auth, db } from '/src/firebase';
 import { query, collection, onSnapshot, where, getDoc, doc } from 'firebase/firestore';
 import axios from 'axios';
 import AdminSidebar from './AdminSidebar'; // Adjust path as needed
-import { Wallet as WalletIcon, X as CloseIcon } from 'lucide-react';
+import { Wallet as WalletIcon, X as CloseIcon, Trash2 } from 'lucide-react';
 import debounce from 'lodash.debounce';
 
 function CustomAlert({ alerts, removeAlert }) {
@@ -139,6 +139,7 @@ export default function AdminPayoutMonitor() {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [selectedTransactions, setSelectedTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedSellerId, setSelectedSellerId] = useState(null);
@@ -217,6 +218,7 @@ export default function AdminPayoutMonitor() {
         { timeout: 15000 }
       );
       addAlert(response.data.message);
+      setSelectedTransactions((prev) => prev.filter((id) => id !== transactionId));
     } catch (error) {
       console.error('Delete error:', error.message, { transactionId, details: error.response?.data?.details });
       const errorMessage = error.response?.data?.error || error.message;
@@ -225,6 +227,32 @@ export default function AdminPayoutMonitor() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTransactions.length === 0) {
+      addAlert('No transactions selected for deletion', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      for (const transactionId of selectedTransactions) {
+        await handleDelete(transactionId);
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error.message);
+      addAlert(`Failed to delete transactions: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectTransaction = (transactionId) => {
+    setSelectedTransactions((prev) =>
+      prev.includes(transactionId)
+        ? prev.filter((id) => id !== transactionId)
+        : [...prev, transactionId]
+    );
   };
 
   const handleTransactionClick = (sellerId) => {
@@ -241,12 +269,27 @@ export default function AdminPayoutMonitor() {
     const q = query(collection(db, 'transactions'), where('status', 'in', ['Pending']));
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const transactionData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        console.log('Fetched pending transactions:', transactionData); // Debug log
+      async (snapshot) => {
+        const transactionData = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const data = docSnap.data();
+            if (data.sellerId) { // Guard against undefined sellerId
+              const sellerRef = doc(db, 'sellers', data.sellerId);
+              const sellerSnap = await getDoc(sellerRef);
+              if (sellerSnap.exists()) {
+                const sellerData = sellerSnap.data();
+                return {
+                  id: docSnap.id,
+                  ...data,
+                  bankName: sellerData.bankName || 'N/A',
+                  accountNumber: sellerData.accountNumber || 'N/A',
+                };
+              }
+            }
+            return { id: docSnap.id, ...data };
+          })
+        );
+        console.log('Fetched pending transactions:', transactionData);
         setTransactions(transactionData);
         setFilteredTransactions(
           transactionData.filter(
@@ -281,6 +324,18 @@ export default function AdminPayoutMonitor() {
               <WalletIcon className="w-8 h-8" />
               Payout Monitor
             </h2>
+            {selectedTransactions.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={loading}
+                className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Trash2 className="w-5 h-5" />
+                Delete Selected ({selectedTransactions.length})
+              </button>
+            )}
           </div>
           <div className="mb-6">
             <div className="relative">
@@ -315,11 +370,22 @@ export default function AdminPayoutMonitor() {
                     className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => handleTransactionClick(txn.sellerId)}
                   >
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedTransactions.includes(txn.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSelectTransaction(txn.id);
+                        }}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Transaction ID:</span> {txn.id || 'N/A'}
+                      </p>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-medium">Transaction ID:</span> {txn.id || 'N/A'}
-                        </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
                           <span className="font-medium">Seller ID:</span> {txn.sellerId || 'N/A'}
                         </p>
@@ -341,16 +407,12 @@ export default function AdminPayoutMonitor() {
                           {txn.country === 'United Kingdom' ? '£' : '₦'}
                           {txn.amount?.toFixed(2) || '0.00'}
                         </p>
-                        {txn.type === 'Withdrawal' && (
-                          <>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Bank Name:</span> {txn.bankName || 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Account Number:</span> {txn.accountNumber || 'N/A'}
-                            </p>
-                          </>
-                        )}
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="font-medium">Bank Name:</span> {txn.bankName || 'N/A'}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="font-medium">Account Number:</span> {txn.accountNumber || 'N/A'}
+                        </p>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
@@ -394,7 +456,7 @@ export default function AdminPayoutMonitor() {
                             loading || !txn.id ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
-                          <i className="bx bx-trash"></i>
+                          <Trash2 className="w-5 h-5" />
                           Delete
                         </button>
                       </div>

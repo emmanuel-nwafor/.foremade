@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
+import { db, auth } from '../firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { Bar, Line } from 'react-chartjs-2';
+import { Chart as ChartJS, BarElement, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
+import { useAuth } from '../contexts/AuthContext';
+
+ChartJS.register(BarElement, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
 const ProSellerAnalytics = () => {
   const [analytics, setAnalytics] = useState({
@@ -15,8 +21,10 @@ const ProSellerAnalytics = () => {
     monthlyTrends: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [period, setPeriod] = useState('30d');
   const { alerts, addAlert, removeAlert } = useAlerts();
+  const { userProfile } = useAuth();
 
   const periods = [
     { value: '7d', label: 'Last 7 Days' },
@@ -27,37 +35,75 @@ const ProSellerAnalytics = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      const firebaseToken = await auth.currentUser?.getIdToken();
-      if (!firebaseToken) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch(`/api/pro-seller-analytics?period=${period}`, {
-        headers: {
-          'Authorization': `Bearer ${firebaseToken}`
-        }
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setAnalytics(data.analytics);
-      } else {
-        throw new Error(data.error || 'Failed to fetch analytics');
-      }
-    } catch (error) {
-      console.error('Fetch analytics error:', error);
-      addAlert(error.message || 'Failed to load analytics data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (userProfile && !userProfile.isProSeller) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">Pro Seller Feature</h2>
+          <p className="mb-4 text-gray-700">Product analytics are only available to Pro Sellers. Upgrade now to track your performance and sales metrics!</p>
+          <a href="/pro-seller-guide-full" className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-semibold">Upgrade to Pro Seller</a>
+          <div className="mt-6">
+            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
-    fetchAnalytics();
+    let unsubscribe;
+    setLoading(true);
+    setError('');
+    unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setError('Please log in to view analytics.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const sellerId = user.uid;
+        const productsSnap = await getDocs(query(collection(db, 'products'), where('sellerId', '==', sellerId)));
+        const products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Calculate analytics
+        const totalProducts = products.length;
+        const activeProducts = products.filter(p => p.status === 'approved').length;
+        const totalViews = products.reduce((sum, p) => sum + (p.views || 0), 0);
+        const totalSales = products.reduce((sum, p) => sum + (p.sales || 0), 0);
+        const averageRating = products.length ? (products.reduce((sum, p) => sum + (p.rating || 0), 0) / products.length) : 0;
+        // Top products by sales
+        const topProducts = [...products].sort((a, b) => (b.sales || 0) - (a.sales || 0)).slice(0, 5).map(p => ({
+          name: p.name,
+          sales: p.sales || 0,
+          views: p.views || 0,
+        }));
+        // Monthly trends (dummy: group by createdAt month)
+        const monthlyMap = {};
+        products.forEach(p => {
+          if (p.createdAt) {
+            const date = new Date(p.createdAt);
+            const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthlyMap[month]) monthlyMap[month] = { month, views: 0, sales: 0 };
+            monthlyMap[month].views += p.views || 0;
+            monthlyMap[month].sales += p.sales || 0;
+          }
+        });
+        const monthlyTrends = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
+        setAnalytics({
+          totalProducts,
+          activeProducts,
+          totalViews,
+          totalSales,
+          averageRating,
+          topProducts,
+          monthlyTrends,
+        });
+      } catch (err) {
+        setError('Failed to load analytics: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe && unsubscribe();
   }, [period]);
 
   const formatCurrency = (amount) => {
@@ -81,10 +127,66 @@ const ProSellerAnalytics = () => {
       </div>
     );
   }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Error</h2>
+          <p className="mb-4 text-gray-700">{error}</p>
+          <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare chart data for Bar and Line
+  const barData = {
+    labels: analytics.topProducts.map(p => p.name),
+    datasets: [
+      {
+        label: 'Sales',
+        data: analytics.topProducts.map(p => p.sales),
+        backgroundColor: '#8884d8',
+      },
+    ],
+  };
+
+  const lineData = {
+    labels: analytics.monthlyTrends.map(t => t.month),
+    datasets: [
+      {
+        label: 'Views',
+        data: analytics.monthlyTrends.map(t => t.views),
+        borderColor: '#8884d8',
+        backgroundColor: 'rgba(136,132,216,0.2)',
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: 'Sales',
+        data: analytics.monthlyTrends.map(t => t.sales),
+        borderColor: '#82ca9d',
+        backgroundColor: 'rgba(130,202,157,0.2)',
+        fill: true,
+        tension: 0.4,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { enabled: true },
+    },
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 flex justify-between items-center">
+          <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+        </div>
         <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         
         {/* Header */}
@@ -107,6 +209,9 @@ const ProSellerAnalytics = () => {
         </div>
 
         {/* Key Metrics */}
+        {(!analytics.topProducts?.length && !analytics.monthlyTrends?.length) && (
+          <div className="text-center text-gray-500 mb-8">No analytics data available yet.</div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
@@ -171,30 +276,17 @@ const ProSellerAnalytics = () => {
           {/* Monthly Trends Chart */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Trends</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analytics.monthlyTrends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="views" stroke="#8884d8" name="Views" />
-                <Line type="monotone" dataKey="sales" stroke="#82ca9d" name="Sales" />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ width: '100%', height: 300 }}>
+              <Line data={lineData} options={chartOptions} />
+            </div>
           </div>
 
           {/* Top Products Chart */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Products</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.topProducts}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="sales" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ width: '100%', height: 300 }}>
+              <Bar data={barData} options={chartOptions} />
+            </div>
           </div>
         </div>
 

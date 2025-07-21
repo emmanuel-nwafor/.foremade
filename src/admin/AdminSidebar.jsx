@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X } from 'lucide-react';
+import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X, UserCheck } from 'lucide-react';
 import logo from '/src/assets/logi.png';
 
 export default function AdminSidebar() {
@@ -21,6 +21,7 @@ export default function AdminSidebar() {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/admin/pro-seller-requests', icon: UserCheck, label: 'Pro Seller Requests' },
     { path: '/admin/users', icon: Users, label: 'Manage Users' },
     { path: '/admin/sellers-wallet', icon: Settings, label: 'Account Management' },
     { path: '/admin/sellers/payouts', icon: DollarSign, label: 'Approve Payments' },
@@ -36,10 +37,12 @@ export default function AdminSidebar() {
   return (
     <>
       {/* Toggle Button for Mobile */}
+      {/* Place the toggle button absolutely above the sidebar, not inside */}
       <button
         onClick={toggleSidebar}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg focus:outline-none hover:bg-blue-700 transition-colors"
         aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+        style={{ zIndex: 60 }}
       >
         {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -48,33 +51,40 @@ export default function AdminSidebar() {
       <div
         className={`fixed top-0 left-0 w-64 h-full bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl transform transition-transform duration-300 ease-in-out z-40
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:block`}
+        style={{ maxHeight: '100vh', display: isSidebarOpen ? 'block' : 'none', marginTop: '0px' }}
       >
-        <Link to="/" onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}>
-          <div className="p-4 border-b border-gray-700 flex-col items-center gap-2">
-            <img src={logo} alt="Logo" className="h-10" />
-            <span className="text-sm font-bold">Admin Panel</span>
+        <div className="flex flex-col h-full">
+          {/* Logo/Header (fixed, non-scrollable) */}
+          <Link to="/" onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}>
+            <div className="p-4 border-b border-gray-700 flex flex-col items-center gap-2 bg-gray-900 z-10" style={{ position: 'relative' }}>
+              <img src={logo} alt="Logo" className="h-10" />
+              <span className="text-sm font-bold">Admin Panel</span>
+            </div>
+          </Link>
+          {/* Scrollable menu */}
+          <div className="flex-1 overflow-y-auto">
+            <nav className="mt-4 px-2">
+              <ul className="space-y-1">
+                {menuItems.map((item) => (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
+                      className={`flex items-center p-3 rounded-lg transition-all duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5 mr-3" />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
-        </Link>
-        <nav className="mt-4 px-2">
-          <ul className="space-y-1">
-            {menuItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  onClick={() => window.innerWidth < 768 && setIsSidebarOpen(false)}
-                  className={`flex items-center p-3 rounded-lg transition-all duration-200 ${
-                    location.pathname === item.path
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        </div>
       </div>
 
       {/* Overlay for Mobile */}

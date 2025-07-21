@@ -35,17 +35,17 @@ import SellerTransactions from './seller/SellerTransactions';
 import SellerProductVariants from './seller/SellerProductVariants';
 import Support from './pages/Support';
 
-import Admin from '/src/admin/Admin.jsx';
-import AdminDashboard from '/src/admin/AdminDashboard.jsx';
-import AdminNotifications from '/src/admin/AdminNotifications.jsx';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
-import AdminEditFees from '/src/admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
-import AdminCategoryEdit from '/src/admin/AdminCategoryEdit';
-import AdminSellerWallet from '/src/admin/AdminSellerWallet';
-import AdminManager from '/src/admin/AdminManager';
+import Admin from './Admin/Admin.jsx';
+import AdminDashboard from './Admin/AdminDashboard.jsx';
+import AdminNotifications from './Admin/AdminNotifications.jsx';
+import AdminUsers from './Admin/AdminUsers.jsx';
+import AdminPayoutMonitor from './Admin/AdminPayoutMonitor.jsx';
+import AdminEditFees from './Admin/AdminEditFees.jsx';
+import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers.jsx';
+import AdminEditDeals from './Admin/AdminEditDeals.jsx';
+import AdminCategoryEdit from './Admin/AdminCategoryEdit.jsx';
+import AdminSellerWallet from './Admin/AdminSellerWallet.jsx';
+import AdminManager from './Admin/AdminManager.jsx';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -80,6 +80,12 @@ import ProRefundPolicy from './pages/ProRefundPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import SellerAgreement from './pages/SellerAgreement';
 import ShippingPolicy from './pages/ShippingPolicy';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import BulkUpload from './seller/BulkUpload';
+import ProductBump from './seller/ProductBump';
+import ProSellerAnalytics from './seller/ProSellerAnalytics';
+import AdminProSellerRequests from './Admin/AdminProSellerRequests';
 
 // ScrollToTop component to handle scroll to top on route changes
 function ScrollToTop() {
@@ -204,6 +210,9 @@ function AppRoutes() {
             <Route path="/chat/:orderId" element={<ProtectedRoute><ChatInterface /></ProtectedRoute>} />
             <Route path="/seller-chat" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
             <Route path="/seller-chat/:chatId" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
+            <Route path="/seller/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
+            <Route path="/seller/product-bump" element={<ProtectedRoute><ProductBump /></ProtectedRoute>} />
+            <Route path="/seller/pro-analytics" element={<ProtectedRoute><ProSellerAnalytics /></ProtectedRoute>} />
           
             <Route path="/admin/sellers-wallet" element={<ProtectedRoute><AdminSellerWallet /></ProtectedRoute>} />
             <Route path="/admin/manager" element={<ProtectedRoute><AdminManager /></ProtectedRoute>} />
@@ -216,6 +225,7 @@ function AppRoutes() {
             <Route path="/admin/notifications" element={<ProtectedRoute><AdminNotifications /></ProtectedRoute>} />
             <Route path="/admin/edit/banners" element={<ProtectedRoute><AdminEditBannerAndOthers /></ProtectedRoute>} />
             <Route path="/admin/edit/daily-deals" element={<ProtectedRoute><AdminEditDeals /></ProtectedRoute>} />
+            <Route path="/admin/pro-seller-requests" element={<ProtectedRoute><AdminProSellerRequests /></ProtectedRoute>} />
            
             <Route path="/" element={<Home />} />
             <Route path="/support" element={<Support />} />
@@ -256,6 +266,7 @@ function AppRoutes() {
             <Route path="/shipping-policy" element={<ShippingPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ToastContainer position="top-right" autoClose={4000} />
         </Layout>
       </CurrencyProvider>
     </AuthProvider>

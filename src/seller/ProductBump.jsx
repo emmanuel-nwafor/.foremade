@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { toast } from 'react-toastify';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProductBump = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bumping, setBumping] = useState({});
   const { alerts, addAlert, removeAlert } = useAlerts();
+  const { userProfile } = useAuth();
 
   const bumpDurations = [
     { value: '3d', label: '3 Days', price: '₦500' },
@@ -34,11 +36,12 @@ const ProductBump = () => {
       if (response.ok) {
         setProducts(data.products || []);
       } else {
+        toast.error(data.error || 'Failed to fetch products');
         throw new Error(data.error || 'Failed to fetch products');
       }
     } catch (error) {
       console.error('Fetch products error:', error);
-      addAlert(error.message || 'Failed to load products', 'error');
+      toast.error(error.message || 'Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -69,15 +72,16 @@ const ProductBump = () => {
       const data = await response.json();
       
       if (response.ok) {
-        addAlert(data.message || 'Product bumped successfully!', 'success');
+        toast.success(data.message || 'Product bumped successfully!');
         // Refresh products to show updated bump status
         fetchProducts();
       } else {
+        toast.error(data.error || 'Failed to bump product');
         throw new Error(data.error || 'Failed to bump product');
       }
     } catch (error) {
       console.error('Bump product error:', error);
-      addAlert(error.message || 'Failed to bump product', 'error');
+      toast.error(error.message || 'Failed to bump product');
     } finally {
       setBumping(prev => ({ ...prev, [productId]: false }));
     }
@@ -128,9 +132,27 @@ const ProductBump = () => {
     );
   }
 
+  if (userProfile && !userProfile.isProSeller) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">Pro Seller Feature</h2>
+          <p className="mb-4 text-gray-700">Bump up is only available to Pro Sellers. Upgrade now to boost your product visibility!</p>
+          <a href="/pro-seller-guide-full" className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-semibold">Upgrade to Pro Seller</a>
+          <div className="mt-6">
+            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 flex justify-between items-center">
+          <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+        </div>
         <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         
         {/* Header */}

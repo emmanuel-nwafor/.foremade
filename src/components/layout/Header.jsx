@@ -252,20 +252,21 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="bg-[#112D4E] hidden sm:flex text-white py-2 w-full">
-        <div className="flex items-center w-full max-w-7xl mx-auto">
-          {/* Left: Logo */}
-          <div className="flex items-center flex-shrink-0">
-            <Link to="/">
-              <img
-                src={logo}
-                className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
-                alt="Foremade"
-              />
-            </Link>
-          </div>
+      <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-8 items-center">
+        {/* Logo at extreme left */}
+        <div className="flex items-center flex-shrink-0 pl-4 pr-2 h-8">
+          <Link to="/">
+            <img
+              src={logo}
+              className="h-8 w-auto"
+              alt="Foremade"
+            />
+          </Link>
+        </div>
+        {/* Main header content centered and right-aligned */}
+        <div className="flex items-center w-full max-w-7xl mx-auto min-w-0 max-w-full">
           {/* Center: Navigation Links */}
-          <div className="flex-1 flex justify-center items-center">
+          <div className="flex-1 flex justify-center items-center min-w-0">
             <div className="flex items-center space-x-4">
               <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
                 Shop
@@ -279,7 +280,7 @@ const Header = () => {
             </div>
           </div>
           {/* Right: User Actions */}
-          <div className="flex items-center gap-4 ml-4">
+          <div className="flex items-center gap-4 mr-7 flex-shrink-0 flex-grow-0 flex-basis-auto">
             {user ? (
               <Link to="/profile" className="hover:text-gray-300 text-sm whitespace-nowrap">
                 Hi, {getDisplayName()}

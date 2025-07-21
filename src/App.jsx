@@ -85,7 +85,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import BulkUpload from './seller/BulkUpload';
 import ProductBump from './seller/ProductBump';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
-import AdminProSellerRequests from './Admin/AdminProSellerRequests';
+import AdminProSellerRequests from './admin/AdminProSellerRequests';
 
 // ScrollToTop component to handle scroll to top on route changes
 function ScrollToTop() {

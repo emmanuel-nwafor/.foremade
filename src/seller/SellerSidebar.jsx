@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Home, ShoppingCart, List, Image, Upload, Award, CheckSquare, Wallet, MessageSquare, Menu, X } from 'lucide-react';
+import { Home, ShoppingCart, List, Image, Upload, Award, CheckSquare, Wallet, MessageSquare, Menu, X, TrendingUp } from 'lucide-react';
 import logo from '../assets/logi.png';
 import debounce from 'lodash.debounce';
 
@@ -12,7 +12,6 @@ export default function SellerSidebar() {
     setIsOpen(!isOpen);
   };
 
-  // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchQuery(value);
@@ -24,7 +23,6 @@ export default function SellerSidebar() {
     debouncedSearch(e.target.value);
   };
 
-  // Menu items for filtering
   const menuItems = [
     { to: '/dashboard', label: 'Dashboard', icon: Home, category: 'Dashboard' },
     { to: '/sellers/orders', label: 'Orders', icon: ShoppingCart, category: 'Order Management' },
@@ -34,18 +32,19 @@ export default function SellerSidebar() {
     { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
     { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
     { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
-    { to: '/transactions', label: 'Transactions', icon: Wallet, category: 'Your wallet' },
+    { to: '/transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
     { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
+    // Pro sellers
+    { to: '/seller/product-bump', label: 'Product Bump', icon: TrendingUp, category: 'Pro Seller' },
+    { to: '/seller/pro-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Pro Seller' },
   ];
 
-  // Filter menu items based on search query
   const filteredMenuItems = menuItems.filter((item) =>
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <>
-      {/* Hamburger Menu Button (Mobile Only) */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-700 rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
@@ -54,13 +53,11 @@ export default function SellerSidebar() {
         <Menu className="w-6 h-6" />
       </button>
 
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col z-50 md:w-64 md:flex md:flex-col transition-transform duration-300 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 max-h-[calc(100vh)] overflow-y-auto`}
       >
-        {/* Logo and Close Button */}
         <div className="p-4 border-b border-gray-700 flex justify-between items-center">
           <Link to="/" onClick={() => setIsOpen(false)} aria-label="Foremade homepage">
             <img src={logo} alt="Foremade logo" className="w-32" />
@@ -74,7 +71,6 @@ export default function SellerSidebar() {
           </button>
         </div>
 
-        {/* Search Input */}
         <div className="p-4 sticky top-0 bg-gray-800 z-10">
           <input
             type="text"
@@ -85,13 +81,11 @@ export default function SellerSidebar() {
           />
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-2 space-y-3">
           {searchQuery && filteredMenuItems.length === 0 ? (
             <p className="text-gray-400 text-sm px-2">No menu items found</p>
           ) : (
             <>
-              {/* Dashboard */}
               {filteredMenuItems.some((item) => item.category === 'Dashboard') && (
                 <Link
                   to="/dashboard"
@@ -104,7 +98,6 @@ export default function SellerSidebar() {
                 </Link>
               )}
 
-              {/* Order Management */}
               {filteredMenuItems.some((item) => item.category === 'Order Management') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Order Management</h3>
@@ -125,7 +118,6 @@ export default function SellerSidebar() {
                 </div>
               )}
 
-              {/* Product Management */}
               {filteredMenuItems.some((item) => item.category === 'Product Management') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Product Management</h3>
@@ -146,7 +138,6 @@ export default function SellerSidebar() {
                 </div>
               )}
 
-              {/* Registering with us */}
               {filteredMenuItems.some((item) => item.category === 'Registering with us') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
@@ -167,7 +158,6 @@ export default function SellerSidebar() {
                 </div>
               )}
 
-              {/* Your wallet */}
               {filteredMenuItems.some((item) => item.category === 'Your wallet') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Your wallet</h3>
@@ -188,7 +178,6 @@ export default function SellerSidebar() {
                 </div>
               )}
 
-              {/* Chat */}
               {filteredMenuItems.some((item) => item.category === 'Chat') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Chat</h3>
@@ -208,12 +197,31 @@ export default function SellerSidebar() {
                     ))}
                 </div>
               )}
+
+              {filteredMenuItems.some((item) => item.category === 'Pro Seller') && (
+                <div>
+                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Pro Seller</h3>
+                  {filteredMenuItems
+                    .filter((item) => item.category === 'Pro Seller')
+                    .map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                        aria-label={item.label}
+                      >
+                        <item.icon className="w-5 h-5 mr-2" />
+                        {item.label}
+                      </Link>
+                    ))}
+                </div>
+              )}
             </>
           )}
         </nav>
       </div>
 
-      {/* Overlay (Mobile Only, when sidebar is open) */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
 import logo from '/src/assets/logi.png';
@@ -205,7 +205,15 @@ const Header = () => {
       const querySnapshot = await getDocs(q);
       const filtered = querySnapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((product) => product.name.toLowerCase().includes(queryText.toLowerCase()));
+        .filter((product) => product.name.toLowerCase().includes(queryText.toLowerCase()))
+        .sort((a, b) => {
+          const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
+          const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;
+          if (aBump && bBump) return bBump - aBump;
+          if (aBump) return -1;
+          if (bBump) return 1;
+          return 0;
+        });
       setSearchResults(filtered);
       setShowDropdown(true);
     } catch (err) {

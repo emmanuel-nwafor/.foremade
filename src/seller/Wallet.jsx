@@ -285,7 +285,7 @@ export default function Wallet() {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <SellerSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-6 md:p-8 lg:p-10">
-        <div className="max-w-4xl mx-auto w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="max-w-8xl mx-auto w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <WalletIcon className="w-8 h-8 text-blue-600" />

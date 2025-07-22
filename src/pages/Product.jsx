@@ -32,6 +32,8 @@ const Product = () => {
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [previousVariant, setPreviousVariant] = useState(null); // Track previous variant
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -61,9 +63,10 @@ const Product = () => {
   const SIZE_RELEVANT_CATEGORIES = ['foremade fashion', 'clothing', 'shoes', 'accessories'];
 
   const calculateTotalPrice = (basePrice, qty, discountPercentage = 0) => {
+    const taxAndFees = 1 + 0.075 + 0.02 + 0.05; // Consistent tax and fee rate
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
-    return discountedPrice * (1 + 0.075 + 0.02 + 0.05) * qty; // Match Checkout.js
+    return discountedPrice * taxAndFees * qty;
   };
 
   const formatDescription = (text) => {
@@ -169,14 +172,12 @@ const Product = () => {
         setSellerLocation(location);
 
         let imageUrls = Array.isArray(data.imageUrls)
-          ? data.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
-          : data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
+          ? data.imageUrls
+          : data.imageUrl && typeof data.imageUrl === 'string'
           ? [data.imageUrl]
           : ['https://via.placeholder.com/600'];
-        let videoUrls = Array.isArray(data.videoUrls)
-          ? data.videoUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
-          : [];
-        if (imageUrls.length === 0) {
+        let videoUrls = Array.isArray(data.videoUrls) ? data.videoUrls : [];
+        if (imageUrls.length === 0 || !imageUrls[0]) {
           imageUrls = ['https://via.placeholder.com/600'];
         }
         const category = data.category?.trim().toLowerCase() || 'uncategorized';
@@ -213,6 +214,7 @@ const Product = () => {
           rating: data.rating || Math.random() * 2 + 3,
           reviews,
           status: data.status || 'pending',
+          variants: data.variants || [],
         };
 
         const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
@@ -238,6 +240,12 @@ const Product = () => {
         if (productData.sizes.length > 0) {
           setSelectedSize(productData.sizes[0]);
         }
+        if (productData.variants.length > 0) {
+          setSelectedVariant(productData.variants[0]);
+          setPreviousVariant(productData.variants[0]); // Set initial previous variant
+          setSelectedColor(productData.variants[0].color);
+          setSelectedSize(productData.variants[0].size);
+        }
 
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
@@ -261,12 +269,9 @@ const Product = () => {
             const data = doc.data();
             if (data.status !== 'approved') return null;
             let imageUrl =
-              data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
+              data.imageUrl && typeof data.imageUrl === 'string'
                 ? data.imageUrl
-                : Array.isArray(data.imageUrls) &&
-                  data.imageUrls[0] &&
-                  typeof data.imageUrls[0] === 'string' &&
-                  data.imageUrls[0].startsWith('https://res.cloudinary.com/')
+                : Array.isArray(data.imageUrls) && data.imageUrls[0]
                 ? data.imageUrls[0]
                 : 'https://via.placeholder.com/600';
             if (doc.id === id) return null;
@@ -315,10 +320,11 @@ const Product = () => {
     try {
       const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
       const validRecent = recent
-        .filter(item => item && item.id && item.name)
-        .map(item => ({
+        .filter((item) => item && item.id && item.name)
+        .map((item) => ({
           ...item,
-          price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0
+          price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0,
+          imageUrl: item.imageUrl || 'https://via.placeholder.com/600',
         }));
       setRecentSearches(validRecent);
     } catch (err) {
@@ -344,12 +350,12 @@ const Product = () => {
   const handleAddToCart = async () => {
     if (!product) return;
     try {
-      if (quantity > product.stock) {
-        addAlert(`Cannot add more than ${product.stock} units of ${product.name}`, 'error', 3000);
-        setQuantity(product.stock > 0 ? product.stock : 1);
+      if (quantity > (selectedVariant?.stock || product.stock)) {
+        addAlert(`Cannot add more than ${(selectedVariant?.stock || product.stock)} units of ${product.name}`, 'error', 3000);
+        setQuantity((selectedVariant?.stock || product.stock) > 0 ? (selectedVariant?.stock || product.stock) : 1);
         return;
       }
-      await addToCart(product.id, quantity, auth.currentUser?.uid);
+      await addToCart(product.id, quantity, auth.currentUser?.uid, selectedColor, selectedSize);
       addAlert(`${product.name} added to cart!`, 'success', 3000);
       setQuantity(1);
     } catch (err) {
@@ -360,9 +366,9 @@ const Product = () => {
 
   const handlePayNow = () => {
     if (!product) return;
-    if (quantity > product.stock) {
-      addAlert(`Cannot purchase more than ${product.stock} units of ${product.name}`, 'error', 3000);
-      setQuantity(product.stock > 0 ? product.stock : 1);
+    if (quantity > (selectedVariant?.stock || product.stock)) {
+      addAlert(`Cannot purchase more than ${(selectedVariant?.stock || product.stock)} units of ${product.name}`, 'error', 3000);
+      setQuantity((selectedVariant?.stock || product.stock) > 0 ? (selectedVariant?.stock || product.stock) : 1);
       return;
     }
     navigate(`/checkout?productId=${product.id}&quantity=${quantity}&color=${encodeURIComponent(selectedColor || '')}&size=${encodeURIComponent(selectedSize || '')}`);
@@ -475,6 +481,43 @@ const Product = () => {
     }
   };
 
+  const handleVariantChange = useCallback((color, size) => {
+    if (!product?.variants) return;
+    const variant = product.variants.find((v) => v.color === color && v.size === size);
+    if (variant) {
+      setPreviousVariant(selectedVariant); // Save current variant as previous
+      setSelectedVariant(variant);
+      setSelectedColor(color);
+      setSelectedSize(size);
+      setProduct((prev) => ({
+        ...prev,
+        price: variant.price,
+        stock: variant.stock,
+        imageUrls: variant.imageUrls && variant.imageUrls.length > 0 ? variant.imageUrls : prev.imageUrls,
+      }));
+      setMainMedia(variant.imageUrls && variant.imageUrls.length > 0 ? variant.imageUrls[0] : product.imageUrls[0]);
+      setCurrentMediaIndex(0);
+      setQuantity(1);
+    }
+  }, [product, selectedVariant]);
+
+  const revertToPreviousVariant = () => {
+    if (previousVariant) {
+      setSelectedVariant(previousVariant);
+      setSelectedColor(previousVariant.color);
+      setSelectedSize(previousVariant.size);
+      setProduct((prev) => ({
+        ...prev,
+        price: previousVariant.price,
+        stock: previousVariant.stock,
+        imageUrls: previousVariant.imageUrls && previousVariant.imageUrls.length > 0 ? previousVariant.imageUrls : prev.imageUrls,
+      }));
+      setMainMedia(previousVariant.imageUrls && previousVariant.imageUrls.length > 0 ? previousVariant.imageUrls[0] : product.imageUrls[0]);
+      setCurrentMediaIndex(0);
+      setQuantity(1);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -502,9 +545,9 @@ const Product = () => {
     product.description.length > DESCRIPTION_LIMIT ? `${product.description.substring(0, DESCRIPTION_LIMIT)}...` : product.description;
   const shouldShowDescriptionToggle = product.description.length > DESCRIPTION_LIMIT;
   const displayedReviews = showAllReviews ? product.reviews : product.reviews?.slice(0, REVIEW_LIMIT);
-  const imageMedia = product.imageUrls;
-  const totalPrice = calculateTotalPrice(product.price, quantity, isDailyDeal ? discountPercentage : 0);
-  const originalPrice = calculateTotalPrice(product.price, quantity, 0);
+  const imageMedia = selectedVariant?.imageUrls && selectedVariant.imageUrls.length > 0 ? selectedVariant.imageUrls : product.imageUrls;
+  const totalPrice = calculateTotalPrice(selectedVariant?.price || product.price, quantity, isDailyDeal ? discountPercentage : 0);
+  const originalPrice = calculateTotalPrice(selectedVariant?.price || product.price, quantity, 0);
   const avgRating = product.reviews && product.reviews.length > 0 
     ? (product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length).toFixed(1)
     : product.rating.toFixed(1);
@@ -662,6 +705,12 @@ const Product = () => {
             transform: scale(1.1);
             color: #ef4444;
           }
+          .back-icon {
+            transition: all 0.3s ease;
+          }
+          .back-icon:hover {
+            transform: scale(1.2);
+          }
         `}
       </style>
       
@@ -691,6 +740,7 @@ const Product = () => {
                     style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '0.75rem' }}
                     onError={(e) => {
                       e.target.src = 'https://via.placeholder.com/600';
+                      console.error('Image load error, using fallback:', e);
                     }}
                   />
                 )}
@@ -709,6 +759,7 @@ const Product = () => {
                       onClick={() => handleMediaClick(media, index)}
                       onError={(e) => {
                         e.target.src = 'https://via.placeholder.com/600';
+                        console.error('Thumbnail load error, using fallback:', e);
                       }}
                     />
                   ))}
@@ -936,12 +987,50 @@ const Product = () => {
                   </div>
                   <div className="info-badge bg-orange-100 text-orange-700 border border-orange-200">
                     <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 17v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                    <span>{product.stock} in stock</span>
+                    <span>{selectedVariant?.stock || product.stock} in stock</span>
                   </div>
                 </div>
 
+                {/* Variant Selection */}
+                {product.variants && product.variants.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Variant:</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={`${selectedColor}-${selectedSize}`}
+                        onChange={(e) => {
+                          const [color, size] = e.target.value.split('-');
+                          handleVariantChange(color, size);
+                        }}
+                        className="w-full py-2 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        {product.variants.map((variant, idx) => (
+                          <option key={idx} value={`${variant.color}-${variant.size}`}>
+                            {`${variant.color} - ${variant.size}`}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={revertToPreviousVariant}
+                        className="back-icon ml-2 bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        disabled={!previousVariant}
+                        title="Revert to previous variant"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      <p>Price: ₦{selectedVariant?.price.toLocaleString('en-NG', { minimumFractionDigits: 2 }) || product.price.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                      <p>Stock: {selectedVariant?.stock || product.stock} units</p>
+                      <p>Images: {selectedVariant?.imageUrls?.length || product.imageUrls.length}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Color Selection */}
-                {product.colors && product.colors.length > 0 && (
+                {product.colors && product.colors.length > 0 && !product.variants.length && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Color:</h3>
                     <div className="flex flex-wrap gap-2">
@@ -962,7 +1051,7 @@ const Product = () => {
                 )}
 
                 {/* Size Selection */}
-                {product.sizes && product.sizes.length > 0 && (
+                {product.sizes && product.sizes.length > 0 && !product.variants.length && (
                   <div className="mb-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Size:</h3>
                     <div className="flex flex-wrap gap-2 min-w-0">
@@ -999,21 +1088,21 @@ const Product = () => {
                       value={quantity}
                       onChange={(e) => {
                         const value = parseInt(e.target.value) || 1;
-                        setQuantity(Math.max(1, Math.min(value, product.stock)));
+                        setQuantity(Math.max(1, Math.min(value, selectedVariant?.stock || product.stock)));
                       }}
                       min="1"
-                      max={product.stock}
+                      max={selectedVariant?.stock || product.stock}
                       className="flex-1 text-center"
                     />
                     <button
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                      onClick={() => setQuantity(Math.min(selectedVariant?.stock || product.stock, quantity + 1))}
                       className="px-3 py-2 hover:bg-gray-100"
                     >
                       +
                     </button>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    {product.stock} available
+                    {selectedVariant?.stock || product.stock} available
                   </p>
                 </div>
 
@@ -1021,10 +1110,10 @@ const Product = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={handleAddToCart}
-                    disabled={product.stock === 0}
+                    disabled={(selectedVariant?.stock || product.stock) === 0}
                     className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
                   >
-                    {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    {(selectedVariant?.stock || product.stock) === 0 ? 'Out of Stock' : 'Add to Cart'}
                   </button>
                   <button
                     onClick={toggleFavorite}
@@ -1076,6 +1165,7 @@ const Product = () => {
                           className="w-16 h-16 object-cover rounded-lg"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/600';
+                            console.error('Similar product image load error, using fallback:', e);
                           }}
                         />
                         <div className="flex-1 min-w-0">
@@ -1083,7 +1173,7 @@ const Product = () => {
                             {similarProduct.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            <PriceFormatter price={similarProduct.price} />
+                            <PriceFormatter price={calculateTotalPrice(similarProduct.price, 1)} />
                           </p>
                           <div className="flex items-center gap-1 mt-1">
                             <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -1119,6 +1209,7 @@ const Product = () => {
                           className="w-12 h-12 object-cover rounded-lg"
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/600';
+                            console.error('Recent search image load error, using fallback:', e);
                           }}
                         />
                         <div className="flex-1 min-w-0">
@@ -1126,7 +1217,7 @@ const Product = () => {
                             {recentProduct.name}
                           </h4>
                           <p className="text-xs text-gray-600">
-                            <PriceFormatter price={recentProduct.price || 0} />
+                            <PriceFormatter price={calculateTotalPrice(recentProduct.price, 1)} />
                           </p>
                         </div>
                       </div>
@@ -1153,10 +1244,10 @@ const Product = () => {
             </div>
             <button
               onClick={handlePayNow}
-              disabled={product.stock === 0}
+              disabled={(selectedVariant?.stock || product.stock) === 0}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {product.stock === 0 ? 'Out of Stock' : 'Pay Now'}
+              {(selectedVariant?.stock || product.stock) === 0 ? 'Out of Stock' : 'Pay Now'}
             </button>
           </div>
         </div>

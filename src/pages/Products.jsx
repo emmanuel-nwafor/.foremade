@@ -79,6 +79,7 @@ const Products = () => {
               rating: data.rating || 0,
               reviews: data.reviews || [],
               status: productStatus,
+              bumpExpiry: data.bumpExpiry || null,
             };
           })
           .filter((product) => {
@@ -115,6 +116,16 @@ const Products = () => {
   const handleFilterChange = useCallback(
     ({ priceRange, selectedCategories, sortOption, searchTerm }) => {
       let updatedProducts = [...initialProducts].filter((product) => product !== null);
+
+      // Sort by bumpExpiry first (highest first)
+      updatedProducts.sort((a, b) => {
+        const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
+        const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;
+        if (aBump && bBump) return bBump - aBump;
+        if (aBump) return -1;
+        if (bBump) return 1;
+        return 0;
+      });
 
       updatedProducts = updatedProducts.filter((product) => {
         const withinPriceRange = product.price >= priceRange[0] && product.price <= priceRange[1];

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Home, ShoppingCart, List, Image, Upload, Award, CheckSquare, Wallet, MessageSquare, Menu, X } from 'lucide-react';
+import { Home, ShoppingCart, List, Image, Upload, Award, CheckSquare, Wallet, MessageSquare, Menu, X, Package } from 'lucide-react';
 import logo from '../assets/logi.png';
 import debounce from 'lodash.debounce';
 
@@ -31,6 +31,7 @@ export default function SellerSidebar() {
     { to: '/sellers/products', label: 'Products List', icon: List, category: 'Product Management' },
     { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
     { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
+    { to: '/seller/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
     { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
     { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
     { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },

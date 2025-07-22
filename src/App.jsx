@@ -87,6 +87,7 @@ import BulkUpload from './seller/BulkUpload';
 import ProductBump from './seller/ProductBump';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
 import AdminProSellerRequests from './admin/AdminProSellerRequests';
+import ProductBumpInfo from './seller/ProductBumpInfo';
 
 // ScrollToTop component to handle scroll to top on route changes
 function ScrollToTop() {
@@ -215,6 +216,7 @@ function AppRoutes() {
             <Route path="/seller/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
             <Route path="/seller/product-bump" element={<ProtectedRoute><ProductBump /></ProtectedRoute>} />
             <Route path="/seller/pro-analytics" element={<ProtectedRoute><ProSellerAnalytics /></ProtectedRoute>} />
+            <Route path="/seller/product-bump-info" element={<ProductBumpInfo />} />
           
             <Route path="/admin/sellers-wallet" element={<ProtectedRoute><AdminSellerWallet /></ProtectedRoute>} />
             <Route path="/admin/manager" element={<ProtectedRoute><AdminManager /></ProtectedRoute>} />

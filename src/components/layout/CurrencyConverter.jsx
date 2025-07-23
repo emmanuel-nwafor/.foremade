@@ -1,5 +1,5 @@
 import React from 'react';
-import { useCurrency } from '/src/CurrencyContext';
+import { useCurrency } from '../../CurrencyContext';
 import { Globe } from 'lucide-react';
 
 export default function CurrencyConverter() {

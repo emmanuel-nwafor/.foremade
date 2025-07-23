@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
@@ -9,7 +9,6 @@ import FreeShipping from '../home/FreeShipping';
 
 const Header = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -23,7 +22,6 @@ const Header = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [categoryMoreOpen, setCategoryMoreOpen] = useState(false);
-  const [mobileCategoryMoreOpen, setMobileCategoryMoreOpen] = useState(false);
 
   const categories = [
     "Camera & Photography",
@@ -54,45 +52,6 @@ const Header = () => {
       .replace(/^-+|-+$/g, '');
 
   const visibleCategories = categories.slice(0, 8);
-  const hiddenCategories = categories.slice(8);
-
-  // Add category alias mapping for Shop by Category
-  const categoryAliasMap = {
-    'shoe': 'Footwear',
-    'shoes': 'Footwear',
-    'fashion': 'Clothing',
-    'clothing': 'Clothing',
-    'phone': 'Computers & Laptops',
-    'phones': 'Computers & Laptops',
-    'laptop': 'Computers & Laptops',
-    'laptops': 'Computers & Laptops',
-    'gaming': 'Game & Console',
-    'game': 'Game & Console',
-    'console': 'Game & Console',
-    // Add more aliases as needed
-  };
-
-  // Add category path mapping for Shop by Category (use actual category names as keys)
-  const categoryPathMap = {
-    'Footwear': 'footwear',
-    'Clothing': 'clothing',
-    'Computers & Laptops': 'computers-laptops',
-    'Game & Console': 'game-console',
-    // Add more as needed
-  };
-
-  // Helper to get mapped category
-  const getCategoryLink = (category) => {
-    const key = category.trim().toLowerCase();
-    return categoryAliasMap[key] || category;
-  };
-
-  // Helper to get mapped category path
-  const getCategoryPath = (category) => {
-    return `/category/${categoryPathMap[category] || slugify(category)}`;
-  };
-
-  const showBackButton = location.pathname !== '/';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -235,16 +194,8 @@ const Header = () => {
     setCategoryMoreOpen(!categoryMoreOpen);
   };
 
-  const toggleMobileCategoryMore = () => {
-    setMobileCategoryMoreOpen(!mobileCategoryMoreOpen);
-  };
-
   const handleMoreDropdownBlur = () => {
     setTimeout(() => setMoreDropdownOpen(false), 200);
-  };
-
-  const handleCategoryMoreBlur = () => {
-    setTimeout(() => setCategoryMoreOpen(false), 200);
   };
 
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
@@ -252,35 +203,71 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-[70px] items-center">
-        {/* Logo at extreme left */}
-        <div className="flex items-center flex-shrink-0 pl-3 pr-2 h-8">
+      <div className="bg-[#112D4E] hidden sm:flex text-white py-2 px-4">
+        <div className="flex items-center w-full max-w-7xl mx-auto">
+          {/* Logo */}
           <Link to="/">
             <img
               src={logo}
-              className="h-[45px] w-auto"
+              className="h-10 sm:h-[52px] sm:w-auto md:w-auto lg:w-auto xl:w-auto"
               alt="Foremade"
             />
           </Link>
-        </div>
-        {/* Main header content centered and right-aligned */}
-        <div className="flex items-center w-full max-w-7xl mx-auto min-w-0 max-w-full">
-          {/* Center: Navigation Links */}
-          <div className="flex-1 flex justify-center items-center min-w-0">
-            <div className="flex items-center space-x-4">
-              <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
-                Shop
-              </Link>
-              <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">
-                Sell
-              </Link>
-              <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
-                Smile
-              </Link>
+          {/* Navigation Links */}
+          <div className="flex ml-5 items-center space-x-4 mt-2">
+            <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
+              Shop
+            </Link>
+            <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">
+              Sell
+            </Link>
+            <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
+              Smile
+            </Link>
+            <div className="relative group">
+              <button
+                onClick={toggleMoreDropdown}
+                onBlur={handleMoreDropdownBlur}
+                className="hover:text-gray-300 text-xs sm:text-sm focus:outline-none"
+              >
+                More <i className="bx bx-chevron-down"></i>
+              </button>
+              {moreDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <Link
+                    to="/daily-deals"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Daily Deals
+                  </Link>
+                  <Link
+                    to="/brand-outlet"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Brand Outlet
+                  </Link>
+                  <Link
+                    to="/gift-cards"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Gift Cards
+                  </Link>
+                  <Link
+                    to="/help-contact"
+                    className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                    onClick={() => setMoreDropdownOpen(false)}
+                  >
+                    Help & Contact
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
-          {/* Right: User Actions */}
-          <div className="flex items-center gap-4 mr-7 flex-shrink-0 flex-grow-0 flex-basis-auto">
+          {/* User Actions */}
+          <div className="flex items-center space-x-3 flex-shrink-0 ml-auto">
             {user ? (
               <Link to="/profile" className="hover:text-gray-300 text-sm whitespace-nowrap">
                 Hi, {getDisplayName()}
@@ -296,7 +283,7 @@ const Header = () => {
                 </Link>
               </div>
             )}
-            <Link to="/notifications" className="relative flex items-center justify-center">
+            <Link to="/notifications" className="relative">
               <i className="bx bx-bell text-xl"></i>
               {notificationCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -304,7 +291,10 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <Link to="/cart" className="relative flex items-center justify-center">
+            <Link to="/search" className="lg:hidden">
+              <i className="bx bx-search text-xl"></i>
+            </Link>
+            <Link to="/cart" className="relative">
               <i className="bx bx-cart-alt text-xl text-white"></i>
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -312,28 +302,17 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <Link to="/search" className="lg:hidden">
-              <i className="bx bx-search text-xl"></i>
-            </Link>
           </div>
         </div>
       </div>
 
       {/* Mobile Header */}
-      <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
-        {/* Left: Logo */}
-        <div className="flex items-center min-w-0">
-          <Link to="/">
-            <img src={logo} className="h-10" alt="Foremade" />
-          </Link>
-        </div>
-        {/* Center: Filler */}
-        <div className="flex-1 min-w-0"></div>
-        {/* Right: Icons */}
-        <div className="flex items-center justify-end flex-1 min-w-0">
-          <Link to="/cart" className="relative flex items-center justify-center">
+      <div className="sm:hidden bg-[#112D4E] text-white py-3 px-4 flex justify-between items-center fixed top-0 left-0 right-0 z-40">
+        <Link to="/">
+          <img src={logo} className="h-10" alt="Foremade" />
+        </Link>
+        <div className="flex items-center space-x-4">
+          <Link to="/cart" className="relative">
             <i className="bx bx-cart-alt text-xl text-white"></i>
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -341,7 +320,7 @@ const Header = () => {
               </span>
             )}
           </Link>
-          <button onClick={() => setSidebarOpen(true)} className="ml-4 mr-4 flex items-center justify-center focus:outline-none">
+          <button onClick={() => setSidebarOpen(true)} className="focus:outline-none">
             <i className="bx bx-menu text-2xl"></i>
           </button>
         </div>
@@ -403,7 +382,7 @@ const Header = () => {
           {categories.map((category) => (
             <Link
               key={category}
-              to={getCategoryPath(category)}
+              to={`/category/${slugify(category)}`}
               className="hover:text-blue-600 bg-gray-100 rounded-full px-3 py-1 whitespace-nowrap flex-shrink-0"
             >
               {category}
@@ -469,7 +448,7 @@ const Header = () => {
               )}
             </div>
             {/* Fixed Categories Section */}
-            <div className="w-full mt-2 sm:mt-4">
+            <div className="w-full mt-2 sm:mt-4 overflow-hidden">
               <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-700 flex-wrap">
                 {visibleCategories.map((category) => (
                   <Link
@@ -480,56 +459,34 @@ const Header = () => {
                     {category}
                   </Link>
                 ))}
-                {/* Categories "More" dropdown - only show if there are more than 8 categories */}
-                {categories.length > 8 && (
-                  <div className="relative" onMouseLeave={handleCategoryMoreBlur}>
-                    <button
-                      onClick={toggleCategoryMore}
-                      className="hover:text-blue-600 focus:outline-none whitespace-nowrap"
-                    >
-                      More <i className="bx bx-chevron-down"></i>
-                    </button>
-                    {categoryMoreOpen && (
-                      <div className="absolute top-full left-1/2 -translate-x-[60%] mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-80 overflow-y-auto">
-                        {hiddenCategories.map((category) => (
-                          <Link
-                            key={category}
-                            to={`/category/${slugify(category)}`}
-                            className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
-                            onClick={() => setCategoryMoreOpen(false)}
-                          >
-                            {category}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Categories "More" dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={toggleCategoryMore}
+                    className="hover:text-blue-600 focus:outline-none whitespace-nowrap"
+                  >
+                    More <i className="bx bx-chevron-down"></i>
+                  </button>
+                  {categoryMoreOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                      {categories.slice(8).map((category) => (
+                        <Link
+                          key={category}
+                          to={`/category/${slugify(category)}`}
+                          className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
+                          onClick={() => setCategoryMoreOpen(false)}
+                        >
+                          {category}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Back Button Below Categories/Search - always visible on all screens */}
-      {showBackButton && (
-        <div className="w-full flex justify-start mt-2 px-2 sm:px-4">
-          <button
-            onClick={() => {
-              if (window.history.length > 2) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-200 text-blue-700 text-sm font-medium focus:outline-none"
-            aria-label="Go back"
-          >
-            <i className="bx bx-arrow-back text-xl"></i>
-            <span className="sm:inline">Return</span>
-          </button>
-        </div>
-      )}
 
       {/* Bottom Navigation - Mobile Only */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 z-40">
@@ -578,7 +535,7 @@ const Header = () => {
       {/* Mobile Sidebar */}
       <div className="sm:hidden">
         <div
-          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto max-h-screen"
+          className="fixed top-0 left-0 h-full bg-[#f8d7b0] w-full transform transition-transform duration-300 ease-in-out z-50"
           style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
         >
           <div className="p-4">
@@ -586,31 +543,6 @@ const Header = () => {
               <i className="bx bx-x text-2xl text-[#112040]"></i>
             </button>
             <div className="flex flex-col space-y-3">
-              {/* Add main navigation links for all users */}
-              <div className="flex justify-center gap-2 w-full mb-4">
-                <Link
-                  to="/products"
-                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Shop
-                </Link>
-                <Link
-                  to="/products-upload"
-                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Sell
-                </Link>
-                <Link
-                  to="/smile"
-                  className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Smile
-                </Link>
-              </div>
-              {/* Auth/Profile section */}
               {!user && (
                 <div className="flex items-center justify-center mt-6 bg-[#112040] text-white px-4 py-3 rounded-lg text-sm hover:bg-[#112040]/80">
                   <Link to="/login" className="mx-2" onClick={() => setSidebarOpen(false)}>
@@ -631,46 +563,16 @@ const Header = () => {
                   My Profile
                 </Link>
               )}
-              {/* Categories */}
-              <div className="space-y-1">
-                {categories.slice(0, 8).map((category) => (
-                  <Link
-                    key={category}
-                    to={`/category/${slugify(category)}`}
-                    className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10 block"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    {category}
-                  </Link>
-                ))}
-                {/* Categories "More" dropdown for mobile sidebar */}
-                <div className="relative">
-                  <button
-                    onClick={toggleMobileCategoryMore}
-                    className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10 w-full text-left flex items-center justify-between"
-                  >
-                    More <i className="bx bx-chevron-down"></i>
-                  </button>
-                  {mobileCategoryMoreOpen && (
-                    <div className="mt-2 space-y-1 z-100">
-                      {console.log('Mobile More Dropdown Open:', mobileCategoryMoreOpen, 'Categories:', categories.slice(8))}
-                      {categories.slice(8).map((category) => (
-                        <Link
-                          key={category}
-                          to={`/category/${slugify(category)}`}
-                          className="text-[#112040] hover:text-amber-500 text-sm py-2 pl-4 border-b border-[#112040]/10 block"
-                          onClick={() => {
-                            setSidebarOpen(false);
-                            setMobileCategoryMoreOpen(false);
-                          }}
-                        >
-                          {category}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {categories.map((category) => (
+                <Link
+                  key={category}
+                  to={`/category/${slugify(category)}`}
+                  className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  {category}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

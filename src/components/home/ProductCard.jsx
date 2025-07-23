@@ -18,6 +18,9 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   const [isDailyDeal, setIsDailyDeal] = useState(propIsDailyDeal);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+  const [views, setViews] = useState(0);
+  const [sales, setSales] = useState(0);
+  const [bumpExpiry, setBumpExpiry] = useState(null);
 
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
@@ -48,6 +51,9 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         setFavoriteCount(0);
         setIsDailyDeal(propIsDailyDeal);
         setDiscountPercentage(0);
+        setViews(0);
+        setSales(0);
+        setBumpExpiry(null);
         return;
       }
 
@@ -62,18 +68,27 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
             favoriteCount: data.favoriteCount,
             isDailyDeal: data.isDailyDeal,
             discountPercentage: data.discountPercentage,
+            views: data.views,
+            sales: data.sales,
+            bumpExpiry: data.bumpExpiry,
           });
           const userId = auth.currentUser?.uid;
           setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
           setFavoriteCount(data.favoriteCount || 0);
           setIsDailyDeal(data.isDailyDeal || propIsDailyDeal);
           setDiscountPercentage(data.discountPercentage || 0);
+          setViews(data.views || 0);
+          setSales(data.sales || 0);
+          setBumpExpiry(data.bumpExpiry ? new Date(data.bumpExpiry) : null);
         } else {
           console.warn('Product not found in Firestore:', product.id);
           setIsFavorited(false);
           setFavoriteCount(0);
           setIsDailyDeal(propIsDailyDeal);
           setDiscountPercentage(0);
+          setViews(0);
+          setSales(0);
+          setBumpExpiry(null);
         }
       } catch (err) {
         console.error('Error fetching product data:', err);
@@ -166,12 +181,27 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
     }
   };
 
-  const trackProductView = () => {
+  const trackProductView = async () => {
     const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
     if (product.id && !recentlyViewed.includes(product.id)) {
       const updatedRecentlyViewed = [product.id, ...recentlyViewed].slice(0, 10);
       localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecentlyViewed));
     }
+    // Update view count in Firebase
+    const productRef = doc(db, 'products', product.id);
+    await updateDoc(productRef, {
+      views: views + 1,
+    });
+    setViews((prev) => prev + 1);
+    // Send analytics to ProSellerAnalytics (via localStorage for simplicity)
+    const analyticsData = {
+      id: product.id,
+      name: product.name,
+      views: views + 1,
+      sales: sales,
+      bumpExpiry: bumpExpiry,
+    };
+    localStorage.setItem(`analytics_${product.id}`, JSON.stringify(analyticsData));
   };
 
   const totalPrice = calculateTotalPrice(product.price || 0, 1, isDailyDeal ? discountPercentage : 0);

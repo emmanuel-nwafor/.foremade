@@ -132,7 +132,7 @@ export default function SellerOnboarding() {
 
       console.log(`Onboarding successful for ${auth.currentUser.uid}, role set to seller`);
       alert('Onboarding successful!');
-      navigate('/seller-dashboard');
+      navigate('/smile');
     } catch (error) {
       console.error(`Onboarding failed for ${auth.currentUser.uid}:`, error);
       setError('Failed to onboard: ' + (error.response?.data?.error || error.message));
@@ -398,7 +398,7 @@ export default function SellerOnboarding() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Already Onboarded</h2>
-            <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your dashboard?</p>
+            <p className="text-gray-600 mb-4">You are already onboarded as a seller. Would you like to proceed to your wallet?</p>
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => navigate('/seller-dashboard')}

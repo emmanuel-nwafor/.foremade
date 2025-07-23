@@ -9,8 +9,7 @@ import SellerLocationForm from './SellerLocationForm';
 import SellerProductUploadPopup from './SellerProductUploadPopup';
 
 // Set global Axios timeout
-axios.defaults.timeout = 60000; // 60 seconds
-
+axios.defaults.timeout = 80000; // 80 seconds
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -904,7 +903,7 @@ const validateLocationForm = () => {
 </Link>
 
 </div>
-        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-7\xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add a New Product

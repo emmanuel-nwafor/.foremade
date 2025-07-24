@@ -21,6 +21,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
   const [views, setViews] = useState(0);
   const [sales, setSales] = useState(0);
   const [bumpExpiry, setBumpExpiry] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
@@ -62,7 +63,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Firestore data:', {
+          console.log('Fetched product data:', {
             id: product.id,
             favoritedBy: data.favoritedBy,
             favoriteCount: data.favoriteCount,
@@ -80,6 +81,10 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
           setViews(data.views || 0);
           setSales(data.sales || 0);
           setBumpExpiry(data.bumpExpiry ? new Date(data.bumpExpiry) : null);
+          // Set initial variant if available
+          if (data.variants && data.variants.length > 0) {
+            setSelectedVariant(data.variants[0]);
+          }
         } else {
           console.warn('Product not found in Firestore:', product.id);
           setIsFavorited(false);
@@ -117,16 +122,25 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
     fetchProductData();
     fetchSellerUsername();
 
+    // Image selection logic mirroring Product page
     let validImage = FALLBACK_IMAGE;
-    if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
+    if (selectedVariant && selectedVariant.imageUrls && Array.isArray(selectedVariant.imageUrls) && selectedVariant.imageUrls.length > 0) {
+      const firstValidVariantImage = selectedVariant.imageUrls.find(img => typeof img === 'string' && img.startsWith('https://'));
+      if (firstValidVariantImage) {
+        validImage = firstValidVariantImage;
+      }
+    } else if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+      const firstValidProductImage = product.imageUrls.find(img => typeof img === 'string' && img.startsWith('https://'));
+      if (firstValidProductImage) {
+        validImage = firstValidProductImage;
+      }
+    } else if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
       validImage = product.imageUrl;
-    } else if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')) {
-      validImage = product.imageUrls[0];
     }
-    console.log('Setting imageUrl to:', validImage);
+    console.log('Selected imageUrl:', validImage);
     setImageUrl(validImage);
     setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.sellerId, product.category, propIsDailyDeal]);
+  }, [product.id, product.imageUrl, product.imageUrls, product.variants, product.sellerId, product.category, propIsDailyDeal, selectedVariant]);
 
   const truncateText = (text, maxLength = 15) => {
     if (!text || typeof text !== 'string') return 'No text available';

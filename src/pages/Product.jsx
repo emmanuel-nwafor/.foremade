@@ -251,7 +251,7 @@ const Product = () => {
           const newSearch = {
             id: productData.id,
             name: productData.name,
-            imageUrl: productData.variants.length && selectedVariant?.imageUrls?.[0] ? selectedVariant.imageUrls[0] : productData.imageUrls[0],
+            imageUrl: productData.variants.length > 0 && selectedVariant?.imageUrls?.length > 0 ? selectedVariant.imageUrls[0] : productData.imageUrls[0] || 'https://via.placeholder.com/600',
             price: productData.price || 0,
             category: productData.category,
             status: productData.status,
@@ -324,7 +324,7 @@ const Product = () => {
         .map((item) => ({
           ...item,
           price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0,
-          imageUrl: item.variants && item.variants.length && item.variants[0]?.imageUrls?.[0] ? item.variants[0].imageUrls[0] : item.imageUrl || 'https://via.placeholder.com/600',
+          imageUrl: item.variants && item.variants.length > 0 && item.variants[0]?.imageUrls?.length > 0 ? item.variants[0].imageUrls[0] : item.imageUrl || 'https://via.placeholder.com/600',
         }));
       setRecentSearches(validRecent);
     } catch (err) {
@@ -733,7 +733,7 @@ const Product = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-col-3 gap-6 animate-fadeIn">
             {/* Media Section */}
             <div className="order-1">
               <div className="relative main-media-container">
@@ -1031,7 +1031,7 @@ const Product = () => {
             </div>
             
             {/* Description */}
-            <div className="order-3 md:order-2 product-info-card mt-6">
+            <div className="order-3 product-info-card">
               <h3 className="text-lg font-bold text-gray-800 mb-3">Description</h3>
               <div
                 className="formatted-description text-gray-700 text-sm"
@@ -1149,7 +1149,7 @@ const Product = () => {
                   )}
                 </div>
               ) : (
-                <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+                <p className="text-gray-500 tet-sm">No reviews yet. Be the first to review this product!</p>
               )}
             </div>
           </div>

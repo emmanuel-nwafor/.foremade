@@ -22,62 +22,99 @@ const SkeletonLoader = ({ type = 'default', count = 1 }) => {
         // Used in Product - mimics a product detail layout including Similar Products
         return (
           <div className="animate-pulse">
-            {/* Main Product Section */}
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-full md:w-3/4">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-1/2">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Media Section */}
+                  <div className="order-1">
                     <div className="w-full h-96 bg-gray-200 rounded-lg"></div>
+                    <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide">
+                      {[...Array(4)].map((_, index) => (
+                        <div key={index} className="w-16 h-16 bg-gray-300 rounded-lg"></div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="md:w-1/2">
-                    <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                    <div className="h-16 bg-gray-200 rounded w-full"></div>
-                  </div>
-                </div>
-                {/* Description Placeholder */}
-                <div className="mt-8">
-                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </div>
-                {/* Reviews Placeholder */}
-                <div className="mt-8">
-                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-              {/* Similar Products (Desktop) */}
-              <div className="w-full md:w-1/4 max-md:hidden">
-                <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="flex flex-col gap-4 md:border-l md:pl-4">
-                  {[...Array(4)].map((_, index) => (
-                    <div key={index} className="w-full h-64 bg-gray-200 rounded-lg">
-                      <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
-                      <div className="p-2">
-                        <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+
+                  {/* Product Info Section */}
+                  <div className="order-2 space-y-4">
+                    <div className="product-info-card">
+                      <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {[...Array(1)].map((_, index) => (
+                          <div key={index} className="h-6 bg-gray-200 rounded w-1/4"></div>
+                        ))}
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+                      <div className="price-section">
+                        <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {[...Array(1)].map((_, index) => (
+                          <div key={index} className="h-6 bg-gray-200 rounded w-1/5"></div>
+                        ))}
+                      </div>
+                      <div className="h-10 bg-gray-200 rounded w-1/2 mb-4"></div>
+                      <div className="h-10 bg-gray-200 rounded w-1/3 mb-4"></div>
+                      <div className="h-10 bg-gray-200 rounded w-2/3 mb-4"></div>
+                      <div className="flex gap-3">
+                        <div className="h-12 bg-gray-200 rounded w-2/3"></div>
+                        <div className="h-12 bg-gray-200 rounded w-1/6"></div>
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Description */}
+                  <div className="order-3 md:order-2 lg:order-3 product-info-card mt-6">
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  </div>
+
+                  {/* Reviews */}
+                  <div className="order-4 lg:order-5 product-info-card" style={{ marginBottom: '2rem' }}>
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-16 bg-gray-200 rounded w-full mb-2"></div>
+                  </div>
                 </div>
               </div>
-            </div>
-            {/* Similar Products (Mobile) */}
-            <div className="md:hidden mt-6">
-              <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="grid grid-cols-2 gap-4">
-                {[...Array(4)].map((_, index) => (
-                  <div key={index} className="w-full h-64 bg-gray-200 rounded-lg">
-                    <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
-                    <div className="p-2">
-                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+
+              {/* Similar Products and Recent Searches Sidebar */}
+              <div className="lg:col-span-1">
+                <div className="sticky top-4 space-y-6">
+                  {/* Similar Products */}
+                  <div className="product-info-card">
+                    <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div className="space-y-4">
+                      {[...Array(4)].map((_, index) => (
+                        <div key={index} className="h-20 bg-gray-200 rounded-lg flex">
+                          <div className="w-16 h-16 bg-gray-300 rounded-lg mr-2"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+
+                  {/* Recent Searches */}
+                  <div className="product-info-card">
+                    <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, index) => (
+                        <div key={index} className="h-16 bg-gray-200 rounded-lg flex">
+                          <div className="w-12 h-12 bg-gray-300 rounded-lg mr-2"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -111,7 +148,6 @@ const SkeletonLoader = ({ type = 'default', count = 1 }) => {
         );
     }
   };
-
 
   return (
     <div className={type === 'default' ? 'flex gap-4 overflow-x-auto' : ''}>

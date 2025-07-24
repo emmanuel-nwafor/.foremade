@@ -64,12 +64,6 @@ function findCategoryBySlug(slug, categories) {
   );
 }
 
-// Mapping from slugs to actual category slugs for fallback
-const slugToCategorySlug = {
-  'coffee-tea': 'cocoa-coffee-tea',
-  // Add more mappings as needed
-};
-
 export default function CategoryPage() {
   const { categoryName } = useParams();
   const [customSubcategories, setCustomSubcategories] = useState({});
@@ -92,15 +86,8 @@ export default function CategoryPage() {
     return () => unsub();
   }, []);
 
-  // Always compare slugs to slugs
-  const effectiveSlug = slugToCategorySlug[categoryName] || categoryName;
-  console.log('categoryName from URL:', categoryName);
-  console.log('effectiveSlug:', effectiveSlug);
-  console.log('Available categories:', Object.keys(customSubcategories));
-  const realCategoryName = Object.keys(customSubcategories).find(
-    name => slugify(name) === effectiveSlug
-  );
-  console.log('realCategoryName:', realCategoryName);
+  // Find the real category name from the slug
+  const realCategoryName = findCategoryBySlug(categoryName, customSubcategories);
   const subcategories = realCategoryName ? customSubcategories[realCategoryName] : null;
   const bannerObj = categoryBanners[realCategoryName];
   const bannerImg = bannerObj ? (isMobile ? bannerObj.mobile : bannerObj.desktop) : fallbackBanner;

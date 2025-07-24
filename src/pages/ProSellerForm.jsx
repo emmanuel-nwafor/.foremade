@@ -116,6 +116,14 @@ const ProSellerForm = () => {
       if (!formData.manager) newErrors.manager = 'Manager name is required';
       if (!formData.managerEmail) newErrors.managerEmail = 'Manager email is required';
       if (!formData.managerPhone) newErrors.managerPhone = 'Manager phone is required';
+      // Prevent manager/company email from being the same as person's email
+      if (
+        formData.managerEmail &&
+        formData.email &&
+        formData.managerEmail.trim().toLowerCase() === formData.email.trim().toLowerCase()
+      ) {
+        newErrors.managerEmail = 'Manager/Company email must be different from your personal email';
+      }
     }
     if (step === 3) {
       if (!formData.productLines) newErrors.productLines = 'Product line is required';

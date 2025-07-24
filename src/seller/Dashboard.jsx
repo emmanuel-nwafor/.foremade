@@ -6,8 +6,9 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import SellerSidebar from './SellerSidebar';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
-import { Package, CheckCircle2, XCircle, BarChart2, PieChart, Plus, ShoppingBag, Wallet } from 'lucide-react';
+import { Package, CheckCircle2, XCircle, BarChart2, PieChart, Plus, ShoppingBag, Wallet, Info } from 'lucide-react';
 import SecondHeader from '../components/layout/SecondHeader';
+import { useAuth } from '../contexts/AuthContext';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -19,6 +20,7 @@ export default function Dashboard() {
   // Add state for confetti/sparkle animation and animated stats
   const [displayStats, setDisplayStats] = useState({ products: 0, approvedProducts: 0, rejectedProducts: 0 });
   const [sellerName, setSellerName] = useState('');
+  const { userProfile } = useAuth();
 
   // Animate stats count-up
   useEffect(() => {
@@ -209,9 +211,16 @@ export default function Dashboard() {
             <Link to="/smile" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-700 text-white font-semibold shadow-sm hover:bg-gray-800 focus:outline-gray-400 focus:ring-2 focus:ring-gray-300 transition" title="Withdraw Funds">
               <Wallet className="w-5 h-5" /> Withdraw Funds
             </Link>
-            <Link to="/seller/product-bump" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
-              <Package className="w-5 h-5" /> Product Bump
-            </Link>
+            {userProfile && userProfile.isProSeller && (
+              <div className="flex flex-1 min-w-[140px] gap-2">
+                <Link to="/seller/product-bump" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
+                  <Package className="w-5 h-5" /> Product Bump
+                </Link>
+                <Link to="/seller/product-bump-info" className="flex items-center justify-center px-3 py-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="What is Product Bump?">
+                  <Info className="w-5 h-5" />
+                </Link>
+              </div>
+            )}
           </div>
           {/* Stats Cards - Responsive grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">

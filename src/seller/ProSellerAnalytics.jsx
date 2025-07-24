@@ -12,6 +12,16 @@ import SellerSidebar from './SellerSidebar';
 
 ChartJS.register(BarElement, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
+const cardStyle = {
+  background: "#fff",
+  borderRadius: 16,
+  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+  maxWidth: 900,
+  width: "100%",
+  padding: 32,
+  margin: "0 16px",
+};
+
 const ProSellerAnalytics = () => {
   const [analytics, setAnalytics] = useState({
     totalProducts: 0,

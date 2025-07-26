@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import SkeletonLoader from '../common/SkeletonLoader';
 import { Zap, Shield, Clock, Truck, Rocket, Smile, ArrowRight } from 'lucide-react';
+import goImage from '../../assets/images/go.jpg';
 
 const Category = () => {
   const [loading, setLoading] = useState(true);
@@ -104,7 +105,7 @@ const Category = () => {
                 <div className="relative">
                   <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-xl border-4 border-white/40">
                     <img 
-                      src="src/assets/images/go.jpg" 
+                      src={goImage} 
                       alt="Happy ForemadeGo delivery person on motorcycle"
                       className="w-full h-full object-cover"
                     />

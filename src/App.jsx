@@ -30,15 +30,15 @@ import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 
-import Admin from '/src/admin/Admin';
-import AdminDashboard from '/src/admin/AdminDashboard';
-import AdminNotifications from '/src/admin/AdminNotifications';
-import AdminUsers from '/src/admin/AdminUsers';
-import AdminPayoutMonitor from '/src/admin/AdminPayoutMonitor';
-import AdminEditFees from './admin/AdminEditFees';
-import AdminEditBannerAndOthers from '/src/admin/AdminEditBannerAndOthers';
-import AdminEditDeals from '/src/admin/AdminEditDeals';
-import AdminCategoryEdit from './admin/AdminCategoryEdit';
+import Admin from './Admin/Admin';
+import AdminDashboard from './Admin/AdminDashboard';
+import AdminNotifications from './Admin/AdminNotifications';
+import AdminUsers from './Admin/AdminUsers';
+import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
+import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './Admin/AdminEditDeals';
+import AdminEditFees from './Admin/AdminEditFees';
+import AdminCategoryEdit from './Admin/AdminCategoryEdit';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -68,6 +68,8 @@ import Store from './components/store/Store';
 import SellerEditProduct from './seller/SellerEditProduct';
 import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
+import ProSellerGuide from './seller/ProSellerGuide';
+import ProSellerFullGuide from './seller/ProSellerFullGuide';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -242,6 +244,8 @@ function App() {
               <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
 
               <Route path="/" element={<Home />} />
+              <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
+              <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
               <Route path="/support" element={<Support />} />
               <Route path="/empowerment-hub" element={<EmpowermentHub />} />
               <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />

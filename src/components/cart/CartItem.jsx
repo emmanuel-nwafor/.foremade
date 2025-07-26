@@ -111,16 +111,29 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const isOutOfStock = product.stock === 0;
   const totalPrice = calculateTotalPrice(product.price, item.quantity, isDailyDeal ? discountPercentage : 0);
 
+  // Use variant image and price if available
+  const displayImage =
+    item.variant?.imageUrl ||
+    (item.variants?.length > 0 && item.variants[0]?.imageUrls?.[0]) ||
+    item.imageUrl ||
+    (Array.isArray(item.imageUrls) && item.imageUrls[0]) ||
+    'https://via.placeholder.com/600';
+  const displayPrice = typeof item.variant?.price === 'number'
+    ? item.variant.price
+    : typeof item.price === 'number'
+    ? item.price
+    : 0;
+
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
       <Link to={`/product/${product.id}`}>
         <img
-          src={mainImage}
-          alt={product.name}
+          src={displayImage}
+          alt={item.name}
           className="w-16 h-16 object-cover rounded"
           onError={(e) => {
-            console.error('CartItem image load error:', { productId: item.productId, failedUrl: e.target.src, name: product.name });
-            e.target.src = 'https://via.placeholder.com/200?text=No+Image';
+            e.target.src = 'https://via.placeholder.com/600';
+            console.error('CartItem image load error:', item);
           }}
           onLoad={() => {
             console.log('CartItem image loaded successfully:', { productId: item.productId, imageUrl: mainImage, name: product.name });

@@ -204,7 +204,16 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
     localStorage.setItem(`analytics_${product.id}`, JSON.stringify(analyticsData));
   };
 
-  const totalPrice = calculateTotalPrice(product.price || 0, 1, isDailyDeal ? discountPercentage : 0);
+  // Use variant image and price if available
+  const displayImage =
+    product.variant?.imageUrl ||
+    (product.variants?.length > 0 && product.variants[0]?.imageUrls?.[0]) ||
+    product.imageUrl ||
+    (Array.isArray(product.imageUrls) && product.imageUrls[0]) ||
+    'https://via.placeholder.com/600';
+  const displayPrice = product.variant?.price || product.price;
+
+  const totalPrice = calculateTotalPrice(displayPrice || 0, 1, isDailyDeal ? discountPercentage : 0);
 
   return (
     <Link
@@ -221,7 +230,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
       )}
       <div className="relative h-[200px] overflow-hidden rounded-t-lg min-w-0">
         <img
-          src={imageFailed ? FALLBACK_IMAGE : imageUrl}
+          src={imageFailed ? FALLBACK_IMAGE : displayImage}
           alt={product.name}
           className="w-full h-full object-cover max-w-full max-h-full"
           onError={() => {
@@ -232,7 +241,7 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
             }
           }}
           loading="lazy"
-          fetchpriority="low"
+          fetchPriority="low"
         />
         <button
           onClick={handleFavorite}
@@ -269,3 +278,6 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
 };
 
 export default ProductCard;
+
+// NOTE: When using <ProductCard /> in a list, always provide a unique key prop:
+// products.map(product => <ProductCard key={product.id} product={product} />)

@@ -1,7 +1,15 @@
-import { useState, useEffect } from 'react';
-import SkeletonLoader from '../common/SkeletonLoader';
-import { Zap, Shield, Clock, Truck, Rocket, Smile, ArrowRight } from 'lucide-react';
-import goImage from '../../assets/images/go.jpg';
+import { useState, useEffect } from "react";
+import SkeletonLoader from "../common/SkeletonLoader";
+import {
+  Zap,
+  Shield,
+  Clock,
+  Truck,
+  Rocket,
+  Smile,
+  ArrowRight,
+} from "lucide-react";
+import goImage from "../../assets/images/go.jpg";
 
 const Category = () => {
   const [loading, setLoading] = useState(true);
@@ -27,10 +35,10 @@ const Category = () => {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800 mb-4">Top Categories</h2>
+      <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800 mb-4">
+        Top Categories
+      </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-       
-
         {/* ForemadeGo Delivery Ad Card */}
         <div className="md:col-span-2 bg-gradient-to-br from-[#D1FAE5] to-[#A7F3D0] rounded-2xl p-2 sm:p-3 text-gray-900 relative overflow-hidden shadow-2xl">
           {/* Background Pattern */}
@@ -46,14 +54,14 @@ const Category = () => {
                 <h2 className="text-xl sm:text-2xl font-bold mb-1">
                   ForemadeGo
                 </h2>
-                <p className="text-black-400 text-xs sm:text-sm font-medium">
+                <p className="text-teal-100 text-xs sm:text-sm font-medium">
                   Lightning Fast • Ultra Secure
                 </p>
               </div>
               <div className="hidden sm:block">
-                <img 
-                  src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IndoaXRlIiBmaWxsLW9wYWNpdHk9IjAuMiIvPgo8cGF0aCBkPSJNMjAgMjVIMzVMMzAgMzVIMjBWMjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K" 
-                  alt="Delivery" 
+                <img
+                  src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IndoaXRlIiBmaWxsLW9wYWNpdHk9IjAuMiIvPgo8cGF0aCBkPSJNMjAgMjVIMzVMMzAgMzVIMjBWMjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K"
+                  alt="Delivery"
                   className="w-8 h-8"
                 />
               </div>
@@ -62,7 +70,6 @@ const Category = () => {
             <div className="flex flex-col lg:flex-row gap-3 mb-2 items-stretch">
               {/* Left Side - Features + CTA */}
               <div className="flex flex-col justify-center flex-1 gap-4">
-               
                 {/* Features */}
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 bg-white/30 backdrop-blur-sm rounded-xl p-2">
@@ -70,8 +77,12 @@ const Category = () => {
                       <Zap className="w-4 h-4 text-teal-500" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-xs text-gray-800">Lightning Delivery</h4>
-                      <p className="text-teal-600 text-xs">Get your orders in record time</p>
+                      <h4 className="font-semibold text-xs text-gray-800">
+                        Integrated with Foremade
+                      </h4>
+                      <p className="text-teal-600 text-xs">
+                        Get your orders in record time
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 bg-white/30 backdrop-blur-sm rounded-xl p-2">
@@ -79,33 +90,38 @@ const Category = () => {
                       <Shield className="w-4 h-4 text-teal-500" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-xs text-gray-800">100% Secure</h4>
-                      <p className="text-teal-600 text-xs">Your packages, guaranteed safe</p>
+                      <h4 className="font-semibold text-xs text-gray-800">
+                        100% Secure
+                      </h4>
+                      <p className="text-teal-600 text-xs">
+                        Your packages, guaranteed safe
+                      </p>
                     </div>
                   </div>
                 </div>
                 {/* CTA */}
-                <div className="bg-white rounded-2xl p-2 flex items-center justify-center gap-9 mt-2">
-                  <h3 className="text-teal-700 text-sm font-bold mb-0">
+                <div className="bg-white rounded-2xl p-2 flex items-center justify-center gap-12 mt-2">
+                  <h3 className="text-teal-700 text-xs font-semibold mb-0">
                     Get Delivery in Minutes
                   </h3>
                   <a
                     href="https://foremadego.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-400 to-teal-600 hover:from-teal-500 hover:to-teal-700 text-white px-4 py-1.5 rounded-xl font-bold transition-all duration-300 shadow-lg text-xs"
+                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-teal-400 to-teal-600 hover:from-teal-500 hover:to-teal-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md text-[10px]"
                   >
-                    Try ForemadeGo
-                    <ArrowRight className="w-4 h-4" />
+                    Track your orders here
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </div>
+
               {/* Right Side - Delivery Person Image */}
               <div className="flex flex-col items-center justify-center flex-1">
                 <div className="relative">
                   <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-xl border-4 border-white/40">
-                    <img 
-                      src={goImage} 
+                    <img
+                      src={goImage}
                       alt="Happy ForemadeGo delivery person on motorcycle"
                       className="w-full h-full object-cover"
                     />
@@ -121,7 +137,10 @@ const Category = () => {
             <div className="text-center mt-1 flex items-center justify-center gap-2">
               <Rocket className="w-4 h-4 text-teal-400" title="Speed" />
               <Shield className="w-4 h-4 text-teal-400" title="Security" />
-              <Smile className="w-4 h-4 text-teal-400" title="Satisfaction Guaranteed" />
+              <Smile
+                className="w-4 h-4 text-teal-400"
+                title="Satisfaction Guaranteed"
+              />
             </div>
           </div>
         </div>
@@ -129,8 +148,12 @@ const Category = () => {
         {/* Cut the Price Card */}
         <div className="md:col-span-1 bg-[#E0F4FF] text-black rounded-lg p-4 sm:p-6 flex flex-col sm:flex-row max-md:items-center items-left justify-between">
           <div className="flex-1">
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2">Cut the Price, Not the Features</h3>
-            <p className="text-sm sm:text-xs mb-4">Get the latest phones at 20% off</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2">
+              Cut the Price, Not the Features
+            </h3>
+            <p className="text-sm sm:text-xs mb-4">
+              Get the latest phones at 20% off
+            </p>
             <a
               href="/electronics"
               className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-sm sm:text-xs inline-block"
@@ -150,7 +173,9 @@ const Category = () => {
         {/* Style Meets Function Card */}
         <div className="bg-[#EDE9FE] text-black rounded-lg p-4 sm:p-6 flex sm:flex-row items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">Style Meets Function</h3>
+            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">
+              Style Meets Function
+            </h3>
             <a
               href="/electronics"
               className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-sm sm:text-xs inline-block"
@@ -170,7 +195,9 @@ const Category = () => {
         {/* Capture the Magic Card */}
         <div className="bg-[#FFE5E5] text-black rounded-lg p-4 sm:p-6 flex sm:flex-row items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">Capture the Magic Around</h3>
+            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">
+              Capture the Magic Around
+            </h3>
             <a
               href="/electronics"
               className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-sm sm:text-xs inline-block"
@@ -190,7 +217,9 @@ const Category = () => {
         {/* Health & Wellness Card */}
         <div className="bg-[#E0F4FF] text-black rounded-lg p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">Health & Wellness</h3>
+            <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2">
+              Health & Wellness
+            </h3>
             <a
               href="/health-beauty"
               className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-sm sm:text-xs inline-block"

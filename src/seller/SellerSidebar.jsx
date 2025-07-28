@@ -29,15 +29,15 @@ export default function SellerSidebar() {
     { to: '/sellers/products', label: 'Products List', icon: List, category: 'Product Management' },
     { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
     { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
-    { to: '/seller/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
+    { to: '/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
     { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
     { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
     { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
-    { to: '/transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
+    { to: '/seller-transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
     { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
     // Pro sellers
-    { to: '/seller/product-bump', label: 'Product Bump', icon: TrendingUp, category: 'Pro Seller' },
-    { to: '/seller/pro-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Pro Seller' },
+    { to: '/product-bump', label: 'Product Bump', icon: TrendingUp, category: 'Pro Seller' },
+    { to: '/pro-seller-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Pro Seller' },
   ];
 
   const filteredMenuItems = menuItems.filter((item) =>

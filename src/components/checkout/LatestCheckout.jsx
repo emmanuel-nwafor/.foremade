@@ -186,7 +186,7 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
           className={`flex-1 py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
             loading || !stripe || !elements
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-blue-800 hover:bg-blue-800'
           }`}
           aria-label="Pay Now"
         >

@@ -29,6 +29,7 @@ import SellerOnboarding from './seller/SellerOnboarding';
 import SellerProductUpload from './seller/SellerProductUpload';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
+import TermsConditions from './pages/TermsAndConditions';
 
 import Admin from './Admin/Admin';
 import AdminDashboard from './Admin/AdminDashboard';
@@ -39,6 +40,7 @@ import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
 import AdminEditDeals from './Admin/AdminEditDeals';
 import AdminEditFees from './Admin/AdminEditFees';
 import AdminCategoryEdit from './Admin/AdminCategoryEdit';
+import AdminManager from './Admin/AdminManager';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -70,6 +72,12 @@ import CategoryPage from './pages/CategoryPage';
 import ProSellerForm from './pages/ProSellerForm';
 import ProSellerGuide from './seller/ProSellerGuide';
 import ProSellerFullGuide from './seller/ProSellerFullGuide';
+import BulkUpload from './seller/BulkUpload';
+import ProductBump from './seller/ProductBump';
+import SellerTransactions from './seller/SellerTransactions';
+import ProSellerAnalytics from './seller/ProSellerAnalytics';
+
+
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -95,9 +103,13 @@ const Layout = ({ children }) => {
     '/admin/sellers/payouts',
     '/admin/products',
     '/admin/notifications',
+    '/admin/manager',
     '/admin/edit/banners',
     '/admin/edit/daily-deals',
-
+    '/bulk-upload',
+    '/product-bump',
+    '/seller-transactions',
+    '/pro-seller-analytics',
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
@@ -242,8 +254,13 @@ function App() {
               <Route path="/admin/notifications" element={<AdminNotifications />} />
               <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
               <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
-
+              <Route path="/admin/manager" element={<AdminManager />} />
               <Route path="/" element={<Home />} />
+              <Route path="/bulk-upload" element={<BulkUpload />} />
+              <Route path="/product-bump" element={<ProductBump />} />
+              <Route path="/seller-transactions" element={<SellerTransactions />} />
+              <Route path="/pro-seller-analytics" element={<ProSellerAnalytics />} />
+              <Route path="/terms-conditions" element={<TermsConditions />} />
               <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
               <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
               <Route path="/support" element={<Support />} />

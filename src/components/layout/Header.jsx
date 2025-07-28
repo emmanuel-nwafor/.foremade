@@ -34,7 +34,7 @@ const Header = () => {
     "Perfumes & Fragrances",
     "Vehicles & Transport",
     "Clothing",
-    "Coffee & Tea",
+    "Cocoa, Coffee & Tea",
     "Computers & Laptops",
     "Footwear",
     "Grills & Outdoor Cooking",

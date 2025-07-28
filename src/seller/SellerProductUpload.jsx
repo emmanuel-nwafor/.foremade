@@ -896,7 +896,7 @@ const validateLocationForm = () => {
 
             <div className="flex justify-end mb-6">
 
-<Link to="/seller/bulk-upload" className="inline-block px-5 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-semibold shadow">
+<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-semibold shadow">
 
   Bulk Upload
 

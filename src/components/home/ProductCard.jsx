@@ -25,9 +25,9 @@ const ProductCard = ({ product }) => {
 
   const displayPrice = product.price || 0;
 
-  const truncateText = (text, maxLength = 30) => {
+  const truncateText = (text, maxLength = 35) => {
     if (!text || typeof text !== 'string') return 'No name available';
-    return text.length > maxLength ? text.slice(0, maxLength - 3) + '...' : text;
+    return text;
   };
 
   // Re-add useEffect for fetching favorite data
@@ -145,24 +145,27 @@ const ProductCard = ({ product }) => {
       </div>
       <div className="flex flex-col justify-between flex-grow p-3 min-w-0 overflow-hidden">
         <div>
-          {/* Product Name - black text */}
-          <h3 className="font-medium text-sm text-black line-clamp-2 mb-1 break-words truncate" title={product.name}>
+          {/* Product Name - font size 18px, same color and weight, allow 2 lines */}
+          <h3
+            className="mb-1 break-words line-clamp-2"
+            title={product.name}
+            style={{ fontSize: '16px', fontWeight: 500, color: '#222', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+          >
             {truncateText(product.name)}
           </h3>
 
-          {/* Product Condition: "New" or "Used" */}
+          {/* Product Condition: font size 18px, same color and weight */}
           {product.condition && (
-            <p className="text-xs text-gray-500 mb-2">
-              <span className="font-semibold">{product.condition}</span>
+            <p style={{ fontSize: '16px', color: '#222', fontWeight: 500 }} className="mb-2">
+              <span>{product.condition}</span>
             </p>
           )}
         </div>
         <div className="mt-auto">
           <div className="flex items-center justify-between">
-            {/* Price - Using inline style for color */}
+            {/* Price - font size 18px, same color and weight */}
             <span
-              className="font-semibold text-lg"
-              style={{ color: 'black' }} // Keep this inline style for forcing black
+              style={{ fontSize: '16px', fontWeight: 500, color: '#222' }}
             >
               <PriceFormatter price={displayPrice} />
             </span>

@@ -1486,8 +1486,8 @@ const Product = () => {
                     onClick={() => handleProductClick(p.id)}
                     isFavorite={favorites.includes(p.id)}
                     toggleFavorite={toggleFavorite}
-                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333]"
-                    imageClassName="!rounded-md"
+                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
+                    imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
                     priceClassName="!text-[#112d4e]"
                     nameClassName="!text-[#333333]"
                   />
@@ -1509,8 +1509,8 @@ const Product = () => {
                     onClick={() => handleProductClick(p.id)}
                     isFavorite={favorites.includes(p.id)}
                     toggleFavorite={toggleFavorite}
-                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333]"
-                    imageClassName="!rounded-md"
+                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
+                    imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
                     priceClassName="!text-[#112d4e]"
                     nameClassName="!text-[#333333]"
                   />

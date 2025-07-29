@@ -147,11 +147,15 @@ const ProductCard = ({ product }) => {
         <div>
           {/* Product Name - font size 18px, same color and weight, allow 2 lines */}
           <h3
-            className="mb-1 break-words line-clamp-2"
+            className="mb-1 break-words line-clamp-2 min-h-[48px]"
             title={product.name}
-            style={{ fontSize: '16px', fontWeight: 500, color: '#222', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            style={{ fontSize: '16px', fontWeight: 500, color: '#222', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '48px' }}
           >
             {truncateText(product.name)}
+            {/* Add invisible whitespace to force 2 lines if name is short */}
+            {product.name && product.name.length < 35 && (
+              <span style={{ visibility: 'hidden' }}>{'\u00A0'.repeat(40)}</span>
+            )}
           </h3>
 
           {/* Product Condition: font size 18px, same color and weight */}

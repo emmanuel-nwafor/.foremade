@@ -253,34 +253,33 @@ const Header = () => {
     <header className="w-full">
       {/* Desktop Header */}
       <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-9.5 items-center">
-        {/* Logo at extreme left */}
-        <div className="flex items-center flex-shrink-0 pl-4 pr-2 h-8">
-          <Link to="/">
-            <img
-              src={logo}
-              className="h-8 w-auto"
-              alt="Foremade"
-            />
-          </Link>
-        </div>
-        {/* Main header content centered and right-aligned */}
-        <div className="flex items-center w-full max-w-7xl mx-auto min-w-0 max-w-full">
-          {/* Center: Navigation Links */}
-          <div className="flex-1 flex justify-center items-center min-w-0">
-            <div className="flex items-center space-x-4">
-              <Link to="/products" className="hover:text-gray-100 hover:underline transition-all">
+       
+        <div className="flex w-full h-full items-center justify-between"> {/* Removed max-w-7xl, mx-auto, and px-4 */}
+
+          {/* Left Group: Logo and nav links - add px-4 directly here if you want internal padding */}
+          <div className="flex items-center h-full pl-4"> {/* Added pl-4 for internal padding here */}
+            <Link to="/">
+              <img
+                src={logo}
+                className="h-12 w-auto"
+                alt="Foremade"
+              />
+            </Link>
+            <nav className="flex items-center ml-2">
+              <Link to="/products" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Shop
               </Link>
-              <Link to="/products-upload" className="m-2 hover:text-gray-100 hover:underline transition-all">
+              <Link to="/products-upload" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Sell
               </Link>
-              <Link to="/smile" className="m-2 hover:text-gray-100 hover:underline transition-all">
+              <Link to="/smile" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Smile
               </Link>
-            </div>
+            </nav>
           </div>
-          {/* Right: User Actions */}
-          <div className="flex items-center gap-4 mr-7 flex-shrink-0 flex-grow-0 flex-basis-auto">
+
+          {/* Right Group: User Actions - add px-4 directly here for internal padding */}
+          <div className="flex items-center gap-4 pr-4"> {/* Added pr-4 for internal padding here */}
             {user ? (
               <Link to="/profile" className="hover:text-gray-300 text-sm whitespace-nowrap">
                 Hi, {getDisplayName()}
@@ -316,9 +315,11 @@ const Header = () => {
               <i className="bx bx-search text-xl"></i>
             </Link>
           </div>
+          
         </div>
+        
       </div>
-
+      <div className="hidden sm:block bg-[#eb9325] h-2 w-full"></div>
       {/* Mobile Header */}
       <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -346,9 +347,9 @@ const Header = () => {
           </button>
         </div>
       </div>
-
       {/* Mobile Content */}
       <div className="block sm:hidden pt-7">
+        <div className="block sm:hidden bg-[#eb9325] h-2 w-full"></div>
         <FreeShipping />
       </div>
       <div className="block sm:hidden px-2 mt-2">
@@ -410,6 +411,7 @@ const Header = () => {
             </Link>
           ))}
         </div>
+       
       </div>
 
       {/* Desktop Free Shipping */}

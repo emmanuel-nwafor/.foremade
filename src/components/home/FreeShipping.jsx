@@ -4,10 +4,14 @@ export default function FreeShipping() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check localStorage for dismissal state
-    const isDismissed = localStorage.getItem('freeShippingDismissed');
     // Check if user is logged in (simple check: userData in localStorage)
     const userData = localStorage.getItem('userData');
+    if (!userData) {
+      // If user is logged out, clear the dismissal flag so banner can show again
+      localStorage.removeItem('freeShippingDismissed');
+    }
+    // Check localStorage for dismissal state
+    const isDismissed = localStorage.getItem('freeShippingDismissed');
     if (!isDismissed && !userData) {
       setIsVisible(true);
     }

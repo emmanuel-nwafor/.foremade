@@ -138,7 +138,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
           className={`flex-1 px-6 py-2 rounded-lg text-white transition ${
             isCartEmpty || hasStockIssues || belowMinimumPrice || totalItems > 20
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-[#112d4e] hover:bg-[#112d4e]'
           }`}
           disabled={isCartEmpty || hasStockIssues || belowMinimumPrice || totalItems > 20}
         >

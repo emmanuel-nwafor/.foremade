@@ -1,3 +1,5 @@
+import SellerAgreement from './seller/SellerAgreement';
+import ShippingPolicy from './pages/ShippingPolicy';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CurrencyProvider } from './CurrencyContext';
@@ -261,6 +263,7 @@ function App() {
               <Route path="/seller-transactions" element={<SellerTransactions />} />
               <Route path="/pro-seller-analytics" element={<ProSellerAnalytics />} />
               <Route path="/terms-conditions" element={<TermsConditions />} />
+              <Route path="/seller-agreement" element={<SellerAgreement />} />
               <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
               <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
               <Route path="/support" element={<Support />} />
@@ -274,6 +277,7 @@ function App() {
               <Route path="/tablet-phones" element={<TabletsPhones />} />
               <Route path="/smart-watches" element={<SmartWatches />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="/privacy-policy/:type" element={<AllPolicies />} />
               <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
               <Route path="/pages/other-products/:category" element={<OtherProductsPage />} />

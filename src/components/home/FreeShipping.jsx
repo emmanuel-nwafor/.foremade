@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 export default function FreeShipping() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     // Check localStorage for dismissal state
     const isDismissed = localStorage.getItem('freeShippingDismissed');
-    if (isDismissed === 'true') {
+    // Check if user is logged in (simple check: userData in localStorage)
+    const userData = localStorage.getItem('userData');
+    if (!isDismissed && !userData) {
       setIsVisible(true);
     }
   }, []);

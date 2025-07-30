@@ -3,10 +3,12 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-export default function FeaturedProducts() {
+// Define the functional component FeaturedProducts
+function FeaturedProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dailyDeals, setDailyDeals] = useState([]);
 
   const categories = [
     'foremade fashion',
@@ -16,6 +18,12 @@ export default function FeaturedProducts() {
     'game & fun',
     'computers & accessories',
   ];
+
+  useEffect(() => {
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
 
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
@@ -88,10 +96,12 @@ export default function FeaturedProducts() {
       ) : (
         products.map((product) => (
           <div className="">
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
           </div>
         ))
       )}
     </div>
   );
 }
+
+export default FeaturedProducts; // Export the component

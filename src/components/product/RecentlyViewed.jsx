@@ -8,7 +8,14 @@ export default function RecentlyViewed() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dailyDeals, setDailyDeals] = useState([]);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
 
   useEffect(() => {
     const fetchRecentlyViewed = async () => {
@@ -188,7 +195,7 @@ export default function RecentlyViewed() {
                 key={product.id}
                 className="flex-shrink-0 w-48 mr-4 snap-start"
               >
-                <ProductCard product={product} />
+            <ProductCard product={product} dailyDeals={dailyDeals} />
               </div>
             ))
           )}

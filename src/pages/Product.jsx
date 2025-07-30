@@ -15,10 +15,51 @@ import {
 import { addToCart } from "/src/utils/cartUtils";
 import CustomAlert, { useAlerts } from "/src/components/common/CustomAlert";
 import ProductCard from "/src/components/home/ProductCard";
+import { Palette, Ruler } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
-
+const colorMap = {
+  red: "#DC2626",
+  blue: "#2563EB",
+  green: "#22C55E",
+  yellow: "#E0B912",
+  orange: "#F59E42",
+  purple: "#A21CAF",
+  pink: "#EC4899",
+  black: "#222222",
+  white: "#F0F0F0",
+  silver: "#E5E7EB",
+  gold: "#FFD700",
+  brown: "#A0522D",
+  gray: "#9CA3AF",
+  grey: "#9CA3AF",
+  beige: "#F5F5DC",
+  teal: "#14B8A6",
+  navy: "#1E3A8A",
+  olive: "#808000",
+  maroon: "#800000",
+  cyan: "#06B6D4",
+  magenta: "#D946EF",
+  lime: "#84CC16",
+  coral: "#FB7185",
+  indigo: "#6366F1",
+  violet: "#8B5CF6",
+  // Add more as needed
+};
 const Product = () => {
+  const [dailyDeals, setDailyDeals] = useState([]);
+  // Fetch daily deals for correct price display in product cards
+  useEffect(() => {
+    const fetchDailyDeals = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "dailyDeals"));
+        setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("Error fetching daily deals:", err);
+      }
+    };
+    fetchDailyDeals();
+  }, []);
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,8 +87,6 @@ const Product = () => {
   const [previousVariant, setPreviousVariant] = useState(null);
 
   const { alerts, addAlert, removeAlert } = useAlerts();
-
- 
 
   const tagStyles = {
     new: "bg-amber-100 text-amber-800 border-amber-300", // Soft yellow tag
@@ -1075,33 +1114,41 @@ const Product = () => {
                 </button>
               </div>
 
-             {/* Price Section */}
-<div className="price-section text-white text-center">
-  <div className="flex flex-col sm:flex-row justify-between items-center">
-    <p className="text-2xl font-extrabold mb-2 sm:mb-0">
-      <PriceFormatter
-        price={totalPrice}
-        currency={product.currency || localStorage.getItem("currency") || "USD"}
-      />
-    </p>
-    {isDailyDeal && (
-      <div className="text-right">
-        <p className="text-sm line-through opacity-80">
-          <PriceFormatter
-            price={originalPrice}
-            currency={product.currency || localStorage.getItem("currency") || "USD"}
-          />
-        </p>
-        <p className="text-lg font-semibold text-[#E0B912]">
-          {discountPercentage}% OFF!
-        </p>
-      </div>
-    )}
-  </div>
-  <p className="text-sm mt-1 text-[#F0F0F0] opacity-90">
-    Total price (inclusive of taxes and fees)
-  </p>
-</div>
+              {/* Price Section */}
+              <div className="price-section text-white text-center">
+                <div className="flex flex-col sm:flex-row justify-between items-center">
+                  <p className="text-2xl font-extrabold mb-2 sm:mb-0">
+                    <PriceFormatter
+                      price={totalPrice}
+                      currency={
+                        product.currency ||
+                        localStorage.getItem("currency") ||
+                        "USD"
+                      }
+                    />
+                  </p>
+                  {isDailyDeal && (
+                    <div className="text-right">
+                      <p className="text-sm line-through opacity-80">
+                        <PriceFormatter
+                          price={originalPrice}
+                          currency={
+                            product.currency ||
+                            localStorage.getItem("currency") ||
+                            "USD"
+                          }
+                        />
+                      </p>
+                      <p className="text-lg font-semibold text-[#E0B912]">
+                        {discountPercentage}% OFF!
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm mt-1 text-[#F0F0F0] opacity-90">
+                  Total price (inclusive of taxes and fees)
+                </p>
+              </div>
 
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="info-badge">
@@ -1139,12 +1186,12 @@ const Product = () => {
                   {product.condition}
                 </span>
                 <Link
-  to={`/seller/${product.sellerId}`}
-  className="info-badge hover:bg-gray-200"
->
-  <i className="ri-store-line"></i>
-  Seller: {product.seller.name}
-</Link>
+                  to={`/seller/${product.sellerId}`}
+                  className="info-badge hover:bg-gray-200"
+                >
+                  <i className="ri-store-line"></i>
+                  Seller: {product.seller.name}
+                </Link>
               </div>
 
               {product.variants.length > 0 && (
@@ -1174,8 +1221,7 @@ const Product = () => {
                             }`}
                             style={{
                               backgroundColor:
-                                colorMap[colorName.toLowerCase()] ||
-                                colorName,
+                                colorMap[colorName.toLowerCase()] || colorName,
                               borderColor:
                                 selectedColor === colorName
                                   ? "#E0B912" // Secondary accent for selected
@@ -1253,7 +1299,9 @@ const Product = () => {
                   </p>
                   <div className="quantity-controls">
                     <button
-                      onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setQuantity((prev) => Math.max(1, prev - 1))
+                      }
                       aria-label="Decrease quantity"
                     >
                       -
@@ -1278,7 +1326,9 @@ const Product = () => {
                           )
                         )
                       }
-                      disabled={quantity >= (selectedVariant?.stock || product.stock)}
+                      disabled={
+                        quantity >= (selectedVariant?.stock || product.stock)
+                      }
                       aria-label="Increase quantity"
                     >
                       +
@@ -1341,7 +1391,8 @@ const Product = () => {
             )}
             <div className="mt-4 flex flex-wrap gap-2">
               {product.tags.map((tag, index) => {
-                const tagClass = tagStyles[tag.toLowerCase()] || tagStyles.default;
+                const tagClass =
+                  tagStyles[tag.toLowerCase()] || tagStyles.default;
                 return (
                   <span
                     key={index}
@@ -1479,19 +1530,48 @@ const Product = () => {
                 Similar Products
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                {similarProducts.map((p) => (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    onClick={() => handleProductClick(p.id)}
-                    isFavorite={favorites.includes(p.id)}
-                    toggleFavorite={toggleFavorite}
-                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
-                    imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
-                    priceClassName="!text-[#112d4e]"
-                    nameClassName="!text-[#333333]"
-                  />
-                ))}
+                {similarProducts.map((p) => {
+                  const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
+                  let minPrice = p.price, maxPrice = p.price;
+                  if (hasVariants) {
+                    const prices = p.variants.map(v => v.price).filter(Boolean);
+                    minPrice = Math.min(...prices);
+                    maxPrice = Math.max(...prices);
+                  }
+                  const uniqueColors = hasVariants ? [...new Set(p.variants.map(v => v.color).filter(Boolean))] : [];
+                  const uniqueSizes = hasVariants ? [...new Set(p.variants.map(v => v.size).filter(Boolean))] : [];
+                  return (
+                    <div key={p.id} className="relative">
+                      <ProductCard
+                        product={p}
+                        dailyDeals={dailyDeals}
+                        selectedColor={p.selectedColor || p.color || (p.colors && p.colors[0]) || ""}
+                        selectedSize={p.selectedSize || p.size || (p.sizes && p.sizes[0]) || ""}
+                        selectedVariant={p.selectedVariant || (p.variants && p.variants[0]) || null}
+                        onClick={() => handleProductClick(p.id)}
+                        isFavorite={favorites.includes(p.id)}
+                        toggleFavorite={toggleFavorite}
+                        cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
+                        imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
+                        priceClassName="!text-[#112d4e]"
+                        nameClassName="!text-[#333333]"
+                        minPrice={minPrice}
+                        maxPrice={maxPrice}
+                        hasVariants={hasVariants}
+                      />
+                      {hasVariants && (
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                          {uniqueColors.length > 0 && (
+                            <span className="flex items-center gap-1"><Palette size={14} />{uniqueColors.length} Color{uniqueColors.length > 1 ? 's' : ''}</span>
+                          )}
+                          {uniqueSizes.length > 0 && (
+                            <span className="flex items-center gap-1"><Ruler size={14} />{uniqueSizes.length} Size{uniqueSizes.length > 1 ? 's' : ''}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1502,19 +1582,48 @@ const Product = () => {
                 Recently Viewed
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                {recentSearches.map((p) => (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    onClick={() => handleProductClick(p.id)}
-                    isFavorite={favorites.includes(p.id)}
-                    toggleFavorite={toggleFavorite}
-                    cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
-                    imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
-                    priceClassName="!text-[#112d4e]"
-                    nameClassName="!text-[#333333]"
-                  />
-                ))}
+                {recentSearches.map((p) => {
+                  const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
+                  let minPrice = p.price, maxPrice = p.price;
+                  if (hasVariants) {
+                    const prices = p.variants.map(v => v.price).filter(Boolean);
+                    minPrice = Math.min(...prices);
+                    maxPrice = Math.max(...prices);
+                  }
+                  const uniqueColors = hasVariants ? [...new Set(p.variants.map(v => v.color).filter(Boolean))] : [];
+                  const uniqueSizes = hasVariants ? [...new Set(p.variants.map(v => v.size).filter(Boolean))] : [];
+                  return (
+                    <div key={p.id} className="relative">
+                      <ProductCard
+                        product={p}
+                        dailyDeals={dailyDeals}
+                        selectedColor={p.selectedColor || p.color || (p.colors && p.colors[0]) || ""}
+                        selectedSize={p.selectedSize || p.size || (p.sizes && p.sizes[0]) || ""}
+                        selectedVariant={p.selectedVariant || (p.variants && p.variants[0]) || null}
+                        onClick={() => handleProductClick(p.id)}
+                        isFavorite={favorites.includes(p.id)}
+                        toggleFavorite={toggleFavorite}
+                        cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
+                        imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
+                        priceClassName="!text-[#112d4e]"
+                        nameClassName="!text-[#333333]"
+                        minPrice={minPrice}
+                        maxPrice={maxPrice}
+                        hasVariants={hasVariants}
+                      />
+                      {hasVariants && (
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                          {uniqueColors.length > 0 && (
+                            <span className="flex items-center gap-1"><Palette size={14} />{uniqueColors.length} Color{uniqueColors.length > 1 ? 's' : ''}</span>
+                          )}
+                          {uniqueSizes.length > 0 && (
+                            <span className="flex items-center gap-1"><Ruler size={14} />{uniqueSizes.length} Size{uniqueSizes.length > 1 ? 's' : ''}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

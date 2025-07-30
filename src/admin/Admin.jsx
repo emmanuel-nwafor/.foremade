@@ -369,7 +369,7 @@ function Admin() {
             <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-md mb-6 animate-slide-down">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 items-center gap-1">
                     Sort Products
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Sort products by name, price, or status"></i>
                   </label>
@@ -487,7 +487,7 @@ function Admin() {
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <Edit2 size={18} className="text-blue-500" /> Tags
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-sm">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {Array.isArray(selectedProduct.tags) ? selectedProduct.tags.join(', ') : 'None'}
                 </p>
               </div>

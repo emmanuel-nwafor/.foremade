@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import ProductCard from '../home/ProductCard';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '/src/firebase';
 
 const ProductList = ({ products = [] }) => {
+  const [dailyDeals, setDailyDeals] = useState([]);
+  useEffect(() => {
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,7 +60,7 @@ const ProductList = ({ products = [] }) => {
           aria-label="Product list"
         >
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} {...props} />
           ))}
         </div>
       )}

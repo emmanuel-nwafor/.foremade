@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import ProductList from '../components/product/ProductList';
+import { collection, getDocs } from 'firebase/firestore';
 import ProductFilter from '../components/product/ProductFilter';
 
 const Products = () => {
   const [initialProducts, setInitialProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [dailyDeals, setDailyDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -107,6 +108,10 @@ const Products = () => {
     };
 
     fetchProducts();
+    // Fetch daily deals
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
   }, [categoryMap]);
 
   useEffect(() => {
@@ -169,7 +174,7 @@ const Products = () => {
           <ProductFilter onFilterChange={handleFilterChange} />
         </div>
         <div className="w-full rounded-lg border">
-          <ProductList products={filteredProducts} loading={loading} />
+          <ProductList products={filteredProducts} loading={loading} dailyDeals={dailyDeals} />
         </div>
       </div>
     </div>

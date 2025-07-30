@@ -11,26 +11,14 @@ import {
 import { toast } from "react-toastify";
 import { Heart } from "lucide-react";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
-import { ShieldCheck, Palette, Ruler } from "lucide-react"; // Import Palette and Ruler icons
+import { ShieldCheck, Palette, Ruler } from "lucide-react";
 
 const FALLBACK_IMAGE = "https://via.placeholder.com/200?text=No+Image";
 
 const ProductCard = ({ product, dailyDeals = [] }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-
-  const [imageUrl, setImageUrl] = useState(
-    product.imageUrl &&
-      typeof product.imageUrl === "string" &&
-      product.imageUrl.startsWith("https://")
-      ? product.imageUrl
-      : Array.isArray(product.imageUrls) &&
-        product.imageUrls.length > 0 &&
-        typeof product.imageUrls[0] === "string" &&
-        product.imageUrls[0].startsWith("https://")
-      ? product.imageUrls[0]
-      : FALLBACK_IMAGE
-  );
+  const [imageUrl, setImageUrl] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
 
   let mergedProduct = { ...product };
@@ -52,18 +40,34 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   // Calculate price range for products with variants
   let minPrice = mergedProduct.price || 0;
   let maxPrice = mergedProduct.price || 0;
+  let hasVariants = mergedProduct.variants && Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
 
-  if (mergedProduct.variants && mergedProduct.variants.length > 0) {
-    const prices = mergedProduct.variants.map((v) => v.price || 0);
+  if (hasVariants) {
+    const prices = mergedProduct.variants.map((v) => (v.price || 0));
     minPrice = Math.min(...prices);
     maxPrice = Math.max(...prices);
   }
 
-  // Apply discount to the base price for display purposes if not a variant product,
-  // otherwise, the price range naturally accounts for discounts on individual variants
-  // if their 'price' property already reflects the discounted price.
-  // For simplicity here, we'll apply discount logic to the minPrice for display on the card.
-  // A more robust solution might involve displaying the *discounted price range*.
+  // Set initial image based on variants or product-level images
+  useEffect(() => {
+    let initialImage = FALLBACK_IMAGE;
+    if (hasVariants && mergedProduct.variants[0]?.imageUrls?.length > 0) {
+      const variantImage = mergedProduct.variants[0].imageUrls.find((url) => 
+        typeof url === "string" && url.startsWith("https://")
+      );
+      initialImage = variantImage || FALLBACK_IMAGE;
+    } else if (Array.isArray(mergedProduct.imageUrls) && mergedProduct.imageUrls.length > 0) {
+      const productImage = mergedProduct.imageUrls.find((url) => 
+        typeof url === "string" && url.startsWith("https://")
+      );
+      initialImage = productImage || FALLBACK_IMAGE;
+    } else if (mergedProduct.imageUrl && typeof mergedProduct.imageUrl === "string" && mergedProduct.imageUrl.startsWith("https://")) {
+      initialImage = mergedProduct.imageUrl;
+    }
+    setImageUrl(initialImage);
+  }, [product, hasVariants]);
+
+  // Apply discount to the minPrice for display purposes
   const originalDisplayPrice = minPrice;
   let discount = 0;
   if (
@@ -86,7 +90,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
 
   const truncateText = (text, maxLength = 35) => {
     if (!text || typeof text !== "string") return "No name available";
-    return text;
+    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   };
 
   useEffect(() => {
@@ -169,8 +173,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     }
   };
 
-  const hasVariants =
-    mergedProduct.variants && mergedProduct.variants.length > 0;
   const uniqueColors = hasVariants
     ? [...new Set(mergedProduct.variants.map((v) => v.color).filter(Boolean))]
     : [];
@@ -245,21 +247,19 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
 
           {mergedProduct.condition && (
             <p
-              style={{ fontSize: "16px", color: "#222", fontWeight: 500 }}
-              className="mb-2"
+              style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
+              className="mb-2 mt-2"
             >
               <span>{mergedProduct.condition}</span>
             </p>
           )}
 
-          {/* New: Display variant information if available */}
           {hasVariants && (
             <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-sm text-gray-600">
               {uniqueColors.length > 0 && (
                 <span className="flex items-center">
                   <Palette size={14} className="mr-1 text-gray-500" />
-                  {uniqueColors.length} Color
-                  {uniqueColors.length > 1 ? "s" : ""}
+                  {uniqueColors.length} Color{uniqueColors.length > 1 ? "s" : ""}
                 </span>
               )}
               {uniqueSizes.length > 0 && (
@@ -310,14 +310,12 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
           </div>
 
           {hasDiscount && (
-            <>
-              <span
-                className="text-gray-400 line-through mr-1"
-                style={{ fontSize: "10px" }}
-              >
-                <PriceFormatter price={originalDisplayPrice} />
-              </span>
-            </>
+            <span
+              className="text-gray-400 line-through mr-1"
+              style={{ fontSize: "10px" }}
+            >
+              <PriceFormatter price={originalDisplayPrice} />
+            </span>
           )}
         </div>
       </div>

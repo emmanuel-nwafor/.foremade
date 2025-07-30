@@ -4,14 +4,16 @@ import { db } from '/src/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { useCurrency } from '/src/CurrencyContext';
 import PriceFormatter from '/src/components/layout/PriceFormatter';
+import placeholder from '/src/assets/placeholder.png';
 
 const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const { convertPrice } = useCurrency();
-  const [mainImage, setMainImage] = useState('https://via.placeholder.com/200?text=No+Image');
+  const [mainImage, setMainImage] = useState(placeholder);
   const [product, setProduct] = useState(null);
   const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
   const [isDailyDeal, setIsDailyDeal] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [imageError, setImageError] = useState(false);
 
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
@@ -35,47 +37,54 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
     };
 
     const fetchProduct = async () => {
-      if (item && item.productId) {
-        try {
-          const productRef = doc(db, 'products', item.productId);
-          const productSnap = await getDoc(productRef);
-          if (productSnap.exists()) {
-            const productData = productSnap.data();
-            setProduct({
-              id: productSnap.id,
-              name: productData.name || 'Unnamed Product',
-              price: productData.price || 0,
-              stock: productData.stock || 0,
-              category: productData.category?.trim().toLowerCase() || 'uncategorized',
-            });
-            const imageUrls = Array.isArray(productData.imageUrls)
-              ? productData.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
-              : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
-              ? [productData.imageUrl]
-              : [];
-            setMainImage(imageUrls.length > 0 ? imageUrls[0] : 'https://via.placeholder.com/200?text=No+Image');
+      if (!item || !item.productId) {
+        console.warn('Invalid cart item data:', item);
+        setProduct(null);
+        setMainImage(placeholder);
+        return;
+      }
 
-            const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
-            const activeDeal = dealsSnapshot.docs
-              .map((doc) => ({ id: doc.id, ...doc.data() }))
-              .find((deal) => deal.productId === item.productId && new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
-            if (activeDeal) {
-              setIsDailyDeal(true);
-              setDiscountPercentage((activeDeal.discount * 100).toFixed(2));
-            } else {
-              setIsDailyDeal(false);
-              setDiscountPercentage(0);
-            }
+      try {
+        const productRef = doc(db, 'products', item.productId);
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          const productData = productSnap.data();
+          setProduct({
+            id: productSnap.id,
+            name: productData.name || 'Unnamed Product',
+            price: Number(productData.price) || 0, // Ensure price is a number
+            stock: Number(productData.stock) || 0,
+            category: productData.category?.trim().toLowerCase() || 'uncategorized',
+            imageUrls: productData.imageUrls || [],
+          });
+
+          const imageUrls = Array.isArray(productData.imageUrls)
+            ? productData.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
+            : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
+            ? [productData.imageUrl]
+            : [];
+          setMainImage(imageUrls.length > 0 ? imageUrls[0] : placeholder);
+
+          const dealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+          const activeDeal = dealsSnapshot.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .find((deal) => deal.productId === item.productId && new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date());
+          if (activeDeal) {
+            setIsDailyDeal(true);
+            setDiscountPercentage(Number((activeDeal.discount * 100).toFixed(2)));
           } else {
-            console.warn(`Product ${item.productId} not found in Firestore.`);
-            setProduct(null);
-            setMainImage('https://via.placeholder.com/200?text=No+Image');
+            setIsDailyDeal(false);
+            setDiscountPercentage(0);
           }
-        } catch (err) {
-          console.error('Product fetch error for cart item:', item.productId, ':', err);
+        } else {
+          console.warn(`Product ${item.productId} not found in Firestore.`);
           setProduct(null);
-          setMainImage('https://via.placeholder.com/200?text=No+Image');
+          setMainImage(placeholder);
         }
+      } catch (err) {
+        console.error('Product fetch error for cart item:', item.productId, ':', err);
+        setProduct(null);
+        setMainImage(placeholder);
       }
     };
 
@@ -84,7 +93,6 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   }, [item]);
 
   if (!item || !item.productId || !product) {
-    console.error('Invalid cart item data:', item);
     return (
       <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
         <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
@@ -111,34 +119,50 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const isOutOfStock = product.stock === 0;
   const totalPrice = calculateTotalPrice(product.price, item.quantity, isDailyDeal ? discountPercentage : 0);
 
-  // Use variant image and price if available
-  const displayImage =
-    item.variant?.imageUrl ||
-    (item.variants?.length > 0 && item.variants[0]?.imageUrls?.[0]) ||
-    item.imageUrl ||
-    (Array.isArray(item.imageUrls) && item.imageUrls[0]) ||
-    'https://via.placeholder.com/600';
+  // Use variant price and image if available
   const displayPrice = typeof item.variant?.price === 'number'
     ? item.variant.price
     : typeof item.price === 'number'
     ? item.price
-    : 0;
+    : product.price || 0;
+
+  const displayImage = (() => {
+    if (item.variant?.imageUrl && typeof item.variant.imageUrl === 'string' && item.variant.imageUrl.startsWith('https://res.cloudinary.com/')) {
+      return item.variant.imageUrl;
+    }
+    if (item.variants?.length > 0 && item.variants[0]?.imageUrls?.length > 0 && item.variants[0].imageUrls[0].startsWith('https://res.cloudinary.com/')) {
+      return item.variants[0].imageUrls[0];
+    }
+    return mainImage;
+  })();
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
       <Link to={`/product/${product.id}`}>
-        <img
-          src={displayImage}
-          alt={item.name}
-          className="w-16 h-16 object-cover rounded"
-          onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/600';
-            console.error('CartItem image load error:', item);
-          }}
-          onLoad={() => {
-            console.log('CartItem image loaded successfully:', { productId: item.productId, imageUrl: mainImage, name: product.name });
-          }}
-        />
+        <div className="relative w-16 h-16">
+          {imageError && (
+            <div className="absolute bottom-0 left-0 bg-red-600 text-white text-xs px-1 rounded">
+              Image Failed
+            </div>
+          )}
+          <img
+            src={displayImage}
+            alt={product.name}
+            className="w-16 h-16 object-cover rounded"
+            onError={(e) => {
+              if (!imageError) {
+                console.error('CartItem image load error:', { productId: item.productId, imageUrl: displayImage });
+                setImageError(true);
+                e.target.src = placeholder;
+              }
+            }}
+            onLoad={() => {
+              console.log('CartItem image loaded successfully:', { productId: item.productId, imageUrl: displayImage, name: product.name });
+              setImageError(false);
+            }}
+            loading="lazy"
+          />
+        </div>
       </Link>
       <div className="flex-1">
         <Link to={`/product/${product.id}`}>

@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '/src/firebase';
+import { auth, db } from '/src/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import Spinner from '/src/components/common/Spinner';
 import emptyCart from '/src/assets/icons/empty-cart.svg';
+import placeholder from '/src/assets/placeholder.png';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 import {
   getCart,
   updateCart,
   clearCart,
   checkout,
   mergeGuestCart,
+  addToCart,
 } from '/src/utils/cartUtils';
 import CartItem from '/src/components/cart/CartItem';
 import CartSummary from '/src/components/cart/CartSummary';
@@ -21,6 +25,7 @@ const Cart = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scrollY, setScrollY] = useState(0);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +34,61 @@ const Cart = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const fetchRecommendedProducts = async () => {
+      try {
+        if (cartItems.length === 0) {
+          setRecommendedProducts([]);
+          return;
+        }
+
+        // Get unique categories from cart items
+        const categories = [...new Set(cartItems.map((item) => item.product.category).filter(Boolean))];
+        if (categories.length === 0) {
+          setRecommendedProducts([]);
+          return;
+        }
+
+        // Fetch up to 4 products from the same categories, excluding cart items
+        const productIdsInCart = cartItems.map((item) => item.productId);
+        const products = [];
+        for (const category of categories) {
+          const q = query(
+            collection(db, 'products'),
+            where('category', '==', category),
+            limit(4 - products.length) // Limit to fill up to 4 total
+          );
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((doc) => {
+            const productData = doc.data();
+            if (!productIdsInCart.includes(doc.id)) {
+              const imageUrl = Array.isArray(productData.imageUrls) && productData.imageUrls[0] && typeof productData.imageUrls[0] === 'string' && productData.imageUrls[0].startsWith('https://')
+                ? productData.imageUrls[0]
+                : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://')
+                ? productData.imageUrl
+                : placeholder;
+              products.push({
+                id: doc.id,
+                name: productData.name || 'Unnamed Product',
+                price: Number(productData.price) || 0,
+                imageUrl,
+                stock: Number(productData.stock) || 0,
+              });
+            }
+          });
+          if (products.length >= 4) break; // Stop if we have enough products
+        }
+
+        setRecommendedProducts(products.slice(0, 4)); // Ensure max 4 products
+      } catch (err) {
+        console.error('Error fetching recommended products:', err);
+        setRecommendedProducts([]);
+      }
+    };
+
+    fetchRecommendedProducts();
+  }, [cartItems]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -56,14 +116,14 @@ const Cart = () => {
               ? product.imageUrl
               : Array.isArray(product.imageUrls) && product.imageUrls[0] && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')
               ? product.imageUrls[0]
-              : '/images/placeholder.jpg';
+              : placeholder;
             return {
               ...item,
               product: {
                 id: product.id || item.productId,
                 name: product.name || 'Unnamed Product',
-                price: product.price || 0,
-                stock: product.stock || 0,
+                price: Number(product.price) || 0,
+                stock: Number(product.stock) || 0,
                 category: product.category || 'uncategorized',
                 imageUrl,
                 rating: product.rating || Math.random() * 2 + 3,
@@ -79,7 +139,7 @@ const Cart = () => {
               console.warn('Filtered out invalid cart item');
               return false;
             }
-            const isValidImage = item.product.imageUrl && typeof item.product.imageUrl === 'string' && (item.product.imageUrl.startsWith('https://') || item.product.imageUrl === '/images/placeholder.jpg');
+            const isValidImage = item.product.imageUrl && typeof item.product.imageUrl === 'string' && (item.product.imageUrl.startsWith('https://') || item.product.imageUrl === placeholder);
             if (!isValidImage) {
               console.warn('Filtered out cart item with invalid imageUrl:', {
                 productId: item.productId,
@@ -121,14 +181,14 @@ const Cart = () => {
               ? product.imageUrl
               : Array.isArray(product.imageUrls) && product.imageUrls[0] && typeof product.imageUrls[0] === 'string' && product.imageUrls[0].startsWith('https://')
               ? product.imageUrls[0]
-              : '/images/placeholder.jpg';
+              : placeholder;
             return {
               ...item,
               product: {
                 id: product.id || item.productId,
                 name: product.name || 'Unnamed Product',
-                price: product.price || 0,
-                stock: product.stock || 0,
+                price: Number(product.price) || 0,
+                stock: Number(product.stock) || 0,
                 category: product.category || 'uncategorized',
                 imageUrl,
                 rating: product.rating || Math.random() * 2 + 3,
@@ -141,7 +201,7 @@ const Cart = () => {
           })
           .filter((item) => {
             if (!item) return false;
-            const isValidImage = item.product.imageUrl && typeof item.product.imageUrl === 'string' && (item.product.imageUrl.startsWith('https://') || item.product.imageUrl === '/images/placeholder.jpg');
+            const isValidImage = item.product.imageUrl && typeof item.product.imageUrl === 'string' && (item.product.imageUrl.startsWith('https://') || item.product.imageUrl === placeholder);
             if (!isValidImage) {
               console.warn('Filtered out cart item with invalid imageUrl:', {
                 productId: item.productId,
@@ -236,6 +296,40 @@ const Cart = () => {
     }
   };
 
+  const handleAddToCart = async (product) => {
+    try {
+      const existingItem = cartItems.find((item) => item.productId === product.id);
+      const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+      if (newQuantity > product.stock) {
+        toast.error(`Cannot add more than ${product.stock} units of ${product.name}`);
+        return;
+      }
+      const cartItem = {
+        productId: product.id,
+        quantity: newQuantity,
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          stock: product.stock,
+          category: product.category || 'uncategorized',
+          imageUrl: product.imageUrl,
+        },
+      };
+      const updatedItems = existingItem
+        ? cartItems.map((item) =>
+            item.productId === product.id ? { ...item, quantity: newQuantity } : item
+          )
+        : [...cartItems, cartItem];
+      await addToCart(cartItem, user?.uid);
+      setCartItems(updatedItems);
+      toast.success(`${product.name} added to cart`);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      toast.error('Failed to add item to cart');
+    }
+  };
+
   const totalPrice = cartItems.reduce(
     (total, item) => total + (item.product?.price || 0) * item.quantity,
     0
@@ -263,7 +357,7 @@ const Cart = () => {
                 className="h-[420px] m-3"
                 onError={(e) => {
                   console.warn('Failed to load empty cart image:', e.target.src);
-                  e.target.src = '/images/placeholder.jpg';
+                  e.target.src = placeholder;
                 }}
               />
               <p className="text-gray-600 m-3 text-md">
@@ -283,6 +377,46 @@ const Cart = () => {
                   removeFromCart={removeFromCart}
                 />
               ))}
+            </div>
+          )}
+          {recommendedProducts.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Customers Also Viewed</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {recommendedProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition"
+                  >
+                    <Link to={`/product/${product.id}`}>
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-40 object-cover rounded mb-2"
+                        onError={(e) => {
+                          console.warn('Failed to load recommended product image:', product.imageUrl);
+                          e.target.src = placeholder;
+                        }}
+                      />
+                      <h3 className="text-sm font-semibold text-gray-800 truncate">{product.name}</h3>
+                    </Link>
+                    <p className="text-xs text-gray-600">
+                      <PriceFormatter price={product.price} />
+                    </p>
+                    <button
+                      onClick={() => handleAddToCart(product)}
+                      className={`mt-2 w-full px-4 py-2 text-sm text-white rounded-lg transition ${
+                        product.stock === 0
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-[#112d4e] hover:bg-[#0f2a44]'
+                      }`}
+                      disabled={product.stock === 0}
+                    >
+                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

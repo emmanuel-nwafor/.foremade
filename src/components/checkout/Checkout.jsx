@@ -31,6 +31,7 @@ import PaystackCheckout from "./PaystackCheckout";
 import cards from "/src/assets/card.png";
 import placeholder from "/src/assets/placeholder.png";
 import "boxicons/css/boxicons.min.css";
+import PriceFormatter from "/src/components/layout/PriceFormatter";
 
 const customToastStyle = {
   background: "#22c55e",
@@ -1632,12 +1633,12 @@ const Checkout = () => {
                       {item.product?.name || "Unknown"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {currency}{" "}
-                      {(
-                        (item.product?.totalPrice || 0) * (item.quantity || 0)
-                      ).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                      })}
+                      <PriceFormatter
+                        price={
+                          (item.product?.totalPrice || 0) * (item.quantity || 0)
+                        }
+                        currency={currency}
+                      />
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <label
@@ -1727,22 +1728,19 @@ const Checkout = () => {
                       {item.product?.name || "Unknown"} (x{item.quantity || 0})
                     </span>
                     <span>
-                      {currency}{" "}
-                      {(
-                        (item.product?.totalPrice || 0) * (item.quantity || 0)
-                      ).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                      })}
+                      <PriceFormatter
+                        price={
+                          (item.product?.totalPrice || 0) * (item.quantity || 0)
+                        }
+                        currency={currency}
+                      />
                     </span>
                   </div>
                 ))}
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>
-                    {currency}{" "}
-                    {subtotalNgn.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })}
+                    <PriceFormatter price={subtotalNgn} currency={currency} />
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1754,10 +1752,7 @@ const Checkout = () => {
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {currency}{" "}
-                    {subtotalNgn.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })}
+                    <PriceFormatter price={subtotalNgn} currency={currency} />
                   </span>
                 </div>
               </div>

@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+// import { collection, getDocs } from 'firebase/firestore'; // Removed duplicate import
 import { toast } from 'react-toastify';
 
 export default function TrendingGadgets() {
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [dailyDeals, setDailyDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
@@ -93,6 +95,10 @@ export default function TrendingGadgets() {
 
   useEffect(() => {
     fetchTrendingProducts().then(setTrendingProducts);
+    // Fetch daily deals
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
   }, []);
 
   const scrollLeft = () => {
@@ -170,7 +176,7 @@ export default function TrendingGadgets() {
                 key={product.id}
                 className="flex-shrink-0 w-60 mr-4 snap-start"
               >
-                <ProductCard product={product} />
+                <ProductCard product={product} dailyDeals={dailyDeals} />
               </div>
             ))
           )}

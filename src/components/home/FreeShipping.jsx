@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
 export default function FreeShipping() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Check if user is logged in (simple check: userData in localStorage)
+    const userData = localStorage.getItem('userData');
+    if (!userData) {
+      // If user is logged out, clear the dismissal flag so banner can show again
+      localStorage.removeItem('freeShippingDismissed');
+    }
     // Check localStorage for dismissal state
     const isDismissed = localStorage.getItem('freeShippingDismissed');
-    if (isDismissed === 'true') {
+    if (!isDismissed && !userData) {
       setIsVisible(true);
     }
   }, []);

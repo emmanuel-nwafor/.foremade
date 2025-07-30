@@ -81,6 +81,7 @@ const DailyDeals = () => {
               discountPercent: (deal.discount * 100).toFixed(2),
               imageUrl,
               description: productData.description || 'No description available',
+              condition: productData.condition || '',
               startDate: deal.startDate,
               endDate: deal.endDate,
             };
@@ -230,6 +231,7 @@ const DailyDeals = () => {
                       name: deal.productName,
                       price: deal.originalPrice * (1 - deal.discountPercent / 100),
                       imageUrl: deal.imageUrl,
+                      condition: deal.condition,
                     }}
                   />
                   <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">

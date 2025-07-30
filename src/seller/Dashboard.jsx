@@ -213,10 +213,10 @@ export default function Dashboard() {
             </Link>
             {userProfile && userProfile.isProSeller && (
               <div className="flex flex-1 min-w-[140px] gap-2">
-                <Link to="/seller/product-bump" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
+                <Link to="/product-bump" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
                   <Package className="w-5 h-5" /> Product Bump
                 </Link>
-                <Link to="/seller/product-bump-info" className="flex items-center justify-center px-3 py-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="What is Product Bump?">
+                <Link to="/product-bump-info" className="flex items-center justify-center px-3 py-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="What is Product Bump?">
                   <Info className="w-5 h-5" />
                 </Link>
               </div>
@@ -272,7 +272,7 @@ export default function Dashboard() {
           {/* Analytics Section */}
           <div className="mt-8">
             <div className="flex justify-end mt-4">
-              <Link to="/seller/pro-analytics" className="inline-block px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold shadow">
+              <Link to="/pro-seller-analytics" className="inline-block px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold shadow">
                 See More Analytics
               </Link>
             </div>

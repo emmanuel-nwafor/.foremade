@@ -3,10 +3,18 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-export default function BestSelling() {
+// Define the functional component BestSelling
+function BestSelling() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dailyDeals, setDailyDeals] = useState([]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
 
   useEffect(() => {
     const fetchBestSellingProducts = async () => {
@@ -24,8 +32,20 @@ export default function BestSelling() {
         // Filter products with valid stock and sort by rating
         const filteredProducts = allProducts
           .filter((product) => {
-            if ((product.stock || 0) < 10) {
-              console.warn('Filtered out product with low stock:', {
+            // Check if product.variants exists and if any variant has stock < 10,
+            // or if it's a non-variant product and its overall stock is < 10.
+            if (product.variants && product.variants.length > 0) {
+              const totalStock = product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+              if (totalStock < 10) {
+                console.warn('Filtered out variant product with low total stock:', {
+                  id: product.id,
+                  name: product.name,
+                  totalStock: totalStock,
+                });
+                return false;
+              }
+            } else if ((product.stock || 0) < 10) {
+              console.warn('Filtered out single-variant product with low stock:', {
                 id: product.id,
                 name: product.name,
                 stock: product.stock,
@@ -74,9 +94,12 @@ export default function BestSelling() {
         <p className="text-gray-600 col-span-full text-center">No best-selling products found. Check your database for products.</p>
       ) : (
         products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          // Remove the extra <div> wrapper around ProductCard
+          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
         ))
       )}
     </div>
   );
 }
+
+export default BestSelling; // Export the component

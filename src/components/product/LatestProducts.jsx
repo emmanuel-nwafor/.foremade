@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'; // Correct import - combines all needed Firestore functions
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-export default function LatestProducts() {
+// Define the functional component LatestProducts
+function LatestProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dailyDeals, setDailyDeals] = useState([]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
+      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
 
   useEffect(() => {
     const fetchLatestProducts = async () => {
@@ -25,8 +33,20 @@ export default function LatestProducts() {
         // Filter products with valid stock
         const filteredProducts = allProducts
           .filter((product) => {
-            if ((product.stock || 0) < 10) {
-              console.warn('Filtered out product with low stock:', {
+            // Check if product.variants exists and if any variant has stock < 10,
+            // or if it's a non-variant product and its overall stock is < 10.
+            if (product.variants && product.variants.length > 0) {
+              const totalStock = product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+              if (totalStock < 10) {
+                console.warn('Filtered out variant product with low total stock:', {
+                  id: product.id,
+                  name: product.name,
+                  totalStock: totalStock,
+                });
+                return false;
+              }
+            } else if ((product.stock || 0) < 10) {
+              console.warn('Filtered out single-variant product with low stock:', {
                 id: product.id,
                 name: product.name,
                 stock: product.stock,
@@ -40,7 +60,7 @@ export default function LatestProducts() {
 
         if (filteredProducts.length === 0) {
           console.warn('No products passed the filters (Latest). Relaxing stock filter...');
-          const relaxedProducts = allProducts;
+          const relaxedProducts = allProducts; // No specific sort here, as it's already sorted by createdAt
           console.log('Products with relaxed stock filter (Latest):', relaxedProducts);
           setProducts(relaxedProducts.slice(0, 8));
         } else {
@@ -74,11 +94,12 @@ export default function LatestProducts() {
         <p className="text-gray-600 col-span-full text-center">No Latest Products Found</p>
       ) : (
         products.map((product) => (
-          <div className="">
-            <ProductCard key={product.id} product={product} />
-          </div>
+          // Removed the extra <div> wrapper
+          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
         ))
       )}
     </div>
   );
 }
+
+export default LatestProducts; // Export the component

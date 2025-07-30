@@ -1,24 +1,43 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { auth, db } from '/src/firebase';
-import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { getCart, clearCart, updateCart } from '/src/utils/cartUtils';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import Spinner from '/src/components/common/Spinner';
-import PaystackCheckout from './PaystackCheckout';
-import cards from '/src/assets/card.png';
-import placeholder from '/src/assets/placeholder.png';
-import 'boxicons/css/boxicons.min.css';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { auth, db } from "/src/firebase";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  runTransaction,
+} from "firebase/firestore";
+import { getCart, clearCart, updateCart } from "/src/utils/cartUtils";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import axios from "axios";
+import { toast } from "react-toastify";
+import Spinner from "/src/components/common/Spinner";
+import PaystackCheckout from "./PaystackCheckout";
+import cards from "/src/assets/card.png";
+import placeholder from "/src/assets/placeholder.png";
+import "boxicons/css/boxicons.min.css";
 
 const customToastStyle = {
-  background: '#22c55e',
-  color: '#fff',
-  fontWeight: 'bold',
-  borderRadius: '8px',
-  padding: '16px',
+  background: "#22c55e",
+  color: "#fff",
+  fontWeight: "bold",
+  borderRadius: "8px",
+  padding: "16px",
 };
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -35,9 +54,13 @@ const preloadImage = (url, timeout = 5000) => {
 
 const ProgressBar = () => (
   <div className="flex justify-between mb-8">
-    {['Cart', 'Shipping', 'Payment', 'Confirmation'].map((step, index) => (
+    {["Cart", "Shipping", "Payment", "Confirmation"].map((step, index) => (
       <div key={step} className="flex-1 text-center">
-        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${index < 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+        <div
+          className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${
+            index < 2 ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-600"
+          }`}
+        >
           {index + 1}
         </div>
         <p className="text-sm mt-2 text-gray-600">{step}</p>
@@ -46,12 +69,16 @@ const ProgressBar = () => (
   </div>
 );
 
-const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) => (
+const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) =>
   isOpen && (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Order</h3>
-        <p className="text-sm text-gray-600 mb-6">Are you sure you want to place this order and clear your cart?</p>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Confirm Order
+        </h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Are you sure you want to place this order and clear your cart?
+        </p>
         <div className="flex gap-4">
           <button
             onClick={onConfirm}
@@ -68,10 +95,16 @@ const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) => (
         </div>
       </div>
     </div>
-  )
-);
+  );
 
-const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currency, setIsProcessing }) => {
+const StripeCheckoutForm = ({
+  totalPrice,
+  formData,
+  onSuccess,
+  onCancel,
+  currency,
+  setIsProcessing,
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -79,7 +112,10 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!stripe || !elements) {
-      toast.error('Stripe not loaded. Please try again.', { position: 'top-right', autoClose: 3000 });
+      toast.error("Stripe not loaded. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
       return;
     }
 
@@ -99,36 +135,40 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
               amount: amountInCents,
               currency: currency.toLowerCase(),
               metadata: {
-                userId: auth.currentUser?.uid || 'anonymous',
+                userId: auth.currentUser?.uid || "anonymous",
                 orderId: `order-${Date.now()}`,
               },
             },
             { timeout: 15000 }
           );
 
-          const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
-            payment_method: {
-              card: elements.getElement(CardElement),
-              billing_details: {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                address: {
-                  line1: formData.address,
-                  city: formData.city,
-                  postal_code: formData.postalCode,
-                  country: currency === 'GBP' ? 'GB' : 'NG',
+          const { error: stripeError, paymentIntent } =
+            await stripe.confirmCardPayment(data.clientSecret, {
+              payment_method: {
+                card: elements.getElement(CardElement),
+                billing_details: {
+                  name: formData.name,
+                  email: formData.email,
+                  phone: formData.phone,
+                  address: {
+                    line1: formData.address,
+                    city: formData.city,
+                    postal_code: formData.postalCode,
+                    country: currency === "GBP" ? "GB" : "NG",
+                  },
                 },
               },
-            },
-          });
+            });
 
           if (stripeError) {
-            toast.error(stripeError.message, { position: 'top-right', autoClose: 3000 });
+            toast.error(stripeError.message, {
+              position: "top-right",
+              autoClose: 3000,
+            });
             return;
           }
 
-          if (paymentIntent.status === 'succeeded') {
+          if (paymentIntent.status === "succeeded") {
             await onSuccess(paymentIntent);
             setLoading(false);
             setIsProcessing(false);
@@ -137,26 +177,29 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
         } catch (err) {
           lastError = err;
           attempts--;
-          if (err.code !== 'ECONNABORTED' || attempts === 0) {
+          if (err.code !== "ECONNABORTED" || attempts === 0) {
             throw err;
           }
-          toast.warn(`Retrying payment (${attempts} attempts left)...`, { position: 'top-right', autoClose: 2000 });
+          toast.warn(`Retrying payment (${attempts} attempts left)...`, {
+            position: "top-right",
+            autoClose: 2000,
+          });
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
-      throw lastError || new Error('Payment failed after retries.');
+      throw lastError || new Error("Payment failed after retries.");
     } catch (err) {
-      console.error('Stripe payment error:', {
+      console.error("Stripe payment error:", {
         message: err.message,
         code: err.code,
         response: err.response?.data,
       });
-      console.log('Logging to Sentry:', err);
+      console.log("Logging to Sentry:", err);
       toast.error(
-        err.code === 'ECONNABORTED'
-          ? 'Payment timed out. Please try again or check your connection.'
-          : err.message || 'Payment failed. Try again.',
-        { position: 'top-right', autoClose: 3000 }
+        err.code === "ECONNABORTED"
+          ? "Payment timed out. Please try again or check your connection."
+          : err.message || "Payment failed. Try again.",
+        { position: "top-right", autoClose: 3000 }
       );
       setLoading(false);
       setIsProcessing(false);
@@ -166,12 +209,18 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-4">
       <div className="bg-white p-4 rounded-lg shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Card Details</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Card Details
+        </label>
         <CardElement
           options={{
             style: {
-              base: { fontSize: '16px', color: '#424770', '::placeholder': { color: '#aab7c4' } },
-              invalid: { color: '#9e2146' },
+              base: {
+                fontSize: "16px",
+                color: "#424770",
+                "::placeholder": { color: "#aab7c4" },
+              },
+              invalid: { color: "#9e2146" },
             },
           }}
           className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -183,12 +232,16 @@ const StripeCheckoutForm = ({ totalPrice, formData, onSuccess, onCancel, currenc
           disabled={loading || !stripe || !elements}
           className={`flex-1 py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
             loading || !stripe || !elements
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#112d4e] hover:bg-[#0e2740]"
           }`}
-          aria-label="Pay Now"
+          aria-label="Checkout"
         >
-          {loading ? 'Processing...' : `Pay ${currency} ${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          {loading
+            ? "Processing..."
+            : `Pay ${currency} ${totalPrice.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}`}
         </button>
         <button
           type="button"
@@ -210,17 +263,17 @@ const Checkout = () => {
   const [loadingState, setLoadingState] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState(() => {
-    const saved = localStorage.getItem('checkoutFormData');
+    const saved = localStorage.getItem("checkoutFormData");
     return saved
       ? JSON.parse(saved)
       : {
-          name: '',
-          email: '',
-          address: '',
-          city: '',
-          postalCode: '',
-          country: 'Nigeria',
-          phone: '',
+          name: "",
+          email: "",
+          address: "",
+          city: "",
+          postalCode: "",
+          country: "Nigeria",
+          phone: "",
           saveInfo: false,
         };
   });
@@ -234,10 +287,10 @@ const Checkout = () => {
   const [sessionTimeout, setSessionTimeout] = useState(null);
   const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default to match AdminSetMinimumPurchase
   const formRef = useRef(null);
-  const debugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
+  const debugMode = import.meta.env.VITE_DEBUG_MODE === "true";
 
   useEffect(() => {
-    localStorage.setItem('checkoutFormData', JSON.stringify(formData));
+    localStorage.setItem("checkoutFormData", JSON.stringify(formData));
   }, [formData]);
 
   useEffect(() => {
@@ -247,23 +300,23 @@ const Checkout = () => {
         const user = auth.currentUser;
 
         // Fetch minimum purchase amount
-        const minRef = doc(db, 'settings', 'minimumPurchase');
+        const minRef = doc(db, "settings", "minimumPurchase");
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
           setMinimumPurchase(minSnap.data().amount || 25000);
         }
 
-        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         setFeeConfig(feeSnap.exists() ? feeSnap.data() : {});
 
         const cartItems = await getCart(user?.uid);
-        console.log('Loaded cart items:', JSON.stringify(cartItems, null, 2));
+        console.log("Loaded cart items:", JSON.stringify(cartItems, null, 2));
 
         const processedCart = await Promise.all(
           cartItems.map(async (item) => {
             if (!item.productId || !item.product) {
-              console.warn('Invalid cart item:', item);
+              console.warn("Invalid cart item:", item);
               return null;
             }
 
@@ -272,38 +325,58 @@ const Checkout = () => {
 
             if (Array.isArray(productData.imageUrls)) {
               imageUrls = productData.imageUrls.filter(
-                (url) => typeof url === 'string' && url.match(/^https?:\/\/.+/i)
+                (url) => typeof url === "string" && url.match(/^https?:\/\/.+/i)
               );
             } else if (
               productData.imageUrl &&
-              typeof productData.imageUrl === 'string' &&
+              typeof productData.imageUrl === "string" &&
               productData.imageUrl.match(/^https?:\/\/.+/i)
             ) {
               imageUrls = [productData.imageUrl];
             }
 
-            const validImageUrls = await Promise.all(imageUrls.map((url) => preloadImage(url)));
-            let filteredImageUrls = imageUrls.filter((_, index) => validImageUrls[index]);
+            const validImageUrls = await Promise.all(
+              imageUrls.map((url) => preloadImage(url))
+            );
+            let filteredImageUrls = imageUrls.filter(
+              (_, index) => validImageUrls[index]
+            );
 
             if (filteredImageUrls.length === 0) {
               filteredImageUrls = [placeholder];
               setImageErrors((prev) => ({ ...prev, [item.productId]: true }));
-              console.warn('No valid imageUrls for product:', productData.name || 'Unknown', 'Using placeholder');
+              console.warn(
+                "No valid imageUrls for product:",
+                productData.name || "Unknown",
+                "Using placeholder"
+              );
             }
 
-            const productRef = doc(db, 'products', item.productId);
+            const productRef = doc(db, "products", item.productId);
             const productSnap = await getDoc(productRef);
-            const category = productSnap.exists() ? productSnap.data().category || 'default' : 'default';
-            const sellerId = productSnap.exists() ? productSnap.data().sellerId : 'default-seller-id';
-            const stock = productSnap.exists() ? productSnap.data().stock || 10 : 10;
+            const category = productSnap.exists()
+              ? productSnap.data().category || "default"
+              : "default";
+            const sellerId = productSnap.exists()
+              ? productSnap.data().sellerId
+              : "default-seller-id";
+            const stock = productSnap.exists()
+              ? productSnap.data().stock || 10
+              : 10;
 
-            const categoryFees = feeSnap.exists() && feeSnap.data()[category] || {
+            const categoryFees = (feeSnap.exists() &&
+              feeSnap.data()[category]) || {
               taxRate: 0.075,
               buyerProtectionRate: 0.02,
               handlingRate: 0.05,
             };
             const basePrice = productData.price || 0;
-            const totalPrice = basePrice * (1 + categoryFees.taxRate + categoryFees.buyerProtectionRate + categoryFees.handlingRate);
+            const totalPrice =
+              basePrice *
+              (1 +
+                categoryFees.taxRate +
+                categoryFees.buyerProtectionRate +
+                categoryFees.handlingRate);
 
             return {
               ...item,
@@ -316,7 +389,7 @@ const Checkout = () => {
                 stock,
               },
               currentImage: filteredImageUrls[0],
-              slideDirection: 'right',
+              slideDirection: "right",
             };
           })
         );
@@ -324,14 +397,17 @@ const Checkout = () => {
         const validCart = processedCart.filter((item) => item !== null);
         setCart(validCart);
         setImageLoading(
-          validCart.reduce((acc, item) => ({
-            ...acc,
-            [item.productId]: true,
-          }), {})
+          validCart.reduce(
+            (acc, item) => ({
+              ...acc,
+              [item.productId]: true,
+            }),
+            {}
+          )
         );
 
         if (user) {
-          const userDocRef = doc(db, 'users', user.uid);
+          const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
@@ -348,10 +424,13 @@ const Checkout = () => {
           }
         }
       } catch (err) {
-        console.error('Error loading cart or user data:', err);
-        console.log('Logging to Sentry:', err);
+        console.error("Error loading cart or user data:", err);
+        console.log("Logging to Sentry:", err);
         setCart([]);
-        toast.error('Failed to load data.', { position: 'top-right', autoClose: 3000 });
+        toast.error("Failed to load data.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
       } finally {
         setLoadingState(false);
       }
@@ -361,14 +440,14 @@ const Checkout = () => {
       try {
         const user = auth.currentUser;
         const cartItems = await getCart(user?.uid);
-        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         const feeConfig = feeSnap.exists() ? feeSnap.data() : {};
 
         const processedCart = await Promise.all(
           cartItems.map(async (item) => {
             if (!item.productId || !item.product) {
-              console.warn('Invalid cart item:', item);
+              console.warn("Invalid cart item:", item);
               return null;
             }
 
@@ -377,30 +456,44 @@ const Checkout = () => {
 
             if (Array.isArray(productData.imageUrls)) {
               imageUrls = productData.imageUrls.filter(
-                (url) => typeof url === 'string' && url.match(/^https?:\/\/.+/i)
+                (url) => typeof url === "string" && url.match(/^https?:\/\/.+/i)
               );
             } else if (
               productData.imageUrl &&
-              typeof productData.imageUrl === 'string' &&
+              typeof productData.imageUrl === "string" &&
               productData.imageUrl.match(/^https?:\/\/.+/i)
             ) {
               imageUrls = [productData.imageUrl];
             }
 
-            const validImageUrls = await Promise.all(imageUrls.map((url) => preloadImage(url)));
-            let filteredImageUrls = imageUrls.filter((_, index) => validImageUrls[index]);
+            const validImageUrls = await Promise.all(
+              imageUrls.map((url) => preloadImage(url))
+            );
+            let filteredImageUrls = imageUrls.filter(
+              (_, index) => validImageUrls[index]
+            );
 
             if (filteredImageUrls.length === 0) {
               filteredImageUrls = [placeholder];
               setImageErrors((prev) => ({ ...prev, [item.productId]: true }));
-              console.warn('No valid imageUrls for product:', productData.name || 'Unknown', 'Using placeholder');
+              console.warn(
+                "No valid imageUrls for product:",
+                productData.name || "Unknown",
+                "Using placeholder"
+              );
             }
 
-            const productRef = doc(db, 'products', item.productId);
+            const productRef = doc(db, "products", item.productId);
             const productSnap = await getDoc(productRef);
-            const category = productSnap.exists() ? productSnap.data().category || 'default' : 'default';
-            const sellerId = productSnap.exists() ? productSnap.data().sellerId : 'default-seller-id';
-            const stock = productSnap.exists() ? productSnap.data().stock || 10 : 10;
+            const category = productSnap.exists()
+              ? productSnap.data().category || "default"
+              : "default";
+            const sellerId = productSnap.exists()
+              ? productSnap.data().sellerId
+              : "default-seller-id";
+            const stock = productSnap.exists()
+              ? productSnap.data().stock || 10
+              : 10;
 
             const categoryFees = feeConfig[category] || {
               taxRate: 0.075,
@@ -408,7 +501,12 @@ const Checkout = () => {
               handlingRate: 0.05,
             };
             const basePrice = productData.price || 0;
-            const totalPrice = basePrice * (1 + categoryFees.taxRate + categoryFees.buyerProtectionRate + categoryFees.handlingRate);
+            const totalPrice =
+              basePrice *
+              (1 +
+                categoryFees.taxRate +
+                categoryFees.buyerProtectionRate +
+                categoryFees.handlingRate);
 
             return {
               ...item,
@@ -421,7 +519,7 @@ const Checkout = () => {
                 stock,
               },
               currentImage: filteredImageUrls[0],
-              slideDirection: 'right',
+              slideDirection: "right",
             };
           })
         );
@@ -429,30 +527,39 @@ const Checkout = () => {
         const validCart = processedCart.filter((item) => item !== null);
         setCart(validCart);
         setImageLoading(
-          validCart.reduce((acc, item) => ({
-            ...acc,
-            [item.productId]: true,
-          }), {})
+          validCart.reduce(
+            (acc, item) => ({
+              ...acc,
+              [item.productId]: true,
+            }),
+            {}
+          )
         );
       } catch (err) {
-        console.error('Error updating cart:', err);
-        console.log('Logging to Sentry:', err);
-        toast.error('Failed to update cart.', { position: 'top-right', autoClose: 3000 });
+        console.error("Error updating cart:", err);
+        console.log("Logging to Sentry:", err);
+        toast.error("Failed to update cart.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
       }
     };
 
     const startSessionTimeout = () => {
       clearTimeout(sessionTimeout);
       const timeout = setTimeout(() => {
-        toast.warn('Session inactive. Please refresh or log in again.', { position: 'top-right', autoClose: 5000 });
-        navigate('/login');
+        toast.warn("Session inactive. Please refresh or log in again.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+        navigate("/login");
       }, 30 * 60 * 1000);
       setSessionTimeout(timeout);
     };
 
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    window.addEventListener('mousemove', startSessionTimeout);
-    window.addEventListener('keydown', startSessionTimeout);
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    window.addEventListener("mousemove", startSessionTimeout);
+    window.addEventListener("keydown", startSessionTimeout);
 
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setIsAuthenticated(!!user);
@@ -462,9 +569,9 @@ const Checkout = () => {
 
     return () => {
       unsubscribe();
-      window.removeEventListener('cartUpdated', handleCartUpdate);
-      window.removeEventListener('mousemove', startSessionTimeout);
-      window.removeEventListener('keydown', startSessionTimeout);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+      window.removeEventListener("mousemove", startSessionTimeout);
+      window.removeEventListener("keydown", startSessionTimeout);
       clearTimeout(sessionTimeout);
     };
   }, []);
@@ -474,60 +581,90 @@ const Checkout = () => {
       const user = auth.currentUser;
       const updatedCart = cart.map((item) =>
         item.productId === productId
-          ? { ...item, quantity: Math.max(1, Math.min(newQuantity, item.product.stock || 10)) }
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                Math.min(newQuantity, item.product.stock || 10)
+              ),
+            }
           : item
       );
       await updateCart(user?.uid, updatedCart);
       setCart(updatedCart);
-      toast.info('Quantity updated.', { position: 'top-right', autoClose: 2000 });
+      toast.info("Quantity updated.", {
+        position: "top-right",
+        autoClose: 2000,
+      });
     } catch (err) {
-      console.error('Error updating quantity:', err);
-      console.log('Logging to Sentry:', err);
-      toast.error('Failed to update quantity.', { position: 'top-right', autoClose: 3000 });
+      console.error("Error updating quantity:", err);
+      console.log("Logging to Sentry:", err);
+      toast.error("Failed to update quantity.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const subtotalNgn = cart.reduce(
-    (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
+    (total, item) =>
+      total + (item.product?.totalPrice || 0) * (item.quantity || 0),
     0
   );
   const belowMinimumPrice = subtotalNgn < minimumPurchase; // Updated to use dynamic minimumPurchase
-  const currency = formData.country === 'United Kingdom' ? 'GBP' : 'NGN';
+  const currency = formData.country === "United Kingdom" ? "GBP" : "NGN";
   const conversionRateNgnToGbp = 0.00048;
-  const totalAmount = currency === 'GBP' ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
+  const totalAmount =
+    currency === "GBP" ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
 
   useEffect(() => {
-    console.log('Subtotal NGN:', subtotalNgn.toLocaleString('en-NG', { minimumFractionDigits: 2 }));
-    console.log('Total Amount:', totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), '(', currency, ')');
+    console.log(
+      "Subtotal NGN:",
+      subtotalNgn.toLocaleString("en-NG", { minimumFractionDigits: 2 })
+    );
+    console.log(
+      "Total Amount:",
+      totalAmount.toLocaleString("en-NG", { minimumFractionDigits: 2 }),
+      "(",
+      currency,
+      ")"
+    );
   }, [subtotalNgn, totalAmount, currency]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
-    setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    if (name === 'country' && value !== formData.country) {
-      toast.info(`Currency will change to ${value === 'United Kingdom' ? 'GBP' : 'NGN'}.`, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+    setFormErrors((prev) => ({ ...prev, [name]: "" }));
+    if (name === "country" && value !== formData.country) {
+      toast.info(
+        `Currency will change to ${
+          value === "United Kingdom" ? "GBP" : "NGN"
+        }.`,
+        {
+          position: "top-right",
+          autoClose: 3000,
+        }
+      );
     }
   };
 
   const validateForm = () => {
     const errors = {};
     const { name, email, address, city, postalCode, country, phone } = formData;
-    if (!name) errors.name = 'Full name is required.';
-    if (!email) errors.email = 'Email is required.';
-    else if (!/\S+@\S+\.\S+/.test(email)) errors.email = 'Invalid email address.';
-    if (!phone) errors.phone = 'Phone number is required.';
-    if (!address) errors.address = 'Address is required.';
-    if (!city) errors.city = 'City is required.';
-    if (!postalCode) errors.postalCode = 'Postal code is required.';
-    if (!['Nigeria', 'United Kingdom'].includes(country)) errors.country = 'Select Nigeria or United Kingdom.';
+    if (!name) errors.name = "Full name is required.";
+    if (!email) errors.email = "Email is required.";
+    else if (!/\S+@\S+\.\S+/.test(email))
+      errors.email = "Invalid email address.";
+    if (!phone) errors.phone = "Phone number is required.";
+    if (!address) errors.address = "Address is required.";
+    if (!city) errors.city = "City is required.";
+    if (!postalCode) errors.postalCode = "Postal code is required.";
+    if (!["Nigeria", "United Kingdom"].includes(country))
+      errors.country = "Select Nigeria or United Kingdom.";
     return { isValid: Object.keys(errors).length === 0, errors };
   };
 
@@ -537,13 +674,13 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      console.log('Backend URL:', backendUrl);
-      console.log('Sending order confirmation email with payload:', {
-        orderId: order.paymentId || 'unknown',
-        email: order.shippingDetails?.email || 'unknown',
+      console.log("Backend URL:", backendUrl);
+      console.log("Sending order confirmation email with payload:", {
+        orderId: order.paymentId || "unknown",
+        email: order.shippingDetails?.email || "unknown",
         items: order.items,
         total: order.totalAmount || 0,
-        currency: order.currency || 'unknown',
+        currency: order.currency || "unknown",
         shippingDetails: order.shippingDetails || {},
       });
 
@@ -551,30 +688,34 @@ const Checkout = () => {
         orderId: order.paymentId || `fallback-${Date.now()}`,
         email: order.shippingDetails?.email || formData.email,
         items: (order.items || []).map((item) => ({
-          productId: item.productId || 'unknown',
+          productId: item.productId || "unknown",
           quantity: item.quantity || 1,
           price: item.price || 0,
-          name: item.name || 'Unknown Product',
-          sellerId: item.sellerId || 'unknown',
-          imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : [placeholder],
+          name: item.name || "Unknown Product",
+          sellerId: item.sellerId || "unknown",
+          imageUrls: Array.isArray(item.imageUrls)
+            ? item.imageUrls
+            : [placeholder],
         })),
         total: order.totalAmount || 0,
         currency: order.currency || currency,
         shippingDetails: {
-          name: order.shippingDetails?.name || formData.name || 'Unknown',
-          address: order.shippingDetails?.address || formData.address || 'Unknown',
-          city: order.shippingDetails?.city || formData.city || '',
-          postalCode: order.shippingDetails?.postalCode || formData.postalCode || '',
-          country: order.shippingDetails?.country || formData.country || '',
-          phone: order.shippingDetails?.phone || formData.phone || '',
+          name: order.shippingDetails?.name || formData.name || "Unknown",
+          address:
+            order.shippingDetails?.address || formData.address || "Unknown",
+          city: order.shippingDetails?.city || formData.city || "",
+          postalCode:
+            order.shippingDetails?.postalCode || formData.postalCode || "",
+          country: order.shippingDetails?.country || formData.country || "",
+          phone: order.shippingDetails?.phone || formData.phone || "",
         },
       };
 
       if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
-        throw new Error('Invalid or missing email address');
+        throw new Error("Invalid or missing email address");
       }
       if (!payload.items.length) {
-        throw new Error('No items provided');
+        throw new Error("No items provided");
       }
 
       let attempts = 2;
@@ -582,10 +723,17 @@ const Checkout = () => {
 
       while (attempts > 0) {
         try {
-          const response = await axios.post(`${backendUrl}/send-order-confirmation`, payload, {
-            timeout: 10000,
-          });
-          console.log('Order confirmation email sent successfully:', response.data);
+          const response = await axios.post(
+            `${backendUrl}/send-order-confirmation`,
+            payload,
+            {
+              timeout: 10000,
+            }
+          );
+          console.log(
+            "Order confirmation email sent successfully:",
+            response.data
+          );
           return;
         } catch (err) {
           lastError = err;
@@ -597,66 +745,87 @@ const Checkout = () => {
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
-      throw lastError || new Error('Failed to send email after retries');
+      throw lastError || new Error("Failed to send email after retries");
     } catch (err) {
-      console.error('Error sending order confirmation email:', {
+      console.error("Error sending order confirmation email:", {
         message: err.message,
         status: err.response?.status,
         responseData: err.response?.data,
         stack: err.stack,
       });
-      console.log('Logging to Sentry:', err);
-      toast.warn('Order placed successfully, but failed to send confirmation email. Please check your email later.', {
-        position: 'top-right',
-        autoClose: 5000,
-      });
-      if (debugMode) {
-        toast.error(`Debug: Email send failed - ${err.message} (${JSON.stringify(err.response?.data)})`, {
-          position: 'bottom-right',
+      console.log("Logging to Sentry:", err);
+      toast.warn(
+        "Order placed successfully, but failed to send confirmation email. Please check your email later.",
+        {
+          position: "top-right",
           autoClose: 5000,
-        });
+        }
+      );
+      if (debugMode) {
+        toast.error(
+          `Debug: Email send failed - ${err.message} (${JSON.stringify(
+            err.response?.data
+          )})`,
+          {
+            position: "bottom-right",
+            autoClose: 5000,
+          }
+        );
       }
     } finally {
       setIsEmailSending(false);
     }
   };
 
-  const sendSellerOrderNotifications = async (sellers, sellerOrderIds, currency, shippingDetails) => {
+  const sendSellerOrderNotifications = async (
+    sellers,
+    sellerOrderIds,
+    currency,
+    shippingDetails
+  ) => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      
+
       for (const [sellerId, items] of Object.entries(sellers)) {
-        const sellerOrderId = sellerOrderIds.find(id => id.includes(sellerId)) || `order-${Date.now()}-${sellerId}`;
+        const sellerOrderId =
+          sellerOrderIds.find((id) => id.includes(sellerId)) ||
+          `order-${Date.now()}-${sellerId}`;
         const sellerSubtotal = items.reduce(
-          (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
+          (total, item) =>
+            total + (item.product?.totalPrice || 0) * (item.quantity || 0),
           0
         );
-        const totalAmount = currency === 'GBP' ? sellerSubtotal * conversionRateNgnToGbp : sellerSubtotal;
+        const totalAmount =
+          currency === "GBP"
+            ? sellerSubtotal * conversionRateNgnToGbp
+            : sellerSubtotal;
 
         const payload = {
           orderId: sellerOrderId,
           sellerId,
-          items: items.map(item => ({
-            productId: item.productId || 'unknown',
+          items: items.map((item) => ({
+            productId: item.productId || "unknown",
             quantity: item.quantity || 1,
             price: item.product?.totalPrice || 0,
-            name: item.product?.name || 'Unknown Product',
-            imageUrls: Array.isArray(item.product?.imageUrls) ? item.product.imageUrls : [placeholder],
+            name: item.product?.name || "Unknown Product",
+            imageUrls: Array.isArray(item.product?.imageUrls)
+              ? item.product.imageUrls
+              : [placeholder],
           })),
           total: totalAmount,
           currency,
           shippingDetails: {
-            name: shippingDetails.name || 'Unknown',
-            address: shippingDetails.address || 'Unknown',
-            city: shippingDetails.city || '',
-            postalCode: shippingDetails.postalCode || '',
-            country: shippingDetails.country || '',
-            phone: shippingDetails.phone || '',
+            name: shippingDetails.name || "Unknown",
+            address: shippingDetails.address || "Unknown",
+            city: shippingDetails.city || "",
+            postalCode: shippingDetails.postalCode || "",
+            country: shippingDetails.country || "",
+            phone: shippingDetails.phone || "",
           },
         };
 
-        console.log('Sending seller notification email with payload:', {
+        console.log("Sending seller notification email with payload:", {
           orderId: sellerOrderId,
           sellerId,
           items: payload.items,
@@ -670,10 +839,17 @@ const Checkout = () => {
 
         while (attempts > 0) {
           try {
-            const response = await axios.post(`${backendUrl}/send-seller-order-notification`, payload, {
-              timeout: 10000,
-            });
-            console.log(`Seller notification email sent successfully for seller ${sellerId}:`, response.data);
+            const response = await axios.post(
+              `${backendUrl}/send-seller-order-notification`,
+              payload,
+              {
+                timeout: 10000,
+              }
+            );
+            console.log(
+              `Seller notification email sent successfully for seller ${sellerId}:`,
+              response.data
+            );
             break;
           } catch (err) {
             lastError = err;
@@ -681,31 +857,46 @@ const Checkout = () => {
             if (attempts === 0 || err.response?.status !== 400) {
               throw err;
             }
-            console.warn(`Retrying seller email send for ${sellerId} (${attempts} attempts left)...`);
+            console.warn(
+              `Retrying seller email send for ${sellerId} (${attempts} attempts left)...`
+            );
             await new Promise((resolve) => setTimeout(resolve, 2000));
           }
         }
         if (attempts === 0) {
-          throw lastError || new Error(`Failed to send seller email for ${sellerId} after retries`);
+          throw (
+            lastError ||
+            new Error(
+              `Failed to send seller email for ${sellerId} after retries`
+            )
+          );
         }
       }
     } catch (err) {
-      console.error('Error sending seller notification emails:', {
+      console.error("Error sending seller notification emails:", {
         message: err.message,
         status: err.response?.status,
         responseData: err.response?.data,
         stack: err.stack,
       });
-      console.log('Logging to Sentry:', err);
-      toast.warn('Order placed successfully, but failed to notify some sellers. They may receive notifications later.', {
-        position: 'top-right',
-        autoClose: 5000,
-      });
-      if (debugMode) {
-        toast.error(`Debug: Seller email send failed - ${err.message} (${JSON.stringify(err.response?.data)})`, {
-          position: 'bottom-right',
+      console.log("Logging to Sentry:", err);
+      toast.warn(
+        "Order placed successfully, but failed to notify some sellers. They may receive notifications later.",
+        {
+          position: "top-right",
           autoClose: 5000,
-        });
+        }
+      );
+      if (debugMode) {
+        toast.error(
+          `Debug: Seller email send failed - ${err.message} (${JSON.stringify(
+            err.response?.data
+          )})`,
+          {
+            position: "bottom-right",
+            autoClose: 5000,
+          }
+        );
       }
     } finally {
       setIsEmailSending(false);
@@ -716,38 +907,54 @@ const Checkout = () => {
     async (paymentData) => {
       try {
         if (cart.length === 0) {
-          toast.error('Cart is empty.', { position: 'top-right', autoClose: 3000 });
+          toast.error("Cart is empty.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
           return;
         }
         const validation = validateForm();
         if (!validation.isValid) {
           setFormErrors(validation.errors);
-          toast.error('Please fix form errors.', { position: 'top-right', autoClose: 3000 });
-          formRef.current.scrollIntoView({ behavior: 'smooth' });
+          toast.error("Please fix form errors.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+          formRef.current.scrollIntoView({ behavior: "smooth" });
           return;
         }
         if (belowMinimumPrice) {
-          toast.error(`Total amount must be at least ₦${minimumPurchase.toLocaleString('en-NG')} to proceed.`, { position: 'top-right', autoClose: 3000 });
+          toast.error(
+            `Total amount must be at least ₦${minimumPurchase.toLocaleString(
+              "en-NG"
+            )} to proceed.`,
+            { position: "top-right", autoClose: 3000 }
+          );
           return;
         }
 
-        console.log('Payment data:', paymentData);
+        console.log("Payment data:", paymentData);
         if (!paymentData || (!paymentData.id && !paymentData.reference)) {
-          console.warn('Invalid payment data:', paymentData);
-          console.log('Logging to Sentry:', new Error('Invalid payment data received'));
+          console.warn("Invalid payment data:", paymentData);
+          console.log(
+            "Logging to Sentry:",
+            new Error("Invalid payment data received")
+          );
         }
 
-        const userId = auth.currentUser?.uid || 'anonymous';
+        const userId = auth.currentUser?.uid || "anonymous";
         const orderId = `order-${Date.now()}`;
-        const paymentGateway = formData.country === 'United Kingdom' ? 'Stripe' : 'Paystack';
-        const paymentId = paymentData?.id || paymentData?.reference || `fallback-${orderId}`;
+        const paymentGateway =
+          formData.country === "United Kingdom" ? "Stripe" : "Paystack";
+        const paymentId =
+          paymentData?.id || paymentData?.reference || `fallback-${orderId}`;
 
         const sellers = {};
         cart.forEach((item) => {
-          const sellerId = item.product?.sellerId || 'default-seller-id';
+          const sellerId = item.product?.sellerId || "default-seller-id";
           if (!sellerId) {
-            console.warn('No sellerId found for item:', item);
-            throw new Error('Seller ID missing for item: ' + item.productId);
+            console.warn("No sellerId found for item:", item);
+            throw new Error("Seller ID missing for item: " + item.productId);
           }
           if (!sellers[sellerId]) sellers[sellerId] = [];
           sellers[sellerId].push(item);
@@ -758,13 +965,19 @@ const Checkout = () => {
         const sellerOrderIds = [];
 
         await runTransaction(db, async (transaction) => {
-          const productRefs = cart.map((item) => doc(db, 'products', item.productId));
-          const productSnaps = await Promise.all(productRefs.map((ref) => transaction.get(ref)));
+          const productRefs = cart.map((item) =>
+            doc(db, "products", item.productId)
+          );
+          const productSnaps = await Promise.all(
+            productRefs.map((ref) => transaction.get(ref))
+          );
 
           const stockUpdates = [];
           productSnaps.forEach((snap, index) => {
             if (!snap.exists()) {
-              console.warn(`Product ${cart[index].productId} does not exist. Skipping stock update.`);
+              console.warn(
+                `Product ${cart[index].productId} does not exist. Skipping stock update.`
+              );
               return;
             }
             const currentStock = snap.data().stock || 0;
@@ -772,14 +985,20 @@ const Checkout = () => {
             const newStock = currentStock - requestedQuantity;
             if (newStock < 0) {
               throw new Error(
-                `Insufficient stock for product ${cart[index].productId} (${cart[index].product?.name || 'Unknown'})`
+                `Insufficient stock for product ${cart[index].productId} (${
+                  cart[index].product?.name || "Unknown"
+                })`
               );
             }
             stockUpdates.push({ ref: productRefs[index], newStock });
           });
 
-          const sellerWalletRefs = Object.keys(sellers).map((sellerId) => doc(db, 'wallets', sellerId));
-          const sellerWalletSnaps = await Promise.all(sellerWalletRefs.map((ref) => transaction.get(ref)));
+          const sellerWalletRefs = Object.keys(sellers).map((sellerId) =>
+            doc(db, "wallets", sellerId)
+          );
+          const sellerWalletSnaps = await Promise.all(
+            sellerWalletRefs.map((ref) => transaction.get(ref))
+          );
           const sellerWallets = sellerWalletSnaps.map((snap, index) => ({
             ref: sellerWalletRefs[index],
             exists: snap.exists(),
@@ -788,7 +1007,7 @@ const Checkout = () => {
           }));
 
           console.log(
-            'Seller wallets before update:',
+            "Seller wallets before update:",
             sellerWallets.map((wallet) => ({
               sellerId: wallet.sellerId,
               exists: wallet.exists,
@@ -801,20 +1020,24 @@ const Checkout = () => {
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
             const sellerItems = sellers[sellerId];
             const sellerSubtotalNgn = sellerItems.reduce(
-              (total, item) => total + ((item.product?.totalPrice || 0) * (item.quantity || 0)),
+              (total, item) =>
+                total + (item.product?.totalPrice || 0) * (item.quantity || 0),
               0
             );
-            const sellerShare = currency === 'GBP' ? sellerSubtotalNgn * conversionRateNgnToGbp : sellerSubtotalNgn;
+            const sellerShare =
+              currency === "GBP"
+                ? sellerSubtotalNgn * conversionRateNgnToGbp
+                : sellerSubtotalNgn;
 
             const order = {
               id: orderId,
               userId,
               sellerId,
               items: sellerItems.map((item) => ({
-                productId: item.productId || 'unknown',
+                productId: item.productId || "unknown",
                 quantity: item.quantity || 0,
                 price: item.product?.totalPrice || 0,
-                name: item.product?.name || 'Unknown',
+                name: item.product?.name || "Unknown",
                 sellerId: item.product?.sellerId || sellerId,
                 imageUrls: item.product?.imageUrls || [placeholder],
               })),
@@ -822,7 +1045,7 @@ const Checkout = () => {
               date: new Date().toISOString(),
               createdAt: serverTimestamp(),
               shippingDetails: formData,
-              status: 'pending-approval',
+              status: "pending-approval",
               paymentGateway,
               paymentId,
               currency,
@@ -831,7 +1054,8 @@ const Checkout = () => {
             orders.push({ order, orderId: sellerOrderId });
             sellerOrderIds.push(sellerOrderId);
 
-            const pendingBalance = (exists ? data?.pendingBalance || 0 : 0) + sellerShare;
+            const pendingBalance =
+              (exists ? data?.pendingBalance || 0 : 0) + sellerShare;
             walletUpdates.push({ sellerId, amount: sellerShare });
             transaction.set(
               ref,
@@ -851,7 +1075,7 @@ const Checkout = () => {
           });
 
           orders.forEach(({ order, orderId }) => {
-            const orderRef = doc(db, 'orders', orderId);
+            const orderRef = doc(db, "orders", orderId);
             try {
               transaction.set(orderRef, order);
             } catch (err) {
@@ -866,13 +1090,13 @@ const Checkout = () => {
           });
 
           const transactionPromises = orders.map(({ order }) =>
-            addDoc(collection(db, 'transactions'), {
+            addDoc(collection(db, "transactions"), {
               userId: order.sellerId,
-              type: 'Sale',
+              type: "Sale",
               description: `Sale from order ${order.id}`,
               amount: order.totalAmount,
-              date: new Date().toISOString().split('T')[0],
-              status: 'Pending',
+              date: new Date().toISOString().split("T")[0],
+              status: "Pending",
               createdAt: serverTimestamp(),
               reference: order.paymentId,
             })
@@ -882,7 +1106,7 @@ const Checkout = () => {
 
         const updatedWallets = await Promise.all(
           walletUpdates.map(async ({ sellerId }) => {
-            const walletRef = doc(db, 'wallets', sellerId);
+            const walletRef = doc(db, "wallets", sellerId);
             const walletSnap = await getDoc(walletRef);
             return {
               sellerId,
@@ -891,10 +1115,10 @@ const Checkout = () => {
             };
           })
         );
-        console.log('Seller wallets after update:', updatedWallets);
+        console.log("Seller wallets after update:", updatedWallets);
 
         if (auth.currentUser && formData.saveInfo) {
-          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          const userDocRef = doc(db, "users", auth.currentUser.uid);
           await setDoc(userDocRef, formData, { merge: true });
         }
 
@@ -904,18 +1128,23 @@ const Checkout = () => {
             ...lastOrder,
             paymentId: sellerOrderIds[0],
             items: cart.map((item) => ({
-              productId: item.productId || 'unknown',
+              productId: item.productId || "unknown",
               quantity: item.quantity || 0,
               price: item.product?.totalPrice || 0,
-              name: item.product?.name || 'Unknown',
-              sellerId: item.product?.sellerId || 'unknown',
+              name: item.product?.name || "Unknown",
+              sellerId: item.product?.sellerId || "unknown",
               imageUrls: item.product?.imageUrls || [placeholder],
             })),
           });
         }
 
         // Send seller notification emails
-        await sendSellerOrderNotifications(sellers, sellerOrderIds, currency, formData);
+        await sendSellerOrderNotifications(
+          sellers,
+          sellerOrderIds,
+          currency,
+          formData
+        );
 
         await clearCart(auth.currentUser?.uid);
         setCart([]);
@@ -923,32 +1152,56 @@ const Checkout = () => {
         toast.success(
           <div>
             <strong>Payment Successful!</strong>
-            <p>Your order has been placed. Check your email for confirmation.</p>
+            <p>
+              Your order has been placed. Check your email for confirmation.
+            </p>
           </div>,
           {
-            position: 'top-right',
+            position: "top-right",
             autoClose: 5000,
             style: customToastStyle,
             icon: <i className="bx bx-check-circle text-blue-500 text-xl" />,
           }
         );
-        navigate('/order-confirmation', { state: { order: { ...lastOrder, items: cart } } });
+        navigate("/order-confirmation", {
+          state: { order: { ...lastOrder, items: cart } },
+        });
       } catch (err) {
-        console.error('Checkout error:', err);
-        console.log('Logging to Sentry:', err);
-        toast.error(err.message || 'Failed to place order. Please try again.', { position: 'top-right', autoClose: 3000 });
+        console.error("Checkout error:", err);
+        console.log("Logging to Sentry:", err);
+        toast.error(err.message || "Failed to place order. Please try again.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
         if (debugMode) {
-          toast.error(`Debug: ${err.message}`, { position: 'bottom-right', autoClose: 5000 });
+          toast.error(`Debug: ${err.message}`, {
+            position: "bottom-right",
+            autoClose: 5000,
+          });
         }
       } finally {
         setShowConfirmModal(false);
       }
     },
-    [cart, subtotalNgn, belowMinimumPrice, formData, totalAmount, navigate, totalItems, currency, debugMode, minimumPurchase]
+    [
+      cart,
+      subtotalNgn,
+      belowMinimumPrice,
+      formData,
+      totalAmount,
+      navigate,
+      totalItems,
+      currency,
+      debugMode,
+      minimumPurchase,
+    ]
   );
 
   const handleCancel = () => {
-    toast.info('Payment cancelled.', { position: 'top-right', autoClose: 3000 });
+    toast.info("Payment cancelled.", {
+      position: "top-right",
+      autoClose: 3000,
+    });
     setShowConfirmModal(false);
   };
 
@@ -959,12 +1212,16 @@ const Checkout = () => {
           ? {
               ...item,
               currentImage: url,
-              slideDirection: index > currentIndex ? 'right' : 'left',
+              slideDirection: index > currentIndex ? "right" : "left",
             }
           : item
       )
     );
-    console.log('Cart item image updated:', { itemId, url, direction: index > currentIndex ? 'right' : 'left' });
+    console.log("Cart item image updated:", {
+      itemId,
+      url,
+      direction: index > currentIndex ? "right" : "left",
+    });
   };
 
   const handleImageLoad = (productId, isThumbnail) => {
@@ -973,7 +1230,11 @@ const Checkout = () => {
       [productId]: isThumbnail ? prev[productId] : false,
     }));
     setImageErrors((prev) => ({ ...prev, [productId]: false }));
-    console.log(`Image ${isThumbnail ? 'thumbnail' : 'main'} loaded for productId: ${productId}`);
+    console.log(
+      `Image ${
+        isThumbnail ? "thumbnail" : "main"
+      } loaded for productId: ${productId}`
+    );
   };
 
   const handleImageError = (e, productId) => {
@@ -985,7 +1246,10 @@ const Checkout = () => {
     setImageErrors((prev) => ({ ...prev, [productId]: true }));
     e.target.src = placeholder;
     if (debugMode) {
-      toast.warn(`Image failed to load for product ${productId}`, { position: 'top-right', autoClose: 3000 });
+      toast.warn(`Image failed to load for product ${productId}`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -1005,7 +1269,11 @@ const Checkout = () => {
       {(isProcessing || isEmailSending) && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
           <Spinner />
-          <p className="text-white ml-4">{isEmailSending ? 'Sending confirmation email...' : 'Processing payment...'}</p>
+          <p className="text-white ml-4">
+            {isEmailSending
+              ? "Sending confirmation email..."
+              : "Processing payment..."}
+          </p>
         </div>
       )}
       <style>
@@ -1029,7 +1297,11 @@ const Checkout = () => {
           <i className="bx bx-cart text-blue-600" />
           Checkout
         </h1>
-        <Link to="/cart" className="text-blue-600 hover:underline text-sm flex items-center gap-1" aria-label="Back to Cart">
+        <Link
+          to="/cart"
+          className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+          aria-label="Back to Cart"
+        >
           <i className="bx bx-arrow-back" />
           Back to Cart
         </Link>
@@ -1037,7 +1309,7 @@ const Checkout = () => {
       {cart.length === 0 ? (
         <div className="text-center">
           <p className="text-gray-600 mb-4">
-            Your cart is empty.{' '}
+            Your cart is empty.{" "}
             <Link to="/products" className="text-blue-600 hover:underline">
               Continue shopping
             </Link>
@@ -1045,14 +1317,20 @@ const Checkout = () => {
         </div>
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
-          <div className="flex-1 bg-white p-6 rounded-lg shadow-md" ref={formRef}>
+          <div
+            className="flex-1 bg-white p-6 rounded-lg shadow-md"
+            ref={formRef}
+          >
             <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <i className="bx bx-home text-blue-600" />
               Shipping Details
             </h2>
             <form className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1064,12 +1342,14 @@ const Checkout = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.name ? 'border-red-500' : 'border-gray-300'
+                      formErrors.name ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.name}
-                    aria-describedby={formErrors.name ? 'name-error' : undefined}
+                    aria-describedby={
+                      formErrors.name ? "name-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.name && (
@@ -1079,7 +1359,10 @@ const Checkout = () => {
                 )}
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1091,12 +1374,14 @@ const Checkout = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.email ? 'border-red-500' : 'border-gray-300'
+                      formErrors.email ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.email}
-                    aria-describedby={formErrors.email ? 'email-error' : undefined}
+                    aria-describedby={
+                      formErrors.email ? "email-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.email && (
@@ -1106,7 +1391,10 @@ const Checkout = () => {
                 )}
               </div>
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Phone <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1118,12 +1406,14 @@ const Checkout = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.phone ? 'border-red-500' : 'border-gray-300'
+                      formErrors.phone ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.phone}
-                    aria-describedby={formErrors.phone ? 'phone-error' : undefined}
+                    aria-describedby={
+                      formErrors.phone ? "phone-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.phone && (
@@ -1133,7 +1423,10 @@ const Checkout = () => {
                 )}
               </div>
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="address"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1145,12 +1438,14 @@ const Checkout = () => {
                     value={formData.address}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.address ? 'border-red-500' : 'border-gray-300'
+                      formErrors.address ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.address}
-                    aria-describedby={formErrors.address ? 'address-error' : undefined}
+                    aria-describedby={
+                      formErrors.address ? "address-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.address && (
@@ -1160,7 +1455,10 @@ const Checkout = () => {
                 )}
               </div>
               <div>
-                <label htmlFor="city" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="city"
+                  className="text-sm font-medium text-gray-700 flex items-center gap-1"
+                >
                   City <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1172,12 +1470,14 @@ const Checkout = () => {
                     value={formData.city}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.city ? 'border-red-500' : 'border-gray-300'
+                      formErrors.city ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.city}
-                    aria-describedby={formErrors.city ? 'city-error' : undefined}
+                    aria-describedby={
+                      formErrors.city ? "city-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.city && (
@@ -1187,7 +1487,10 @@ const Checkout = () => {
                 )}
               </div>
               <div>
-                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="postalCode"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Postal Code <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1199,22 +1502,32 @@ const Checkout = () => {
                     value={formData.postalCode}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.postalCode ? 'border-red-500' : 'border-gray-300'
+                      formErrors.postalCode
+                        ? "border-red-500"
+                        : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.postalCode}
-                    aria-describedby={formErrors.postalCode ? 'postalcode-error' : undefined}
+                    aria-describedby={
+                      formErrors.postalCode ? "postalcode-error" : undefined
+                    }
                   />
                 </div>
                 {formErrors.postalCode && (
-                  <p id="postalcode-error" className="text-red-600 text-xs mt-1">
+                  <p
+                    id="postalcode-error"
+                    className="text-red-600 text-xs mt-1"
+                  >
                     {formErrors.postalCode}
                   </p>
                 )}
               </div>
               <div>
-                <label htmlFor="country" className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                <label
+                  htmlFor="country"
+                  className="block text-sm font-medium text-gray-700 items-center gap-1"
+                >
                   Country <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -1225,12 +1538,14 @@ const Checkout = () => {
                     value={formData.country}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      formErrors.country ? 'border-red-500' : 'border-gray-300'
+                      formErrors.country ? "border-red-500" : "border-gray-300"
                     }`}
                     required
                     disabled={loadingState}
                     aria-invalid={!!formErrors.country}
-                    aria-describedby={formErrors.country ? 'country-error' : undefined}
+                    aria-describedby={
+                      formErrors.country ? "country-error" : undefined
+                    }
                   >
                     <option value="">Select a country</option>
                     <option value="Nigeria">Nigeria</option>
@@ -1253,7 +1568,10 @@ const Checkout = () => {
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   disabled={loadingState}
                 />
-                <label htmlFor="saveInfo" className="ml-2 text-sm text-gray-600">
+                <label
+                  htmlFor="saveInfo"
+                  className="ml-2 text-sm text-gray-600"
+                >
                   Save shipping information for future purchases
                 </label>
               </div>
@@ -1273,7 +1591,10 @@ const Checkout = () => {
                 </span>
               </h2>
               {cart.map((item) => (
-                <div key={item.productId} className="flex items-start gap-4 mb-4 border-b pb-4">
+                <div
+                  key={item.productId}
+                  className="flex items-start gap-4 mb-4 border-b pb-4"
+                >
                   <div className="w-24 h-24 relative overflow-hidden rounded-lg image-zoom">
                     {imageLoading[item.productId] && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
@@ -1282,14 +1603,23 @@ const Checkout = () => {
                     )}
                     <img
                       src={item.currentImage || placeholder}
-                      alt={item.product?.name || 'Product Image'}
+                      alt={item.product?.name || "Product Image"}
                       className={`absolute w-full h-full object-cover ${
-                        item.slideDirection === 'right' ? 'slide-in-right' : 'slide-in-left'
-                      } ${imageLoading[item.productId] || imageErrors[item.productId] ? 'opacity-50' : 'opacity-100'}`}
+                        item.slideDirection === "right"
+                          ? "slide-in-right"
+                          : "slide-in-left"
+                      } ${
+                        imageLoading[item.productId] ||
+                        imageErrors[item.productId]
+                          ? "opacity-50"
+                          : "opacity-100"
+                      }`}
                       onLoad={() => handleImageLoad(item.productId, false)}
                       onError={(e) => handleImageError(e, item.productId)}
                       loading="lazy"
-                      aria-label={`Image for ${item.product?.name || 'Unknown Product'}`}
+                      aria-label={`Image for ${
+                        item.product?.name || "Unknown Product"
+                      }`}
                     />
                     {imageErrors[item.productId] && (
                       <div className="absolute bottom-0 left-0 bg-red-600 text-white text-xs px-1 rounded">
@@ -1298,26 +1628,40 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-800">{item.product?.name || 'Unknown'}</h3>
+                    <h3 className="text-base font-semibold text-gray-800">
+                      {item.product?.name || "Unknown"}
+                    </h3>
                     <p className="text-sm text-gray-600">
-                      {currency}{' '}
-                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
+                      {currency}{" "}
+                      {(
+                        (item.product?.totalPrice || 0) * (item.quantity || 0)
+                      ).toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                       })}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <label htmlFor={`quantity-${item.productId}`} className="text-sm text-gray-600">
+                      <label
+                        htmlFor={`quantity-${item.productId}`}
+                        className="text-sm text-gray-600"
+                      >
                         Qty:
                       </label>
                       <input
                         type="number"
                         id={`quantity-${item.productId}`}
                         value={item.quantity || 1}
-                        onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value))}
+                        onChange={(e) =>
+                          updateQuantity(
+                            item.productId,
+                            parseInt(e.target.value)
+                          )
+                        }
                         min="1"
                         max={item.product?.stock || 10}
                         className="w-16 p-1 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        aria-label={`Quantity for ${item.product?.name || 'Unknown'}`}
+                        aria-label={`Quantity for ${
+                          item.product?.name || "Unknown"
+                        }`}
                       />
                     </div>
                     {item.product?.imageUrls?.length > 1 && (
@@ -1326,16 +1670,27 @@ const Checkout = () => {
                           <img
                             key={`${item.productId}-${index}`}
                             src={url}
-                            alt={`${item.product?.name || 'Unknown'} ${index + 1}`}
+                            alt={`${item.product?.name || "Unknown"} ${
+                              index + 1
+                            }`}
                             className={`w-10 h-10 object-cover rounded border cursor-pointer ${
-                              item.currentImage === url ? 'border-blue-500 border-2' : 'border-gray-300'
-                            } ${imageLoading[item.productId] || imageErrors[item.productId] ? 'opacity-50' : 'opacity-100'}`}
+                              item.currentImage === url
+                                ? "border-blue-500 border-2"
+                                : "border-gray-300"
+                            } ${
+                              imageLoading[item.productId] ||
+                              imageErrors[item.productId]
+                                ? "opacity-50"
+                                : "opacity-100"
+                            }`}
                             onClick={() =>
                               handleImageClick(
                                 item.productId,
                                 url,
                                 index,
-                                item.product.imageUrls.indexOf(item.currentImage)
+                                item.product.imageUrls.indexOf(
+                                  item.currentImage
+                                )
                               )
                             }
                             onLoad={() => handleImageLoad(item.productId, true)}
@@ -1352,7 +1707,11 @@ const Checkout = () => {
           </div>
           <div className="w-full lg:w-1/3">
             <div className="p-6 bg-white rounded-lg shadow-md sticky top-4">
-              <img src={cards} alt="Accepted payment cards" className="mb-6 w-auto h-8" />
+              <img
+                src={cards}
+                alt="Accepted payment cards"
+                className="mb-6 w-auto h-8"
+              />
               <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="bx bx-receipt text-blue-600" />
                 Order Summary
@@ -1365,11 +1724,13 @@ const Checkout = () => {
                 {cart.map((item) => (
                   <div key={item.productId} className="flex justify-between">
                     <span className="truncate w-2/3">
-                      {item.product?.name || 'Unknown'} (x{item.quantity || 0})
+                      {item.product?.name || "Unknown"} (x{item.quantity || 0})
                     </span>
                     <span>
-                      {currency}{' '}
-                      {((item.product?.totalPrice || 0) * (item.quantity || 0)).toLocaleString('en-US', {
+                      {currency}{" "}
+                      {(
+                        (item.product?.totalPrice || 0) * (item.quantity || 0)
+                      ).toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                       })}
                     </span>
@@ -1378,23 +1739,32 @@ const Checkout = () => {
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>
-                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {currency}{" "}
+                    {subtotalNgn.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span className="text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-full">Free</span>
+                  <span className="text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-full">
+                    Free
+                  </span>
                 </div>
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    {currency} {subtotalNgn.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {currency}{" "}
+                    {subtotalNgn.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               </div>
               {belowMinimumPrice && (
                 <p className="text-red-600 text-xs mt-2 bg-red-50 p-2 rounded">
-                  ❌ Minimum purchase amount is ₦{minimumPurchase.toLocaleString('en-NG')} to checkout.
+                  ❌ Minimum purchase amount is ₦
+                  {minimumPurchase.toLocaleString("en-NG")} to checkout.
                 </p>
               )}
               <div className="mt-6 border-t pt-4">
@@ -1404,72 +1774,92 @@ const Checkout = () => {
                 </h2>
                 <div className="space-y-2 text-sm text-gray-600">
                   <p>
-                    <strong>Name:</strong> {formData.name || 'Not provided'}
+                    <strong>Name:</strong> {formData.name || "Not provided"}
                   </p>
                   <p>
-                    <strong>Email:</strong> {formData.email || 'Not provided'}
+                    <strong>Email:</strong> {formData.email || "Not provided"}
                   </p>
                   <p>
-                    <strong>Phone:</strong> {formData.phone || 'Not provided'}
+                    <strong>Phone:</strong> {formData.phone || "Not provided"}
                   </p>
                   <p>
-                    <strong>Address:</strong> {formData.address || 'Not provided'}
+                    <strong>Address:</strong>{" "}
+                    {formData.address || "Not provided"}
                   </p>
                   <p>
-                    <strong>City:</strong> {formData.city || 'Not provided'}
+                    <strong>City:</strong> {formData.city || "Not provided"}
                   </p>
                   <p>
-                    <strong>Postal Code:</strong> {formData.postalCode || 'Not provided'}
+                    <strong>Postal Code:</strong>{" "}
+                    {formData.postalCode || "Not provided"}
                   </p>
                   <p>
-                    <strong>Country:</strong> {formData.country || 'Not provided'}
+                    <strong>Country:</strong>{" "}
+                    {formData.country || "Not provided"}
                   </p>
                 </div>
               </div>
-              {isAuthenticated && formValidity.isValid && cart.length > 0 && !belowMinimumPrice && (
-                <div className="mt-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <i className="bx bx-credit-card text-blue-600" />
-                    Payment Details
-                  </h2>
-                  {formData.country === 'United Kingdom' ? (
-                    <Elements stripe={stripePromise}>
-                      <StripeCheckoutForm
-                        totalPrice={subtotalNgn * conversionRateNgnToGbp}
-                        formData={formData}
-                        onSuccess={(paymentIntent) => setShowConfirmModal(true)}
-                        onCancel={handleCancel}
-                        currency={currency}
-                        setIsProcessing={setIsProcessing}
+              {isAuthenticated &&
+                formValidity.isValid &&
+                cart.length > 0 &&
+                !belowMinimumPrice && (
+                  <div className="mt-6">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <i className="bx bx-credit-card text-blue-600" />
+                      Payment Details
+                    </h2>
+                    {formData.country === "United Kingdom" ? (
+                      <Elements stripe={stripePromise}>
+                        <StripeCheckoutForm
+                          totalPrice={subtotalNgn * conversionRateNgnToGbp}
+                          formData={formData}
+                          onSuccess={(paymentIntent) =>
+                            setShowConfirmModal(true)
+                          }
+                          onCancel={handleCancel}
+                          currency={currency}
+                          setIsProcessing={setIsProcessing}
+                        />
+                      </Elements>
+                    ) : formData.country === "Nigeria" ? (
+                      <PaystackCheckout
+                        email={formData.email}
+                        amount={subtotalNgn * 100}
+                        onSuccess={(paymentData) => setShowConfirmModal(true)}
+                        onClose={handleCancel}
+                        disabled={
+                          !formValidity.isValid ||
+                          cart.length === 0 ||
+                          loadingState ||
+                          belowMinimumPrice
+                        }
+                        buttonText="Checkout"
+                        className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
+                          !formValidity.isValid ||
+                          cart.length === 0 ||
+                          loadingState ||
+                          belowMinimumPrice
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-[#112d4e] hover:bg-[#0e2740]"
+                        }`}
+                        iconClass="bx bx-cart mr-2"
+                        sellerId={
+                          cart[0]?.product?.sellerId || "default-seller-id"
+                        }
                       />
-                    </Elements>
-                  ) : formData.country === 'Nigeria' ? (
-                    <PaystackCheckout
-                      email={formData.email}
-                      amount={subtotalNgn * 100}
-                      onSuccess={(paymentData) => setShowConfirmModal(true)}
-                      onClose={handleCancel}
-                      disabled={!formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice}
-                      buttonText="Pay Now"
-                      className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
-                        !formValidity.isValid || cart.length === 0 || loadingState || belowMinimumPrice
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-blue-900 hover:bg-blue-800'
-                      }`}
-                      iconClass="bx bx-cart mr-2"
-                      sellerId={cart[0]?.product?.sellerId || 'default-seller-id'}
-                    />
-                  ) : (
-                    <p className="text-red-600 text-sm">Please select a valid country.</p>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <p className="text-red-600 text-sm">
+                        Please select a valid country.
+                      </p>
+                    )}
+                  </div>
+                )}
               {!isAuthenticated && (
                 <div className="mt-4 text-sm text-red-600">
-                  Please{' '}
+                  Please{" "}
                   <Link to="/login" className="text-blue-600 hover:underline">
                     log in
-                  </Link>{' '}
+                  </Link>{" "}
                   to proceed with payment.
                 </div>
               )}
@@ -1477,13 +1867,30 @@ const Checkout = () => {
           </div>
         </div>
       )}
-      <ConfirmationModal isOpen={showConfirmModal} onConfirm={handlePaymentSuccess} onCancel={handleCancel} />
-        {debugMode && (
-          <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-            <h3 className="font-bold mb-2">Debug Logs</h3>
-            <pre>{JSON.stringify({ cart, formData, formErrors, imageLoading, imageErrors, minimumPurchase }, null, 2)}</pre>
-          </div>
-        )}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onConfirm={handlePaymentSuccess}
+        onCancel={handleCancel}
+      />
+      {debugMode && (
+        <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+          <h3 className="font-bold mb-2">Debug Logs</h3>
+          <pre>
+            {JSON.stringify(
+              {
+                cart,
+                formData,
+                formErrors,
+                imageLoading,
+                imageErrors,
+                minimumPurchase,
+              },
+              null,
+              2
+            )}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,166 +1,140 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { auth, db } from '/src/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { toast } from 'react-toastify';
-import { User, Heart } from 'lucide-react';
-import AddToCartButton from '/src/components/cart/AddToCartButton';
-import PriceFormatter from '/src/components/layout/PriceFormatter';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { auth, db } from "/src/firebase";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore";
+import { toast } from "react-toastify";
+import { Heart } from "lucide-react";
+import PriceFormatter from "/src/components/layout/PriceFormatter";
+import { ShieldCheck, Palette, Ruler } from "lucide-react"; // Import Palette and Ruler icons
 
-const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
+const FALLBACK_IMAGE = "https://via.placeholder.com/200?text=No+Image";
 
-const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
+const ProductCard = ({ product, dailyDeals = [] }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
-  const [imageUrl, setImageUrl] = useState(FALLBACK_IMAGE);
-  const [imageFailed, setImageFailed] = useState(false);
-  const [sellerUsername, setSellerUsername] = useState('Unknown Seller');
-  const [isDailyDeal, setIsDailyDeal] = useState(propIsDailyDeal);
-  const [discountPercentage, setDiscountPercentage] = useState(0);
-  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
-  const [views, setViews] = useState(0);
-  const [sales, setSales] = useState(0);
-  const [bumpExpiry, setBumpExpiry] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
 
-  const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
-    const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
-    const discountedPrice = basePrice - discount;
-    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+  const [imageUrl, setImageUrl] = useState(
+    product.imageUrl &&
+      typeof product.imageUrl === "string" &&
+      product.imageUrl.startsWith("https://")
+      ? product.imageUrl
+      : Array.isArray(product.imageUrls) &&
+        product.imageUrls.length > 0 &&
+        typeof product.imageUrls[0] === "string" &&
+        product.imageUrls[0].startsWith("https://")
+      ? product.imageUrls[0]
+      : FALLBACK_IMAGE
+  );
+  const [imageFailed, setImageFailed] = useState(false);
+
+  let mergedProduct = { ...product };
+  if (Array.isArray(dailyDeals) && product.id) {
+    const deal = dailyDeals.find(
+      (d) =>
+        d.productId === product.id &&
+        d.discount &&
+        (!d.endDate || new Date(d.endDate) > new Date()) &&
+        (!d.startDate || new Date(d.startDate) <= new Date())
+    );
+    if (deal) {
+      mergedProduct.isDailyDeal = true;
+      mergedProduct.discountPercentage =
+        typeof deal.discount === "number" ? deal.discount * 100 : 0;
+    }
+  }
+
+  // Calculate price range for products with variants
+  let minPrice = mergedProduct.price || 0;
+  let maxPrice = mergedProduct.price || 0;
+
+  if (mergedProduct.variants && mergedProduct.variants.length > 0) {
+    const prices = mergedProduct.variants.map((v) => v.price || 0);
+    minPrice = Math.min(...prices);
+    maxPrice = Math.max(...prices);
+  }
+
+  // Apply discount to the base price for display purposes if not a variant product,
+  // otherwise, the price range naturally accounts for discounts on individual variants
+  // if their 'price' property already reflects the discounted price.
+  // For simplicity here, we'll apply discount logic to the minPrice for display on the card.
+  // A more robust solution might involve displaying the *discounted price range*.
+  const originalDisplayPrice = minPrice;
+  let discount = 0;
+  if (
+    mergedProduct.isDailyDeal &&
+    typeof mergedProduct.discountPercentage === "number" &&
+    mergedProduct.discountPercentage > 0
+  ) {
+    discount = mergedProduct.discountPercentage;
+  } else if (
+    typeof mergedProduct.discount === "number" &&
+    mergedProduct.discount > 0 &&
+    mergedProduct.discount < 100
+  ) {
+    discount = mergedProduct.discount;
+  }
+  const hasDiscount = discount > 0;
+  const discountedDisplayPrice = hasDiscount
+    ? Math.round(originalDisplayPrice * (1 - discount / 100))
+    : originalDisplayPrice;
+
+  const truncateText = (text, maxLength = 35) => {
+    if (!text || typeof text !== "string") return "No name available";
+    return text;
   };
 
   useEffect(() => {
-    const fetchFeeConfig = async () => {
-      try {
-        const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
-        const feeSnap = await getDoc(feeRef);
-        if (feeSnap.exists()) {
-          const data = feeSnap.data();
-          const category = product?.category || 'default';
-          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
-        }
-      } catch (err) {
-        console.error('Error fetching fee config:', err);
-        toast.error('Failed to load fee settings.');
-      }
-    };
-
-    const fetchProductData = async () => {
-      if (!product || typeof product !== 'object' || !product.id) {
-        console.log('Invalid or missing product ID:', product);
+    const fetchFavoriteStatus = async () => {
+      if (!product || !product.id) {
         setIsFavorited(false);
         setFavoriteCount(0);
-        setIsDailyDeal(propIsDailyDeal);
-        setDiscountPercentage(0);
-        setViews(0);
-        setSales(0);
-        setBumpExpiry(null);
         return;
       }
-
       try {
-        const productRef = doc(db, 'products', product.id);
+        const productRef = doc(db, "products", product.id);
         const docSnap = await getDoc(productRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Fetched product data:', {
-            id: product.id,
-            favoritedBy: data.favoritedBy,
-            favoriteCount: data.favoriteCount,
-            isDailyDeal: data.isDailyDeal,
-            discountPercentage: data.discountPercentage,
-            views: data.views,
-            sales: data.sales,
-            bumpExpiry: data.bumpExpiry,
-          });
           const userId = auth.currentUser?.uid;
-          setIsFavorited(userId && Array.isArray(data.favoritedBy) && data.favoritedBy.includes(userId) || false);
+          setIsFavorited(
+            (userId &&
+              Array.isArray(data.favoritedBy) &&
+              data.favoritedBy.includes(userId)) ||
+              false
+          );
           setFavoriteCount(data.favoriteCount || 0);
-          setIsDailyDeal(data.isDailyDeal || propIsDailyDeal);
-          setDiscountPercentage(data.discountPercentage || 0);
-          setViews(data.views || 0);
-          setSales(data.sales || 0);
-          setBumpExpiry(data.bumpExpiry ? new Date(data.bumpExpiry) : null);
-          // Set initial variant if available
-          if (data.variants && data.variants.length > 0) {
-            setSelectedVariant(data.variants[0]);
-          }
         } else {
-          console.warn('Product not found in Firestore:', product.id);
           setIsFavorited(false);
           setFavoriteCount(0);
-          setIsDailyDeal(propIsDailyDeal);
-          setDiscountPercentage(0);
-          setViews(0);
-          setSales(0);
-          setBumpExpiry(null);
         }
       } catch (err) {
-        console.error('Error fetching product data:', err);
-        toast.error('Failed to load product data.');
+        console.error("Error fetching favorite status:", err);
       }
     };
 
-    const fetchSellerUsername = async () => {
-      if (isDailyDeal || !product.sellerId) {
-        setSellerUsername('');
-        return;
-      }
-      try {
-        const sellerRef = doc(db, 'users', product.sellerId);
-        const sellerSnap = await getDoc(sellerRef);
-        if (sellerSnap.exists()) {
-          setSellerUsername(sellerSnap.data().username || 'Unknown Seller');
-        }
-      } catch (err) {
-        console.error('Error fetching seller username:', err);
-        setSellerUsername('Unknown Seller');
-      }
-    };
-
-    fetchFeeConfig();
-    fetchProductData();
-    fetchSellerUsername();
-
-    // Image selection logic mirroring Product page
-    let validImage = FALLBACK_IMAGE;
-    if (selectedVariant && selectedVariant.imageUrls && Array.isArray(selectedVariant.imageUrls) && selectedVariant.imageUrls.length > 0) {
-      const firstValidVariantImage = selectedVariant.imageUrls.find(img => typeof img === 'string' && img.startsWith('https://'));
-      if (firstValidVariantImage) {
-        validImage = firstValidVariantImage;
-      }
-    } else if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
-      const firstValidProductImage = product.imageUrls.find(img => typeof img === 'string' && img.startsWith('https://'));
-      if (firstValidProductImage) {
-        validImage = firstValidProductImage;
-      }
-    } else if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('https://')) {
-      validImage = product.imageUrl;
-    }
-    console.log('Selected imageUrl:', validImage);
-    setImageUrl(validImage);
-    setImageFailed(false);
-  }, [product.id, product.imageUrl, product.imageUrls, product.variants, product.sellerId, product.category, propIsDailyDeal, selectedVariant]);
-
-  const truncateText = (text, maxLength = 15) => {
-    if (!text || typeof text !== 'string') return 'No text available';
-    return text.length > maxLength ? text.slice(0, maxLength - 3) + '...' : text;
-  };
+    fetchFavoriteStatus();
+  }, [product.id]);
 
   const handleFavorite = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     const userId = auth.currentUser?.uid;
     if (!userId || !product?.id) {
-      toast.error('Please sign in to favorite a product.');
+      toast.error("Please sign in to favorite a product.");
       return;
     }
 
     try {
-      const productRef = doc(db, 'products', product.id);
+      const productRef = doc(db, "products", product.id);
       const docSnap = await getDoc(productRef);
       if (!docSnap.exists()) {
-        toast.error('Product not found.');
+        toast.error("Product not found.");
         return;
       }
 
@@ -175,10 +149,10 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         });
         setIsFavorited(false);
         setFavoriteCount(Math.max(0, currentCount - 1));
-        toast.success('Removed from favorites!');
+        toast.success("Removed from favorites!");
       } else {
         if (favoritedBy.includes(userId)) {
-          toast.info('You have already favorited this product.');
+          toast.info("You have already favorited this product.");
           return;
         }
         await updateDoc(productRef, {
@@ -187,95 +161,164 @@ const ProductCard = ({ product, isDailyDeal: propIsDailyDeal = false }) => {
         });
         setIsFavorited(true);
         setFavoriteCount(currentCount + 1);
-        toast.success('Added to favorites!');
+        toast.success("Added to favorites!");
       }
     } catch (err) {
-      console.error('Error updating favorite:', err);
-      toast.error('Failed to update favorite. Try again!');
+      console.error("Error updating favorite:", err);
+      toast.error("Failed to update favorite. Try again!");
     }
   };
 
-  const trackProductView = async () => {
-    const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-    if (product.id && !recentlyViewed.includes(product.id)) {
-      const updatedRecentlyViewed = [product.id, ...recentlyViewed].slice(0, 10);
-      localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecentlyViewed));
-    }
-    // Update view count in Firebase
-    const productRef = doc(db, 'products', product.id);
-    await updateDoc(productRef, {
-      views: views + 1,
-    });
-    setViews((prev) => prev + 1);
-    // Send analytics to ProSellerAnalytics (via localStorage for simplicity)
-    const analyticsData = {
-      id: product.id,
-      name: product.name,
-      views: views + 1,
-      sales: sales,
-      bumpExpiry: bumpExpiry,
-    };
-    localStorage.setItem(`analytics_${product.id}`, JSON.stringify(analyticsData));
-  };
-
-  const totalPrice = calculateTotalPrice(product.price || 0, 1, isDailyDeal ? discountPercentage : 0);
+  const hasVariants =
+    mergedProduct.variants && mergedProduct.variants.length > 0;
+  const uniqueColors = hasVariants
+    ? [...new Set(mergedProduct.variants.map((v) => v.color).filter(Boolean))]
+    : [];
+  const uniqueSizes = hasVariants
+    ? [...new Set(mergedProduct.variants.map((v) => v.size).filter(Boolean))]
+    : [];
 
   return (
     <Link
-      to={`/product/${product.id}`}
+      to={`/product/${mergedProduct.id}`}
       className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden"
-      onClick={trackProductView}
       tabIndex={0}
-      aria-label={product.name}
+      aria-label={mergedProduct.name}
     >
-      {isDailyDeal && (
-        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-          Deal! -{discountPercentage}%
-        </span>
-      )}
       <div className="relative h-[200px] overflow-hidden rounded-t-lg min-w-0">
         <img
           src={imageFailed ? FALLBACK_IMAGE : imageUrl}
-          alt={product.name}
+          alt={mergedProduct.name || "Product Image"}
           className="w-full h-full object-cover max-w-full max-h-full"
           onError={() => {
             if (!imageFailed) {
-              console.warn('Image load error:', { productId: product.id, imageUrl, name: product.name });
+              console.warn(
+                "Image load error for product:",
+                mergedProduct.id,
+                mergedProduct.name
+              );
               setImageFailed(true);
               setImageUrl(FALLBACK_IMAGE);
             }
           }}
           loading="lazy"
-          fetchpriority="low"
+          fetchPriority="low"
         />
         <button
           onClick={handleFavorite}
           className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
-          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={
+            isFavorited ? "Remove from favorites" : "Add to favorites"
+          }
         >
-          <Heart className={`w-5 h-5 ${isFavorited ? 'text-gray-600 fill-gray-600' : 'text-gray-600'}`} />
+          <Heart
+            className={`w-5 h-5 ${
+              isFavorited ? "text-gray-600 fill-gray-600" : "text-gray-600"
+            }`}
+          />
           <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
       </div>
       <div className="flex flex-col justify-between flex-grow p-3 min-w-0 overflow-hidden">
         <div>
-          <h3 className="font-medium text-sm text-gray-800 line-clamp-2 mb-1 break-words truncate" title={product.name}>
-            {truncateText(product.name)}
-          </h3>
-          {!isDailyDeal && sellerUsername && (
-            <div className="flex items-center text-sm text-gray-600 mb-2">
-              <User className="w-4 h-4 text-blue-600 mr-1" />
-              <span className="line-clamp-1" title={sellerUsername}>
-                {truncateText(sellerUsername, 20)}
+          <h3
+            className="mb-1 break-words line-clamp-2 min-h-[48px]"
+            title={mergedProduct.name}
+            style={{
+              fontSize: "16px",
+              fontWeight: 500,
+              color: "#222",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              minHeight: "48px",
+            }}
+          >
+            {truncateText(mergedProduct.name)}
+            {mergedProduct.name && mergedProduct.name.length < 35 && (
+              <span style={{ visibility: "hidden" }}>
+                {"\u00A0".repeat(40)}
               </span>
+            )}
+          </h3>
+
+          {mergedProduct.condition && (
+            <p
+              style={{ fontSize: "16px", color: "#222", fontWeight: 500 }}
+              className="mb-2"
+            >
+              <span>{mergedProduct.condition}</span>
+            </p>
+          )}
+
+          {/* New: Display variant information if available */}
+          {hasVariants && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-sm text-gray-600">
+              {uniqueColors.length > 0 && (
+                <span className="flex items-center">
+                  <Palette size={14} className="mr-1 text-gray-500" />
+                  {uniqueColors.length} Color
+                  {uniqueColors.length > 1 ? "s" : ""}
+                </span>
+              )}
+              {uniqueSizes.length > 0 && (
+                <span className="flex items-center">
+                  <Ruler size={14} className="mr-1 text-gray-500" />
+                  {uniqueSizes.length} Size{uniqueSizes.length > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
           )}
         </div>
         <div className="mt-auto">
           <div className="flex items-center justify-between">
-            <PriceFormatter price={totalPrice} />
-            <AddToCartButton productId={product.id} isIconOnly={true} />
+            <span
+              style={{
+                fontSize: "16px",
+                fontWeight: 500,
+                color: "#222",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              {hasDiscount ? (
+                <>
+                  <span className="" style={{ fontSize: "16px" }}>
+                    <PriceFormatter price={discountedDisplayPrice} />
+                  </span>
+                </>
+              ) : (
+                <>
+                  {hasVariants && minPrice !== maxPrice && (
+                    <span className="text-sm text-gray-500 mr-1">From</span>
+                  )}
+                  <PriceFormatter price={minPrice} />
+                  {hasVariants && minPrice !== maxPrice && (
+                    <>
+                      <span className="mx-1">-</span>
+                      <PriceFormatter price={maxPrice} />
+                    </>
+                  )}
+                </>
+              )}
+            </span>
+            <div className="p-2 flex items-center justify-center bg-gray-100 rounded-full">
+              <ShieldCheck className="w-5 h-5 text-green-500" />
+            </div>
           </div>
+
+          {hasDiscount && (
+            <>
+              <span
+                className="text-gray-400 line-through mr-1"
+                style={{ fontSize: "10px" }}
+              >
+                <PriceFormatter price={originalDisplayPrice} />
+              </span>
+            </>
+          )}
         </div>
       </div>
     </Link>

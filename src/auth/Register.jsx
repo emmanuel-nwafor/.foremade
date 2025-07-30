@@ -3,7 +3,6 @@ import { GoogleAuthProvider, FacebookAuthProvider, signInWithRedirect, getRedire
 import { auth, db } from '../firebase';
 import { doc, setDoc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
@@ -45,55 +44,7 @@ export default function Register() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const [signupAttempts, setSignupAttempts] = useState(0);
-  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
-      console.error('Missing VITE_RECAPTCHA_SITE_KEY');
-      setEmailError('reCAPTCHA config error');
-      return;
-    }
-
-    const loadRecaptcha = async (attempt = 1) => {
-      const scriptId = 'recaptcha-script';
-      if (document.getElementById(scriptId)) return;
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = `https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`;
-      script.async = true;
-      script.onerror = () => {
-        console.error('reCAPTCHA script failed');
-        if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
-        else setEmailError('Failed to load reCAPTCHA. Check network.');
-      };
-      document.body.appendChild(script);
-
-      script.onload = () => {
-        console.log('reCAPTCHA script loaded');
-        window.grecaptcha.ready(() => {
-          console.log('reCAPTCHA ready');
-          window.grecaptcha.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'signup' })
-            .then(token => {
-              console.log('reCAPTCHA token:', token);
-              setRecaptchaToken(token);
-            })
-            .catch(err => {
-              console.error('reCAPTCHA execute error:', err);
-              if (attempt < 3) setTimeout(() => loadRecaptcha(attempt + 1), 1000);
-              else setEmailError('reCAPTCHA token failed. Try again.');
-            });
-        });
-      };
-
-      return () => {
-        const existingScript = document.getElementById(scriptId);
-        if (existingScript) document.body.removeChild(existingScript);
-      };
-    };
-
-    loadRecaptcha();
-  }, []);
 
   useEffect(() => {
     getRedirectResult(auth)
@@ -156,7 +107,7 @@ export default function Register() {
         
         await addDoc(collection(db, 'notifications'), {
           type: 'user_signup',
-          message: `New user signed up: ${user.email}`,
+          message: `New social user signed up: ${user.email}`,
           createdAt: new Date(),
           details: { user_id: user.uid, email: user.email },
         });
@@ -229,10 +180,6 @@ export default function Register() {
       setPhoneNumberError('Invalid phone (e.g., +1234567890).');
       hasError = true;
     }
-    if (!recaptchaToken) {
-      setEmailError('reCAPTCHA failed. Try again.');
-      hasError = true;
-    }
 
     if (hasError) {
       setLoadingEmail(false);
@@ -241,21 +188,6 @@ export default function Register() {
     }
 
     try {
-      console.log('Sending reCAPTCHA token:', recaptchaToken);
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verify-recaptcha`, {
-        token: recaptchaToken,
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      console.log('reCAPTCHA response:', response.data);
-
-      if (!response.data.success || response.data.score < 0.5) {
-        setEmailError('reCAPTCHA failed. Are you a bot?');
-        setLoadingEmail(false);
-        setSignupAttempts(prev => prev + 1);
-        return;
-      }
-
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -278,7 +210,6 @@ export default function Register() {
       };
       await setDoc(doc(db, 'users', user.uid), userData);
 
-      // Add notification for user sign-up
       await addDoc(collection(db, 'notifications'), {
         type: 'user_signup',
         message: `New user signed up: ${user.email}`,
@@ -287,7 +218,7 @@ export default function Register() {
       });
 
       localStorage.setItem('userData', JSON.stringify(userData));
-      setSuccessMessage(`Welcome, ${firstName}! Verify your email at ${email}.`);
+      setSuccessMessage(`Welcome, ${firstName}! Verify your email at ${email} to log in.`);
       setSignupAttempts(0);
       setTimeout(() => {
         setLoadingEmail(false);
@@ -296,7 +227,7 @@ export default function Register() {
     } catch (err) {
       console.error('Registration error:', err);
       setLoadingEmail(false);
-      const errorMessage = err.response?.data?.error || getFriendlyErrorMessage(err);
+      const errorMessage = getFriendlyErrorMessage(err);
       if (errorMessage.includes('email')) setEmailError(errorMessage);
       else if (errorMessage.includes('password')) setPasswordError(errorMessage);
       else {
@@ -493,13 +424,6 @@ export default function Register() {
                 {loadingFacebook ? 'Processing...' : 'Facebook'}
               </button>
             </div>
-            <p className="text-gray-500 text-xs mt-4">
-              This site is protected by reCAPTCHA and the Google{' '}
-              <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>{' '}
-              and{' '}
-              <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">Terms of Service</a>{' '}
-              apply.
-            </p>
           </div>
         </div>
       </div>

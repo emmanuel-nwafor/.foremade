@@ -65,6 +65,7 @@ export default function Login() {
         }
       })
       .catch((err) => {
+        console.error('Redirect result error:', err);
         setEmailError(getFriendlyErrorMessage(err));
         setLoadingGoogle(false);
         setLoadingFacebook(false);
@@ -73,8 +74,7 @@ export default function Login() {
 
   const handleSocialLogin = async (user) => {
     try {
-      // Check OTP verification status
-      const response = await fetch(`${backendUrl}/verify-otp-status`, {
+      const response = await fetch('https://foremade-backend.onrender.com/verify-otp-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email }),
@@ -112,13 +112,14 @@ export default function Login() {
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
-      setSuccessMessage(`Welcome back, ${firstName}!`);
+      setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
         navigate(ADMIN_EMAILS.includes(userData.email) ? '/admin/dashboard' : '/profile');
       }, 2000);
     } catch (err) {
+      console.error('Social login error:', err);
       setEmailError(getFriendlyErrorMessage(err) || 'Login failed. Please try again.');
       setLoadingGoogle(false);
       setLoadingFacebook(false);
@@ -153,13 +154,14 @@ export default function Login() {
       return;
     }
 
+    console.log('Attempting login with:', { email: trimmedEmail, password: trimmedPassword });
+
     try {
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      // Check OTP verification status
-      const response = await fetch(`${backendUrl}/verify-otp-status`, {
+      const response = await fetch('https://foremade-backend.onrender.com/verify-otp-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email }),
@@ -188,6 +190,7 @@ export default function Login() {
         setLoadingEmail(false);
       }
     } catch (err) {
+      console.error('Login error:', err);
       setLoadingEmail(false);
       const errorMessage = getFriendlyErrorMessage(err);
       if (errorMessage.includes('email') || errorMessage.includes('account') || errorMessage.includes('valid')) {
@@ -209,6 +212,7 @@ export default function Login() {
     try {
       await signInWithRedirect(auth, provider);
     } catch (err) {
+      console.error('Google sign-in error:', err);
       setLoadingGoogle(false);
       setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }
@@ -225,6 +229,7 @@ export default function Login() {
     try {
       await signInWithRedirect(auth, provider);
     } catch (err) {
+      console.error('Facebook sign-in error:', err);
       setLoadingFacebook(false);
       setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }

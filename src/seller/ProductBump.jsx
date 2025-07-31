@@ -24,12 +24,8 @@ const ProductBump = () => {
   const [productSales, setProductSales] = useState({}); // Track product sales
 
   const bumpDurations = [
-    { value: '1h', label: '1 Hour', price: 100, hours: '1h' },
-    { value: '6h', label: '6 Hours', price: 200, hours: '6h' },
-    { value: '12h', label: '12 Hours', price: 350, hours: '12h' },
-    { value: '24h', label: '1 Day', price: 500, hours: '24h' },
-    { value: '48h', label: '2 Days', price: 800, hours: '48h' },
     { value: '72h', label: '3 Days', price: 1500, hours: '72h' },
+    { value: '168h', label: '7 Days', price: 3500, hours: '168h' },
   ];
 
   const debouncedSearch = useCallback(
@@ -108,7 +104,7 @@ const ProductBump = () => {
     try {
       setIsProcessing(true);
       const firebaseToken = await auth.currentUser?.getIdToken();
-      const durationMap = { '1h': '1h', '6h': '6h', '12h': '12h', '24h': '24h', '48h': '48h', '72h': '72h' };
+      const durationMap = { '72h': '72h', 'i68h' : '168h' };
       const mappedDuration = durationMap[durationHours] || '24h';
       const backendUrl = 'https://foremade-backend.onrender.com';
 
@@ -141,12 +137,8 @@ const ProductBump = () => {
       // Save to Firebase and update sales
       const bumpExpiry = new Date();
       const durationInMs = {
-        '1h': 1 * 60 * 60 * 1000,
-        '6h': 6 * 60 * 60 * 1000,
-        '12h': 12 * 60 * 60 * 1000,
-        '24h': 24 * 60 * 60 * 1000,
-        '48h': 48 * 60 * 60 * 1000,
         '72h': 72 * 60 * 60 * 1000,
+        '168h': 168 * 60 * 60 * 1000,
       }[mappedDuration];
       bumpExpiry.setTime(bumpExpiry.getTime() + durationInMs);
 
@@ -461,7 +453,7 @@ const ProductBump = () => {
           <div className="text-sm text-gray-700 space-y-2">
             <p>• Bumped products appear at the top of search results and category pages.</p>
             <p>• Increased visibility leads to more views and potential sales.</p>
-            <p>• Choose from durations: 1h, 6h, 12h, 24h, 48h, 72h.</p>
+            <p>• Choose from durations: 72h, 168h.</p>
             <p>• You can bump multiple products simultaneously.</p>
           </div>
         </div>

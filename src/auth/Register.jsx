@@ -17,6 +17,7 @@ const validatePassword = (password) => {
   const hasSpecialChar = /[_@!+=#$%^&*()[\]{}|;:,.<>?~`/-]/.test(password);
   return {
     isValid: hasLength && hasLetter && hasNumber && hasSpecialChar,
+    score: (hasLength ? 25 : 0) + (hasLetter ? 25 : 0) + (hasNumber ? 25 : 0) + (hasSpecialChar ? 25 : 0),
     errors: [
       !hasLength && 'Password needs 6+ characters.',
       !hasLetter && 'Password needs a letter.',
@@ -60,6 +61,19 @@ export default function Register() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [signupAttempts, setSignupAttempts] = useState(0);
   const navigate = useNavigate();
+
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState(0);
+
+  useEffect(() => {
+    const validation = validatePassword(password);
+    setPasswordStrength(validation.score);
+    if (!validation.isValid && password) {
+      setPasswordError(validation.errors[0]);
+    } else {
+      setPasswordError('');
+    }
+  }, [password]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -112,7 +126,6 @@ export default function Register() {
       return;
     }
 
-    // Debug log
     console.log('Registering with:', { email, password });
 
     try {
@@ -128,11 +141,10 @@ export default function Register() {
         phoneNumber: phoneNumber || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
-        role: 'Buyer', // Default role
+        role: 'Buyer',
       };
       await setDoc(doc(db, 'users', user.uid), userData);
 
-      // Trigger backend to send OTP
       const response = await fetch(`${backendUrl}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,7 +154,7 @@ export default function Register() {
 
       if (data.success) {
         setSuccessMessage('Account created! Check your email for a verification code.');
-        setShowOtpModal(true); // Show OTP modal
+        setShowOtpModal(true);
       } else {
         setEmailError(data.error || 'Something went wrong. Please try again.');
       }
@@ -181,7 +193,6 @@ export default function Register() {
     setSuccessMessage('');
     setLoading(true);
 
-    // Debug log
     console.log('Verifying OTP:', { email, otp });
 
     if (!otp.trim()) {
@@ -201,7 +212,7 @@ export default function Register() {
       if (data.success) {
         setSuccessMessage('Email verified! You can log in now.');
         setShowOtpModal(false);
-        await sendEmailVerification(auth.currentUser); // Optional Firebase verification
+        await sendEmailVerification(auth.currentUser);
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -307,8 +318,23 @@ export default function Register() {
               >
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
-              {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             </div>
+            {/* Password Strength Meter */}
+            {password && (
+              <div className="mt-2">
+                <div className="text-xs text-gray-600 mb-1">Password Strength</div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ease-out ${passwordStrength >= 75 ? 'bg-green-500' : passwordStrength >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${passwordStrength}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs mt-1">
+                  {passwordStrength >= 75 ? 'Strong' : passwordStrength >= 50 ? 'Medium' : 'Weak'}
+                </p>
+              </div>
+            )}
+            {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
             {successMessage && <p className="text-green-600 text-xs mb-4">{successMessage}</p>}
             <button
               type="submit"
@@ -319,27 +345,35 @@ export default function Register() {
             </button>
           </form>
 
-          {/* Animated OTP Modal */}
+          {/* Advanced OTP Modal */}
           {showOtpModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
                 <h3 className="text-xl font-semibold mb-4">Verify Your Email</h3>
-                <p className="text-gray-600 mb-4">A verification code has been sent to {email}. Please enter it below.</p>
+                <p className="text-gray-600 mb-4">A verification code has been sent to {email}. Enter it below.</p>
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className={`w-full p-3 border rounded-lg transition-all duration-300 ${otpError ? 'border-red-500' : 'border-gray-300'}`}
-                      maxLength="6"
-                      required
-                    />
-                    <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${otp ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
-                      Verification Code
-                    </label>
-                    {otpError && <p className="text-red-600 text-xs mt-1">{otpError}</p>}
+                  <div className="flex justify-between gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength="1"
+                        value={otp[index] || ''}
+                        onChange={(e) => {
+                          const newOtp = otp.split('');
+                          newOtp[index] = e.target.value;
+                          setOtp(newOtp.join(''));
+                          if (e.target.value && index < 5) document.getElementsByTagName('input')[index + 1].focus();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace' && !otp[index] && index > 0) document.getElementsByTagName('input')[index - 1].focus();
+                        }}
+                        className="w-12 h-12 text-center border rounded-lg focus:border-blue-500 focus:outline-none text-2xl font-medium"
+                        required
+                      />
+                    ))}
                   </div>
+                  {otpError && <p className="text-red-600 text-xs mt-1">{otpError}</p>}
                   <button
                     type="submit"
                     className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"

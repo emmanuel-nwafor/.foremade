@@ -234,14 +234,14 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             className="mb-1 break-words line-clamp-2 min-h-[48px]"
             title={mergedProduct.name}
             style={{
-              fontSize: "16px",
-              fontWeight: 500,
+              fontSize: "15px",
+              fontWeight: 600,
               color: "#222",
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
-              minHeight: "48px",
+              // minHeight: "48px",
             }}
           >
             {truncateText(mergedProduct.name)}
@@ -262,7 +262,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
           )}
 
           {hasVariants && (
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-sm text-gray-600">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-gray-600">
               {uniqueColors.length > 0 && (
                 <span className="flex items-center">
                   <Palette size={14} className="mr-1 text-gray-500" />
@@ -302,8 +302,8 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
                 </>
               )}
             </span>
-            <div className="p-2 flex items-center justify-center bg-gray-100 rounded-full">
-              <ShieldCheck className="w-5 h-5 text-green-500" />
+            <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
+              <ShieldCheck className="w-4 h-4 text-green-500" />
             </div>
           </div>
 

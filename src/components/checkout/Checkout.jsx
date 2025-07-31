@@ -1828,7 +1828,7 @@ const Checkout = () => {
                           loadingState ||
                           belowMinimumPrice
                         }
-                        buttonText="Checkout"
+                        buttonText="Complete Purchase"
                         className={`w-full py-3 px-4 rounded-lg text-white text-sm font-medium transition duration-200 shadow transform hover:scale-105 ${
                           !formValidity.isValid ||
                           cart.length === 0 ||

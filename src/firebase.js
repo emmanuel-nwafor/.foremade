@@ -32,34 +32,4 @@ try {
   throw new Error('Failed to initialize Firebase for users. Check your configuration.');
 }
 
-// Vendor Firebase configuration
-let vendorAuth;
-let vendorDb;
-let vendorStorage;
-
-try {
-  const vendorApp = initializeApp({
-    apiKey: "AIzaSyBCJ66zthIZWbotDrugJCd63KbokscgV7g",
-    authDomain: "foremade-database.firebaseapp.com",
-    projectId: "foremade-database",
-    storageBucket: "foremade-database.firebasestorage.app",
-    messagingSenderId: "519808269327",
-    appId: "1:519808269327:web:accc580a777f6a1fdcf77a",
-    measurementId: "G-93V0N3FJSN"
-  }, 'vendorApp');
-  vendorAuth = getAuth(vendorApp);
-  vendorDb = getFirestore(vendorApp);
-  vendorStorage = getStorage(vendorApp);
-
-  // Set persistence for vendor auth
-  setPersistence(vendorAuth, browserLocalPersistence)
-    .then(() => console.log('Vendor auth persistence set to local'))
-    .catch(error => console.error('Error setting vendor auth persistence:', error));
-
-  console.log('Firebase initialized successfully for vendors');
-} catch (error) {
-  console.error('Firebase initialization error for vendors:', error);
-  throw new Error('Failed to initialize Firebase for vendors. Check your configuration.');
-}
-
-export { auth, db, storage, vendorAuth, vendorDb, vendorStorage };
+export { auth, db, storage };

@@ -15,15 +15,23 @@ import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
-    case 'auth/invalid-credential': return 'Invalid email or password.';
-    case 'auth/wrong-password': return 'Incorrect password. Please try again.';
-    case 'auth/user-not-found': return 'No account found with this email. Contact your admin.';
+    case 'auth/invalid-credential': return 'Incorrect email or password.';
+    case 'auth/wrong-password': return 'Wrong password. Please try again.';
+    case 'auth/user-not-found': return 'No account found with this email.';
     case 'auth/invalid-email': return 'Please enter a valid email address.';
-    case 'auth/user-disabled': return 'This account has been disabled. Contact your admin.';
+    case 'auth/user-disabled': return 'This account is not available.';
     case 'auth/too-many-requests': return 'Too many attempts. Please try again later.';
-    default: return 'An unexpected error occurred. Please try again.';
+    case 'auth/otp-not-verified': return 'Please verify your email with the code sent to you.';
+    default: return 'Something went wrong. Please try again.';
   }
 };
+
+const ADMIN_EMAILS = [
+  'echinecherem729@gmail.com',
+  'emitexc.e.o1@gmail.com',
+  'info@foremade.com',
+  'support@foremade.com',
+];
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -38,13 +46,9 @@ export default function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   useEffect(() => {
-    // Auto-fill email from Google sign-in
     const socialEmail = localStorage.getItem('socialEmail') || state?.email || '';
     if (socialEmail) {
       setEmail(socialEmail);
@@ -69,6 +73,20 @@ export default function Login() {
 
   const handleSocialLogin = async (user) => {
     try {
+      // Check OTP verification status
+      const response = await fetch(`${backendUrl}/verify-otp-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        setEmailError(data.error || 'Please verify your email with the code sent to you.');
+        setLoadingGoogle(false);
+        setLoadingFacebook(false);
+        return;
+      }
+
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       let userData;
@@ -76,9 +94,7 @@ export default function Login() {
       if (userSnapshot.exists()) {
         userData = userSnapshot.data();
       } else {
-        // Create user document for social login if it doesn't exist
-        const adminEmails = ['echinecherem729@gmail.com', 'emitexc.e.o1@gmail.com'];
-        const role = adminEmails.includes(user.email) ? 'Admin' : 'Buyer';
+        const role = ADMIN_EMAILS.includes(user.email) ? 'Admin' : 'Buyer';
         const displayName = user.displayName || '';
         const [firstName, lastName] = displayName.split(' ').length > 1 ? displayName.split(' ') : [displayName, ''];
         userData = {
@@ -94,16 +110,16 @@ export default function Login() {
       }
 
       localStorage.setItem('userData', JSON.stringify(userData));
-      localStorage.removeItem('socialEmail'); // Cleanup
+      localStorage.removeItem('socialEmail');
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome back, ${firstName}!`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate(userData.role === 'Admin' ? '/admin-dashboard' : '/profile');
+        navigate(ADMIN_EMAILS.includes(userData.email) ? '/admin/dashboard' : '/profile');
       }, 2000);
     } catch (err) {
-      setEmailError(getFriendlyErrorMessage(err));
+      setEmailError(getFriendlyErrorMessage(err) || 'Login failed. Please try again.');
       setLoadingGoogle(false);
       setLoadingFacebook(false);
     }
@@ -142,20 +158,33 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
+      // Check OTP verification status
+      const response = await fetch(`${backendUrl}/verify-otp-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        setEmailError(data.error || 'Please verify your email with the code sent to you.');
+        setLoadingEmail(false);
+        return;
+      }
+
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       if (userSnapshot.exists()) {
         const userData = userSnapshot.data();
         localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.removeItem('socialEmail'); // Cleanup
+        localStorage.removeItem('socialEmail');
         const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
         setSuccessMessage(`Welcome, ${firstName}!`);
         setTimeout(() => {
           setLoadingEmail(false);
-          navigate(userData.role === 'Admin' ? '/admin-dashboard' : '/profile');
+          navigate(ADMIN_EMAILS.includes(userData.email) ? '/admin/dashboard' : '/profile');
         }, 2000);
       } else {
-        setEmailError('No account found. Contact your admin.');
+        setEmailError('Account not found. Please contact support.');
         setLoadingEmail(false);
       }
     } catch (err) {
@@ -181,7 +210,7 @@ export default function Login() {
       await signInWithRedirect(auth, provider);
     } catch (err) {
       setLoadingGoogle(false);
-      setEmailError(getFriendlyErrorMessage(err));
+      setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }
   };
 
@@ -197,7 +226,7 @@ export default function Login() {
       await signInWithRedirect(auth, provider);
     } catch (err) {
       setLoadingFacebook(false);
-      setEmailError(getFriendlyErrorMessage(err));
+      setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }
   };
 

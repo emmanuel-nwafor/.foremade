@@ -6,16 +6,16 @@ export default function CurrencyConverter() {
   const { currency, changeCurrency, loading, availableCurrencies = [] } = useCurrency();
 
   const fallbackCurrencies = [
-    { code: 'USD', label: '$ USD' },
-    { code: 'NGN', label: '₦ NGN' },
-    { code: 'GBP', label: '£ GBP' },
-    { code: 'JPY', label: '¥ JPY' },
-    { code: 'GHS', label: '₵ GHS' },
-    { code: 'EUR', label: '€ EUR' },
-    { code: 'CAD', label: '$ CAD' },
-    { code: 'AUD', label: '$ AUD' },
-    { code: 'CNY', label: '¥ CNY' },
-    { code: 'INR', label: '₹ INR' },
+    { code: 'USD', label: 'USD' },
+    { code: 'NGN', label: 'NGN' },
+    { code: 'GBP', label: 'GBP' },
+    { code: 'JPY', label: 'JPY' },
+    { code: 'GHS', label: 'GHS' },
+    { code: 'EUR', label: 'EUR' },
+    { code: 'CAD', label: 'CAD' },
+    { code: 'AUD', label: 'AUD' },
+    { code: 'CNY', label: 'CNY' },
+    { code: 'INR', label: 'INR' },
   ];
 
   return (

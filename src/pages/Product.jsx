@@ -1529,7 +1529,7 @@ const Product = () => {
               <h2 className="text-xl font-bold text-[#333333] mb-4">
                 Similar Products
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                 {similarProducts.map((p) => {
                   const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
                   let minPrice = p.price, maxPrice = p.price;
@@ -1581,7 +1581,7 @@ const Product = () => {
               <h2 className="text-xl font-bold text-[#333333] mb-4">
                 Recently Viewed
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                 {recentSearches.map((p) => {
                   const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
                   let minPrice = p.price, maxPrice = p.price;

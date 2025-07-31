@@ -36,7 +36,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     }
   }
 
-  // Calculate price range for products with variants
+  // Calculate price range for products with variants, using maxPrice as the base
   let minPrice = mergedProduct.price || 0;
   let maxPrice = mergedProduct.price || 0;
   let hasVariants = Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
@@ -73,8 +73,8 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     setImageFailed(false);
   }, [product, hasVariants]);
 
-  // Apply discount to the minPrice for display purposes
-  const originalDisplayPrice = minPrice;
+  // Apply discount to the maxPrice for display purposes
+  const originalDisplayPrice = maxPrice; // Using maxPrice as the base
   let discount = 0;
   if (
     mergedProduct.isDailyDeal &&
@@ -298,16 +298,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
                 </>
               ) : (
                 <>
-                  {hasVariants && minPrice !== maxPrice && (
-                    <span className="text-sm text-gray-500 mr-1">From</span>
-                  )}
-                  <PriceFormatter price={minPrice} />
-                  {hasVariants && minPrice !== maxPrice && (
-                    <>
-                      <span className="mx-1">-</span>
-                      <PriceFormatter price={maxPrice} />
-                    </>
-                  )}
+                  <PriceFormatter price={maxPrice} /> {/* Only show maxPrice */}
                 </>
               )}
             </span>

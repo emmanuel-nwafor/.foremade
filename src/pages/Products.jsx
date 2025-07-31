@@ -43,31 +43,45 @@ const Products = () => {
               return null;
             }
 
-            let imageUrl;
-            if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')) {
+            let imageUrl = null;
+            if (Array.isArray(data.variants) && data.variants.length > 0 && data.variants[0]?.imageUrls) {
+              const firstValidUrl = data.variants[0].imageUrls.find((url) => typeof url === 'string' && url.trim() && url.startsWith('https://'));
+              imageUrl = firstValidUrl || (data.variants[0].imageUrls[0] || null);
+              console.log(`Variant image check for ${doc.id}:`, { firstValidUrl, allUrls: data.variants[0].imageUrls });
+            } else if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+              const firstValidUrl = data.imageUrls.find((url) => typeof url === 'string' && url.trim() && url.startsWith('https://'));
+              imageUrl = firstValidUrl || data.imageUrls[0] || null;
+              console.log(`Product image check for ${doc.id}:`, { firstValidUrl, allUrls: data.imageUrls });
+            } else if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://')) {
               imageUrl = data.imageUrl;
-            } else if (
-              Array.isArray(data.imageUrls) &&
-              data.imageUrls.length > 0 &&
-              typeof data.imageUrls[0] === 'string' &&
-              data.imageUrls[0].startsWith('https://')
-            ) {
-              imageUrl = data.imageUrls[0];
+              console.log(`Single imageUrl check for ${doc.id}:`, data.imageUrl);
             } else {
-              imageUrl = null;
               console.warn(`Product ${doc.id} has no valid imageUrl or imageUrls`, {
                 id: doc.id,
                 name: data.name,
                 imageUrl: data.imageUrl,
                 imageUrls: data.imageUrls,
+                variants: data.variants,
               });
+            }
+
+            // Calculate price range for products with variants
+            let minPrice = data.price || 0;
+            let maxPrice = data.price || 0;
+            let hasVariants = Array.isArray(data.variants) && data.variants.length > 0;
+            if (hasVariants) {
+              const variantPrices = data.variants.map((v) => (v.price || 0));
+              minPrice = Math.min(...variantPrices);
+              maxPrice = Math.max(...variantPrices);
             }
 
             return {
               id: doc.id,
               name: data.name || 'Unknown Product',
               description: data.description || '',
-              price: data.price || 0,
+              price: hasVariants ? minPrice : data.price || 0, // Use minPrice for variants, else base price
+              minPrice: hasVariants ? minPrice : null,
+              maxPrice: hasVariants ? maxPrice : null,
               stock: data.stock || 0,
               category: data.category || 'uncategorized',
               categoryId: categoryMap[data.category?.toLowerCase()] || 11,
@@ -75,6 +89,7 @@ const Products = () => {
               sizes: data.sizes || [],
               condition: data.condition || 'New',
               imageUrl,
+              variants: data.variants || [],
               sellerId: data.sellerId || '',
               seller: data.seller || { name: data.sellerName || 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || 0,
@@ -83,14 +98,7 @@ const Products = () => {
               bumpExpiry: data.bumpExpiry || null,
             };
           })
-          .filter((product) => {
-            if (!product) return false;
-            if (!product.id) {
-              console.error('Filtered out product with invalid id:', product);
-              return false;
-            }
-            return true;
-          });
+          .filter((product) => product !== null && product.id);
 
         console.log('Fetched approved products from Firestore:', products);
         if (products.length === 0) {
@@ -108,9 +116,8 @@ const Products = () => {
     };
 
     fetchProducts();
-    // Fetch daily deals
-    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
-      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    getDocs(collection(db, 'dailyDeals')).then((snapshot) => {
+      setDailyDeals(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
   }, [categoryMap]);
 
@@ -122,7 +129,6 @@ const Products = () => {
     ({ priceRange, selectedCategories, sortOption, searchTerm }) => {
       let updatedProducts = [...initialProducts].filter((product) => product !== null);
 
-      // Sort by bumpExpiry first (highest first)
       updatedProducts.sort((a, b) => {
         const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
         const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;
@@ -133,7 +139,9 @@ const Products = () => {
       });
 
       updatedProducts = updatedProducts.filter((product) => {
-        const withinPriceRange = product.price >= priceRange[0] && product.price <= priceRange[1];
+        const withinPriceRange =
+          (product.minPrice !== null ? product.minPrice : product.price) >= priceRange[0] &&
+          (product.maxPrice !== null ? product.maxPrice : product.price) <= priceRange[1];
         const inSelectedCategories =
           selectedCategories.length === 0 || selectedCategories.includes(product.categoryId);
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -141,9 +149,9 @@ const Products = () => {
       });
 
       if (sortOption === 'price-low-high') {
-        updatedProducts.sort((a, b) => a.price - b.price);
+        updatedProducts.sort((a, b) => (a.minPrice || a.price) - (b.minPrice || b.price));
       } else if (sortOption === 'price-high-low') {
-        updatedProducts.sort((a, b) => b.price - a.price);
+        updatedProducts.sort((a, b) => (b.minPrice || b.price) - (a.minPrice || a.price));
       } else if (sortOption === 'alpha-asc') {
         updatedProducts.sort((a, b) => a.name.localeCompare(b.name));
       } else if (sortOption === 'alpha-desc') {

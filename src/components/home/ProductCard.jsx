@@ -12,8 +12,7 @@ import { toast } from "react-toastify";
 import { Heart } from "lucide-react";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
 import { ShieldCheck, Palette, Ruler } from "lucide-react";
-
-const FALLBACK_IMAGE = "https://via.placeholder.com/200?text=No+Image";
+import placeholder from "/src/assets/placeholder.png";
 
 const ProductCard = ({ product, dailyDeals = [] }) => {
   const [isFavorited, setIsFavorited] = useState(false);
@@ -40,31 +39,38 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   // Calculate price range for products with variants
   let minPrice = mergedProduct.price || 0;
   let maxPrice = mergedProduct.price || 0;
-  let hasVariants = mergedProduct.variants && Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
+  let hasVariants = Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
 
   if (hasVariants) {
-    const prices = mergedProduct.variants.map((v) => (v.price || 0));
-    minPrice = Math.min(...prices);
-    maxPrice = Math.max(...prices);
+    const variantPrices = mergedProduct.variants.map((v) => (v.price || 0));
+    minPrice = Math.min(...variantPrices);
+    maxPrice = Math.max(...variantPrices);
   }
 
   // Set initial image based on variants or product-level images
   useEffect(() => {
-    let initialImage = FALLBACK_IMAGE;
-    if (hasVariants && mergedProduct.variants[0]?.imageUrls?.length > 0) {
-      const variantImage = mergedProduct.variants[0].imageUrls.find((url) => 
-        typeof url === "string" && url.startsWith("https://")
+    console.log("Product data:", mergedProduct);
+    let initialImage = placeholder;
+    if (hasVariants && mergedProduct.variants[0]?.imageUrls) {
+      const firstValidUrl = mergedProduct.variants[0].imageUrls.find((url) =>
+        typeof url === "string" && url.trim() && url.startsWith("https://")
       );
-      initialImage = variantImage || FALLBACK_IMAGE;
+      initialImage = firstValidUrl || (mergedProduct.variants[0].imageUrls[0] || placeholder);
+      console.log("Variant image check:", { firstValidUrl, allUrls: mergedProduct.variants[0].imageUrls });
     } else if (Array.isArray(mergedProduct.imageUrls) && mergedProduct.imageUrls.length > 0) {
-      const productImage = mergedProduct.imageUrls.find((url) => 
-        typeof url === "string" && url.startsWith("https://")
+      const firstValidUrl = mergedProduct.imageUrls.find((url) =>
+        typeof url === "string" && url.trim() && url.startsWith("https://")
       );
-      initialImage = productImage || FALLBACK_IMAGE;
+      initialImage = firstValidUrl || mergedProduct.imageUrls[0] || placeholder;
+      console.log("Product image check:", { firstValidUrl, allUrls: mergedProduct.imageUrls });
     } else if (mergedProduct.imageUrl && typeof mergedProduct.imageUrl === "string" && mergedProduct.imageUrl.startsWith("https://")) {
       initialImage = mergedProduct.imageUrl;
+      console.log("Single imageUrl check:", mergedProduct.imageUrl);
+    } else {
+      console.warn(`Product ${mergedProduct.id} has no valid imageUrl or imageUrls`);
     }
     setImageUrl(initialImage);
+    setImageFailed(false);
   }, [product, hasVariants]);
 
   // Apply discount to the minPrice for display purposes
@@ -126,7 +132,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   }, [product.id]);
 
   const handleFavorite = async (e) => {
-    e.preventDefault();
+    e.preventPropagation();
     e.stopPropagation();
     const userId = auth.currentUser?.uid;
     if (!userId || !product?.id) {
@@ -189,18 +195,19 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     >
       <div className="relative h-[200px] overflow-hidden rounded-t-lg min-w-0">
         <img
-          src={imageFailed ? FALLBACK_IMAGE : imageUrl}
+          src={imageFailed ? placeholder : imageUrl}
           alt={mergedProduct.name || "Product Image"}
           className="w-full h-full object-cover max-w-full max-h-full"
-          onError={() => {
+          onError={(e) => {
             if (!imageFailed) {
-              console.warn(
+              console.error(
                 "Image load error for product:",
                 mergedProduct.id,
-                mergedProduct.name
+                mergedProduct.name,
+                { imageUrl, attemptedUrl: e.target.src }
               );
               setImageFailed(true);
-              setImageUrl(FALLBACK_IMAGE);
+              setImageUrl(placeholder);
             }
           }}
           loading="lazy"

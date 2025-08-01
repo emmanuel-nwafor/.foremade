@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
   sendEmailVerification 
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -60,6 +63,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [signupAttempts, setSignupAttempts] = useState(0);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
 
   // Password strength state
@@ -126,7 +131,7 @@ export default function Register() {
       return;
     }
 
-    console.log('Registering with:', { email, password });
+    console.log('Registering with:', { firstName, lastName, email, password });
 
     try {
       const username = generateUsername(firstName, lastName);
@@ -162,6 +167,44 @@ export default function Register() {
       setEmailError(err.message.includes('email') ? 'This email is already in use or invalid. Try another.' : 'Registration failed. Please check your details and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider) => {
+    let authProvider;
+    if (provider === 'google') {
+      authProvider = new GoogleAuthProvider();
+      setLoadingGoogle(true);
+    } else if (provider === 'facebook') {
+      authProvider = new FacebookAuthProvider();
+      setLoadingFacebook(true);
+    }
+    try {
+      const result = await signInWithPopup(auth, authProvider);
+      const user = result.user;
+      const [socialFirstName, socialLastName] = user.displayName?.split(' ') || [user.email.split('@')[0], '']; // Fallback to email if no displayName
+
+      const username = generateUsername(socialFirstName, socialLastName);
+
+      const userData = {
+        firstName: socialFirstName || user.email.split('@')[0], // Use email part if no first name
+        lastName: socialLastName || '', // Empty if no last name
+        email: user.email,
+        username,
+        phoneNumber: user.phoneNumber || '',
+        createdAt: new Date().toISOString(),
+        uid: user.uid,
+        role: 'Buyer',
+      };
+      await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+
+      setSuccessMessage('Account created successfully with ' + provider + '! Redirecting...');
+      setTimeout(() => navigate('/'), 2000); // Redirect to home without OTP
+    } catch (err) {
+      setEmailError('Social signup failed: ' + err.message);
+    } finally {
+      setLoadingGoogle(false);
+      setLoadingFacebook(false);
     }
   };
 
@@ -344,13 +387,42 @@ export default function Register() {
               {loading ? 'Registering...' : 'Sign Up'}
             </button>
           </form>
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 mb-4">Or continue with</p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => handleSocialLogin('google')}
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                disabled={loadingGoogle}
+              >
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-2" />
+                {loadingGoogle ? 'Processing...' : 'Google'}
+              </button>
+              <button
+                onClick={() => handleSocialLogin('facebook')}
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                disabled={loadingFacebook}
+              >
+                <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
+                {loadingFacebook ? 'Processing...' : 'Facebook'}
+              </button>
+            </div>
+          </div>
 
           {/* Advanced OTP Modal */}
           {showOtpModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
-                <h3 className="text-xl font-semibold mb-4">Verify Your Email</h3>
-                <p className="text-gray-600 mb-4">A verification code has been sent to {email}. Enter it below.</p>
+              <div className="m-4 bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-semibold">Verify Your Email</h3>
+                  <button
+                      onClick={() => setShowOtpModal(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <i className="bx bx-x text-[24px]"></i>
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-4 text-sm text-center">Enter the 6-digits code sent to your email {email}.</p>
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="flex justify-between gap-2">
                     {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -381,23 +453,17 @@ export default function Register() {
                   >
                     {loading ? 'Verifying...' : 'Verify Code'}
                   </button>
-                  <p className="text-center text-gray-600 mt-2">
+                  <p className="text-center text-gray-600 mt-2 text-sm">
                     Didn’t receive a code?{' '}
                     <button
                       onClick={handleResendOtp}
                       className="text-blue-600 hover:underline"
                       disabled={loading}
                     >
-                      Send a new code
+                      Resend 
                     </button>
                   </p>
-                  {successMessage && <p className="text-green-600 text-xs mt-2">{successMessage}</p>}
-                  <button
-                    onClick={() => setShowOtpModal(false)}
-                    className="mt-4 text-gray-500 hover:text-gray-700"
-                  >
-                    Close
-                  </button>
+                  {successMessage && <p className="text-center text-green-600 text-xs mt-2">{successMessage}</p>}
                 </form>
               </div>
             </div>

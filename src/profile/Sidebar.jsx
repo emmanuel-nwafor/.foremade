@@ -2,11 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { User, Package, Heart, Map, Settings } from 'lucide-react'; // Importing lucide-react icons
+
+// Validation functions (to match Register)
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part?.trim());
+  const firstPart = nameParts[0]?.slice(0, 4).toLowerCase() || 'user';
+  const secondPart = nameParts[1]?.slice(0, 3).toLowerCase() || '';
+  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
+};
 
 export default function Sidebar() {
   const [userData, setUserData] = useState({
-    name: 'Emmanuel Chinecherem',
-    username: 'emmaChi',
+    firstName: '',
+    lastName: '',
+    username: 'guest',
     email: '',
     profileImage: localStorage.getItem('profileImage') || null,
   });
@@ -15,7 +27,8 @@ export default function Sidebar() {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         setUserData({
-          name: 'Guest',
+          firstName: '',
+          lastName: '',
           username: 'guest',
           email: '',
           profileImage: null,
@@ -23,15 +36,17 @@ export default function Sidebar() {
         return;
       }
 
+      // USER'S DATA NAMES
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            const firestoreData = docSnap.data();
+            const userData = docSnap.data();
             setUserData((prev) => ({
               ...prev,
-              name: firestoreData.name || user.displayName || 'Emmanuel Chinecherem',
-              username: firestoreData.username || 'emmaChi',
+              firstName: userData.firstName || '',
+              lastName: userData.lastName || '',
+              username: userData.username || generateUsername(userData.firstName || '', userData.lastName || ''),
               email: user.email || '',
             }));
           }
@@ -55,8 +70,9 @@ export default function Sidebar() {
       if (storedUserData) {
         setUserData((prev) => ({
           ...prev,
-          name: storedUserData.name || prev.name,
-          username: storedUserData.username || prev.username,
+          firstName: storedUserData.firstName || prev.firstName,
+          lastName: storedUserData.lastName || prev.lastName,
+          username: storedUserData.username || generateUsername(storedUserData.firstName || '', storedUserData.lastName || ''),
           email: storedUserData.email || prev.email,
         }));
       }
@@ -86,7 +102,7 @@ export default function Sidebar() {
     }
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-300 text-white text-lg font-bold uppercase rounded-full">
-        {userData.email ? userData.email[0] : 'U'}
+        {(userData.firstName || userData.email)[0]}
       </div>
     );
   };
@@ -94,48 +110,48 @@ export default function Sidebar() {
   return (
     <div className="md:w-1/4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <div className="flex flex-col items-center mb-6 text-center">
-        <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center overflow-hidden">
+        <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center overflow-hidden hover:bg-gray-300 transition-colors duration-300">
           {getAvatar()}
         </div>
         <h3 className="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-200">
-          {userData.name}
+          {userData.firstName} {userData.lastName || ''}
         </h3>
         <p className="text-gray-600 dark:text-gray-400 text-sm">{userData.username}</p>
       </div>
       <nav className="flex flex-col space-y-2">
         <Link
           to="/profile"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg transition-colors duration-300"
         >
-          <i className="bx bx-user text-lg text-blue-500 dark:text-blue-400"></i>
+          <User className="w-5 h-5 text-blue-500 dark:text-blue-400" />
           <span>Profile</span>
         </Link>
         <Link
           to="/orders"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg transition-colors duration-300"
         >
-          <i className="bx bx-package text-lg text-green-500 dark:text-green-400"></i>
+          <Package className="w-5 h-5 text-green-500 dark:text-green-400" />
           <span>Orders</span>
         </Link>
         <Link
           to="/favorites"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg transition-colors duration-300"
         >
-          <i className="bx bx-heart text-lg text-red-500 dark:text-red-400"></i>
+          <Heart className="w-5 h-5 text-red-500 dark:text-red-400" />
           <span>Wishlist</span>
         </Link>
         <Link
           to="/address"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg transition-colors duration-300"
         >
-          <i className="bx bx-map text-lg text-purple-500 dark:text-purple-400"></i>
+          <Map className="w-5 h-5 text-purple-500 dark:text-purple-400" />
           <span>Addresses</span>
         </Link>
         <Link
           to="/setting"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg transition-colors duration-300"
         >
-          <i className="bx bx-cog text-lg text-orange-500 dark:text-orange-400"></i>
+          <Settings className="w-5 h-5 text-orange-500 dark:text-orange-400" />
           <span>Settings</span>
         </Link>
       </nav>

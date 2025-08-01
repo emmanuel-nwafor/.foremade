@@ -3,8 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import {
   signInWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
   setPersistence,
@@ -56,22 +55,6 @@ export default function Login() {
     }
   }, [state]);
 
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          const user = result.user;
-          handleSocialLogin(user);
-        }
-      })
-      .catch((err) => {
-        console.error('Redirect result error:', err);
-        setEmailError(getFriendlyErrorMessage(err));
-        setLoadingGoogle(false);
-        setLoadingFacebook(false);
-      });
-  }, []);
-
   const handleSocialLogin = async (user) => {
     try {
       const response = await fetch('https://foremade-backend.onrender.com/verify-otp-status', {
@@ -102,7 +85,7 @@ export default function Login() {
           email: user.email,
           firstName: firstName || user.email.split('@')[0],
           lastName: lastName || '',
-          username: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000),
+          username: (user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)),
           phoneNumber: user.phoneNumber || '',
           role,
         };
@@ -210,7 +193,8 @@ export default function Login() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithRedirect(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await handleSocialLogin(result.user);
     } catch (err) {
       console.error('Google sign-in error:', err);
       setLoadingGoogle(false);
@@ -227,7 +211,8 @@ export default function Login() {
     const provider = new FacebookAuthProvider();
     provider.setCustomParameters({ display: 'popup' });
     try {
-      await signInWithRedirect(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await handleSocialLogin(result.user);
     } catch (err) {
       console.error('Facebook sign-in error:', err);
       setLoadingFacebook(false);
@@ -324,7 +309,7 @@ export default function Login() {
               Forgot Password?
             </Link>
           </p>
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <p className="text-gray-600 mb-4">Or continue with</p>
             <div className="flex justify-center space-x-4">
               <button

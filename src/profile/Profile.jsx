@@ -2,9 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Spinner from '../components/common/Spinner';
+import { Package, Heart, Star } from 'lucide-react'; // Importing lucide-react icons
+
+// Validation functions (to match Register)
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part?.trim());
+  const firstPart = nameParts[0]?.slice(0, 4).toLowerCase() || 'user';
+  const secondPart = nameParts[1]?.slice(0, 3).toLowerCase() || '';
+  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
+};
 
 export default function Profile() {
   const [loading, setLoading] = useState(true);
@@ -35,16 +45,18 @@ export default function Profile() {
             const userAddresses = firestoreData.addresses || [];
             setUserData({
               email: user.email || '',
-              username: firestoreData.username || user.displayName || 'emmachi789',
-              name: firestoreData.name || user.displayName || 'Emmanuel Chinecherem',
+              username: firestoreData.username || generateUsername(firestoreData.firstName || '', firestoreData.lastName || ''),
+              firstName: firestoreData.firstName || '',
+              lastName: firestoreData.lastName || '',
               createdAt: firestoreData.createdAt || '2025-05-04T23:28:48.857Z',
               address: userAddresses[0]?.street
                 ? `${userAddresses[0].street}, ${userAddresses[0].city}, ${userAddresses[0].state}, ${userAddresses[0].postalCode}, ${userAddresses[0].country}`
                 : 'Not provided',
               country: firestoreData.country || '',
-              phone: firestoreData.phone || '',
+              phone: firestoreData.phoneNumber || '', // Ensured to use phoneNumber from Firestore
               uid: user.uid,
             });
+            console.log('Fetched user data:', firestoreData); // Debug log
           } else {
             setError('User profile not found.');
           }
@@ -103,165 +115,98 @@ export default function Profile() {
     }
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-300 text-white text-2xl font-bold uppercase">
-        {userData?.email ? userData.email[0] : 'U'}
+        {(userData?.firstName || userData?.email)[0]}
       </div>
     );
-  };
-
-  // Define animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
   };
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Spinner />
-          <p className="text-gray-600 dark:text-gray-300 mt-4">Loading your profile...</p>
-        </motion.div>
+        <Spinner />
+        <p className="text-gray-600 dark:text-gray-300 mt-4">Loading your profile...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <motion.div
-        className="container mx-auto px-4 py-8 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
+      <div className="container mx-auto px-4 py-8 text-center">
         <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
         {isAuthError ? (
-          <Link to="/login" className="text-blue-600 hover:underline inline-block relative overflow-hidden group">
-            <span className="relative z-10">Go to Login 🔐</span>
-            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Go to Login
           </Link>
         ) : (
-          <motion.button
+          <button
             onClick={() => {
               setError('');
               setLoading(true);
             }}
-            className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md hover:shadow-lg transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
-            Retry 🔄
-          </motion.button>
+            Retry
+          </button>
         )}
-      </motion.div>
+      </div>
     );
   }
 
   if (!userData) {
     return (
-      <motion.div
-        className="container mx-auto px-4 py-8 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
+      <div className="container mx-auto px-4 py-8 text-center">
         <p className="text-red-600 dark:text-red-400 mb-4">User data not available.</p>
-        <motion.button
+        <button
           onClick={() => setLoading(true)}
-          className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md hover:shadow-lg transition-all duration-300"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
         >
-          Retry 🔄
-        </motion.button>
-      </motion.div>
+          Retry
+        </button>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      className="container mx-auto px-4 py-8 text-gray-800 dark:text-gray-700"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
+    <div className="container mx-auto px-4 py-8 text-gray-800 dark:text-gray-700">
       <div className="flex flex-col md:flex-row gap-6">
         <Sidebar />
         <div className="md:w-3/4">
-          <motion.div
-            className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6"
-            variants={itemVariants}
-          >
-            <motion.div
-              whileHover={{ scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="rounded-lg p-4 text-center bg-gradient-to-br from-blue-50 to-white dark:from-blue-900 dark:to-gray-800 border border-blue-100 dark:border-blue-700 hover:border-blue-200 dark:hover:border-blue-600 cursor-pointer"
-            >
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-blue-50 to-white dark:from-blue-900 dark:to-gray-800 border border-blue-100 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer transition-colors duration-300">
               <Link to="/orders" className="block">
-                <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <i className="bx bx-package text-2xl text-blue-500 mb-2"></i>
-                  <p className="text-gray-400 dark:text-gray-300">Orders 📦</p>
-                  <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">9</p>
-                </motion.div>
+                <Package className="w-6 h-6 text-blue-500 mb-2 mx-auto" />
+                <p className="text-gray-400 dark:text-gray-300">Orders</p>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">9</p>
               </Link>
-            </motion.div>
+            </div>
 
-            <motion.div
-              whileHover={{ scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="rounded-lg p-4 text-center bg-gradient-to-br from-purple-50 to-white dark:from-purple-900 dark:to-gray-800 border border-purple-100 dark:border-purple-700 hover:border-purple-200 dark:hover:border-purple-600 cursor-pointer"
-            >
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-purple-50 to-white dark:from-purple-900 dark:to-gray-800 border border-purple-100 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-800 cursor-pointer transition-colors duration-300">
               <Link to="/favorites" className="block">
-                <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <i className="bx bx-heart text-2xl text-purple-500 mb-2"></i>
-                  <p className="text-gray-400 dark:text-gray-300">Wish List ❤️</p>
-                  <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockWishlistCount}</p>
-                </motion.div>
+                <Heart className="w-6 h-6 text-purple-500 mb-2 mx-auto" />
+                <p className="text-gray-400 dark:text-gray-300">Wish List</p>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockWishlistCount}</p>
               </Link>
-            </motion.div>
+            </div>
 
-            <motion.div
-              whileHover={{ scale: 1.03, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)" }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="rounded-lg p-4 text-center bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900 dark:to-gray-800 border border-yellow-100 dark:border-yellow-700 hover:border-yellow-200 dark:hover:border-yellow-600 cursor-pointer"
-            >
-              <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 300 }}>
-                <i className="bx bx-star text-2xl text-yellow-500 mb-2"></i>
-                <p className="text-gray-400 dark:text-gray-300">Loyalty Points 🌟</p>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockLoyaltyPoints} <i className="bx bx-star text-yellow-500"></i></p>
-              </motion.div>
-            </motion.div>
-          </motion.div>
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900 dark:to-gray-800 border border-yellow-100 dark:border-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-800 cursor-pointer transition-colors duration-300">
+              <Star className="w-6 h-6 text-yellow-500 mb-2 mx-auto" />
+              <p className="text-gray-400 dark:text-gray-300">Loyalty Points</p>
+              <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockLoyaltyPoints} <Star className="w-4 h-4 text-yellow-500 inline" /></p>
+            </div>
+          </div>
 
-          <motion.div
-            className="rounded-lg p-6 mb-6 bg-gray-50 dark:bg-gray-800 shadow-md"
-            variants={itemVariants}
-          >
+          <div className="rounded-lg p-6 mb-6 bg-gray-50 dark:bg-gray-800 shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Personal Details 📋</h3>
+              <h3 className="text-lg font-semibold">Personal Details</h3>
               <Link
                 to="/setting"
-                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 transition duration-200"
+                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 transition-colors duration-300"
               >
-                <i className="bx bx-edit mr-1"></i> Edit Profile ✏️
+                <i className="bx bx-edit mr-1"></i> Edit Profile
               </Link>
             </div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow hover:bg-gray-300 transition-colors duration-300">
                 {getAvatar()}
               </div>
             </div>
@@ -272,11 +217,11 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-300">First Name</p>
-                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.name.split(' ')[0]}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.firstName || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-300">Last Name</p>
-                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.name.split(' ').slice(1).join(' ') || '-'}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.lastName || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-300">Email</p>
@@ -291,7 +236,7 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-300">Phone</p>
-                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.phone}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.phone || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-300">Date Joined</p>
@@ -302,27 +247,24 @@ export default function Profile() {
                 <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.address}</p>
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="rounded-lg p-6 mb-6 bg-gray-50 dark:bg-gray-800 shadow-md"
-            variants={itemVariants}
-          >
+          <div className="rounded-lg p-6 mb-6 bg-gray-50 dark:bg-gray-800 shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">User Address 📍</h3>
+              <h3 className="text-lg font-semibold">User Address</h3>
               <Link
                 to="/setting"
-                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 transition duration-200"
+                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 transition-colors duration-300"
               >
-                <i className="bx bx-map mr-1"></i> Update Address 🗺️
+                <i className="bx bx-map mr-1"></i> Update Address
               </Link>
             </div>
-            <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-300">
               <p className="font-semibold text-gray-800 dark:text-gray-200">{userData.address}</p>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

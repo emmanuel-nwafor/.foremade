@@ -447,14 +447,14 @@ export default function SellerOnboarding() {
                 className="py-2 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
                 aria-label="Go to Dashboard"
               >
-                Yes, Take Me There
+                Yes
               </button>
               <button
                 onClick={() => setShowModal(false)}
                 className="py-2 px-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-200"
                 aria-label="Close Modal"
               >
-                No, Stay Here
+                No
               </button>
             </div>
           </div>

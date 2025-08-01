@@ -45,6 +45,7 @@ import AdminEditFees from './admin/AdminEditFees';
 import AdminCategoryEdit from './admin/AdminCategoryEdit';
 import AdminManager from './admin/AdminManager';
 import AdminSellerWallet from './admin/AdminSellerWallet';
+import AdminProSellerRequests from './admin/AdminProSellerRequests'
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -81,6 +82,7 @@ import ProductBump from './seller/ProductBump';
 import SellerTransactions from './seller/SellerTransactions';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
 import SellerChat from './seller/SellerChat';
+import AdminBumpedProducts from './admin/AdminBumpedProducts';
 
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
@@ -111,9 +113,12 @@ const Layout = ({ children }) => {
     '/admin/manager',
     '/admin/edit/banners',
     '/admin/edit/daily-deals',
+    '/admin/pro-sellers-requests',
+    '/admin/bumped-products',
     '/bulk-upload',
     '/product-bump',
     '/seller-transactions',
+    '/seller/edit-product:id',
     '/pro-seller-analytics',
     '/sellers/orders',
     '/sellers/products',
@@ -214,6 +219,8 @@ function App() {
                 <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
                 <Route path="/admin/manager" element={<AdminManager />} />
                 <Route path="/admin/sellers-wallet" element={<AdminSellerWallet />} />
+                <Route path="/admin/pro-sellers-requests" element={<AdminProSellerRequests />} />
+                <Route path="/admin/bumped-products" element={<AdminBumpedProducts />} />
               {/* </Route> */}
 
               <Route path="*" element={<NotFound />} />

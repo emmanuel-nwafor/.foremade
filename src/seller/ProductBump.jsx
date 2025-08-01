@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import SellerSidebar from './SellerSidebar';
 import { Link } from 'react-router-dom';
 import debounce from 'lodash.debounce';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw, CheckCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PaystackCheckout from '/src/components/checkout/PaystackCheckout';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,19 +38,22 @@ const ProductBump = () => {
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           try {
-            const q = query(collection(db, 'productBump'), where('sellerId', '==', user.uid));
+            const q = query(collection(db, 'products'), where('sellerId', '==', user.uid));
             const querySnapshot = await getDocs(q);
             const productsList = querySnapshot.docs.map((doc) => {
               const data = doc.data();
+              const imageUrls = Array.isArray(data.imageUrls)
+                ? data.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
+                : data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
+                ? [data.imageUrl]
+                : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
               return {
                 id: doc.id,
-                productId: data.productId,
-                name: data.name || 'Unnamed Product',
-                price: data.price || 0,
-                imageUrl: data.imageUrl || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg',
-                sellerId: data.sellerId,
-                startDate: data.startDate?.toDate(),
-                expiry: data.expiry?.toDate(),
+                ...data,
+                imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
+                uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date(),
+                bumpExpiry: data.bumpExpiry ? data.bumpExpiry.toDate() : null,
+                isBumped: data.isBumped || false,
               };
             });
             setProducts(productsList);
@@ -120,43 +123,45 @@ const ProductBump = () => {
       const data = text ? JSON.parse(text) : {};
       toast.success(data.message || 'Product bumped successfully!');
 
-      const startDate = new Date();
+      const bumpExpiry = new Date();
       const durationInMs = {
         '72h': 72 * 60 * 60 * 1000,
         '168h': 168 * 60 * 60 * 1000,
       }[mappedDuration];
-      const expiry = new Date(startDate.getTime() + durationInMs);
+      bumpExpiry.setTime(bumpExpiry.getTime() + durationInMs);
 
-      await addDoc(collection(db, 'productBump'), {
+      await addDoc(collection(db, 'bumpTransactions'), {
         productId,
         sellerId: auth.currentUser?.uid,
-        name: products.find((p) => p.productId === productId)?.name || 'Unnamed Product',
-        price: products.find((p) => p.productId === productId)?.price || 0,
-        imageUrl: products.find((p) => p.productId === productId)?.imageUrl || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg',
-        startDate,
-        expiry,
+        bumpDuration: mappedDuration,
+        paymentIntentId: paymentData.reference || `fallback-${Date.now()}`,
+        bumpExpiry,
+        timestamp: new Date(),
       });
 
-      // Send email notification
-      const emailResponse = await fetch(`${backendUrl}/send-product-bump-receipt`, {
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { bumpExpiry, isBumped: true });
+
+      // Send email notification to seller
+      const emailResponse = await fetch(`${backendUrl}/api/send-bump-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firebaseToken}` },
         body: JSON.stringify({
-          email: auth.currentUser?.email,
-          duration: duration.label,
-          amount: totalAmount / 100,
-          startTime: startDate.toISOString(),
-          endTime: expiry.toISOString(),
+          sellerId: auth.currentUser?.uid,
+          productId,
+          productName: products.find((p) => p.id === productId)?.name || 'Unnamed Product',
+          expiryDate: bumpExpiry.toISOString(),
         }),
       });
       if (!emailResponse.ok) {
         console.warn('Email notification failed:', await emailResponse.text());
       }
 
-      setProducts((prevProducts) => [
-        ...prevProducts,
-        { id: productId, productId, name: products.find((p) => p.productId === productId)?.name || 'Unnamed Product', price: products.find((p) => p.productId === productId)?.price || 0, imageUrl: products.find((p) => p.productId === productId)?.imageUrl || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg', sellerId: auth.currentUser?.uid, startDate, expiry },
-      ]);
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.id === productId ? { ...product, bumpExpiry, isBumped: true } : product
+        )
+      );
       setBumpQuota((prev) => prev - 1);
     } catch (error) {
       toast.error(error.message || 'Failed to bump product');
@@ -173,7 +178,7 @@ const ProductBump = () => {
   const handleProductClick = async (productId) => {
     const productRef = doc(db, 'products', productId);
     await updateDoc(productRef, {
-      views: (products.find((p) => p.productId === productId)?.views || 0) + 1,
+      views: (products.find((p) => p.id === productId)?.views || 0) + 1,
     });
   };
 
@@ -190,11 +195,11 @@ const ProductBump = () => {
     const updateTimeRemaining = () => {
       const newTimeRemaining = {};
       products.forEach((product) => {
-        if (product.expiry && new Date(product.expiry) > new Date()) {
+        if (product.bumpExpiry && new Date(product.bumpExpiry) > new Date()) {
           const now = new Date();
-          const expiry = new Date(product.expiry);
+          const expiry = new Date(product.bumpExpiry);
           const diffMs = expiry - now;
-          newTimeRemaining[product.productId] = diffMs > 0 ? diffMs : 0;
+          newTimeRemaining[product.id] = diffMs > 0 ? diffMs : 0;
         }
       });
       setTimeRemaining(newTimeRemaining);
@@ -223,7 +228,7 @@ const ProductBump = () => {
     });
   };
 
-  const isBumpActive = (product) => product.expiry && new Date(product.expiry) > new Date();
+  const isBumpActive = (product) => product.isBumped && product.bumpExpiry && new Date(product.bumpExpiry) > new Date();
 
   const handleRefresh = () => window.location.reload();
 
@@ -343,13 +348,13 @@ const ProductBump = () => {
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <div
-                key={product.productId}
+                key={product.id}
                 className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-lg transition duration-300"
-                onClick={() => handleProductClick(product.productId)}
+                onClick={() => handleProductClick(product.id)}
               >
                 <div className="relative aspect-[4/3] mb-4 overflow-hidden rounded-lg">
                   <img
-                    src={product.imageUrl}
+                    src={product.imageUrls[0]}
                     alt={product.name || 'Product Image'}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
                     onError={(e) => {
@@ -358,19 +363,27 @@ const ProductBump = () => {
                         '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500">Image N/A</span></div>';
                     }}
                   />
-                  {isBumpActive(product) ? (
+                  {isBumpActive(product) && (
                     <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Countdown: {formatTime(timeRemaining[product.productId] || 0)}
-                    </span>
-                  ) : (
-                    <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      Bump Expired
+                      Bumped Up
                     </span>
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">{product.name}</h3>
-                <p className="text-gray-700 text-sm mb-1">Price: ₦{product.price.toLocaleString('en-NG')}</p>
-                <p className="text-gray-600 text-xs mt-1">Started: {formatDate(product.startDate)}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
+                <p className="text-gray-700 text-sm mb-1">Price: ₦{(product.price || 0).toLocaleString('en-NG')}</p>
+                <p className="text-gray-600 text-xs mt-1">Uploaded: {product.uploadDate.toLocaleDateString('en-NG', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}</p>
+                {isBumpActive(product) && timeRemaining[product.id] > 0 && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-gray-900">Time Remaining: {formatTime(timeRemaining[product.id])}</p>
+                    {product.bumpExpiry && (
+                      <p className="text-xs text-gray-700 mt-1">Expires: {formatDate(product.bumpExpiry)}</p>
+                    )}
+                  </div>
+                )}
                 {!isBumpActive(product) && (
                   <div className="mt-3 space-y-2">
                     {bumpDurations.map((duration) => (
@@ -378,12 +391,12 @@ const ProductBump = () => {
                         key={duration.hours}
                         email={auth.currentUser?.email}
                         amount={duration.price * 100}
-                        onSuccess={(paymentData) => handlePaymentSuccess(paymentData, product.productId, duration.hours)}
+                        onSuccess={(paymentData) => handlePaymentSuccess(paymentData, product.id, duration.hours)}
                         onClose={handleCancel}
-                        disabled={bumping[product.productId] || bumpQuota <= 0 || isProcessing}
+                        disabled={bumping[product.id] || bumpQuota <= 0 || isProcessing}
                         buttonText={`${duration.label} (₦${duration.price.toLocaleString('en-NG')})`}
                         className={`w-full flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
-                          bumping[product.productId] || bumpQuota <= 0 || isProcessing
+                          bumping[product.id] || bumpQuota <= 0 || isProcessing
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-blue-100 text-gray-900 hover:bg-blue-200'
                         }`}
@@ -392,7 +405,7 @@ const ProductBump = () => {
                     ))}
                   </div>
                 )}
-                {bumping[product.productId] && (
+                {bumping[product.id] && (
                   <div className="flex items-center justify-center py-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     <span className="ml-2 text-sm text-gray-900">Processing...</span>
@@ -427,4 +440,4 @@ const ProductBump = () => {
   );
 };
 
-export default ProductBump; 
+export default ProductBump;

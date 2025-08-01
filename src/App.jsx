@@ -80,6 +80,7 @@ import BulkUpload from './seller/BulkUpload';
 import ProductBump from './seller/ProductBump';
 import SellerTransactions from './seller/SellerTransactions';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
+import SellerChat from './seller/SellerChat';
 
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
@@ -119,6 +120,7 @@ const Layout = ({ children }) => {
     '/seller-onboarding',
     '/dashboard',
     '/admin/sellers-wallet',
+    '/seller-chat',
   ].includes(location.pathname);
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
@@ -197,6 +199,7 @@ function App() {
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/about" element={<AboutUs />} />
+                <Route path="/seller-chat" element={<SellerChat />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
 
                 {/* Admin Routes */}

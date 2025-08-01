@@ -30,14 +30,12 @@ export default function SellerSidebar() {
     { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
     { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
     { to: '/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
+    { to: '/pro-seller-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Product Management' },
     { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
     { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
     { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
     { to: '/seller-transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
     { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
-    // Pro sellers
-    { to: '/product-bump', label: 'Product Bump', icon: TrendingUp, category: 'Pro Seller' },
-    { to: '/pro-seller-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Pro Seller' },
   ];
 
   const filteredMenuItems = menuItems.filter((item) =>
@@ -184,26 +182,6 @@ export default function SellerSidebar() {
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Chat</h3>
                   {filteredMenuItems
                     .filter((item) => item.category === 'Chat')
-                    .map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
-                        aria-label={item.label}
-                      >
-                        <item.icon className="w-5 h-5 mr-2" />
-                        {item.label}
-                      </Link>
-                    ))}
-                </div>
-              )}
-
-              {filteredMenuItems.some((item) => item.category === 'Pro Seller') && (
-                <div>
-                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Pro Seller</h3>
-                  {filteredMenuItems
-                    .filter((item) => item.category === 'Pro Seller')
                     .map((item) => (
                       <Link
                         key={item.to}

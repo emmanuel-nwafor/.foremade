@@ -6,9 +6,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
+  updateProfile,
   sendEmailVerification 
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 
 // Validation functions
@@ -138,15 +139,17 @@ export default function Register() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      await updateProfile(user, { displayName: username }); // Set displayName
+
       const userData = {
-        firstName,
-        lastName,
-        email,
+        email: user.email,
+        name: `${firstName} ${lastName}`, // Match previous logic
         username,
+        address: '',
         phoneNumber: phoneNumber || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
-        role: 'Buyer',
+        profileImage: null,
       };
       await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -160,6 +163,7 @@ export default function Register() {
       if (data.success) {
         setSuccessMessage('Account created! Check your email for a verification code.');
         setShowOtpModal(true);
+        localStorage.setItem('userData', JSON.stringify(userData)); // Save to local storage
       } else {
         setEmailError(data.error || 'Something went wrong. Please try again.');
       }
@@ -182,22 +186,26 @@ export default function Register() {
     try {
       const result = await signInWithPopup(auth, authProvider);
       const user = result.user;
-      const [socialFirstName, socialLastName] = user.displayName?.split(' ') || [user.email.split('@')[0], '']; // Fallback to email if no displayName
+      const [socialFirstName, ...rest] = user.displayName?.split(' ') || [user.email.split('@')[0], ''];
+      const socialLastName = rest.join(' ');
 
       const username = generateUsername(socialFirstName, socialLastName);
 
+      await updateProfile(user, { displayName: username }); // Set displayName
+
       const userData = {
-        firstName: socialFirstName || user.email.split('@')[0], // Use email part if no first name
-        lastName: socialLastName || '', // Empty if no last name
         email: user.email,
+        name: `${socialFirstName} ${socialLastName}`, // Match previous logic
         username,
+        address: '',
         phoneNumber: user.phoneNumber || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
-        role: 'Buyer',
+        profileImage: user.photoURL || null,
       };
       await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
 
+      localStorage.setItem('userData', JSON.stringify(userData)); // Save to local storage
       setSuccessMessage('Account created successfully with ' + provider + '! Redirecting...');
       setTimeout(() => navigate('/'), 2000); // Redirect to home without OTP
     } catch (err) {
@@ -254,8 +262,8 @@ export default function Register() {
 
       if (data.success) {
         setSuccessMessage('Email verified! You can log in now.');
+        await sendEmailVerification(auth.currentUser); // Match previous logic
         setShowOtpModal(false);
-        await sendEmailVerification(auth.currentUser);
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -416,10 +424,10 @@ export default function Register() {
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-lg font-semibold">Verify Your Email</h3>
                   <button
-                      onClick={() => setShowOtpModal(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <i className="bx bx-x text-[24px]"></i>
+                    onClick={() => setShowOtpModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <i className="bx bx-x text-[24px]"></i>
                   </button>
                 </div>
                 <p className="text-gray-600 mb-4 text-sm text-center">Enter the 6-digits code sent to your email {email}.</p>
@@ -460,7 +468,7 @@ export default function Register() {
                       className="text-blue-600 hover:underline"
                       disabled={loading}
                     >
-                      Resend 
+                      Resend
                     </button>
                   </p>
                   {successMessage && <p className="text-center text-green-600 text-xs mt-2">{successMessage}</p>}

@@ -20,8 +20,6 @@ const ProductBump = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { userProfile } = useAuth();
   const [timeRemaining, setTimeRemaining] = useState({});
-  const [productViews, setProductViews] = useState({}); // Track product views
-  const [productSales, setProductSales] = useState({}); // Track product sales
 
   const bumpDurations = [
     { value: '72h', label: '3 Days', price: 1500, hours: '72h' },
@@ -54,20 +52,9 @@ const ProductBump = () => {
                 ...data,
                 imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
                 uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date(),
-                views: data.views || 0, // Load existing views from Firebase
-                sales: data.sales || 0, // Load existing sales from Firebase
               };
             });
             setProducts(productsList);
-            // Initialize views and sales state
-            const viewsObj = {};
-            const salesObj = {};
-            productsList.forEach((product) => {
-              viewsObj[product.id] = product.views || 0;
-              salesObj[product.id] = product.sales || 0;
-            });
-            setProductViews(viewsObj);
-            setProductSales(salesObj);
           } catch (err) {
             setError('Failed to fetch products: ' + err.message);
           }
@@ -104,7 +91,7 @@ const ProductBump = () => {
     try {
       setIsProcessing(true);
       const firebaseToken = await auth.currentUser?.getIdToken();
-      const durationMap = { '72h': '72h', 'i68h' : '168h' };
+      const durationMap = { '72h': '72h', '168h': '168h' };
       const mappedDuration = durationMap[durationHours] || '24h';
       const backendUrl = 'https://foremade-backend.onrender.com';
 
@@ -134,7 +121,6 @@ const ProductBump = () => {
       const data = text ? JSON.parse(text) : {};
       toast.success(data.message || 'Product bumped successfully!');
 
-      // Save to Firebase and update sales
       const bumpExpiry = new Date();
       const durationInMs = {
         '72h': 72 * 60 * 60 * 1000,
@@ -151,18 +137,14 @@ const ProductBump = () => {
         timestamp: new Date(),
       });
 
-      // Increment sales for the product
       const productRef = doc(db, 'products', productId);
-      await updateDoc(productRef, {
-        sales: (productSales[productId] || 0) + 1, // Increment sales by 1 per successful bump
-      });
+      await updateDoc(productRef, { bumpExpiry });
 
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
-          product.id === productId ? { ...product, bumpExpiry, sales: (productSales[productId] || 0) + 1 } : product
+          product.id === productId ? { ...product, bumpExpiry } : product
         )
       );
-      setProductSales((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
       setBumpQuota((prev) => prev - 1);
     } catch (error) {
       toast.error(error.message || 'Failed to bump product');
@@ -177,11 +159,9 @@ const ProductBump = () => {
   };
 
   const handleProductClick = async (productId) => {
-    // Increment view count locally and update Firebase
-    setProductViews((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
     const productRef = doc(db, 'products', productId);
     await updateDoc(productRef, {
-      views: (productViews[productId] || 0) + 1,
+      views: (products.find((p) => p.id === productId)?.views || 0) + 1,
     });
   };
 
@@ -206,8 +186,8 @@ const ProductBump = () => {
         }
       });
       setTimeRemaining(newTimeRemaining);
-      if (Object.values(newTimeRemaining).every(time => time <= 0)) {
-        fetchProducts();
+      if (Object.values(newTimeRemaining).every((time) => time <= 0)) {
+        fetchProducts(); // Refresh when all timers expire
       }
     };
 
@@ -217,11 +197,11 @@ const ProductBump = () => {
   }, [products]);
 
   const formatTime = (ms) => {
-    if (ms <= 0) return null;
+    if (ms <= 0) return 'Expired';
     const hours = Math.floor(ms / (1000 * 60 * 60));
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    return `${hours}h ${minutes}m ${seconds}s`;
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const formatDate = (dateString) => {
@@ -235,17 +215,6 @@ const ProductBump = () => {
   };
 
   const isBumpActive = (product) => product.bumpExpiry && new Date(product.bumpExpiry) > new Date();
-  const getBumpStatus = (product) => {
-    if (!product.bumpExpiry) return null;
-    const now = new Date();
-    const expiry = new Date(product.bumpExpiry);
-    if (expiry > now) {
-      const diffTime = expiry - now;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return `Active for ${diffDays} more day${diffDays !== 1 ? 's' : ''}`;
-    }
-    return 'Expired';
-  };
 
   const handleRefresh = () => window.location.reload();
 
@@ -289,7 +258,7 @@ const ProductBump = () => {
           <p className="mb-4 text-gray-700">Product bump is only available to Pro Sellers. Upgrade now to boost your products' visibility!</p>
           <a href="/pro-seller-guide-full" className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-semibold">Upgrade to Pro Seller</a>
           <div className="mt-6">
-            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+            <Link to="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</Link>
           </div>
         </div>
       </div>
@@ -367,7 +336,7 @@ const ProductBump = () => {
               <div
                 key={product.id}
                 className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-lg transition duration-300"
-                onClick={() => handleProductClick(product.id)} // Track click as a view
+                onClick={() => handleProductClick(product.id)}
               >
                 <div className="relative aspect-[4/3] mb-4 overflow-hidden rounded-lg">
                   <img
@@ -381,9 +350,9 @@ const ProductBump = () => {
                     }}
                   />
                   {isBumpActive(product) && (
-                    <div className="absolute top-2 left-2">
-                      <CheckCircle className="w-6 h-6 text-green-500" />
-                    </div>
+                    <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Bumped Up
+                    </span>
                   )}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
@@ -401,11 +370,6 @@ const ProductBump = () => {
                     )}
                   </div>
                 )}
-                {/* Display analytics */}
-                <div className="mt-3 p-2 bg-gray-50 border border-gray-200 rounded-md">
-                  <p className="text-sm text-gray-900">Views: {productViews[product.id] || 0}</p>
-                  <p className="text-sm text-gray-900">Sales: {productSales[product.id] || 0}</p>
-                </div>
                 {!isBumpActive(product) && (
                   <div className="mt-3 space-y-2">
                     {bumpDurations.map((duration) => (
@@ -440,7 +404,7 @@ const ProductBump = () => {
               <PlusCircle className="w-24 h-24 text-gray-300" />
               <p className="text-gray-900 text-center text-lg mt-4">No products uploaded yet.<br />Start by adding your first product!</p>
               <Link
-                to="/seller/upload-product"
+                to="/products-upload"
                 className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
               >
                 Add Your First Product

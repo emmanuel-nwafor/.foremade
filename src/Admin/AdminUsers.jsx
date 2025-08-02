@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, getIdToken } from 'firebase/auth';
+import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import axios from 'axios';
 import AdminSidebar from './AdminSidebar';
 
 // Custom Alert Component
@@ -52,8 +53,14 @@ const generateUsername = (firstName, lastName) => {
   const firstPart = nameParts[0] ? nameParts[0].slice(0, 4).toLowerCase() : 'user';
   const secondPart = nameParts[1] ? nameParts[1].slice(0, 3).toLowerCase() : '';
   const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
-  return usernameBase + randomNum;
+  return (firstPart + secondPart).replace(/[^a-z0-9]/g, '') + randomNum;
+};
+
+// Get initials from email or name
+const getInitials = (email, name) => {
+  if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  if (email) return email.split('@')[0].slice(0, 2).toUpperCase();
+  return '??';
 };
 
 export default function AdminUsers() {
@@ -69,13 +76,15 @@ export default function AdminUsers() {
     password: '',
     role: 'buyer',
   });
+  const [addAdminData, setAddAdminData] = useState({ email: '', password: '' });
+  const [selectedUser, setSelectedUser] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [errors, setErrors] = useState({});
+  const [showUserModal, setShowUserModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showEditPassword, setShowEditPassword] = useState(false);
 
   // Check admin authentication and fetch users
   useEffect(() => {
@@ -85,14 +94,25 @@ export default function AdminUsers() {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!userDoc.exists() || userDoc.data().role !== 'admin') {
           addAlert('Unauthorized access.', 'error');
+          // navigate('/login');
         }
       } else {
         addAlert('Please log in as an admin.', 'error');
+        // navigate('/login');
       }
     });
 
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const userList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const userList = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          role: data.role || 'buyer',
+          status: data.status || 'active',
+          profileImage: data.profileImage || null,
+        };
+      });
       setUsers(userList);
     });
 
@@ -102,34 +122,54 @@ export default function AdminUsers() {
     };
   }, [navigate]);
 
+  // Fetch products for selected user with images and info
+  const fetchUserProducts = async (userId) => {
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where('sellerId', '==', userId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const products = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Unnamed Product',
+          imageUrl: data.imageUrl || null,
+          price: data.price || 0,
+          description: data.description || 'No description available',
+          category: data.category || 'Uncategorized',
+        };
+      });
+      setSelectedUser((prev) => prev ? { ...prev, products } : null);
+    });
+    return unsubscribe;
+  };
+
   // Close modal with ESC key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showEditModal) {
+      if (e.key === 'Escape' && (showUserModal || showEditModal)) {
+        setShowUserModal(false);
         setShowEditModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showEditModal]);
+  }, [showUserModal, showEditModal]);
 
   // Validate email
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   // Validate password
-  const validatePassword = (password) => {
-    if (password && password.length < 6) {
-      return 'Password must be at least 6 characters long.';
-    }
-    return '';
-  };
+  const validatePassword = (password) => (password && password.length < 6 ? 'Password must be at least 6 characters.' : '');
 
   // Handle input changes
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  // Handle add admin input changes
+  const handleAddAdminChange = (field, value) => {
+    setAddAdminData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
@@ -142,15 +182,25 @@ export default function AdminUsers() {
   // Validate form
   const validateForm = (data) => {
     const newErrors = {};
-    if (!data.firstName.trim()) newErrors.firstName = 'First name is required.';
-    if (!data.lastName.trim()) newErrors.lastName = 'Last name is required.';
+    if (!data.firstName?.trim()) newErrors.firstName = 'First name is required.';
+    if (!data.lastName?.trim()) newErrors.lastName = 'Last name is required.';
     if (!data.email) newErrors.email = 'Email is required.';
     else if (!validateEmail(data.email)) newErrors.email = 'Please enter a valid email address.';
     if (data.password) {
       const passwordError = validatePassword(data.password);
       if (passwordError) newErrors.password = passwordError;
     }
-    if (!['buyer', 'seller', 'admin'].includes(data.role)) newErrors.role = 'Invalid role selected.';
+    if (!['buyer', 'seller', 'pro seller', 'admin'].includes(data.role)) newErrors.role = 'Invalid role selected.';
+    return newErrors;
+  };
+
+  // Validate add admin form
+  const validateAddAdmin = (data) => {
+    const newErrors = {};
+    if (!data.email) newErrors.email = 'Email is required.';
+    else if (!validateEmail(data.email)) newErrors.email = 'Please enter a valid email address.';
+    if (!data.password) newErrors.password = 'Password is required.';
+    else if (validatePassword(data.password)) newErrors.password = validatePassword(data.password);
     return newErrors;
   };
 
@@ -179,7 +229,8 @@ export default function AdminUsers() {
         email: formData.email,
         name: `${formData.firstName} ${formData.lastName}`,
         username,
-        role: formData.role,
+        role: formData.role || 'buyer',
+        status: 'active',
         preRegistered: true,
         createdAt: new Date().toISOString(),
         uid: newUser.uid,
@@ -189,6 +240,7 @@ export default function AdminUsers() {
 
       addAlert(`User ${formData.email} added successfully! 🎉`, 'success');
       setFormData({ email: '', firstName: '', lastName: '', password: '', role: 'buyer' });
+      setIsFormOpen(false);
     } catch (err) {
       console.error('Error adding user:', err);
       if (err.code === 'auth/email-already-in-use') {
@@ -200,6 +252,38 @@ export default function AdminUsers() {
       } else {
         addAlert('Failed to add user.', 'error');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle add admin submission
+  const handleAddAdmin = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    setLoading(true);
+
+    const newErrors = validateAddAdmin(addAdminData);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
+      addAlert('Please fix the form errors.', 'error');
+      return;
+    }
+
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const idToken = await getIdToken(user);
+      const response = await axios.post(`${BACKEND_URL}/api/auth/admin/add-admin`, addAdminData, {
+        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      });
+      addAlert(response.data.message, 'success');
+      setAddAdminData({ email: '', password: '' });
+      setIsAddAdminOpen(false);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.response?.data?.details || 'Failed to add admin';
+      addAlert(errorMsg, 'error');
+      console.error('Error adding admin:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -246,17 +330,65 @@ export default function AdminUsers() {
     }
   };
 
+  // Handle suspend/unsuspend user
+  const handleSuspend = async (userId, email, currentStatus) => {
+    if (!window.confirm(`Are you sure you want to ${currentStatus === 'suspended' ? 'unsuspend' : 'suspend'} ${email}?`)) return;
+    setLoading(true);
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const idToken = await getIdToken(user);
+      const response = await axios.post(`${BACKEND_URL}/admin/suspend-user/${userId}`, { action: currentStatus === 'suspended' ? 'unsuspend' : 'suspend' }, {
+        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      });
+      addAlert(response.data.message, 'success');
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.response?.data?.details || 'Failed to update user status';
+      addAlert(errorMsg, 'error');
+      console.error('Error suspending/unsuspending user:', error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle delete user
   const handleDelete = async (userId, email) => {
     if (!window.confirm(`Are you sure you want to delete ${email}? This cannot be undone.`)) return;
-
     setLoading(true);
     try {
-      await deleteDoc(doc(db, 'users', userId));
-      addAlert(`User ${email} deleted successfully! 🗑️`, 'success');
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+      console.log('Current User:', { uid: currentUser.uid, email: currentUser.email });
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      const idToken = await getIdToken(user);
+      const response = await axios.delete(`${BACKEND_URL}/admin/delete-user/${userId}`, {
+        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      });
+      addAlert(response.data.message, 'success');
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to delete user';
+      addAlert(errorMsg, 'error');
+      console.error('Error deleting user:', error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open user info modal
+  const openUserModal = async (user) => {
+    setLoading(true);
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.id));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const unsubscribe = await fetchUserProducts(user.id);
+        setSelectedUser({ ...user, ...userData, unsubscribe });
+      }
+      setShowUserModal(true);
     } catch (err) {
-      console.error('Error deleting user:', err);
-      addAlert('Failed to delete user.', 'error');
+      console.error('Error fetching user details:', err);
+      addAlert('Failed to fetch user details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -278,8 +410,8 @@ export default function AdminUsers() {
 
   // Filter users by search query
   const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (user.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
   if (!user) {
@@ -328,10 +460,7 @@ export default function AdminUsers() {
 
           {/* Add User Form */}
           <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-8">
-            <div
-              className="flex justify-between items-center cursor-pointer"
-              onClick={() => setIsFormOpen(!isFormOpen)}
-            >
+            <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsFormOpen(!isFormOpen)}>
               <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
                 <i className={`bx bx-chevron-${isFormOpen ? 'up' : 'down'} text-blue-500 text-lg sm:text-xl`}></i>
                 Add New User
@@ -357,12 +486,7 @@ export default function AdminUsers() {
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
                         />
-                        {errors.firstName && (
-                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="bx bx-error-circle"></i>
-                            {errors.firstName}
-                          </p>
-                        )}
+                        {errors.firstName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.firstName}</p>}
                       </div>
                       <div className="relative group">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -379,12 +503,7 @@ export default function AdminUsers() {
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
                         />
-                        {errors.lastName && (
-                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="bx bx-error-circle"></i>
-                            {errors.lastName}
-                          </p>
-                        )}
+                        {errors.lastName && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.lastName}</p>}
                       </div>
                       <div className="relative group">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -401,44 +520,24 @@ export default function AdminUsers() {
                           } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                           disabled={loading}
                         />
-                        {errors.email && (
-                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="bx bx-error-circle"></i>
-                            {errors.email}
-                          </p>
-                        )}
+                        {errors.email && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.email}</p>}
                       </div>
                       <div className="relative group">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           Password <span className="text-red-500">*</span>
                           <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Password (min 6 characters)"></i>
                         </label>
-                        <div className="relative mt-1">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={formData.password}
-                            onChange={(e) => handleChange('password', e.target.value)}
-                            placeholder="Enter password"
-                            className={`w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
-                              errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                            } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                            disabled={loading}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
-                            title={showPassword ? 'Hide password' : 'Show password'}
-                          >
-                            <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'}`}></i>
-                          </button>
-                        </div>
-                        {errors.password && (
-                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="bx bx-error-circle"></i>
-                            {errors.password}
-                          </p>
-                        )}
+                        <input
+                          type="password"
+                          value={formData.password}
+                          onChange={(e) => handleChange('password', e.target.value)}
+                          placeholder="Enter password"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                            errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors.password && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.password}</p>}
                       </div>
                       <div className="relative group sm:col-span-2">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -455,14 +554,10 @@ export default function AdminUsers() {
                         >
                           <option value="buyer">Buyer</option>
                           <option value="seller">Seller</option>
+                          <option value="pro seller">Pro Seller</option>
                           <option value="admin">Admin</option>
                         </select>
-                        {errors.role && (
-                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                            <i className="bx bx-error-circle"></i>
-                            {errors.role}
-                          </p>
-                        )}
+                        {errors.role && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.role}</p>}
                       </div>
                     </div>
                   </div>
@@ -470,7 +565,7 @@ export default function AdminUsers() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`py-2 px-4 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm`}
+                      className="py-2 px-4 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm"
                     >
                       {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-plus"></i>}
                       {loading ? 'Adding...' : 'Add User'}
@@ -481,7 +576,71 @@ export default function AdminUsers() {
             )}
           </div>
 
-          {/* Users Table */}
+          {/* Add Admin Form */}
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-8">
+            <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsAddAdminOpen(!isAddAdminOpen)}>
+              <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <i className={`bx bx-chevron-${isAddAdminOpen ? 'up' : 'down'} text-blue-500 text-lg sm:text-xl`}></i>
+                Add New Admin
+              </h3>
+            </div>
+            {isAddAdminOpen && (
+              <div className="mt-4 animate-slide-down">
+                <form onSubmit={handleAddAdmin} className="space-y-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="relative group">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          Email <span className="text-red-500">*</span>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Admin's email address"></i>
+                        </label>
+                        <input
+                          type="email"
+                          value={addAdminData.email}
+                          onChange={(e) => handleAddAdminChange('email', e.target.value)}
+                          placeholder="admin@example.com"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                            errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors.email && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.email}</p>}
+                      </div>
+                      <div className="relative group">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          Password <span className="text-red-500">*</span>
+                          <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Password (min 6 characters)"></i>
+                        </label>
+                        <input
+                          type="password"
+                          value={addAdminData.password}
+                          onChange={(e) => handleAddAdminChange('password', e.target.value)}
+                          placeholder="Enter password"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                            errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors.password && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><i className="bx bx-error-circle"></i>{errors.password}</p>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="py-2 px-4 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2 transition-all duration-200 shadow-sm"
+                    >
+                      {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-plus"></i>}
+                      {loading ? 'Adding...' : 'Add Admin'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Users Grid */}
           <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 mb-2 sm:mb-4 flex items-center gap-2">
               <i className="bx bx-list-ul text-blue-500 text-lg sm:text-xl"></i>
@@ -490,127 +649,49 @@ export default function AdminUsers() {
             {filteredUsers.length === 0 ? (
               <p className="text-gray-600 dark:text-gray-300 italic text-sm">No users found.</p>
             ) : (
-              <>
-                {/* Desktop/Tablets Table (md and up) */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
-                    <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-1 sm:px-2 py-2 min-w-[120px]">Email</th>
-                        <th className="px-1 sm:px-2 py-2 min-w-[100px]">Name</th>
-                        <th className="px-1 sm:px-2 py-2 min-w-[80px] hidden lg:table-cell">Username</th>
-                        <th className="px-1 sm:px-2 py-2 min-w-[70px]">Role</th>
-                        <th className="px-1 sm:px-2 py-2 min-w-[100px] hidden xl:table-cell">Created At</th>
-                        <th className="px-1 sm:px-2 py-2 min-w-[80px]">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-sm transition-all duration-200">
-                          <td className="px-1 sm:px-2 py-2 break-words">{user.email}</td>
-                          <td className="px-1 sm:px-2 py-2 break-words">{user.name}</td>
-                          <td className="px-1 sm:px-2 py-2 break-words hidden lg:table-cell">{user.username}</td>
-                          <td className="px-1 sm:px-2 py-2">
-                            <span
-                              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                user.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                                user.role === 'seller' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 hidden xl:table-cell">
-                            {new Date(user.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 flex gap-2">
-                            <button
-                              onClick={() => openEditModal(user)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 text-xs sm:text-sm"
-                              disabled={loading}
-                              title="Edit user"
-                            >
-                              <i className="bx bx-edit"></i>
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(user.id, user.email)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1 text-xs sm:text-sm"
-                              disabled={loading}
-                              title="Delete user"
-                            >
-                              <i className="bx bx-trash"></i>
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map((user) => {
+                  const roleColor = user.role === 'buyer' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' :
+                    user.role === 'seller' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                    user.role === 'pro seller' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                    user.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-700';
+                  const imageUrl = user.profileImage || null;
+                  const initials = getInitials(user.email, user.name);
 
-                {/* Mobile Card Layout (below md) */}
-                <div className="block md:hidden space-y-3">
-                  {filteredUsers.map((user) => (
+                  return (
                     <div
                       key={user.id}
-                      className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600"
+                      className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => openUserModal(user)}
                     >
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-3 mb-3">
+                        {imageUrl ? (
+                          <img src={imageUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">
+                            {initials}
+                          </div>
+                        )}
                         <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Email:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.email}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Name:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.name}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Username:</span>
-                          <p className="text-gray-600 dark:text-gray-400 break-words text-xs sm:text-sm">{user.username}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Role:</span>
-                          <p className="text-gray-600 dark:text-gray-400 capitalize text-xs sm:text-sm">
-                            <span
-                              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                user.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                                user.role === 'seller' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              {user.role}
-                            </span>
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs sm:text-sm">Created At:</span>
-                          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                            {new Date(user.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </p>
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user.name}</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Email: {user.email}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2 mt-3">
+                      <span className={`text-xs px-2 py-1 rounded-full ${roleColor}`}>
+                        {user.role}
+                      </span>
+                      <div className="mt-3 flex justify-end gap-2">
                         <button
-                          onClick={() => openEditModal(user)}
-                          className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-lg text-xs sm:text-sm hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm"
-                          disabled={loading}
+                          onClick={(e) => { e.stopPropagation(); handleSuspend(user.id, user.email, user.status); }}
+                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 flex items-center gap-1 text-xs"
+                          disabled={loading || user.status === 'suspended'}
                         >
-                          <i className="bx bx-edit"></i>
-                          Edit
+                          <i className="bx bx-block"></i>
+                          {user.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
                         </button>
                         <button
-                          onClick={() => handleDelete(user.id, user.email)}
-                          className="flex-1 py-2 px-3 bg-red-600 text-white rounded-lg text-xs sm:text-sm hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(user.id, user.email); }}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1 text-xs"
                           disabled={loading}
                         >
                           <i className="bx bx-trash"></i>
@@ -618,182 +699,182 @@ export default function AdminUsers() {
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* Edit User Modal */}
-          {showEditModal && (
+          {/* User Info Modal */}
+          {showUserModal && selectedUser && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md w-full max-w-sm sm:max-w-md">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md w-full max-w-md">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                    <i className="bx bx-edit text-blue-500 text-lg sm:text-xl"></i>
-                    Edit User
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">User Details</h3>
+                  <button
+                    onClick={() => { setShowUserModal(false); selectedUser.unsubscribe && selectedUser.unsubscribe(); }}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+                  >
+                    <i className="bx bx-x"></i>
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <p><strong>Name:</strong> {selectedUser.name}</p>
+                  <p><strong>Email:</strong> {selectedUser.email}</p>
+                  <p><strong>Username:</strong> {selectedUser.username}</p>
+                  <p><strong>Role:</strong> {selectedUser.role}</p>
+                  <div>
+                    <strong>Products:</strong>
+                    {selectedUser.products && selectedUser.products.length > 0 ? (
+                      <ul className="mt-2 space-y-4">
+                        {selectedUser.products.map((product) => (
+                          <li key={product.id} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                            <div className="flex items-start gap-3">
+                              {product.imageUrl ? (
+                                <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-cover rounded" />
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-400">
+                                  No Image
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-gray-700 dark:text-gray-200">{product.name}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Price: ₦{product.price?.toLocaleString('en-NG') || 'N/A'}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Category: {product.category}</p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">No products uploaded.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => { setShowUserModal(false); openEditModal(selectedUser); selectedUser.unsubscribe && selectedUser.unsubscribe(); }}
+                    className="py-2 px-3 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => { setShowUserModal(false); selectedUser.unsubscribe && selectedUser.unsubscribe(); }}
+                    className="py-2 px-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit User Modal */}
+          {showEditModal && editUser && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Edit User</h3>
                   <button
                     onClick={() => setShowEditModal(false)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-lg sm:text-xl"
-                    title="Close"
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
                   >
                     <i className="bx bx-x"></i>
                   </button>
                 </div>
                 <form onSubmit={handleEditSubmit} className="space-y-4">
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      First Name <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's first name"></i>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={editUser.firstName}
                       onChange={(e) => handleEditChange('firstName', e.target.value)}
-                      placeholder="John"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg focus:ring-2 ${
                         errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
                       disabled={loading}
                     />
-                    {errors.firstName && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.firstName}
-                      </p>
-                    )}
+                    {errors.firstName && <p className="text-red-600 text-sm mt-1">{errors.firstName}</p>}
                   </div>
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Last Name <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's last name"></i>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={editUser.lastName}
                       onChange={(e) => handleEditChange('lastName', e.target.value)}
-                      placeholder="Doe"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg focus:ring-2 ${
                         errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
                       disabled={loading}
                     />
-                    {errors.lastName && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.lastName}
-                      </p>
-                    )}
+                    {errors.lastName && <p className="text-red-600 text-sm mt-1">{errors.lastName}</p>}
                   </div>
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Email <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="User's email address"></i>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email <span className="text-red-500">*</span></label>
                     <input
                       type="email"
                       value={editUser.email}
                       onChange={(e) => handleEditChange('email', e.target.value)}
-                      placeholder="john.doe@example.com"
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg focus:ring-2 ${
                         errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
                       disabled={loading}
                     />
-                    {errors.email && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.email}
-                      </p>
-                    )}
+                    {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
                   </div>
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Username
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Unique username (auto-generated if blank)"></i>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
                     <input
                       type="text"
                       value={editUser.username}
                       onChange={(e) => handleEditChange('username', e.target.value)}
-                      placeholder="Auto-generated if blank"
-                      className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                      className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       disabled={loading}
                     />
                   </div>
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      New Password (optional)
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Enter new password to send reset email"></i>
-                    </label>
-                    <div className="relative mt-1">
-                      <input
-                        type={showEditPassword ? 'text' : 'password'}
-                        value={editUser.password}
-                        onChange={(e) => handleEditChange('password', e.target.value)}
-                        placeholder="Leave blank to keep current password"
-                        className={`w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
-                          errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowEditPassword(!showEditPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
-                        title={showEditPassword ? 'Hide password' : 'Show password'}
-                      >
-                        <i className={`bx ${showEditPassword ? 'bx-hide' : 'bx-show'}`}></i>
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.password}
-                      </p>
-                    )}
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password (optional)</label>
+                    <input
+                      type="password"
+                      value={editUser.password}
+                      onChange={(e) => handleEditChange('password', e.target.value)}
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg focus:ring-2 ${
+                        errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      disabled={loading}
+                    />
+                    {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
                   </div>
                   <div className="relative group">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Role <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help text-xs sm:text-sm" title="Select user role"></i>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role <span className="text-red-500">*</span></label>
                     <select
                       value={editUser.role}
                       onChange={(e) => handleEditChange('role', e.target.value)}
-                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 ${
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg focus:ring-2 ${
                         errors.role ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
                       disabled={loading}
                     >
                       <option value="buyer">Buyer</option>
                       <option value="seller">Seller</option>
+                      <option value="pro seller">Pro Seller</option>
                       <option value="admin">Admin</option>
                     </select>
-                    {errors.role && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors.role}
-                      </p>
-                    )}
+                    {errors.role && <p className="text-red-600 text-sm mt-1">{errors.role}</p>}
                   </div>
-                  <div className="flex justify-end gap-2 sm:gap-4">
+                  <div className="mt-4 flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setShowEditModal(false)}
-                      className="py-2 px-3 rounded-lg text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-xs sm:text-sm flex items-center gap-1 transition-all duration-200 shadow-sm"
-                      disabled={loading}
+                      className="py-2 px-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                     >
-                      <i className="bx bx-x"></i>
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`py-2 px-3 rounded-lg text-white text-xs sm:text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1 transition-all duration-200 shadow-sm`}
+                      className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
-                      {loading ? <i className="bx bx-loader bx-spin"></i> : <i className="bx bx-save"></i>}
                       {loading ? 'Updating...' : 'Update User'}
                     </button>
                   </div>

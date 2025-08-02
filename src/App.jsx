@@ -122,7 +122,7 @@ const Layout = ({ children }) => {
     '/product-bump',
     '/product-bump-info',
     '/seller-transactions',
-    '/seller/edit-product:id',
+    '/seller/edit-product/:id',
     '/pro-seller-analytics',
     '/sellers/orders',
     '/sellers/products',

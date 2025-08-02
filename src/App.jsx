@@ -118,7 +118,7 @@ const Layout = ({ children }) => {
     '/bulk-upload',
     '/product-bump',
     '/seller-transactions',
-    '/seller/edit-product:id',
+    '/seller/edit-product/:id',
     '/pro-seller-analytics',
     '/sellers/orders',
     '/sellers/products',

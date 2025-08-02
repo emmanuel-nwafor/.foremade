@@ -1,0 +1,104 @@
+/* Foremade Company Theme - Centralized Styles */
+:root {
+  --primary-color: #121928;
+  --secondary-color: #FF5722;
+  --accent-color: #FF8A65;
+  --background-light: #FFFFFF;
+  --background-dark: #121928;
+  --text-main: #121928;
+  --text-light: #FFFFFF;
+  --border-radius: 0.75rem;
+  --card-bg: #F0F0F0;
+  --card-border: #CCCCCC;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+body {
+  background: var(--background-light);
+  color: var(--text-main);
+  font-family: var(--font-family);
+}
+
+.company-card, .policy-card, .seller-card, .admin-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.company-banner, .policy-banner, .seller-banner, .admin-banner {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  padding: 1.5rem 2rem;
+  border-radius: var(--border-radius);
+  font-weight: bold;
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.company-btn, .policy-btn, .seller-btn, .admin-btn {
+  background: var(--accent-color);
+  color: var(--text-light);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.company-btn:hover, .policy-btn:hover, .seller-btn:hover, .admin-btn:hover {
+  background: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.company-link, .policy-link, .seller-link, .admin-link {
+  color: var(--accent-color);
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+.company-link:hover, .policy-link:hover, .seller-link:hover, .admin-link:hover {
+  color: var(--secondary-color);
+}
+
+.company-header, .policy-header, .seller-header, .admin-header {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius);
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+}
+
+.company-footer, .policy-footer, .seller-footer, .admin-footer {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+/* Utility classes for spacing and layout */
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.p-2 { padding: 0.5rem; }
+.p-4 { padding: 1rem; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .company-card, .policy-card, .seller-card, .admin-card {
+    padding: 1rem;
+  }
+  .company-banner, .policy-banner, .seller-banner, .admin-banner {
+    font-size: 1rem;
+    padding: 1rem;
+  }
+}

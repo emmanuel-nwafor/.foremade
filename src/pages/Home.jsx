@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import '/src/theme.css';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import BuyerBanner from '../components/home/EnhancedBuyerBanner';
+import CookieBanner from '../components/CookieBanner';
 import Carousel from '../components/home/Carousel';
 import Category from '../components/home/Category';
 import SellerBanner from '../components/home/EnhancedSellerBanner';
@@ -127,18 +129,20 @@ const Home = () => {
   };
 
   return (
-    <div>
+    <div className="home-main-container bg-background-light">
+      {/* Cookie consent banner for new users */}
+      <CookieBanner />
       {/* Welcome banner for new visitors (eBay-inspired) */}
       {isNewVisitor && (
-        <div className="bg-blue-50 p-4 mb-4">
+        <div className="welcome-banner">
           <div className="container mx-auto flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-blue-800">Welcome to Foremade!</h3>
-              <p className="text-sm text-blue-600">Discover amazing deals from trusted sellers</p>
+              <h3 className="font-bold text-primary">Welcome to Foremade!</h3>
+              <p className="text-sm text-secondary">Discover amazing deals from trusted sellers</p>
             </div>
             <button 
               onClick={() => setIsNewVisitor(false)}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-primary hover:text-primary-dark"
             >
               <i className="bx bx-x text-xl"></i>
             </button>
@@ -148,61 +152,55 @@ const Home = () => {
 
       {/* Main carousel */}
       <Carousel />
-      
       {/* Quick shopping categories with transparent images */}
       <CategoryGrid />
-
       {/* Recommendations */}
       <RecommendedForYou />
-      
       {/* Daily Deals - eBay inspired */}
       <DailyDeals />
-
       {/* Trending gadgets */}
       <TrendingGadgets />
-      
       {/* Trending fashion */}
       <TrendingFashion />
-      
       {/* Category promotions */}
       <Category />
-
       {/* Recently viewed section */}
       <RecentlyViewed />
-      
       {/* Empowerment hub */}
       <EmpowermentHubPreview />
-      
       {/* Enhanced Buyer Banner - showing products to buy */}
       <BuyerBanner />
-
       {/* Manufacturer's Pick - inserted between banners */}
       <div className="my-8 px-2 sm:px-4 lg:px-8">
         <ManufacturerPick />
       </div>
-
       {/* Enhanced Seller Banner - encouraging selling */}
       <SellerBanner />
-      
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
-
       {/* Privacy Policies and Terms & Conditions Links */}
-      <div className="bg-gray-50 py-6 border-t border-gray-200">
+      <div className="footer-bar">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-row justify-center items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-row justify-center items-center gap-4 text-sm">
             <Link 
               to="/privacy-policy" 
-              className="hover:text-blue-600 transition-colors duration-200 underline"
+              className="footer-link"
             >
               Privacy Policy
             </Link>
-            <span className="text-gray-400">|</span>
+            <span className="footer-separator">|</span>
             <Link 
               to="/terms-conditions" 
-              className="hover:text-blue-600 transition-colors duration-200 underline"
+              className="footer-link"
             >
               Terms & Conditions
+            </Link>
+            <span className="footer-separator">|</span>
+            <Link 
+              to="/user-agreement" 
+              className="footer-link"
+            >
+              User Agreement
             </Link>
           </div>
         </div>

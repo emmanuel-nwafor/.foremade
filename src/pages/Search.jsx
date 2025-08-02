@@ -75,7 +75,7 @@ const Search = () => {
             placeholder="Search for items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 xs:py-3 rounded-full bg-white shadow-sm text-sm xs:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 xs:py-3 rounded-full bg-white shadow-sm text-sm xs:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 justify-end"
           />
           <i className="bx bx-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg xs:text-xl"></i>
         </div>

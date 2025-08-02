@@ -5,6 +5,7 @@ import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import axios from 'axios';
+import SellerSidebar from './SellerSidebar';
 
 const CSV_FIELDS = [
   'name', 'description', 'price', 'stock', 'category', 'subcategory', 'colors', 'sizes', 'condition', 'tags', 'manualSize', 'imageUrls', 'videoUrl', 'country', 'state', 'city', 'address', 'specifications'
@@ -53,7 +54,7 @@ const BulkUpload = () => {
               10 + sampleCount,
               cat,
               subcat,
-              'Red|Blue',
+              'Red|blue',
               'M|L',
               'New',
               'Sample|Demo',
@@ -369,221 +370,224 @@ const BulkUpload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 lg:px-8">
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
-        </div>
-        <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Bulk Product Upload</h1>
-          <p className="text-gray-600 mt-2">Upload multiple products at once for faster inventory management</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Download Template Card */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-blue-900">Download Template</h3>
-                <p className="text-sm text-blue-700">Get the CSV template to format your data correctly</p>
-              </div>
-            </div>
-            <button
-              onClick={downloadTemplate}
-              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Download Template
-            </button>
+    <div className="min-h-screen flex bg-gray-50">
+      <SellerSidebar />
+      <div className="flex-1 ml-0 md:ml-64 p-4 md:p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
           </div>
-          {/* Upload CSV Card */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-blue-900">Upload CSV</h3>
-                <p className="text-sm text-blue-700">Upload your formatted CSV file with product data</p>
-              </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="mt-4 w-full px-4 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Bulk Product Upload</h1>
+            <p className="text-gray-600 mt-2">Upload multiple products at once for faster inventory management</p>
           </div>
-          {/* Submit for Review Card */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-blue-900">Submit for Review</h3>
-                <p className="text-sm text-blue-700">Submit your products for admin approval</p>
-              </div>
-            </div>
-            <button
-              onClick={handleBulkUpload}
-              disabled={uploading || products.length === 0}
-              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {uploading ? 'Submitting...' : `Submit ${products.length} Products`}
-            </button>
-          </div>
-        </div>
-        {/* Products Preview & Edit */}
-        {products.length > 0 && (
-          <div className="space-y-6">
-            {products.map((product, idx) => (
-              <div key={idx} className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4">
-                <div className="flex-1 space-y-2">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Name *</label>
-                      <input type="text" value={product.name || ''} onChange={e => handleFieldChange(idx, 'name', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.name ? 'border-red-500' : 'border-gray-300'}`} />
-                      {productErrors[idx]?.name && <div className="text-xs text-red-600">{productErrors[idx].name}</div>}
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Category *</label>
-                      <input type="text" value={product.category || ''} onChange={e => handleFieldChange(idx, 'category', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.category ? 'border-red-500' : 'border-gray-300'}`} />
-                      {productErrors[idx]?.category && <div className="text-xs text-red-600">{productErrors[idx].category}</div>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Description *</label>
-                      <textarea value={product.description || ''} onChange={e => handleFieldChange(idx, 'description', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.description ? 'border-red-500' : 'border-gray-300'}`} rows={2} />
-                      {productErrors[idx]?.description && <div className="text-xs text-red-600">{productErrors[idx].description}</div>}
-                    </div>
-                    <div className="flex-1 flex flex-col gap-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700">Price *</label>
-                        <input type="number" value={product.price || ''} onChange={e => handleFieldChange(idx, 'price', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.price ? 'border-red-500' : 'border-gray-300'}`} />
-                        {productErrors[idx]?.price && <div className="text-xs text-red-600">{productErrors[idx].price}</div>}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700">Stock *</label>
-                        <input type="number" value={product.stock || ''} onChange={e => handleFieldChange(idx, 'stock', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.stock ? 'border-red-500' : 'border-gray-300'}`} />
-                        {productErrors[idx]?.stock && <div className="text-xs text-red-600">{productErrors[idx].stock}</div>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Colors *</label>
-                      <input type="text" value={product.colors?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'colors', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.colors ? 'border-red-500' : 'border-gray-300'}`} placeholder="e.g. Red | Blue" />
-                      {productErrors[idx]?.colors && <div className="text-xs text-red-600">{productErrors[idx].colors}</div>}
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Sizes</label>
-                      <input type="text" value={product.sizes?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'sizes', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. S | M | L" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Tags</label>
-                      <input type="text" value={product.tags?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'tags', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. Audio | Portable" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Manual Size</label>
-                      <input type="text" value={product.manualSize || ''} onChange={e => handleFieldChange(idx, 'manualSize', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Condition</label>
-                      <input type="text" value={product.condition || ''} onChange={e => handleFieldChange(idx, 'condition', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. New" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Subcategory</label>
-                      <input type="text" value={product.subcategory || ''} onChange={e => handleFieldChange(idx, 'subcategory', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
-                      {productErrors[idx]?.subcategory && <div className="text-xs text-red-600">{productErrors[idx].subcategory}</div>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Country *</label>
-                      <input type="text" value={product.country || ''} onChange={e => handleFieldChange(idx, 'country', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.country ? 'border-red-500' : 'border-gray-300'}`} />
-                      {productErrors[idx]?.country && <div className="text-xs text-red-600">{productErrors[idx].country}</div>}
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">State *</label>
-                      <input type="text" value={product.state || ''} onChange={e => handleFieldChange(idx, 'state', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.state ? 'border-red-500' : 'border-gray-300'}`} />
-                      {productErrors[idx]?.state && <div className="text-xs text-red-600">{productErrors[idx].state}</div>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">City</label>
-                      <input type="text" value={product.city || ''} onChange={e => handleFieldChange(idx, 'city', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700">Address</label>
-                      <input type="text" value={product.address || ''} onChange={e => handleFieldChange(idx, 'address', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700">Specifications (JSON)</label>
-                    <textarea value={typeof product.specifications === 'string' ? product.specifications : JSON.stringify(product.specifications || {})} onChange={e => handleFieldChange(idx, 'specifications', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" rows={2} />
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Download Template Card */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <svg className="w-6 h-6 text-[#112d4e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                 </div>
-                <div className="flex flex-col gap-2 w-full md:w-64">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700">Images *</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {/* Show previews for uploaded files or URLs */}
-                      {(product.imageFiles && product.imageFiles.length > 0
-                        ? product.imageFiles.map((file, i) => (
-                            file instanceof File
-                              ? <img key={i} src={URL.createObjectURL(file)} alt="preview" className="w-16 h-16 object-cover rounded border" />
-                              : null
-                          ))
-                        : product.imageUrls?.map((url, i) => (
-                            typeof url === 'string' && url
-                              ? <img key={i} src={url} alt="preview" className="w-16 h-16 object-cover rounded border" />
-                              : null
-                          ))
-                      )}
-                    </div>
-                    <input type="file" accept="image/*" multiple onChange={e => handleImageChange(idx, e.target.files)} className="w-full" />
-                    <input type="text" placeholder="Or paste image URLs separated by |" value={product.imageUrls?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'imageUrls', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full mt-1 text-xs border rounded px-2 py-1" />
-                    {productErrors[idx]?.imageUrls && <div className="text-xs text-red-600">{productErrors[idx].imageUrls}</div>}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700">Video</label>
-                    {product.videoFile && <video src={URL.createObjectURL(product.videoFile)} controls className="w-full h-24 object-cover rounded mb-1" />}
-                    {!product.videoFile && product.videoUrl && <video src={product.videoUrl} controls className="w-full h-24 object-cover rounded mb-1" />}
-                    <input type="file" accept="video/*" onChange={e => handleVideoChange(idx, e.target.files)} className="w-full" />
-                    <input type="text" placeholder="Or paste video URL" value={product.videoUrl || ''} onChange={e => handleFieldChange(idx, 'videoUrl', e.target.value)} className="w-full mt-1 text-xs border rounded px-2 py-1" />
-                  </div>
-                  <button onClick={() => handleRemoveProduct(idx)} type="button" className="mt-2 w-full px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs">Remove Product</button>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-blue-900">Download Template</h3>
+                  <p className="text-sm text-[#112d4e]">Get the CSV template to format your data correctly</p>
                 </div>
               </div>
-            ))}
+              <button
+                onClick={downloadTemplate}
+                className="mt-4 w-full px-4 py-2 bg-[#112d4e] text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Download Template
+              </button>
+            </div>
+            {/* Upload CSV Card */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-[#112d4e]">Upload CSV</h3>
+                  <p className="text-sm text-[#112d4e]">Upload your formatted CSV file with product data</p>
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="mt-4 w-full px-4 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {/* Submit for Review Card */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <svg className="w-6 h-6 text-[#112d4e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-[#112d4e]">Submit for Review</h3>
+                  <p className="text-sm text-[#112d4e]">Submit your products for admin approval</p>
+                </div>
+              </div>
+              <button
+                onClick={handleBulkUpload}
+                disabled={uploading || products.length === 0}
+                className="mt-4 w-full px-4 py-2 bg-[#112d4e] text-white rounded-md hover:bg-[#112d4e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {uploading ? 'Submitting...' : `Submit ${products.length} Products`}
+              </button>
+            </div>
           </div>
-        )}
-        {/* Instructions */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">Instructions</h3>
-          <div className="text-sm text-blue-700 space-y-2">
-            <p>• Download the CSV template and fill in your product data. Use <b>|</b> to separate multiple values (e.g. Red|Blue for colors).</p>
-            <p>• Ensure all required fields are filled (name, description, price, stock, category, colors, imageUrls, country, state).</p>
-            <p>• Maximum 100 products per upload.</p>
-            <p>• All products will be reviewed by admin before approval.</p>
-            <p>• Image URLs should be publicly accessible, or you can upload images after CSV upload.</p>
-            <p>• Specifications should be in valid JSON format.</p>
+          {/* Products Preview & Edit */}
+          {products.length > 0 && (
+            <div className="space-y-6">
+              {products.map((product, idx) => (
+                <div key={idx} className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Name *</label>
+                        <input type="text" value={product.name || ''} onChange={e => handleFieldChange(idx, 'name', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.name ? 'border-red-500' : 'border-gray-300'}`} />
+                        {productErrors[idx]?.name && <div className="text-xs text-red-600">{productErrors[idx].name}</div>}
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Category *</label>
+                        <input type="text" value={product.category || ''} onChange={e => handleFieldChange(idx, 'category', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.category ? 'border-red-500' : 'border-gray-300'}`} />
+                        {productErrors[idx]?.category && <div className="text-xs text-red-600">{productErrors[idx].category}</div>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Description *</label>
+                        <textarea value={product.description || ''} onChange={e => handleFieldChange(idx, 'description', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.description ? 'border-red-500' : 'border-gray-300'}`} rows={2} />
+                        {productErrors[idx]?.description && <div className="text-xs text-red-600">{productErrors[idx].description}</div>}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700">Price *</label>
+                          <input type="number" value={product.price || ''} onChange={e => handleFieldChange(idx, 'price', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.price ? 'border-red-500' : 'border-gray-300'}`} />
+                          {productErrors[idx]?.price && <div className="text-xs text-red-600">{productErrors[idx].price}</div>}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700">Stock *</label>
+                          <input type="number" value={product.stock || ''} onChange={e => handleFieldChange(idx, 'stock', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.stock ? 'border-red-500' : 'border-gray-300'}`} />
+                          {productErrors[idx]?.stock && <div className="text-xs text-red-600">{productErrors[idx].stock}</div>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Colors *</label>
+                        <input type="text" value={product.colors?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'colors', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.colors ? 'border-red-500' : 'border-gray-300'}`} placeholder="e.g. Red | blue" />
+                        {productErrors[idx]?.colors && <div className="text-xs text-red-600">{productErrors[idx].colors}</div>}
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Sizes</label>
+                        <input type="text" value={product.sizes?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'sizes', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. S | M | L" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Tags</label>
+                        <input type="text" value={product.tags?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'tags', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. Audio | Portable" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Manual Size</label>
+                        <input type="text" value={product.manualSize || ''} onChange={e => handleFieldChange(idx, 'manualSize', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Condition</label>
+                        <input type="text" value={product.condition || ''} onChange={e => handleFieldChange(idx, 'condition', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" placeholder="e.g. New" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Subcategory</label>
+                        <input type="text" value={product.subcategory || ''} onChange={e => handleFieldChange(idx, 'subcategory', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
+                        {productErrors[idx]?.subcategory && <div className="text-xs text-red-600">{productErrors[idx].subcategory}</div>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Country *</label>
+                        <input type="text" value={product.country || ''} onChange={e => handleFieldChange(idx, 'country', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.country ? 'border-red-500' : 'border-gray-300'}`} />
+                        {productErrors[idx]?.country && <div className="text-xs text-red-600">{productErrors[idx].country}</div>}
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">State *</label>
+                        <input type="text" value={product.state || ''} onChange={e => handleFieldChange(idx, 'state', e.target.value)} className={`w-full border rounded px-2 py-1 text-sm ${productErrors[idx]?.state ? 'border-red-500' : 'border-gray-300'}`} />
+                        {productErrors[idx]?.state && <div className="text-xs text-red-600">{productErrors[idx].state}</div>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">City</label>
+                        <input type="text" value={product.city || ''} onChange={e => handleFieldChange(idx, 'city', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-700">Address</label>
+                        <input type="text" value={product.address || ''} onChange={e => handleFieldChange(idx, 'address', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700">Specifications (JSON)</label>
+                      <textarea value={typeof product.specifications === 'string' ? product.specifications : JSON.stringify(product.specifications || {})} onChange={e => handleFieldChange(idx, 'specifications', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" rows={2} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 w-full md:w-64">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700">Images *</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {/* Show previews for uploaded files or URLs */}
+                        {(product.imageFiles && product.imageFiles.length > 0
+                          ? product.imageFiles.map((file, i) => (
+                              file instanceof File
+                                ? <img key={i} src={URL.createObjectURL(file)} alt="preview" className="w-16 h-16 object-cover rounded border" />
+                                : null
+                            ))
+                          : product.imageUrls?.map((url, i) => (
+                              typeof url === 'string' && url
+                                ? <img key={i} src={url} alt="preview" className="w-16 h-16 object-cover rounded border" />
+                                : null
+                            ))
+                        )}
+                      </div>
+                      <input type="file" accept="image/*" multiple onChange={e => handleImageChange(idx, e.target.files)} className="w-full" />
+                      <input type="text" placeholder="Or paste image URLs separated by |" value={product.imageUrls?.join(' | ') || ''} onChange={e => handleFieldChange(idx, 'imageUrls', e.target.value.split('|').map(v => v.trim()).filter(Boolean))} className="w-full mt-1 text-xs border rounded px-2 py-1" />
+                      {productErrors[idx]?.imageUrls && <div className="text-xs text-red-600">{productErrors[idx].imageUrls}</div>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700">Video</label>
+                      {product.videoFile && <video src={URL.createObjectURL(product.videoFile)} controls className="w-full h-24 object-cover rounded mb-1" />}
+                      {!product.videoFile && product.videoUrl && <video src={product.videoUrl} controls className="w-full h-24 object-cover rounded mb-1" />}
+                      <input type="file" accept="video/*" onChange={e => handleVideoChange(idx, e.target.files)} className="w-full" />
+                      <input type="text" placeholder="Or paste video URL" value={product.videoUrl || ''} onChange={e => handleFieldChange(idx, 'videoUrl', e.target.value)} className="w-full mt-1 text-xs border rounded px-2 py-1" />
+                    </div>
+                    <button onClick={() => handleRemoveProduct(idx)} type="button" className="mt-2 w-full px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs">Remove Product</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Instructions */}
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">Instructions</h3>
+            <div className="text-sm text-blue-900 space-y-2">
+              <p>• Download the CSV template and fill in your product data. Use <b>|</b> to separate multiple values (e.g. Red|blue for colors).</p>
+              <p>• Ensure all required fields are filled (name, description, price, stock, category, colors, imageUrls, country, state).</p>
+              <p>• Maximum 100 products per upload.</p>
+              <p>• All products will be reviewed by admin before approval.</p>
+              <p>• Image URLs should be publicly accessible, or you can upload images after CSV upload.</p>
+              <p>• Specifications should be in valid JSON format.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -591,4 +595,4 @@ const BulkUpload = () => {
   );
 };
 
-export default BulkUpload; 
+export default BulkUpload;

@@ -25,6 +25,9 @@ const Header = () => {
   const [categoryMoreOpen, setCategoryMoreOpen] = useState(false);
   const [mobileCategoryMoreOpen, setMobileCategoryMoreOpen] = useState(false);
 
+  // Calculate mobile header height for spacer
+  const mobileHeaderHeight = "3rem"; // Adjust based on your actual header height
+
   const categories = [
     "Camera & Photography",
     "Television & Accessories",
@@ -265,7 +268,7 @@ const Header = () => {
                 alt="Foremade"
               />
             </Link>
-            <nav className="flex items-center ml-2">
+            <nav className="flex items-center ml-2 mt-1">
               <Link to="/products" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Shop
               </Link>
@@ -347,9 +350,19 @@ const Header = () => {
           </button>
         </div>
       </div>
-      {/* Mobile Content */}
-      <div className="block sm:hidden pt-7">
-        <div className="block sm:hidden bg-[#eb9325] h-2 w-full"></div>
+
+      {/* SPACER FOR FIXED HEADER */}
+      <div 
+        className="sm:hidden" 
+        style={{ 
+          height: `calc(${mobileHeaderHeight} + env(safe-area-inset-top))`,
+          minHeight: '3rem' // Fallback
+        }} 
+      />
+
+      {/* Mobile Content - MOVED BELOW SPACER */}
+      <div className="block sm:hidden">
+        <div className="block sm:hidden bg-[#eb9325] h-2 w-full -mt-16 mb-14"></div>
         <FreeShipping />
       </div>
       <div className="block sm:hidden px-2 mt-2">
@@ -363,7 +376,6 @@ const Header = () => {
             onFocus={handleFocus}
             onBlur={handleBlur}
           />
-          <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm"></i>
           {showDropdown && (
             <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
               {loading ? (
@@ -400,7 +412,7 @@ const Header = () => {
             </div>
           )}
         </div>
-        <div className="flex overflow-x-auto gap-2 text-xs text-gray-700 py-2 scrollbar-hide">
+        <div className="flex overflow-x-auto gap-2 text-xs text-gray-700 py-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
           {categories.map((category) => (
             <Link
               key={category}

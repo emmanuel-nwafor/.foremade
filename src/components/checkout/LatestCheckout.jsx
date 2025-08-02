@@ -650,7 +650,7 @@ const Checkout = () => {
     if (!phone) errors.phone = "Phone number is required.";
     if (!address) errors.address = "Address is required.";
     if (!city) errors.city = "City is required.";
-    if (!postalCode) errors.postalCode = "Postal code is required.";
+    // Postal code is optional
     if (!["Nigeria", "United Kingdom"].includes(country))
       errors.country = "Select Nigeria or United Kingdom.";
     return { isValid: Object.keys(errors).length === 0, errors };
@@ -1473,7 +1473,7 @@ const Checkout = () => {
                   htmlFor="postalCode"
                   className="block text-sm font-medium text-gray-700 items-center gap-1"
                 >
-                  Postal Code <span className="text-red-500">*</span>
+                  Postal Code
                 </label>
                 <div className="relative">
                   <i className="bx bx-mail-send absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1481,7 +1481,7 @@ const Checkout = () => {
                     type="text"
                     id="postalCode"
                     name="postalCode"
-                    value={formData.postalCode}
+                    value={formData.postalCode || ''}
                     onChange={handleInputChange}
                     className={`mt-1 w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                       formErrors.postalCode

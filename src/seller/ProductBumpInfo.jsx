@@ -93,17 +93,49 @@ const buttonStyle = {
 
 function ProductBumpInfo() {
   const [hovered, setHovered] = React.useState("");
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const handleHover = (id) => setHovered(id);
   const handleLeave = () => setHovered("");
 
   return (
-    <div style={mainStyle} className="flex min-h-screen">
-      <div className="hidden md:block md:w-64 bg-white border-r max-h-screen overflow-y-auto">
-        <SellerSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar Container */}
+      <div className="relative">
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#112d4e] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+        >
+          {sidebarOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+
+        {/* Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+        )}
+        
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static top-0 left-0 h-full z-40 md:z-0 w-64 bg-[#112d4e] shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}>
+          <SellerSidebar />
+        </div>
       </div>
-      <div className="flex-1 flex justify-center items-start py-10 bg-white">
+      
+      {/* Main Content */}
+      <div className="flex-1 ml-0 md:ml-64 flex justify-center items-start py-10 bg-gray-50">
         <div style={cardStyle}>
-          <h1 style={h1Style}>🔼 Product Bumps</h1>
+          <h1 style={h1Style}><TrendingUp size={32} style={{display: 'inline', marginRight: 12, verticalAlign: 'middle'}} /> Product Bumps</h1>
           <p style={{ marginBottom: 24, fontSize: 18, color: "#181818" }}>Get more eyes on your listings. Sell faster.</p>
 
           <div style={sectionStyle}>
@@ -141,11 +173,11 @@ function ProductBumpInfo() {
               </li>
               <li>Update your images, title, price, and description before activating a bump.</li>
               <li>
-                You can <span style={highlightStyle}>lower</span> the price while a bump is active—but you can’t raise it until the bump ends.
+                You can <span style={highlightStyle}>lower</span> the price while a bump is active—but you can't raise it until the bump ends.
               </li>
             </ul>
             <div style={noteStyle}>
-              ⚠️ Lowering the price doesn’t reduce the cost of the bump. No refunds are given for price changes after activation.
+              <AlertCircle size={16} style={{display: 'inline', marginRight: 6, verticalAlign: 'middle'}} /> Lowering the price doesn't reduce the cost of the bump. No refunds are given for price changes after activation.
             </div>
           </div>
 
@@ -241,4 +273,4 @@ function ProductBumpInfo() {
   );
 }
 
-export default ProductBumpInfo; 
+export default ProductBumpInfo;

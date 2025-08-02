@@ -32,7 +32,7 @@ export default function CurrencyConverter() {
         >
           {(availableCurrencies.length > 0 ? availableCurrencies : fallbackCurrencies).map((cur) => (
             <option key={cur.code} value={cur.code}>
-              {cur.label}
+              {cur.code}
             </option>
           ))}
         </select>

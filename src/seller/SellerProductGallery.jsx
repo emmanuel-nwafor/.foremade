@@ -120,14 +120,14 @@ export default function SellerProductGallery() {
           <button onClick={handleRefresh} title="Refresh" className="ml-0 md:ml-auto bg-white border border-blue-200 rounded-full p-2 md:p-3 hover:bg-blue-100 transition focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 mt-2 md:mt-0">
             <RefreshCw className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
           </button>
-          <Link to="/products-upload" className="hidden sm:flex bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 md:px-10 md:py-5 rounded-xl hover:from-blue-700 hover:to-purple-700 transition duration-300 items-center gap-3 shadow-xl focus:outline-blue-400 focus:ring-4 focus:ring-blue-300 ml-4 font-bold text-lg md:text-xl animate-none hover:animate-pulseBtn">
+          <Link to="/products-upload" className="hidden sm:flex bg-[#112d4e] text-white px-8 py-4 md:px-10 md:py-5 rounded-xl hover:bg-[#1a4577] transition duration-300 items-center gap-3 shadow-xl focus:outline-[#112d4e] focus:ring-4 focus:ring-blue-300 ml-4 font-bold text-lg md:text-xl">
             <PlusCircle className="w-7 h-7 md:w-8 md:h-8" /> <span>Add New Product</span>
           </Link>
         </div>
         {/* Floating Add Button (Mobile/Tablet): use better + icon */}
         <Link
           to="/products-upload"
-          className="sm:hidden fixed bottom-8 right-4 md:bottom-12 md:right-12 z-50 rounded-full bg-gradient-to-br from-blue-600 via-purple-500 to-pink-500 text-white p-7 shadow-2xl hover:from-blue-700 hover:to-pink-600 transition focus:outline-blue-400 focus:ring-4 focus:ring-blue-300 flex items-center justify-center animate-pulseBtn"
+          className="sm:hidden fixed bottom-8 right-4 md:bottom-12 md:right-12 z-50 rounded-full bg-[#112d4e] text-white p-7 shadow-2xl hover:bg-[#1a4577] transition focus:outline-[#112d4e] focus:ring-4 focus:ring-blue-300 flex items-center justify-center animate-pulseBtn"
           title="Add New Product"
           aria-label="Add New Product"
           tabIndex={0}
@@ -214,7 +214,7 @@ export default function SellerProductGallery() {
               <div className="flex flex-col items-center justify-center mt-10 mb-10 animate-slide-in col-span-full">
                 <ImageIcon className="w-24 h-24 mb-4 text-blue-200" />
                 <p className="text-gray-600 text-center text-lg">No products uploaded yet.<br/>Start by adding your first product!</p>
-                <Link to="/products-upload" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center gap-2 shadow-lg focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 mt-4">
+                <Link to="/products-upload" className="bg-[#112d4e] text-white px-6 py-3 rounded-lg hover:bg-[#1a4577] transition duration-300 flex items-center gap-2 shadow-lg focus:outline-[#112d4e] focus:ring-2 focus:ring-blue-300 mt-4">
                   <PlusCircle className="w-5 h-5" /> Add Your First Product
                 </Link>
               </div>
@@ -242,7 +242,7 @@ export default function SellerProductGallery() {
               }`}>
                 {modalContent.status === 'pending' ? 'Pending' : modalContent.status === 'approved' ? 'Approved' : 'Not Approved'}
               </span>
-              <button onClick={() => setShowModal(false)} className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition focus:outline-blue-400 focus:ring-2 focus:ring-blue-300">Close</button>
+              <button onClick={() => setShowModal(false)} className="mt-6 w-full bg-[#112d4e] text-white py-2 rounded-lg hover:bg-[#1a4577] transition focus:outline-[#112d4e] focus:ring-2 focus:ring-blue-300">Close</button>
             </div>
           </div>
         )}

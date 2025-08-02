@@ -119,7 +119,7 @@ export default function SellerProductVariants() {
     () => [
       { name: 'Red', hex: '#ff0000' },
       { name: 'Orange', hex: '#FFA500' },
-      { name: 'Blue', hex: '#0000ff' },
+      { name: 'blue', hex: '#0000ff' },
       { name: 'Green', hex: '#008000' },
       { name: 'Brown', hex: '#8b4513' },
       { name: 'Black', hex: '#000000' },
@@ -1386,7 +1386,7 @@ export default function SellerProductVariants() {
                         type="text"
                         value={variant.color}
                         onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
-                        placeholder="Type a color (e.g., Navy Blue)"
+                        placeholder="Type a color (e.g., Navy blue)"
                         className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                           errors[`variant${index}_color`]
                             ? 'border-red-500 focus:ring-red-500'

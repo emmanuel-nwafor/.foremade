@@ -49,7 +49,7 @@ body {
 
 /* src/styles.css */
 .paystack-button {
-  background: #0a4d9f;
+  background: #083d7f;
   color: white;
   padding: 10px 20px;
   border: none;
@@ -78,7 +78,6 @@ body {
 
 .scrollbar-hide {
   -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 @keyframes slide-in {

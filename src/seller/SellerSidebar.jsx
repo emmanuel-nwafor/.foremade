@@ -45,7 +45,7 @@ export default function SellerSidebar() {
   return (
     <>
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-700 rounded-lg hover:bg-blue-900 transition"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 text-black bg-blue-900 rounded-lg hover:bg-blue-900 transition"
         onClick={toggleSidebar}
         aria-label="Open sidebar"
       >
@@ -89,7 +89,7 @@ export default function SellerSidebar() {
                 <Link
                   to="/dashboard"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center p-2 rounded-lg bg-gray-700 text-white font-semibold hover:bg-blue-600 transition"
+                  className="flex items-center p-2 rounded-lg bg-gray-700 text-white font-semibold hover:bg-gray-600 transition"
                   aria-label="Dashboard"
                 >
                   <Home className="w-5 h-5 mr-2" />

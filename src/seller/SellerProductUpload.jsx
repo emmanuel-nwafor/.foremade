@@ -184,7 +184,7 @@ export default function SellerProductUpload() {
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
     { name: 'Orange', hex: '#FFA500' },
-    { name: 'Blue', hex: '#0000ff' },
+    { name: 'blue', hex: '#0000ff' },
     { name: 'Green', hex: '#008000' },
     { name: 'Brown', hex: '#8b4513' },
     { name: 'Black', hex: '#000000' },
@@ -896,7 +896,7 @@ const validateLocationForm = () => {
 
             <div className="flex justify-end mb-6">
 
-<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-semibold shadow">
+<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-[#112d4e] font-semibold shadow">
 
   Bulk Upload
 
@@ -1035,7 +1035,7 @@ const validateLocationForm = () => {
 
             {/* Video Upload Section */}
             <div className="relative group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                 Product Video (1 video, Optional)
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Upload one video (MP4, MKV, WEBM, max 10MB, 30s, no audio)"></i>
               </label>
@@ -1118,7 +1118,7 @@ const validateLocationForm = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                     Seller Name <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Your registered name"></i>
                   </label>
@@ -1138,7 +1138,7 @@ const validateLocationForm = () => {
                   )}
                 </div>
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                     Product Name <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Name of the product"></i>
                   </label>
@@ -1162,7 +1162,7 @@ const validateLocationForm = () => {
                 </div>
               </div>
               <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Description
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Describe your product with optional bold, italic, or code formatting"></i>
                 </label>
@@ -1235,7 +1235,7 @@ const validateLocationForm = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                     Price (₦) <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Price in Naira"></i>
                   </label>
@@ -1260,7 +1260,7 @@ const validateLocationForm = () => {
                   )}
                 </div>
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Stock Quantity <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Available stock"></i>
                   </label>
@@ -1285,7 +1285,7 @@ const validateLocationForm = () => {
                 </div>
               </div>
               <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Product Size <span className="text-red-500">*</span>
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
                 </label>
@@ -1344,7 +1344,7 @@ const validateLocationForm = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Category <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product category"></i>
                   </label>
@@ -1397,7 +1397,7 @@ const validateLocationForm = () => {
                 </div>
                 {formData.category && (
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                       Subcategory <span className="text-red-500">*</span>
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
                     </label>
@@ -1450,7 +1450,7 @@ const validateLocationForm = () => {
                 )}
                 {formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory] && (
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Sub-Subcategory <span className="text-red-500">*</span>
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
                     </label>
@@ -1505,7 +1505,7 @@ const validateLocationForm = () => {
                   <i className="bx bx-ruler text-blue-500"></i>
                   Sizes
                 </h3>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                   Sizes <span className="text-red-500">*</span>
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter sizes"></i>
                 </label>
@@ -1571,7 +1571,7 @@ const validateLocationForm = () => {
                 <i className="bx bx-color-fill text-blue-500"></i>
                 Colors
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
                 Colors <span className="text-red-500">*</span>
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
               </label>
@@ -1651,7 +1651,7 @@ const validateLocationForm = () => {
                 <i className="bx bx-purchase-tag text-blue-500"></i>
                 Tags
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Tags (Optional)
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
               </label>
@@ -1697,7 +1697,7 @@ const validateLocationForm = () => {
                   <i className="bx bx-star text-blue-500"></i>
                   Condition
                 </h3>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Product Condition <span className="text-red-500">*</span>
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
                 </label>
@@ -1732,7 +1732,7 @@ const validateLocationForm = () => {
                   <i className="bx bx-link text-blue-500"></i>
                   Product URL (Optional)
                 </h3>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   External Product URL
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Link to external product page (optional)"></i>
                 </label>
@@ -1779,7 +1779,7 @@ const validateLocationForm = () => {
               <div className="flex justify-end mt-8">
                 <button
                   type="submit"
-                  className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
+                  className={`flex items-center gap-2 px-6 py-3 bg-[#112d4e] text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
                     loading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={loading}

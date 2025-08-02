@@ -89,7 +89,7 @@ const AboutUs = () => {
         <div className="mt-12 text-center">
           <Link 
             to="/products" 
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#112d4e] text-white rounded-lg hover:bg-[#112d4e] transition-colors"
           >
             Start Shopping
             <i className="bx bx-right-arrow-alt"></i>

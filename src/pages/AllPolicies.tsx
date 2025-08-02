@@ -395,6 +395,7 @@ const AllPolicies = () => {
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="flex items-center gap-4">
             <button 
+            aria-label="back"
               onClick={() => navigate('/privacy-policy')}
               className="bg-white/10 p-2 rounded-lg hover:bg-white/20 transition-colors"
             >

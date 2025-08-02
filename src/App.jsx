@@ -83,7 +83,10 @@ import SellerTransactions from './seller/SellerTransactions';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
 import SellerChat from './seller/SellerChat';
 import AdminBumpedProducts from './admin/AdminBumpedProducts';
-
+import UserAgreement from './pages/UserAgreement';
+import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
+import RefundPolicy from './pages/RefundPolicy';
+import ProductBumpInfo from './seller/ProductBumpInfo';
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
 const Layout = ({ children }) => {
@@ -117,6 +120,7 @@ const Layout = ({ children }) => {
     '/admin/bumped-products',
     '/bulk-upload',
     '/product-bump',
+    '/product-bump-info',
     '/seller-transactions',
     '/seller/edit-product:id',
     '/pro-seller-analytics',
@@ -171,6 +175,7 @@ function App() {
                 <Route path="/seller-onboarding" element={<SellerOnboarding />} />
                 <Route path="/bulk-upload" element={<BulkUpload />} />
                 <Route path="/product-bump" element={<ProductBump />} />
+                <Route path="/product-bump-info" element={<ProductBumpInfo />} />
                 <Route path="/seller-transactions" element={<SellerTransactions />} />
                 <Route path="/pro-seller-analytics" element={<ProSellerAnalytics />} />
                 <Route path="/terms-conditions" element={<TermsConditions />} />
@@ -178,6 +183,8 @@ function App() {
                 <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
                 <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/empowerment-hub" element={<EmpowermentHub />} />
                 <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
                 <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />
@@ -206,6 +213,7 @@ function App() {
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/seller-chat" element={<SellerChat />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
+             <Route path="/user-agreement" element={<UserAgreement />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />

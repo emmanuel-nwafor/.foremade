@@ -99,7 +99,7 @@ export default function Dashboard() {
       {
         label: 'Counts',
         data: [stats.products, stats.approvedProducts, stats.rejectedProducts],
-        backgroundColor: ['#3B82F6', '#22C55E', '#EF4444'],
+        backgroundColor: ['#2563EB', '#16A34A', '#DC2626'],
         borderColor: ['#2563EB', '#16A34A', '#DC2626'],
         borderWidth: 1,
       },
@@ -117,8 +117,8 @@ export default function Dashboard() {
           stats.rejectedProducts,
           stats.products - (stats.approvedProducts + stats.rejectedProducts),
         ],
-        backgroundColor: ['#22C55E', '#EF4444', '#F59E0B'],
-        borderColor: ['#16A34A', '#DC2626', '#D97706'],
+        backgroundColor: ['#2563EB', '#16A34A', '#DC2626'],
+        borderColor: ['#2563EB', '#16A34A', '#DC2626'],
         borderWidth: 1,
       },
     ],
@@ -175,15 +175,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="relative flex min-h-screen bg-white overflow-x-hidden">
-      {/* Remove animated SVG background blobs */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-800 text-white rounded-lg focus:outline-blue-400 focus:ring-2 focus:ring-blue-300"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        <i className="bx bx-menu text-xl"></i>
-      </button>
+    <div className="relative flex min-h-screen bg-white overflow-x-hidden">     
       <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:w-64 bg-white border-r max-h-[calc(100vh-2rem)] overflow-y-auto`}>
         <SellerSidebar />
       </div>
@@ -202,18 +194,18 @@ export default function Dashboard() {
           </div>
           {/* Quick Actions */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-8 md:mb-10 items-stretch">
-            <Link to="/products-upload" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition" title="Add Product">
+            <Link to="/products-upload" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#112d4e] text-white font-semibold shadow-sm hover:bg-[#112d4e] focus:outline-blue-400 focus:ring-2 focus:ring-blue-300 transition" title="Add Product">
               <Plus className="w-5 h-5" /> Add Product
             </Link>
-            <Link to="/sellers/orders" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white font-semibold shadow-sm hover:bg-green-700 focus:outline-green-400 focus:ring-2 focus:ring-green-300 transition" title="View Orders">
+            <Link to="/sellers/orders" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#112d4e] text-white font-semibold shadow-sm hover:bg-[#112d4e] focus:outline-green-400 focus:ring-2 focus:ring-green-300 transition" title="View Orders">
               <ShoppingBag className="w-5 h-5" /> View Orders
             </Link>
-            <Link to="/smile" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-700 text-white font-semibold shadow-sm hover:bg-gray-800 focus:outline-gray-400 focus:ring-2 focus:ring-gray-300 transition" title="Withdraw Funds">
+            <Link to="/smile" className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#112d4e] text-white font-semibold shadow-sm hover:bg-[#112d4e] focus:outline-gray-400 focus:ring-2 focus:ring-gray-300 transition" title="Withdraw Funds">
               <Wallet className="w-5 h-5" /> Withdraw Funds
             </Link>
             {userProfile && userProfile.isProSeller && (
               <div className="flex flex-1 min-w-[140px] gap-2">
-                <Link to="/product-bump" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold shadow-sm hover:bg-purple-700 focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
+                <Link to="/product-bump" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#112d4e] text-white font-semibold shadow-sm hover:bg-[#112d4e] focus:outline-purple-400 focus:ring-2 focus:ring-purple-300 transition" title="Product Bump">
                   <Package className="w-5 h-5" /> Product Bump
                 </Link>
                 <Link to="/product-bump-info" className="flex items-center justify-center px-3 py-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="What is Product Bump?">

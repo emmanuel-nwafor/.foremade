@@ -17,7 +17,7 @@ const PrivacyPolicy = () => {
       title: 'Introduction and Scope',
       icon: 'bx-info-circle',
       content: (
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-secondary leading-relaxed">
           This Privacy Notice explains how Foremade and its affiliates ("Foremade", "we", "us", or "our") collect,
           use, store, share, and protect your personal data. It complies with international privacy laws including
           GDPR, NDPR, CCPA, and more.
@@ -37,12 +37,11 @@ const PrivacyPolicy = () => {
             { region: 'Other Africa', entity: 'Foremade Africa Ltd. – Nairobi' },
             { region: 'Americas', entity: 'Foremade Americas Inc. – Delaware, USA' },
             { region: 'Asia', entity: 'Foremade Asia Pte. Ltd. – Singapore' },
-            { region: 'Australia/Oceania', entity: 'Foremade AU Pty Ltd. – Sydney' },
             { region: 'All Regions', entity: 'Foremade Global AG – Zurich' }
           ].map(({ region, entity }, index) => (
-            <div key={index} className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
-              <div className="font-semibold text-blue-900">{region}</div>
-              <div className="text-sm text-blue-700">{entity}</div>
+            <div key={index} className="bg-background-light p-3 rounded-lg border-l-4 border-primary">
+              <div className="font-semibold text-primary">{region}</div>
+              <div className="text-sm text-secondary">{entity}</div>
             </div>
           ))}
         </div>
@@ -53,10 +52,10 @@ const PrivacyPolicy = () => {
       title: 'Contact and DPO',
       icon: 'bx-envelope',
       content: (
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
-          <p className="text-gray-700">
+        <div className="bg-background-light p-4 rounded-lg border border-border-light">
+          <p className="text-secondary">
             Reach our Data Protection Officers via the{' '}
-            <Link to="/privacy-policy/contact" className="text-orange-600 hover:text-orange-800 font-semibold underline decoration-2 underline-offset-2 transition-colors">
+            <Link to="/privacy-policy/contact" className="policy-link font-semibold">
               Privacy Centre
             </Link>.
           </p>
@@ -76,11 +75,11 @@ const PrivacyPolicy = () => {
             { type: 'Geolocation', desc: 'Location data (if enabled by you)' },
             { type: 'Third-party Sources', desc: 'Data from partners and public sources' }
           ].map(({ type, desc }, index) => (
-            <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+            <div key={index} className="flex items-start space-x-3 p-3 bg-background-light rounded-lg">
+              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
               <div>
-                <div className="font-semibold text-gray-900">{type}</div>
-                <div className="text-sm text-gray-600">{desc}</div>
+                <div className="font-semibold text-primary">{type}</div>
+                <div className="text-sm text-secondary">{desc}</div>
               </div>
             </div>
           ))}
@@ -99,9 +98,9 @@ const PrivacyPolicy = () => {
             'Platform improvement',
             'Consent (e.g., marketing)'
           ].map((basis, index) => (
-            <div key={index} className="flex items-center space-x-2 p-3 bg-green-50 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-green-800 font-medium">{basis}</span>
+            <div key={index} className="flex items-center space-x-2 p-3 bg-background-light rounded-lg">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <span className="text-primary font-medium">{basis}</span>
             </div>
           ))}
         </div>
@@ -112,8 +111,8 @@ const PrivacyPolicy = () => {
       title: 'International Transfers',
       icon: 'bx-world',
       content: (
-        <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-          <p className="text-gray-700 leading-relaxed">
+        <div className="bg-background-light p-4 rounded-lg border-l-4 border-primary">
+          <p className="text-secondary leading-relaxed">
             We use Standard Contractual Clauses (SCCs), NDPR rules, APEC frameworks, or other safeguards to protect your data when transferred internationally.
           </p>
         </div>
@@ -124,7 +123,7 @@ const PrivacyPolicy = () => {
       title: 'Data Retention',
       icon: 'bx-folder',
       content: (
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-secondary leading-relaxed">
           We keep your data as long as needed to deliver services, comply with legal obligations, or resolve disputes.
         </p>
       )
@@ -134,13 +133,13 @@ const PrivacyPolicy = () => {
       title: 'Your Rights',
       icon: 'bx-user',
       content: (
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-          <p className="text-gray-700 mb-3">
+        <div className="bg-background-light p-4 rounded-lg border border-border-light">
+          <p className="text-secondary mb-3">
             Depending on your region, you may request access, correction, deletion, or restriction of your data.
           </p>
           <div className="flex items-center space-x-2">
-            <span className="text-purple-700">Submit requests via our</span>
-            <Link to="/privacy-policy/contact" className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+            <span className="text-primary">Submit requests via our</span>
+            <Link to="/privacy-policy/contact" className="policy-link font-semibold">
               Privacy Centre
             </Link>
           </div>
@@ -152,10 +151,10 @@ const PrivacyPolicy = () => {
       title: 'Cookies',
       icon: 'bx-cookie',
       content: (
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <p className="text-gray-700 mb-3">
+        <div className="bg-background-light p-4 rounded-lg border border-border-light">
+          <p className="text-secondary mb-3">
             We use cookies to enhance performance and deliver marketing. Adjust your preferences in our{' '}
-            <Link to="/privacy-policy/cookies" className="text-yellow-700 hover:text-yellow-900 font-semibold underline decoration-2 underline-offset-2 transition-colors">
+            <Link to="/privacy-policy/cookies" className="policy-link font-semibold">
               Cookie Settings
             </Link>.
           </p>
@@ -167,8 +166,8 @@ const PrivacyPolicy = () => {
       title: 'Data Security',
       icon: 'bx-lock',
       content: (
-        <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
-          <p className="text-gray-700 leading-relaxed">
+        <div className="bg-background-light p-4 rounded-lg border-l-4 border-primary">
+          <p className="text-secondary leading-relaxed">
             We apply encryption, access controls, and secure infrastructure to protect your data from unauthorized access and breaches.
           </p>
         </div>
@@ -179,18 +178,18 @@ const PrivacyPolicy = () => {
       title: 'Third-Party Links',
       icon: 'bx-link',
       content: (
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-secondary leading-relaxed">
           We are not responsible for third-party privacy practices linked from our platform. Please review their policies separately.
         </p>
       )
     },
     {
       id: 'children',
-      title: 'Children\'s Privacy',
+      title: "Children's Privacy",
       icon: 'bx-child',
       content: (
-        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-          <p className="text-gray-700 leading-relaxed">
+        <div className="bg-background-light p-4 rounded-lg border border-border-light">
+          <p className="text-secondary leading-relaxed">
             Children under 16 require verified parental consent to use our services.
           </p>
         </div>
@@ -201,7 +200,7 @@ const PrivacyPolicy = () => {
       title: 'Policy Updates',
       icon: 'bx-refresh',
       content: (
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-secondary leading-relaxed">
           We may update this policy and will notify you of major changes through our website or email notifications.
         </p>
       )
@@ -210,45 +209,42 @@ const PrivacyPolicy = () => {
 
   return (
     <>
-      {/* Load Boxicons CSS */}
       <link href="https://cdnjs.cloudflare.com/ajax/libs/boxicons/2.1.4/css/boxicons.min.css" rel="stylesheet" />
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        {/* Header */}
+      <div className="min-h-screen bg-background-light py-8">
         <div className="bg-gray-100">
           <div className="max-w-4xl mx-auto px-6 py-16">
             <div className="text-center">
               <div className="flex justify-center mb-6">
-                <div className="bg-blue-100 p-4 rounded-2xl">
-                  <i className="bx bx-shield text-4xl text-blue-600"></i>
+                <div className="bg-primary/10 p-4 rounded-2xl">
+                  <i className="bx bx-shield text-4xl text-primary"></i>
                 </div>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary">
                 Foremade Global Privacy Notice
               </h1>
-              <div className="bg-orange-100 px-4 py-2 rounded-full inline-block">
-                <p className="text-orange-600 font-medium">Effective Date: June 2, 2025</p>
+              <div className="bg-accent px-4 py-2 rounded-full inline-block">
+                <p className="text-accent font-medium">Effective Date: June 2, 2025</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content */}
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="space-y-4">
             {sections.map((section) => (
-              <div key={section.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={section.id} className="bg-background-light rounded-xl shadow-sm border border-border-light overflow-hidden hover:shadow-md transition-shadow">
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-background-dark transition-colors"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="text-blue-600 flex items-center justify-center w-8">
+                    <div className="text-primary flex items-center justify-center w-8">
                       <i className={`bx ${section.icon} text-2xl`}></i>
                     </div>
-                    <h2 className="text-xl font-semibold text-gray-900">{section.title}</h2>
+                    <h2 className="text-xl font-semibold text-primary">{section.title}</h2>
                   </div>
-                  <div className="text-gray-400">
+                  <div className="text-secondary">
                     {expandedSections[section.id] ? (
                       <i className="bx bx-chevron-down text-2xl"></i>
                     ) : (
@@ -256,9 +252,8 @@ const PrivacyPolicy = () => {
                     )}
                   </div>
                 </button>
-                
                 {expandedSections[section.id] && (
-                  <div className="px-6 pb-6 border-t border-gray-100">
+                  <div className="px-6 pb-6 border-t border-border-light">
                     <div className="pt-4">
                       {section.content}
                     </div>
@@ -268,49 +263,28 @@ const PrivacyPolicy = () => {
             ))}
           </div>
 
-          {/* Regional Policies */}
-          <div className="mt-12 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <i className="bx bx-globe text-2xl text-blue-600 mr-3"></i>
-              Regional Privacy Policies
-            </h2>
+          <div className="mt-8">
+            <h3 className="text-2xl font-semibold text-primary mb-4">Regional Policies</h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { name: 'EU Policy', type: 'eu', color: 'blue' },
-                { name: 'Nigeria Policy', type: 'nigeria', color: 'green' },
-                { name: 'US Policy', type: 'us', color: 'red' },
-                { name: 'Asia Policy', type: 'asia', color: 'yellow' },
-                { name: 'Australia/Oceania', type: 'australia', color: 'purple' }
+                { name: 'EU Policy', type: 'eu' },
+                { name: 'UK Policy', type: 'uk' },
+                { name: 'US Policy', type: 'us' },
+                { name: 'Nigeria Policy', type: 'nigeria' },
+                { name: 'Other Africa', type: 'africa' },
+                { name: 'Americas Policy', type: 'americas' },
+                { name: 'Asia Policy', type: 'asia' },
+                { name: 'Australia/Oceania', type: 'australia' }
               ].map((policy, index) => (
                 <Link
                   key={index}
                   to={`/privacy-policy/${policy.type}`}
-                  className={
-                    `block p-4 rounded-lg border-2 bg-${policy.color}-50 hover:bg-${policy.color}-100 transition-all group ` +
-                    (policy.color === 'blue' ? 'border-blue-200 hover:border-blue-300' :
-                     policy.color === 'green' ? 'border-green-200 hover:border-green-300' :
-                     policy.color === 'red' ? 'border-red-200 hover:border-red-300' :
-                     policy.color === 'yellow' ? 'border-yellow-200 hover:border-yellow-300' :
-                     policy.color === 'purple' ? 'border-purple-200 hover:border-purple-300' : '')
-                  }
+                  className="block p-4 rounded-lg border-2 bg-background-light hover:bg-background-dark transition-all group border-border-light hover:border-primary"
                 >
-                  <div className={
-                    policy.color === 'blue' ? 'text-blue-800 group-hover:text-blue-900' :
-                    policy.color === 'green' ? 'text-green-800 group-hover:text-green-900' :
-                    policy.color === 'red' ? 'text-red-800 group-hover:text-red-900' :
-                    policy.color === 'yellow' ? 'text-yellow-800 group-hover:text-yellow-900' :
-                    policy.color === 'purple' ? 'text-purple-800 group-hover:text-purple-900' : ''
-                  }>
+                  <div className="text-primary group-hover:text-secondary">
                     {policy.name}
                   </div>
-                  <div className={
-                    'text-sm flex items-center gap-1 ' +
-                    (policy.color === 'blue' ? 'text-blue-600' :
-                     policy.color === 'green' ? 'text-green-600' :
-                     policy.color === 'red' ? 'text-red-600' :
-                     policy.color === 'yellow' ? 'text-yellow-600' :
-                     policy.color === 'purple' ? 'text-purple-600' : '')
-                  }>
+                  <div className="text-sm flex items-center gap-1 text-secondary">
                     View regional details
                     <i className="bx bx-right-arrow-alt"></i>
                   </div>
@@ -319,10 +293,9 @@ const PrivacyPolicy = () => {
             </div>
           </div>
 
-          {/* Footer */}
           <footer className="mt-16 pt-8 border-t border-gray-200 text-center">
-            <div className="text-gray-500 text-sm">
-              © 2025 Foremade Global. All rights reserved.
+            <div className="text-secondary text-sm">
+              &copy; {new Date().getFullYear()} Foremade Global. All rights reserved.
             </div>
           </footer>
         </div>

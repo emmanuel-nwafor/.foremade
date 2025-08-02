@@ -134,44 +134,44 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 text-gray-800">
+    <div className="container mx-auto px-4 py-8 text-primary-color">
       <div className="flex flex-col md:flex-row gap-6">
         <Sidebar />
         <div className="md:w-3/4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-blue-50 to-white border border-blue-100 cursor-pointer">
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-background-light to-white border border-border-light cursor-pointer">
               <Link to="/orders" className="block">
-                <i className="bx bx-package text-2xl text-blue-500 mb-2"></i>
-                <p className="text-gray-400">Orders</p>
-                <p className="text-lg font-semibold text-gray-800">9</p>
+                <i className="bx bx-package text-2xl text-secondary-color mb-2"></i>
+                <p className="text-primary-color/60">Orders</p>
+                <p className="text-lg font-semibold text-primary-color">9</p>
               </Link>
             </div>
-            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-purple-50 to-white border border-purple-100 cursor-pointer">
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-background-light to-white border border-border-light cursor-pointer">
               <Link to="/favorites" className="block">
-                <i className="bx bx-heart text-2xl text-purple-500 mb-2"></i>
-                <p className="text-gray-400">Wish List</p>
-                <p className="text-lg font-semibold text-gray-800">{mockWishlistCount}</p>
+                <i className="bx bx-heart text-2xl text-secondary-color mb-2"></i>
+                <p className="text-primary-color/60">Wish List</p>
+                <p className="text-lg font-semibold text-primary-color">{mockWishlistCount}</p>
               </Link>
             </div>
-            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-yellow-50 to-white border border-yellow-100 cursor-pointer">
-              <i className="bx bx-star text-2xl text-yellow-500 mb-2"></i>
-              <p className="text-gray-400">Loyalty Points</p>
-              <p className="text-lg font-semibold text-gray-800">{mockLoyaltyPoints} <i className="bx bx-star text-yellow-500"></i></p>
+            <div className="rounded-lg p-4 text-center bg-gradient-to-br from-background-light to-white border border-border-light cursor-pointer">
+              <i className="bx bx-star text-2xl text-accent-color mb-2"></i>
+              <p className="text-primary-color/60">Loyalty Points</p>
+              <p className="text-lg font-semibold text-primary-color">{mockLoyaltyPoints} <i className="bx bx-star text-accent-color"></i></p>
             </div>
           </div>
 
-          <div className="rounded-lg p-6 mb-6 bg-white border border-gray-100 shadow-sm">
+          <div className="rounded-lg p-6 mb-6 bg-background-light border border-border-light shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Personal Details</h3>
+              <h3 className="text-lg font-semibold text-primary-color">Personal Details</h3>
               <Link
                 to="/setting"
-                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition duration-200"
+                className="flex items-center px-4 py-2 rounded-lg bg-accent-color/10 text-accent-color hover:bg-accent-color/20 transition duration-200"
               >
                 <i className="bx bx-edit mr-1"></i> Edit Profile
               </Link>
             </div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-lg">
+              <div className="w-24 h-24 bg-background-light rounded-full flex items-center justify-center overflow-hidden border-2 border-secondary-color shadow-lg">
                 <img
                   src={mainProfileImage}
                   alt="Profile"
@@ -182,10 +182,10 @@ export default function Profile() {
                 />
               </div>
               <div className="ml-2">
-                <h2 className="text-xl font-bold text-gray-800">
+                <h2 className="text-xl font-bold text-primary-color">
                   {userData.name}
                 </h2>
-                <p className="text-gray-500">Member since {formatDate(userData.createdAt)}</p>
+                <p className="text-primary-color/60">Member since {formatDate(userData.createdAt)}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,16 +193,16 @@ export default function Profile() {
                 { label: "Username", value: userData.username },
                 { label: "First Name", value: userData.name.split(' ')[0] },
                 { label: "Last Name", value: userData.name.split(' ').slice(1).join(' ') || '-' },
-                { label: "Email", value: userData.email, icon: "bx-check-circle", iconColor: "text-green-500" },
+                { label: "Email", value: userData.email, icon: "bx-check-circle", iconColor: "text-secondary-color" },
                 { label: "Country", value: userData.country },
                 { label: "Phone", value: userData.phone },
                 { label: "Date Joined", value: formatDate(userData.createdAt) },
                 { label: "Address", value: userData.address }
               ].map((item, index) => (
                 <div key={index} className="group">
-                  <div className="p-3 rounded-lg bg-gray-50">
-                    <p className="text-slate-400 text-sm">{item.label}</p>
-                    <p className="font-semibold text-gray-800 flex items-center">
+                  <div className="p-3 rounded-lg bg-background-light border border-border-light">
+                    <p className="text-primary-color/60 text-sm">{item.label}</p>
+                    <p className="font-semibold text-primary-color flex items-center">
                       {item.value}
                       {item.icon && <i className={`bx ${item.icon} ml-2 ${item.iconColor}`}></i>}
                     </p>
@@ -212,20 +212,20 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-lg p-6 mb-6 bg-white border border-gray-100 shadow-sm">
+          <div className="rounded-lg p-6 mb-6 bg-background-light border border-border-light shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">User Address</h3>
+              <h3 className="text-lg font-semibold text-primary-color">User Address</h3>
               <Link
                 to="/setting"
-                className="flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition duration-200"
+                className="flex items-center px-4 py-2 rounded-lg bg-accent-color/10 text-accent-color hover:bg-accent-color/20 transition duration-200"
               >
                 <i className="bx bx-map mr-1"></i> Update Address
               </Link>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="p-4 bg-background-light rounded-lg border border-border-light">
               <div className="flex items-start">
-                <i className="bx bx-map-pin text-blue-500 mr-2 text-xl mt-1"></i>
-                <p className="font-semibold text-gray-800">{userData.address}</p>
+                <i className="bx bx-map-pin text-secondary-color mr-2 text-xl mt-1"></i>
+                <p className="font-semibold text-primary-color">{userData.address}</p>
               </div>
             </div>
           </div>

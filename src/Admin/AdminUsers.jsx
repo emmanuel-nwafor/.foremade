@@ -4,7 +4,7 @@ import { auth, db } from '/src/firebase';
 import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, getIdToken } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import axios from 'axios';
-import AdminSidebar from '/src/AdminSidebar';
+import AdminSidebar from '/src/Admin/AdminSidebar.jsx';
 
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {

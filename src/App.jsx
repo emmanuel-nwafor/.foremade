@@ -46,6 +46,7 @@ import AdminCategoryEdit from './Admin/AdminCategoryEdit';
 import AdminManager from './Admin/AdminManager';
 import AdminSellerWallet from './Admin/AdminSellerWallet';
 import AdminProSellerRequests from './Admin/AdminProSellerRequests'
+import AdminBumpedProducts from './Admin/AdminBumpedProducts';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -82,7 +83,6 @@ import ProductBump from './seller/ProductBump';
 import SellerTransactions from './seller/SellerTransactions';
 import ProSellerAnalytics from './seller/ProSellerAnalytics';
 import SellerChat from './seller/SellerChat';
-import AdminBumpedProducts from './admin/AdminBumpedProducts';
 import UserAgreement from './pages/UserAgreement';
 import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
 import RefundPolicy from './pages/RefundPolicy';

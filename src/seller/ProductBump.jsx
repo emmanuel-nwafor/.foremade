@@ -143,7 +143,6 @@ const ProductBump = () => {
       const productRef = doc(db, 'products', productId);
       await updateDoc(productRef, { bumpExpiry, isBumped: true });
 
-      // Send email notification to seller
       const emailResponse = await fetch(`${backendUrl}/api/send-bump-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firebaseToken}` },
@@ -239,12 +238,12 @@ const ProductBump = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-background-light to-background-light/50">
-        <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+        <SellerSidebar onToggle={() => setSidebarOpen(!sidebarOpen)} isOpen={sidebarOpen} />
+        <div className={`flex-1 p-2 sm:p-4 ${sidebarOpen ? 'ml-64' : 'ml-0'} transition-all duration-300 md:ml-64 flex justify-center items-center`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 w-full max-w-5xl">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-pulse h-64" />
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-sm animate-pulse h-32 sm:h-40" />
             ))}
           </div>
         </div>
@@ -254,10 +253,10 @@ const ProductBump = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background-light to-background-light/50">
-        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
-          <p className="text-red-700 text-base mb-4">{error}</p>
-          <Link to="/login" className="text-secondary hover:text-secondary/80 font-medium underline">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-50">
+        <div className="bg-red-50 border-l-4 border-red-500 p-3 sm:p-4 rounded-lg shadow-lg max-w-xs sm:max-w-md mx-auto">
+          <p className="text-red-700 text-sm sm:text-base mb-1 sm:mb-2">{error}</p>
+          <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium underline text-sm sm:text-base">
             Return to Login
           </Link>
         </div>
@@ -268,12 +267,12 @@ const ProductBump = () => {
   if (userProfile && !userProfile.isProSeller) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
-          <h2 className="text-2xl font-bold mb-4 text-orange-600">Pro Seller Feature</h2>
-          <p className="mb-4 text-gray-700">Product bump is only available to Pro Sellers. Upgrade now to boost your products' visibility!</p>
-          <Link to="/pro-seller-guide-full" className="inline-block px-6 py-2 text-white rounded font-semibold" style={{ backgroundColor: '#112d4e' }} onMouseOver={(e) => e.target.style.backgroundColor = '#0d2440'} onMouseOut={(e) => e.target.style.backgroundColor = '#112d4e'}>Upgrade to Pro Seller</Link>
-          <div className="mt-6">
-            <Link to="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</Link>
+        <div className="bg-white p-3 sm:p-4 rounded-lg shadow text-center max-w-sm sm:max-w-md mx-auto">
+          <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-orange-600">Pro Seller Feature</h2>
+          <p className="mb-2 sm:mb-3 text-gray-700 text-sm sm:text-base">Product bump is only available to Pro Sellers. Upgrade now to boost your products' visibility!</p>
+          <Link to="/pro-seller-guide-full" className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 text-white rounded font-semibold" style={{ backgroundColor: '#112d4e' }} onMouseOver={(e) => e.target.style.backgroundColor = '#0d2440'} onMouseOut={(e) => e.target.style.backgroundColor = '#112d4e'}>Upgrade to Pro Seller</Link>
+          <div className="mt-2 sm:mt-3">
+            <Link to="/sell" className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-semibold text-sm sm:text-base">Return to Dashboard</Link>
           </div>
         </div>
       </div>
@@ -281,73 +280,37 @@ const ProductBump = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
-      {/* Sidebar Container */}
-      <div className="relative">
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#112d4e] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
-        >
-          {sidebarOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </button>
-
-        {/* Mobile Overlay */}
-        {sidebarOpen && (
-          <div 
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setSidebarOpen(false)}
-          ></div>
-        )}
-        
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static top-0 left-0 h-full z-40 md:z-0 w-64 bg-[#112d4e] shadow-lg md:shadow-none transition-transform duration-300 ease-in-out overflow-y-auto`}>
-          <SellerSidebar />
+    <div className="min-h-screen flex m-5">
+      <SellerSidebar onToggle={() => setSidebarOpen(!sidebarOpen)} isOpen={sidebarOpen} />
+      <div className={`flex-1 p-2 sm:p-4 ${sidebarOpen ? 'ml-64' : 'ml-0'} mt-6 transition-all duration-300 md:ml-64`}>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Product Bump</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Boost your products' visibility with the bump feature</p>
         </div>
-      </div>
-      
-      {/* Main Content */}
-      <div className="flex-1 ml-0 md:ml-64 p-10">
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
-        </div>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Product Bump</h1>
-          <p className="text-gray-600 mt-2">Boost your products' visibility with the bump feature</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+            <div className="p-4 flex items-center">
+              <div className="p-1 sm:p-1.5 bg-blue-100 rounded-lg">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Bump Overview</h3>
-                <p className="text-sm text-gray-700">Increase visibility of your products</p>
+              <div className="ml-1 sm:ml-2">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900">Bump Overview</h3>
+                <p className="text-xs sm:text-sm text-gray-700">Increase visibility of your products</p>
               </div>
             </div>
           </div>
-          <div className="bg-blue-100 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* <div className="bg-blue-100 border border-blue-200 rounded-lg p-2 sm:p-3">
+            <div className="p-4 flex items-center">
+              <div className="p-1 sm:p-1.5 bg-blue-100 rounded-lg">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Search Products</h3>
-                <p className="text-sm text-gray-700">Filter your products by name</p>
+              <div className="ml-1 sm:ml-2">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900">Search Products</h3>
+                <p className="text-xs sm:text-sm text-gray-700">Filter your products by name</p>
               </div>
             </div>
             <input
@@ -355,24 +318,24 @@ const ProductBump = () => {
               value={searchQuery}
               onChange={(e) => debouncedSearch(e.target.value)}
               placeholder="Search by product name..."
-              className="mt-4 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 sm:mt-2 w-full px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
             />
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          </div> */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 sm:p-3">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-1 sm:p-1.5 bg-blue-100 rounded-lg">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Refresh</h3>
-                <p className="text-sm text-gray-700">Update your product list</p>
+              <div className="ml-1 sm:ml-2">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900">Refresh</h3>
+                <p className="text-xs sm:text-sm text-gray-700">Update your product list</p>
               </div>
             </div>
             <button
               onClick={handleRefresh}
-              className="mt-4 w-full px-4 py-2 text-white rounded-lg transition-colors"
+              className="mt-1 sm:mt-2 w-full px-2 sm:px-3 py-1 sm:py-1.5 text-white rounded-lg transition-colors text-xs sm:text-sm"
               style={{ backgroundColor: '#112d4e' }}
               onMouseOver={(e) => e.target.style.backgroundColor = '#0d2440'}
               onMouseOut={(e) => e.target.style.backgroundColor = '#112d4e'}
@@ -381,15 +344,15 @@ const ProductBump = () => {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="bg-white border border-gray-200 rounded-xl p-4 shadow-md hover:shadow-lg transition duration-300"
+                className="bg-white border border-gray-200 rounded-lg p-2 sm:p-3 shadow-md hover:shadow-lg transition duration-300"
                 onClick={() => handleProductClick(product.id)}
               >
-                <div className="relative aspect-[4/3] mb-4 overflow-hidden rounded-lg">
+                <div className="relative aspect-square sm:aspect-[4/3] mb-1 sm:mb-2 overflow-hidden rounded-lg">
                   <img
                     src={product.imageUrls[0]}
                     alt={product.name || 'Product Image'}
@@ -397,32 +360,32 @@ const ProductBump = () => {
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.parentElement.innerHTML =
-                        '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500">Image N/A</span></div>';
+                        '<div class="absolute w-full h-full bg-gray-200 rounded-lg flex items-center justify-center"><span class="text-gray-500 text-xs sm:text-sm">Image N/A</span></div>';
                     }}
                   />
                   {isBumpActive(product) && (
-                    <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="absolute top-1 left-1 inline-flex items-center px-1 sm:px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Bumped Up
                     </span>
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">{product.name || 'Unnamed Product'}</h3>
-                <p className="text-gray-700 text-sm mb-1">Price: ₦{(product.price || 0).toLocaleString('en-NG')}</p>
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1 truncate">{product.name || 'Unnamed Product'}</h3>
+                <p className="text-gray-700 text-xs sm:text-sm mb-1">Price: ₦{(product.price || 0).toLocaleString('en-NG')}</p>
                 <p className="text-gray-600 text-xs mt-1">Uploaded: {product.uploadDate.toLocaleDateString('en-NG', {
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric',
                 })}</p>
                 {isBumpActive(product) && timeRemaining[product.id] > 0 && (
-                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-gray-900">Time Remaining: {formatTime(timeRemaining[product.id])}</p>
+                  <div className="mt-1 sm:mt-2 p-1 sm:p-1.5 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-xs sm:text-sm text-gray-900">Time Remaining: {formatTime(timeRemaining[product.id])}</p>
                     {product.bumpExpiry && (
-                      <p className="text-xs text-gray-700 mt-1">Expires: {formatDate(product.bumpExpiry)}</p>
+                      <p className="text-xs mt-0.5">Expires: {formatDate(product.bumpExpiry)}</p>
                     )}
                   </div>
                 )}
                 {!isBumpActive(product) && (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-1 sm:mt-2 space-y-1 sm:space-y-1.5">
                     {bumpDurations.map((duration) => (
                       <PaystackCheckout
                         key={duration.hours}
@@ -432,7 +395,7 @@ const ProductBump = () => {
                         onClose={handleCancel}
                         disabled={bumping[product.id] || bumpQuota <= 0 || isProcessing}
                         buttonText={`${duration.label} (₦${duration.price.toLocaleString('en-NG')})`}
-                        className={`w-full flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition duration-200 ${
+                        className={`w-full flex items-center justify-center px-1.5 sm:px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition duration-200 ${
                           bumping[product.id] || bumpQuota <= 0 || isProcessing
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'text-white'
@@ -454,20 +417,20 @@ const ProductBump = () => {
                   </div>
                 )}
                 {bumping[product.id] && (
-                  <div className="flex items-center justify-center py-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-secondary"></div>
-                    <span className="ml-2 text-sm text-primary">Processing...</span>
+                  <div className="flex items-center justify-center py-1">
+                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
+                    <span className="ml-1 text-xs sm:text-sm text-blue-600">Processing...</span>
                   </div>
                 )}
               </div>
             ))
           ) : (
-            <div className="col-span-full flex flex-col items-center justify-center mt-10 mb-10">
-              <PlusCircle className="w-24 h-24 text-gray-300" />
-              <p className="text-gray-900 text-center text-lg mt-4">No products uploaded yet.<br />Start by adding your first product!</p>
+            <div className="col-span-full flex flex-col items-center justify-center mt-4 sm:mt-6 mb-4 sm:mb-6">
+              <PlusCircle className="w-12 sm:w-16 h-12 sm:h-16 text-gray-300" />
+              <p className="text-gray-900 text-center text-sm sm:text-base mt-1 sm:mt-2">No products uploaded yet.<br />Start by adding your first product!</p>
               <Link
                 to="/products-upload"
-                className="mt-4 px-6 py-2 text-white rounded-lg transition duration-300"
+                className="mt-1 sm:mt-2 px-3 sm:px-4 py-1 sm:py-1.5 text-white rounded-lg transition duration-300 text-sm sm:text-base"
                 style={{ backgroundColor: '#112d4e' }}
                 onMouseOver={(e) => e.target.style.backgroundColor = '#0d2440'}
                 onMouseOut={(e) => e.target.style.backgroundColor = '#112d4e'}
@@ -477,13 +440,13 @@ const ProductBump = () => {
             </div>
           )}
         </div>
-        <div className="mt-8 bg-secondary/5 border border-secondary/20 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-primary mb-4">How Product Bump Works</h3>
-          <div className="text-sm text-primary/80 space-y-2">
-            <p>• Bumped products appear at the top of search results and category pages.</p>
-            <p>• Increased visibility leads to more views and potential sales.</p>
-            <p>• Choose from durations: 72h, 168h.</p>
-            <p>• You can bump multiple products simultaneously.</p>
+        <div className="mt-3 sm:mt-4 bg-blue-50/50 border border-blue-100 rounded-lg p-4 sm:p-4">
+          <h3 className="text-sm sm:text-base font-semibold text-blue-800 mb-1 sm:mb-2">How Product Bump Works</h3>
+          <div className="text-xs sm:text-sm text-blue-700/80 space-y-0.5 sm:space-y-1">
+            <p>• Select a product from the list below.</p>
+            <p>• Choose a bump duration (3 or 7 days) and click the corresponding button.</p>
+            <p>• Complete the payment via Paystack to activate the bump.</p>
+            <p>• Bumped products appear at the top of search results for the selected duration.</p>
           </div>
         </div>
       </div>

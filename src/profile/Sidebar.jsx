@@ -22,6 +22,7 @@ export default function Sidebar() {
     email: '',
     profileImage: localStorage.getItem('profileImage') || null,
   });
+  const fallbackImage = 'https://via.placeholder.com/150?text=Profile';
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
@@ -36,7 +37,6 @@ export default function Sidebar() {
         return;
       }
 
-      // USER'S DATA NAMES
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
@@ -95,20 +95,20 @@ export default function Sidebar() {
           alt="Profile"
           className="w-full h-full object-cover"
           onError={() => {
-            setUserData((prev) => ({ ...prev, profileImage: null }));
+            setUserData((prev) => ({ ...prev, profileImage: fallbackImage }));
           }}
         />
       );
     }
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-300 text-white text-lg font-bold uppercase rounded-full">
-        {(userData.firstName || userData.email)[0]}
+        {userData.email[0] || '?'}
       </div>
     );
   };
 
   return (
-    <div className="md:w-1/4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+    <div className="md:w-1/4 dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-black">
       <div className="flex flex-col items-center mb-6 text-center">
         <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center overflow-hidden hover:bg-gray-300 transition-colors duration-300">
           {getAvatar()}
@@ -121,37 +121,37 @@ export default function Sidebar() {
       <nav className="flex flex-col space-y-2">
         <Link
           to="/profile"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg transition-colors duration-300"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <User className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+          <User className="w-7 h-7 text-black dark:text-blue-400" />
           <span>Profile</span>
         </Link>
         <Link
           to="/orders"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 p-2 rounded-lg transition-colors duration-300"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Package className="w-5 h-5 text-green-500 dark:text-green-400" />
+          <Package className="w-7 h-7 text-black dark:text-green-400" />
           <span>Orders</span>
         </Link>
         <Link
           to="/favorites"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-lg transition-colors duration-300"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Heart className="w-5 h-5 text-red-500 dark:text-red-400" />
+          <Heart className="w-7 h-7 text-black dark:text-red-400" />
           <span>Wishlist</span>
         </Link>
         <Link
           to="/address"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 p-2 rounded-lg transition-colors duration-300"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Map className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+          <Map className="w-7 h-7 text-black dark:text-purple-400" />
           <span>Addresses</span>
         </Link>
         <Link
           to="/setting"
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 p-2 rounded-lg transition-colors duration-300"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Settings className="w-5 h-5 text-orange-500 dark:text-orange-400" />
+          <Settings className="w-7 h-7 text-black dark:text-orange-400" />
           <span>Settings</span>
         </Link>
       </nav>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom"; // Added Link
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { auth, db } from "/src/firebase";
 import {
   doc,
@@ -44,11 +44,9 @@ const colorMap = {
   coral: "#FB7185",
   indigo: "#6366F1",
   violet: "#8B5CF6",
-  // Add more as needed
 };
 const Product = () => {
   const [dailyDeals, setDailyDeals] = useState([]);
-  // Fetch daily deals for correct price display in product cards
   useEffect(() => {
     const fetchDailyDeals = async () => {
       try {
@@ -85,16 +83,22 @@ const Product = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [previousVariant, setPreviousVariant] = useState(null);
+  const [feeConfig, setFeeConfig] = useState(null);
+  const [fees, setFees] = useState({
+    buyerProtectionFee: 0,
+    handlingFee: 0,
+    totalEstimatedPrice: 0,
+    sellerEarnings: 0,
+  });
 
   const { alerts, addAlert, removeAlert } = useAlerts();
 
   const tagStyles = {
-    new: "bg-amber-100 text-amber-800 border-amber-300", // Soft yellow tag
-    sale: "bg-emerald-100 text-emerald-800 border-emerald-300", // Soft green tag for sale
-    trending: "bg-blue-100 text-blue-800 border-blue-300", // Soft blue tag
-    default: "bg-gray-100 text-gray-800 border-gray-300", // Default light grey
+    new: "bg-amber-100 text-amber-800 border-amber-300",
+    sale: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    trending: "bg-blue-100 text-blue-800 border-blue-300",
+    default: "bg-gray-100 text-gray-800 border-gray-300",
   };
-  // END OF CHANGED PART
 
   const SIZE_RELEVANT_CATEGORIES = [
     "foremade fashion",
@@ -103,13 +107,42 @@ const Product = () => {
     "accessories",
   ];
 
-  const calculateTotalPrice = (basePrice, qty, discountPercentage = 0) => {
-    const taxAndFees = 1 + 0.075 + 0.02 + 0.05;
-    const discount =
-      discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
-    const discountedPrice = basePrice - discount;
-    return discountedPrice * taxAndFees * qty;
-  };
+  useEffect(() => {
+    const fetchFeeConfig = async () => {
+      try {
+        const docRef = doc(db, "feeConfigurations", "categoryFees");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFeeConfig(docSnap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching fee configurations:", err);
+      }
+    };
+    fetchFeeConfig();
+  }, []);
+
+  useEffect(() => {
+    if (feeConfig && product?.category && (selectedVariant?.price || product.price) > 0) {
+      const basePrice = selectedVariant?.price || product.price;
+      const config = feeConfig[product.category] || {
+        minPrice: 1000,
+        maxPrice: Infinity,
+        buyerProtectionRate: 0.08,
+        handlingRate: 0.20,
+      };
+      const buyerProtectionFee = basePrice * config.buyerProtectionRate;
+      const handlingFee = basePrice * config.handlingRate;
+      const totalEstimatedPrice = basePrice + buyerProtectionFee + handlingFee;
+      const sellerEarnings = basePrice;
+      setFees({
+        buyerProtectionFee,
+        handlingFee,
+        totalEstimatedPrice,
+        sellerEarnings,
+      });
+    }
+  }, [feeConfig, product?.category, selectedVariant?.price, product?.price]);
 
   const formatDescription = (text) => {
     if (!text || typeof text !== "string") return "";
@@ -307,12 +340,10 @@ const Product = () => {
           setSelectedSize(productData.variants[0].size);
         }
 
-        // In fetchProduct function, update the updateRecentSearches function:
         const updateRecentSearches = () => {
           const recent = JSON.parse(
             localStorage.getItem("recentSearches") || "[]"
           );
-          // Store variant-specific data if available
           const variantData =
             productData.variants.length && selectedVariant
               ? {
@@ -331,7 +362,7 @@ const Product = () => {
             price: variantData?.price || productData.price || 0,
             category: productData.category,
             status: productData.status,
-            variant: variantData, // Store variant data
+            variant: variantData,
           };
           const updatedRecent = [
             newSearch,
@@ -418,7 +449,6 @@ const Product = () => {
         .filter((item) => item && item.id && item.name)
         .map((item) => ({
           ...item,
-          // Use variant image if available, fallback to product image
           imageUrl:
             item.variant?.imageUrl ||
             item.imageUrl ||
@@ -511,11 +541,9 @@ const Product = () => {
     }
   };
 
-  // UPDATED: Handle Pay Now functionality
   const handlePayNow = async () => {
     if (!product) return;
 
-    // Stock check
     if (quantity > (selectedVariant?.stock || product.stock)) {
       addAlert(
         `Cannot purchase more than ${
@@ -533,7 +561,6 @@ const Product = () => {
     }
 
     try {
-      // First add to cart
       await addToCart(
         product.id,
         quantity,
@@ -542,7 +569,6 @@ const Product = () => {
         selectedSize
       );
 
-      // Then navigate to checkout (fix: ensure navigation happens after addToCart)
       setTimeout(() => {
         navigate(
           `/checkout?productId=${
@@ -551,7 +577,7 @@ const Product = () => {
             selectedColor || ""
           )}&size=${encodeURIComponent(selectedSize || "")}`
         );
-      }, 100); // slight delay to ensure cart update
+      }, 100);
     } catch (err) {
       console.error("Error adding to cart:", err);
       addAlert("Failed to add to cart", "error", 3000);
@@ -727,15 +753,13 @@ const Product = () => {
     }
   };
 
-  // Add this helper function near the top of your file
   const getSafeImageUrl = (url) => {
-    // If url is empty, null, or known unreachable, use local fallback
     if (
       !url ||
-      url.includes("via.placeholder.com") || // unreachable host
+      url.includes("via.placeholder.com") ||
       url === "https://via.placeholder.com/600"
     ) {
-      return "/fallback-image.png"; // Use a local fallback image you provide in public folder
+      return "/fallback-image.png";
     }
     return url;
   };
@@ -782,16 +806,12 @@ const Product = () => {
     : product.imageUrls
         .map((url) => ({ type: "image", url }))
         .filter((media) => media.url);
-  const totalPrice = calculateTotalPrice(
-    selectedVariant?.price || product.price,
-    quantity,
-    isDailyDeal ? discountPercentage : 0
-  );
-  const originalPrice = calculateTotalPrice(
-    selectedVariant?.price || product.price,
-    quantity,
-    0
-  );
+  const basePrice = selectedVariant?.price || product.price;
+  const originalPrice = basePrice * quantity;
+  const totalPrice = fees.totalEstimatedPrice * quantity;
+  const discountedTotalPrice = isDailyDeal
+    ? Math.round(totalPrice * (1 - discountPercentage / 100))
+    : totalPrice;
   const avgRating =
     product.reviews && product.reviews.length > 0
       ? (
@@ -851,7 +871,7 @@ const Product = () => {
             bottom: 0;
             left: 0;
             right: 0;
-            background: #F0F0F0; /* Soft off-white */
+            background: #F0F0F0;
             padding: 1rem;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
             z-index: 50;
@@ -868,8 +888,8 @@ const Product = () => {
             margin-bottom: 0.25rem;
           }
           .product-info-card {
-            background: #F0F0F0; /* Soft off-white */
-            border: 1px solid #CCCCCC; /* Light grey border */
+            background: #F0F0F0;
+            border: 1px solid #CCCCCC;
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin-bottom: 1rem;
@@ -880,12 +900,12 @@ const Product = () => {
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
           }
           .price-section {
-            background: #f0f0f0; /* Primary accent blue/teal */
-            border: 1px solid #cccccc; /* Primary accent blue/teal */
+            background: #f0f0f0;
+            border: 1px solid #cccccc;
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin: 1rem 0;
-            color: #F0F0F0; /* Soft off-white text */
+            color: #F0F0F0;
           }
           .selection-option {
             transition: all 0.2s ease;
@@ -896,9 +916,9 @@ const Product = () => {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           }
           .selection-option.selected {
-            border-color: #E0B912; /* Secondary accent gold/yellow */
-            background-color: #E0B912; /* Secondary accent gold/yellow */
-            color: #333333; /* Dark neutral text */
+            border-color: #E0B912;
+            background-color: #E0B912;
+            color: #333333;
             box-shadow: 0 0 0 2px rgba(224, 185, 18, 0.2);
           }
           .info-badge {
@@ -910,9 +930,9 @@ const Product = () => {
             padding: 0.375rem 0.75rem;
             border-radius: 0.5rem;
             transition: all 0.2s ease;
-            background: #F0F0F0; /* Soft off-white */
-            color: #333333; /* Dark neutral text */
-            border: 1px solid #CCCCCC; /* Light grey border */
+            background: #F0F0F0;
+            color: #333333;
+            border: 1px solid #CCCCCC;
           }
           .info-badge:hover {
             transform: translateY(-1px);
@@ -921,50 +941,50 @@ const Product = () => {
           .quantity-controls {
             display: flex;
             align-items: center;
-            border: 1px solid #CCCCCC; /* Light grey border */
+            border: 1px solid #CCCCCC;
             border-radius: 0.5rem;
             overflow: hidden;
-            background: #F0F0F0; /* Soft off-white */
+            background: #F0F0F0;
             max-width: 120px;
           }
           .quantity-controls button {
-            background: #F0F0F0; /* Soft off-white */
+            background: #F0F0F0;
             border: none;
             padding: 0.5rem 0.75rem;
             transition: all 0.2s ease;
             cursor: pointer;
-            color: #333333; /* Dark neutral text */
+            color: #333333;
           }
           .quantity-controls button:hover {
-            background: #112d4e; /* Primary accent blue/teal */
-            color: #F0F0F0; /* Soft off-white text */
+            background: #112d4e;
+            color: #F0F0F0;
           }
           .quantity-controls input {
             border: none;
             text-align: center;
             width: 3rem;
             padding: 0.5rem;
-            background: #F0F0F0; /* Soft off-white */
-            color: #333333; /* Dark neutral text */
+            background: #F0F0F0;
+            color: #333333;
           }
           .quantity-controls input:focus {
             outline: none;
-            box-shadow: inset 0 0 0 2px #E0B912; /* Secondary accent gold/yellow */
+            box-shadow: inset 0 0 0 2px #E0B912;
           }
           .favorite-button {
             transition: all 0.3s ease;
-            color: #333333; /* Dark neutral text */
+            color: #333333;
           }
           .favorite-button:hover {
             transform: scale(1.2);
           }
           .favorite-button.active {
             transform: scale(1.1);
-            color: gray; /* Muted red for active favorite */
+            color: gray;
           }
           .back-icon {
             transition: all 0.3s ease;
-            color: #333333; /* Dark neutral text */
+            color: #333333;
           }
           .back-icon:hover {
             transform: scale(1.2);
@@ -975,7 +995,6 @@ const Product = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-col-3 gap-6 animate-fadeIn">
-            {/* Media Section */}
             <div className="order-1">
               <div className="relative main-media-container">
                 {allMedia.length > 0 &&
@@ -1031,7 +1050,7 @@ const Product = () => {
                       key={index}
                       className={`w-20 h-20 flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 ${
                         currentMediaIndex === index
-                          ? "border-[#112d4e]" // Primary accent border for selected thumbnail
+                          ? "border-[#112d4e]"
                           : "border-transparent"
                       } thumbnail`}
                       onClick={() => handleMediaClick(media.url, index)}
@@ -1060,7 +1079,6 @@ const Product = () => {
               )}
             </div>
 
-            {/* Product Details Section */}
             <div className="order-2 md:order-2 product-info-card shadow-lg">
               <div className="flex items-center mb-4">
                 <button
@@ -1090,7 +1108,7 @@ const Product = () => {
                   onClick={toggleFavorite}
                   className={`favorite-button p-2 rounded-full ${
                     favorites.includes(product.id)
-                      ? "active text-[#DC2626]" // Muted red when favorited
+                      ? "active text-[#DC2626]"
                       : "text-[#333333] hover:text-[#DC2626]"
                   }`}
                   aria-label={
@@ -1114,12 +1132,11 @@ const Product = () => {
                 </button>
               </div>
 
-              {/* Price Section */}
               <div className="price-section text-white text-center">
                 <div className="flex flex-col sm:flex-row justify-between items-center">
                   <p className="text-2xl font-extrabold mb-2 sm:mb-0">
                     <PriceFormatter
-                      price={totalPrice}
+                      price={discountedTotalPrice}
                       currency={
                         product.currency ||
                         localStorage.getItem("currency") ||
@@ -1146,7 +1163,7 @@ const Product = () => {
                   )}
                 </div>
                 <p className="text-sm mt-1 text-[#F0F0F0] opacity-90">
-                  Total price (inclusive of taxes and fees)
+                  Total price (inclusive of fees)
                 </p>
               </div>
 
@@ -1154,7 +1171,7 @@ const Product = () => {
                 <span className="info-badge">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 text-[#112d4e]" // Primary accent color
+                    className="h-4 w-4 text-[#112d4e]"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1171,7 +1188,7 @@ const Product = () => {
                 <span className="info-badge">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 text-[#112d4e]" // Primary accent color
+                    className="h-4 w-4 text-[#112d4e]"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1224,14 +1241,14 @@ const Product = () => {
                                 colorMap[colorName.toLowerCase()] || colorName,
                               borderColor:
                                 selectedColor === colorName
-                                  ? "#E0B912" // Secondary accent for selected
-                                  : "#CCCCCC", // Light grey
+                                  ? "#E0B912"
+                                  : "#CCCCCC",
                               color:
                                 colorName.toLowerCase() === "white" ||
                                 colorName.toLowerCase() === "silver" ||
                                 colorMap[colorName.toLowerCase()] === "#F0F0F0"
                                   ? "#333333"
-                                  : "#F0F0F0", // Dark text for light colors, light text for dark
+                                  : "#F0F0F0",
                             }}
                             aria-label={`Select color ${colorName}`}
                             title={colorName}
@@ -1291,7 +1308,6 @@ const Product = () => {
                 </div>
               )}
 
-              {/* Stock and Quantity */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <p className="text-sm font-semibold text-[#333333]">
@@ -1338,15 +1354,14 @@ const Product = () => {
                 <p
                   className={`text-sm font-semibold ${
                     (selectedVariant?.stock || product.stock) > 0
-                      ? "text-[#112d4e]" // Primary accent for in stock
-                      : "text-[#DC2626]" // Muted red for out of stock
+                      ? "text-[#112d4e]"
+                      : "text-[#DC2626]"
                   }`}
                 >
                   Stock: {selectedVariant?.stock || product.stock} units
                 </p>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <button
                   onClick={handleAddToCart}
@@ -1358,7 +1373,7 @@ const Product = () => {
                 <button
                   onClick={handlePayNow}
                   disabled={!product.stock || quantity > product.stock}
-                  className="flex-1 px-6 py-3 rounded-lg bg-[#112d4e] text-[#F0F0F0] font-semibold hover:bg-[#112d4e] focus:outline-none focus:ring-2 focus:ring-[#112d4e] focus:ring-offset-2 transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-6 py-3 rounded-lg bg-[#112d4e] text-[#F0F0F0] font-semibold hover:bg-[#007F8B] focus:outline-none focus:ring-2 focus:ring-[#112d4e] focus:ring-offset-2 transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Pay Now
                 </button>
@@ -1366,7 +1381,6 @@ const Product = () => {
             </div>
           </div>
 
-          {/* Product Description */}
           <div className="product-info-card shadow-lg mt-6">
             <h2 className="text-2xl font-bold text-[#333333] mb-4">
               Description
@@ -1405,7 +1419,6 @@ const Product = () => {
             </div>
           </div>
 
-          {/* Reviews Section */}
           <div className="product-info-card shadow-lg mt-6">
             <h2 className="text-2xl font-bold text-[#333333] mb-4">
               Customer Reviews ({product.reviews.length})
@@ -1434,8 +1447,8 @@ const Product = () => {
                           xmlns="http://www.w3.org/2000/svg"
                           className={`h-5 w-5 ${
                             i < review.rating
-                              ? "text-[#E0B912]" // Secondary accent for filled stars
-                              : "text-[#CCCCCC]" // Light grey for empty stars
+                              ? "text-[#E0B912]"
+                              : "text-[#CCCCCC]"
                           }`}
                           viewBox="0 0 20 20"
                           fill="currentColor"
@@ -1482,8 +1495,8 @@ const Product = () => {
                         xmlns="http://www.w3.org/2000/svg"
                         className={`h-8 w-8 cursor-pointer ${
                           star <= reviewRating
-                            ? "text-[#E0B912]" // Secondary accent for selected stars
-                            : "text-[#CCCCCC]" // Light grey for unselected stars
+                            ? "text-[#E0B912]"
+                            : "text-[#CCCCCC]"
                         }`}
                         viewBox="0 0 20 20"
                         fill="currentColor"
@@ -1522,7 +1535,6 @@ const Product = () => {
           </div>
         </div>
 
-        {/* Similar Products & Recently Viewed */}
         <div className="lg:col-span-1">
           {similarProducts.length > 0 && (
             <div className="product-info-card shadow-lg mb-6">

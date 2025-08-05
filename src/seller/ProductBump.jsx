@@ -301,26 +301,6 @@ const ProductBump = () => {
               </div>
             </div>
           </div>
-          {/* <div className="bg-blue-100 border border-blue-200 rounded-lg p-2 sm:p-3">
-            <div className="p-4 flex items-center">
-              <div className="p-1 sm:p-1.5 bg-blue-100 rounded-lg">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-              </div>
-              <div className="ml-1 sm:ml-2">
-                <h3 className="text-sm sm:text-base font-semibold text-gray-900">Search Products</h3>
-                <p className="text-xs sm:text-sm text-gray-700">Filter your products by name</p>
-              </div>
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => debouncedSearch(e.target.value)}
-              placeholder="Search by product name..."
-              className="mt-1 sm:mt-2 w-full px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-            />
-          </div> */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 sm:p-3">
             <div className="flex items-center">
               <div className="p-1 sm:p-1.5 bg-blue-100 rounded-lg">

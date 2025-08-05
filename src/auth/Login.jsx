@@ -9,7 +9,7 @@ import {
   setPersistence,
   browserSessionPersistence,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
@@ -19,18 +19,11 @@ const getFriendlyErrorMessage = (error) => {
     case 'auth/user-not-found': return 'No account found with this email.';
     case 'auth/invalid-email': return 'Please enter a valid email address.';
     case 'auth/user-disabled': return 'This account is not available.';
-    case 'auth/too-many-requests': return 'Too many attempts. Please try again later.';
+    case 'auth/too-many-requests': return 'Too many attempts. Please try again.';
     case 'auth/otp-not-verified': return 'Please verify your email with the code sent to you.';
     default: return 'Something went wrong. Please try again.';
   }
 };
-
-const ADMIN_EMAILS = [
-  'echinecherem729@gmail.com',
-  'emitexc.e.o1@gmail.com',
-  'info@foremade.com',
-  'support@foremade.com',
-];
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -44,6 +37,7 @@ export default function Login() {
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
   const { state } = useLocation();
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -57,27 +51,13 @@ export default function Login() {
 
   const handleSocialLogin = async (user) => {
     try {
-      const response = await fetch('https://foremade-backend.onrender.com/verify-otp-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email }),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        setEmailError(data.error || 'Please verify your email with the code sent to you.');
-        setLoadingGoogle(false);
-        setLoadingFacebook(false);
-        return;
-      }
-
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       let userData;
-
       if (userSnapshot.exists()) {
         userData = userSnapshot.data();
       } else {
-        const role = ADMIN_EMAILS.includes(user.email) ? 'Admin' : 'Buyer';
+        const role = (await getDocs(query(collection(db, 'admins'), where('email', '==', user.email)))).size > 0 ? 'admin' : 'buyer';
         const displayName = user.displayName || '';
         const [firstName, lastName] = displayName.split(' ').length > 1 ? displayName.split(' ') : [displayName, ''];
         userData = {
@@ -91,7 +71,6 @@ export default function Login() {
         };
         await setDoc(userDoc, userData);
       }
-
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
@@ -99,7 +78,7 @@ export default function Login() {
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate(ADMIN_EMAILS.includes(userData.email) ? '/admin/dashboard' : '/profile');
+        navigate(userData.role === 'admin' ? '/admin/dashboard' : '/profile');
       }, 2000);
     } catch (err) {
       console.error('Social login error:', err);
@@ -137,45 +116,34 @@ export default function Login() {
       return;
     }
 
-    console.log('Attempting login with:', { email: trimmedEmail, password: trimmedPassword });
-
     try {
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      const response = await fetch('https://foremade-backend.onrender.com/verify-otp-status', {
+      const response = await fetch(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email }),
+        body: JSON.stringify({ email: trimmedEmail }),
       });
-      const data = await response.json();
-      if (!data.success) {
-        setEmailError(data.error || 'Please verify your email with the code sent to you.');
-        setLoadingEmail(false);
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Server error');
       }
-
+      const data = await response.json();
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
-      if (userSnapshot.exists()) {
-        const userData = userSnapshot.data();
-        localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.removeItem('socialEmail');
-        const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
-        setSuccessMessage(`Welcome, ${firstName}!`);
-        setTimeout(() => {
-          setLoadingEmail(false);
-          navigate(ADMIN_EMAILS.includes(userData.email) ? '/admin/dashboard' : '/profile');
-        }, 2000);
-      } else {
-        setEmailError('Account not found. Please contact support.');
+      const userData = userSnapshot.exists() ? userSnapshot.data() : { uid: user.uid, email: trimmedEmail };
+      localStorage.setItem('userData', JSON.stringify(userData));
+      setSuccessMessage(`Welcome, ${userData.name?.split(' ')[0] || 'User'}!`);
+      setTimeout(() => {
         setLoadingEmail(false);
-      }
+        navigate(data.redirectUrl);
+      }, 2000);
     } catch (err) {
       console.error('Login error:', err);
       setLoadingEmail(false);
-      const errorMessage = getFriendlyErrorMessage(err);
+      const errorMessage = err.message || getFriendlyErrorMessage(err);
       if (errorMessage.includes('email') || errorMessage.includes('account') || errorMessage.includes('valid')) {
         setEmailError(errorMessage);
       } else {
@@ -189,7 +157,6 @@ export default function Login() {
     setPasswordError('');
     setSuccessMessage('');
     setLoadingGoogle(true);
-
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
@@ -207,7 +174,6 @@ export default function Login() {
     setPasswordError('');
     setSuccessMessage('');
     setLoadingFacebook(true);
-
     const provider = new FacebookAuthProvider();
     provider.setCustomParameters({ display: 'popup' });
     try {

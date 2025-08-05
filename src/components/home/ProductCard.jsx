@@ -310,6 +310,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             )}
           </h3>
 
+          <div className="flex items-center justify-between">
           {mergedProduct.condition && (
             <p
               style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
@@ -318,6 +319,13 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               <span>{mergedProduct.condition}</span>
             </p>
           )}
+
+          {isProSeller && (
+              <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
+                <ShieldCheck className="w-4 h-4 text-green-500" />
+              </div>
+          )}
+          </div>
 
           {hasVariants && (
             <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-gray-600">
@@ -360,11 +368,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
                 </>
               )}
             </span>
-            {isProSeller && (
-              <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
-                <ShieldCheck className="w-4 h-4 text-green-500" />
-              </div>
-            )}
           </div>
 
           {hasDiscount && (

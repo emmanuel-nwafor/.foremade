@@ -370,17 +370,26 @@ export default function AdminUsers() {
     }
   };
 
-  // Handle delete user
+  // Modified handleDelete function to include sending membership revoked email
   const handleDelete = async (userId, email) => {
     if (!window.confirm(`Are you sure you want to delete ${email}? This cannot be undone.`)) return;
     setLoading(true);
     try {
+      // Send membership revoked email
+      await fetch('/send-membership-revoked-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
       addAlert(`User ${email} deleted successfully!`, 'success');
     } catch (error) {
-      console.error('Error deleting user:', error);
-      addAlert('Failed to delete user.', 'error');
+      console.error('Error deleting user or sending email:', error);
+      addAlert('Failed to delete user or send email.', 'error');
     } finally {
       setLoading(false);
     }

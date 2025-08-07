@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X, Award, TrendingUp } from 'lucide-react';
+import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X, Award, TrendingUp, CalendarArrowUp } from 'lucide-react';
 import logo from '/src/assets/logi.png';
 
 export default function AdminSidebar() {
@@ -24,6 +24,7 @@ export default function AdminSidebar() {
     { path: '/admin/users', icon: Users, label: 'Manage Users' },
     { path: '/admin/sellers-wallet', icon: Settings, label: 'Account Management' },
     { path: '/admin/sellers/payouts', icon: DollarSign, label: 'Approve Payments' },
+    { path: '/admin/transactions', icon: CalendarArrowUp, label: 'Transactions' },
     { path: '/admin/products', icon: Package, label: 'Manage Products' },
     { path: '/admin/edit/categories', icon: List, label: 'Categories' },
     { path: '/admin/edit/fees', icon: Calculator, label: 'Edit Fees' },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
@@ -73,6 +73,10 @@ const DailyDeals = () => {
               : FALLBACK_IMAGE;
             console.log(`Image for deal ${deal.id}:`, imageUrl);
 
+            // Update or create document with isDailyDeal flag
+            const dealRef = doc(db, 'dailyDeals', deal.id);
+            await setDoc(dealRef, { isDailyDeal: true }, { merge: true });
+
             return {
               id: deal.id,
               productId: deal.productId,
@@ -84,6 +88,7 @@ const DailyDeals = () => {
               condition: productData.condition || '',
               startDate: deal.startDate,
               endDate: deal.endDate,
+              isDailyDeal: true,
             };
           })
         );
@@ -229,18 +234,15 @@ const DailyDeals = () => {
                     product={{
                       id: deal.productId,
                       name: deal.productName,
-                      price: deal.originalPrice * (1 - deal.discountPercent / 100),
+                      price: deal.originalPrice * (1 - parseFloat(deal.discountPercent) / 100),
                       imageUrl: deal.imageUrl,
                       condition: deal.condition,
+                      isDailyDeal: deal.isDailyDeal,
+                      discountPercentage: parseFloat(deal.discountPercent),
                     }}
                   />
                   <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
                     {deal.discountPercent}% OFF
-                  </div>
-                  <div className="mt-1">
-                    <span className="text-gray-500 line-through text-[10px] xs:text-xs">
-                      ₦{deal.originalPrice.toLocaleString('en-NG')}
-                    </span>
                   </div>
                 </div>
               </div>

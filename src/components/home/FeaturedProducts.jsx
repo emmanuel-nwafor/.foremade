@@ -16,7 +16,7 @@ const FeaturedProducts = () => {
         const productSnapshot = await getDocs(productsCollection);
         const productList = productSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((product) => product.status === 'approved');
+          .filter((product) => product.status === 'approved' && product.isBumped && product.bumpExpiry && new Date(product.bumpExpiry) > new Date());
         setProducts(productList);
       } catch (error) {
         console.error('Error fetching products:', error);

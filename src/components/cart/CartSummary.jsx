@@ -8,7 +8,7 @@ import PriceFormatter from '/src/components/layout/PriceFormatter';
 const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const { convertPrice } = useCurrency();
   const navigate = useNavigate();
-  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+  const [feeConfig, setFeeConfig] = useState({ buyerProtectionRate: 0.08, handlingRate: 0.20 });
   const [minimumPurchase, setMinimumPurchase] = useState(25000);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
         if (feeSnap.exists()) {
           const data = feeSnap.data();
           const category = cartItems[0]?.product?.category || 'default';
-          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+          setFeeConfig(data[category] || { buyerProtectionRate: 0.08, handlingRate: 0.20 });
         }
 
         const minRef = doc(db, 'settings', 'minimumPurchase');
@@ -69,7 +69,7 @@ const CartSummary = ({ totalPrice: propTotalPrice, cartItems, clearCart }) => {
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
-    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+    return discountedPrice * (1 + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
   };
 
   const totalPrice = cartItems.reduce((sum, item) => {

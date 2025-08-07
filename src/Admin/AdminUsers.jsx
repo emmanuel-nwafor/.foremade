@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, getIdToken } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
-import axios from 'axios';
-import AdminSidebar from './AdminSidebar';
+import AdminSidebar from '/src/Admin/AdminSidebar.jsx';
 
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {
@@ -272,18 +271,40 @@ export default function AdminUsers() {
     }
 
     try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const idToken = await getIdToken(user);
-      const response = await axios.post(`${BACKEND_URL}/api/auth/admin/add-admin`, addAdminData, {
-        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      const userCredential = await createUserWithEmailAndPassword(auth, addAdminData.email, addAdminData.password);
+      const newAdmin = userCredential.user;
+
+      const username = addAdminData.email.split('@')[0];
+      await updateProfile(newAdmin, { displayName: username });
+
+      await setDoc(doc(db, 'users', newAdmin.uid), {
+        email: addAdminData.email,
+        name: username,
+        username,
+        role: 'admin',
+        status: 'active',
+        preRegistered: true,
+        createdAt: new Date().toISOString(),
+        uid: newAdmin.uid,
+        profileImage: null,
       });
-      addAlert(response.data.message, 'success');
+
+      await setDoc(doc(collection(db, 'admins'), newAdmin.uid), {
+        email: addAdminData.email,
+        uid: newAdmin.uid,
+        createdAt: new Date().toISOString(),
+      });
+
+      addAlert(`Admin ${addAdminData.email} added successfully! 🎉`, 'success');
       setAddAdminData({ email: '', password: '' });
       setIsAddAdminOpen(false);
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.details || 'Failed to add admin';
-      addAlert(errorMsg, 'error');
-      console.error('Error adding admin:', error.response?.data || error.message);
+    } catch (err) {
+      console.error('Error adding admin:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setErrors({ email: 'This email is already in use.' });
+      } else {
+        addAlert('Failed to add admin.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -335,41 +356,40 @@ export default function AdminUsers() {
     if (!window.confirm(`Are you sure you want to ${currentStatus === 'suspended' ? 'unsuspend' : 'suspend'} ${email}?`)) return;
     setLoading(true);
     try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const idToken = await getIdToken(user);
-      const response = await axios.post(`${BACKEND_URL}/admin/suspend-user/${userId}`, { action: currentStatus === 'suspended' ? 'unsuspend' : 'suspend' }, {
-        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        status: currentStatus === 'suspended' ? 'active' : 'suspended',
+        updatedAt: new Date().toISOString(),
       });
-      addAlert(response.data.message, 'success');
+      addAlert(`User ${email} ${currentStatus === 'suspended' ? 'unsuspended' : 'suspended'} successfully!`, 'success');
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.details || 'Failed to update user status';
-      addAlert(errorMsg, 'error');
-      console.error('Error suspending/unsuspending user:', error.response?.data || error.message);
+      console.error('Error suspending/unsuspending user:', error);
+      addAlert('Failed to update user status.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle delete user
+  // Modified handleDelete function to include sending membership revoked email
   const handleDelete = async (userId, email) => {
     if (!window.confirm(`Are you sure you want to delete ${email}? This cannot be undone.`)) return;
     setLoading(true);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('User not authenticated');
-      }
-      console.log('Current User:', { uid: currentUser.uid, email: currentUser.email });
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const idToken = await getIdToken(user);
-      const response = await axios.delete(`${BACKEND_URL}/admin/delete-user/${userId}`, {
-        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      // Send membership revoked email
+      await fetch('/send-membership-revoked-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
       });
-      addAlert(response.data.message, 'success');
+
+      const userRef = doc(db, 'users', userId);
+      await deleteDoc(userRef);
+      addAlert(`User ${email} deleted successfully!`, 'success');
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to delete user';
-      addAlert(errorMsg, 'error');
-      console.error('Error deleting user:', error.response?.data || error.message);
+      console.error('Error deleting user or sending email:', error);
+      addAlert('Failed to delete user or send email.', 'error');
     } finally {
       setLoading(false);
     }

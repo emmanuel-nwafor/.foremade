@@ -10,7 +10,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const { convertPrice } = useCurrency();
   const [mainImage, setMainImage] = useState(placeholder);
   const [product, setProduct] = useState(null);
-  const [feeConfig, setFeeConfig] = useState({ taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+  const [feeConfig, setFeeConfig] = useState({ buyerProtectionRate: 0.08, handlingRate: 0.20 });
   const [isDailyDeal, setIsDailyDeal] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [imageError, setImageError] = useState(false);
@@ -18,7 +18,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
   const calculateTotalPrice = (basePrice, qty = 1, discountPercentage = 0) => {
     const discount = discountPercentage > 0 ? (basePrice * discountPercentage) / 100 : 0;
     const discountedPrice = basePrice - discount;
-    return discountedPrice * (1 + feeConfig.taxRate + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
+    return discountedPrice * (1 + feeConfig.buyerProtectionRate + feeConfig.handlingRate) * qty;
   };
 
   useEffect(() => {
@@ -29,7 +29,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
         if (feeSnap.exists()) {
           const data = feeSnap.data();
           const category = product?.category || 'default';
-          setFeeConfig(data[category] || { taxRate: 0.075, buyerProtectionRate: 0.02, handlingRate: 0.05 });
+          setFeeConfig(data[category] || { buyerProtectionRate: 0.08, handlingRate: 0.20 });
         }
       } catch (err) {
         console.error('Error fetching fee config:', err);
@@ -52,7 +52,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
           setProduct({
             id: productSnap.id,
             name: productData.name || 'Unnamed Product',
-            price: Number(productData.price) || 0, // Ensure price is a number
+            price: Number(productData.price) || 0,
             stock: Number(productData.stock) || 0,
             category: productData.category?.trim().toLowerCase() || 'uncategorized',
             imageUrls: productData.imageUrls || [],
@@ -136,6 +136,12 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
     return mainImage;
   })();
 
+  // Truncate product name to 7-8 words
+  const truncateName = (name, maxWords = 8) => {
+    const words = name.split(' ');
+    return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '…' : name;
+  };
+
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
       <Link to={`/product/${product.id}`}>
@@ -166,7 +172,7 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
       </Link>
       <div className="flex-1">
         <Link to={`/product/${product.id}`}>
-          <h3 className="text-sm font-bold text-gray-800">{product.name}</h3>
+          <h3 className="text-sm font-bold text-gray-800">{truncateName(product.name)}</h3>
         </Link>
         {isDailyDeal && (
           <div className="flex items-center gap-2">

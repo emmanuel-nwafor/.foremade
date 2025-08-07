@@ -7,6 +7,10 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  collection,
+  getDocs,
+  query,
+  where,
 } from "firebase/firestore";
 import { toast } from "react-toastify";
 import { Heart } from "lucide-react";
@@ -19,6 +23,14 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
+  const [feeConfig, setFeeConfig] = useState(null);
+  const [fees, setFees] = useState({
+    buyerProtectionFee: 0,
+    handlingFee: 0,
+    totalEstimatedPrice: 0,
+    sellerEarnings: 0,
+  });
+  const [isProSeller, setIsProSeller] = useState(false);
 
   let mergedProduct = { ...product };
   if (Array.isArray(dailyDeals) && product.id) {
@@ -36,7 +48,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     }
   }
 
-  // Calculate price range for products with variants, using maxPrice as the base
   let minPrice = mergedProduct.price || 0;
   let maxPrice = mergedProduct.price || 0;
   let hasVariants = Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
@@ -47,34 +58,82 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     maxPrice = Math.max(...variantPrices);
   }
 
-  // Set initial image based on variants or product-level images
   useEffect(() => {
-    console.log("Product data:", mergedProduct);
     let initialImage = placeholder;
     if (hasVariants && mergedProduct.variants[0]?.imageUrls) {
       const firstValidUrl = mergedProduct.variants[0].imageUrls.find((url) =>
         typeof url === "string" && url.trim() && url.startsWith("https://")
       );
       initialImage = firstValidUrl || (mergedProduct.variants[0].imageUrls[0] || placeholder);
-      console.log("Variant image check:", { firstValidUrl, allUrls: mergedProduct.variants[0].imageUrls });
     } else if (Array.isArray(mergedProduct.imageUrls) && mergedProduct.imageUrls.length > 0) {
       const firstValidUrl = mergedProduct.imageUrls.find((url) =>
         typeof url === "string" && url.trim() && url.startsWith("https://")
       );
       initialImage = firstValidUrl || mergedProduct.imageUrls[0] || placeholder;
-      console.log("Product image check:", { firstValidUrl, allUrls: mergedProduct.imageUrls });
     } else if (mergedProduct.imageUrl && typeof mergedProduct.imageUrl === "string" && mergedProduct.imageUrl.startsWith("https://")) {
       initialImage = mergedProduct.imageUrl;
-      console.log("Single imageUrl check:", mergedProduct.imageUrl);
     } else {
       console.warn(`Product ${mergedProduct.id} has no valid imageUrl or imageUrls`);
     }
     setImageUrl(initialImage);
     setImageFailed(false);
-  }, [product, hasVariants]);
 
-  // Apply discount to the maxPrice for display purposes
-  const originalDisplayPrice = maxPrice; // Using maxPrice as the base
+    const fetchFeeConfig = async () => {
+      try {
+        const docRef = doc(db, "feeConfigurations", "categoryFees");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFeeConfig(docSnap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching fee configurations:", err);
+      }
+    };
+    fetchFeeConfig();
+
+    const checkProSellerStatus = async () => {
+      if (mergedProduct.sellerId) {
+        try {
+          // Fetch pro sellers
+          const proSellersSnapshot = await getDocs(collection(db, "proSellers"));
+          const proSellers = proSellersSnapshot.docs.map((doc) => doc.data());
+
+          // Check if sellerId matches any userId in proSellers
+          const isMatch = proSellers.some(
+            (proSeller) => proSeller.userId === mergedProduct.sellerId
+          );
+          setIsProSeller(isMatch);
+        } catch (err) {
+          console.error("Error checking pro seller status:", err);
+          setIsProSeller(false);
+        }
+      }
+    };
+    checkProSellerStatus();
+  }, [product, hasVariants, mergedProduct.sellerId]);
+
+  useEffect(() => {
+    if (feeConfig && mergedProduct.category && maxPrice > 0) {
+      const config = feeConfig[mergedProduct.category] || {
+        minPrice: 1000,
+        maxPrice: Infinity,
+        buyerProtectionRate: 0.08,
+        handlingRate: 0.20,
+      };
+      const buyerProtectionFee = maxPrice * config.buyerProtectionRate;
+      const handlingFee = maxPrice * config.handlingRate;
+      const totalEstimatedPrice = maxPrice + buyerProtectionFee + handlingFee;
+      const sellerEarnings = maxPrice;
+      setFees({
+        buyerProtectionFee,
+        handlingFee,
+        totalEstimatedPrice,
+        sellerEarnings,
+      });
+    }
+  }, [feeConfig, mergedProduct.category, maxPrice]);
+
+  const originalDisplayPrice = maxPrice;
   let discount = 0;
   if (
     mergedProduct.isDailyDeal &&
@@ -90,9 +149,9 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     discount = mergedProduct.discount;
   }
   const hasDiscount = discount > 0;
-  const discountedDisplayPrice = hasDiscount
-    ? Math.round(originalDisplayPrice * (1 - discount / 100))
-    : originalDisplayPrice;
+  const discountedTotalPrice = hasDiscount
+    ? Math.round(fees.totalEstimatedPrice * (1 - discount / 100))
+    : fees.totalEstimatedPrice;
 
   const truncateText = (text, maxLength = 35) => {
     if (!text || typeof text !== "string") return "No name available";
@@ -241,7 +300,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
-              // minHeight: "48px",
             }}
           >
             {truncateText(mergedProduct.name)}
@@ -252,6 +310,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             )}
           </h3>
 
+          <div className="flex items-center justify-between">
           {mergedProduct.condition && (
             <p
               style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
@@ -260,6 +319,13 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               <span>{mergedProduct.condition}</span>
             </p>
           )}
+
+          {isProSeller && (
+              <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
+                <ShieldCheck className="w-4 h-4 text-green-500" />
+              </div>
+          )}
+          </div>
 
           {hasVariants && (
             <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-gray-600">
@@ -293,18 +359,15 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               {hasDiscount ? (
                 <>
                   <span className="" style={{ fontSize: "16px" }}>
-                    <PriceFormatter price={discountedDisplayPrice} />
+                    <PriceFormatter price={discountedTotalPrice} />
                   </span>
                 </>
               ) : (
                 <>
-                  <PriceFormatter price={maxPrice} /> {/* Only show maxPrice */}
+                  <PriceFormatter price={fees.totalEstimatedPrice} />
                 </>
               )}
             </span>
-            <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
-              <ShieldCheck className="w-4 h-4 text-green-500" />
-            </div>
           </div>
 
           {hasDiscount && (

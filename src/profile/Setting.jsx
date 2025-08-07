@@ -29,6 +29,7 @@ export default function Setting() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const navigate = useNavigate();
+  const fallbackImage = 'https://via.placeholder.com/150?text=Profile';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -59,7 +60,7 @@ export default function Setting() {
           username: firestoreData.username || 'emmachi789',
           email: user.email || '',
           country: firestoreData.country || '',
-          phone: firestoreData.phone || '',
+          phone: firestoreData.phoneNumber || 'Not provided',
           address,
         });
       } catch (err) {
@@ -190,7 +191,7 @@ export default function Setting() {
         name: userData.name,
         username: userData.username,
         country: userData.country,
-        phone: userData.phone,
+        phoneNumber: userData.phone === 'Not provided' ? '' : userData.phone,
         addresses: [addressObj],
       });
 
@@ -237,13 +238,13 @@ export default function Setting() {
           src={previewImage}
           alt="Profile"
           className="w-full h-full object-cover"
-          onError={() => setPreviewImage(null)}
+          onError={() => setPreviewImage(fallbackImage)}
         />
       );
     }
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-300 text-white text-2xl font-bold uppercase">
-        {userData.email ? userData.email[0] : 'U'}
+        {userData.email[0] || '?'}
       </div>
     );
   };
@@ -252,7 +253,7 @@ export default function Setting() {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <Spinner />
-        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        <p className="text-gray-600 dark:text-gray-300 mt-4">Loading...</p>
       </div>
     );
   }
@@ -260,10 +261,10 @@ export default function Setting() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
         <button
           onClick={() => setError('')}
-          className="mt-6 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors"
+          className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors"
         >
           Retry
         </button>
@@ -273,16 +274,16 @@ export default function Setting() {
 
   return (
     <div className="container mx-auto px-4 py-8 text-gray-800 dark:text-gray-700">
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row gap-6">
         <Sidebar />
         <div className="md:w-3/4">
-          <h1 className="text-3xl font-bold mb-6">Settings</h1>
-          <div className="rounded-lg p-6 bg-gray-50 dark:bg-gray-800 shadow-md">
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">Settings</h1>
+          <div className="rounded-lg p-6 dark:bg-gray-800 shadow-md border border-gray-100 dark:border-black">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
               <User size={20} /> Profile Picture
             </h3>
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shadow hover:bg-gray-300 transition-colors duration-300">
                 {getAvatar()}
               </div>
               <div className="flex flex-col gap-2">
@@ -299,7 +300,7 @@ export default function Setting() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
               <User size={20} /> Personal Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -310,7 +311,7 @@ export default function Setting() {
                   name="name"
                   value={userData.name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                   placeholder="Enter your name"
                 />
               </div>
@@ -321,7 +322,7 @@ export default function Setting() {
                   name="username"
                   value={userData.username}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                   placeholder="Enter your username"
                 />
               </div>
@@ -332,7 +333,7 @@ export default function Setting() {
                   name="email"
                   value={userData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-400"
                   disabled
                 />
               </div>
@@ -343,7 +344,7 @@ export default function Setting() {
                   name="country"
                   value={userData.country}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                   placeholder="Enter your country"
                 />
               </div>
@@ -354,7 +355,7 @@ export default function Setting() {
                   name="phone"
                   value={userData.phone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                   placeholder="Enter your phone number"
                 />
               </div>
@@ -365,13 +366,13 @@ export default function Setting() {
                   name="address"
                   value={userData.address}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                   placeholder="Enter your address"
                 />
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
               <Lock size={20} /> Security
             </h3>
             <div className="mb-6">
@@ -383,7 +384,7 @@ export default function Setting() {
                       type={showCurrentPassword ? 'text' : 'password'}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                       placeholder="Enter current password"
                     />
                     <button
@@ -401,7 +402,7 @@ export default function Setting() {
                       type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-black rounded-lg dark:bg-gray-700 dark:text-gray-200"
                       placeholder="Enter new password"
                     />
                     <button
@@ -416,13 +417,13 @@ export default function Setting() {
               {passwordError && <p className="text-red-600 dark:text-red-400 text-sm mt-2">{passwordError}</p>}
               <button
                 onClick={handlePasswordChange}
-                className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-800 transition-colors"
+                className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors"
               >
                 Change Password
               </button>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
               <Settings size={20} /> Preferences
             </h3>
             <div className="mb-6">
@@ -447,25 +448,24 @@ export default function Setting() {
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <User size={20} /> Account Actions
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
             </h3>
             <div className="flex flex-wrap gap-4 mb-6">
-              <button
+              {/* <button
                 onClick={handleLogout}
-                className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg shadow-md hover:from-red-600 hover:to-red-800 transition-colors flex items-center gap-1"
+                className="px-3 py-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-colors flex items-center gap-1"
               >
                 <LogOut size={16} /> Log Out
-              </button>
+              </button> */}
               <Link
                 to="/profile"
-                className="px-6 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 rounded-lg shadow-md hover:from-gray-400 hover:to-gray-500 transition-colors dark:from-gray-600 dark:to-gray-700 dark:text-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800 flex items-center gap-1"
+                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400 transition-colors dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 flex items-center gap-1"
               >
                 <X size={16} /> Cancel
               </Link>
               <button
                 onClick={handleSave}
-                className="px-3 py-2 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg shadow-md hover:from-green-600 hover:to-green-800 transition-colors flex items-center gap-1"
+                className="px-3 py-2 bg-gray-700 text-white rounded-lg shadow-md hover:bg-gray-800 transition-colors flex items-center gap-1"
               >
                 <Save size={16} /> Save Changes
               </button>

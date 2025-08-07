@@ -365,19 +365,16 @@ const Checkout = () => {
               ? productSnap.data().stock || 10
               : 10;
 
-            const categoryFees = (feeSnap.exists() &&
-              feeSnap.data()[category]) || {
-              taxRate: 0.075,
-              buyerProtectionRate: 0.02,
-              handlingRate: 0.05,
+            const config = feeConfig[category] || {
+              minPrice: 1000,
+              maxPrice: Infinity,
+              buyerProtectionRate: 0.08,
+              handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-            const totalPrice =
-              basePrice *
-              (1 +
-                categoryFees.taxRate +
-                categoryFees.buyerProtectionRate +
-                categoryFees.handlingRate);
+            const buyerProtectionFee = basePrice * config.buyerProtectionRate;
+            const handlingFee = basePrice * config.handlingRate;
+            const totalPrice = basePrice + buyerProtectionFee + handlingFee;
 
             return {
               ...item,
@@ -496,18 +493,16 @@ const Checkout = () => {
               ? productSnap.data().stock || 10
               : 10;
 
-            const categoryFees = feeConfig[category] || {
-              taxRate: 0.075,
-              buyerProtectionRate: 0.02,
-              handlingRate: 0.05,
+            const config = feeConfig[category] || {
+              minPrice: 1000,
+              maxPrice: Infinity,
+              buyerProtectionRate: 0.08,
+              handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-            const totalPrice =
-              basePrice *
-              (1 +
-                categoryFees.taxRate +
-                categoryFees.buyerProtectionRate +
-                categoryFees.handlingRate);
+            const buyerProtectionFee = basePrice * config.buyerProtectionRate;
+            const handlingFee = basePrice * config.handlingRate;
+            const totalPrice = basePrice + buyerProtectionFee + handlingFee;
 
             return {
               ...item,
@@ -1583,11 +1578,11 @@ const Checkout = () => {
                 Cart Items
                 <span
                   className="ml-2 text-xs text-gray-500 cursor-help relative group"
-                  aria-label="Prices include tax, buyer protection, and handling fees."
+                  aria-label="Prices include buyer protection and handling fees."
                 >
                   <i className="bx bx-info-circle" />
                   <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-2 -top-10 left-0 w-48 z-10">
-                    Prices include tax, buyer protection, and handling fees.
+                    Prices include buyer protection and handling fees.
                   </span>
                 </span>
               </h2>

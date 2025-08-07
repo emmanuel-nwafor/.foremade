@@ -145,7 +145,7 @@ export default function Sidebar() {
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-800 p-2 rounded-lg transition-colors duration-300"
         >
           <Heart className="w-6 h-6 text-black dark:text-white" />
-          <span>Wishlist</span>
+          <span>Favorites</span>
         </Link>
         <Link
           to="/address"

@@ -38,9 +38,9 @@ const Category = () => {
       <h2 className="text-lg sm:text-lg md:text-xl font-bold text-gray-800 mb-4">
         Top Categories
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 ">
         {/* ForemadeGo Delivery Ad Card */}
-        <div className="md:col-span-2 bg-gradient-to-br from-[#D1FAE5] to-[#A7F3D0] rounded-2xl p-2 sm:p-3 text-gray-900 relative overflow-hidden shadow-2xl">
+        <div className="p-5 md:col-span-2 bg-gradient-to-br from-[#D1FAE5] to-[#A7F3D0] rounded-2xl sm:p-3 text-gray-900 relative overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-white rounded-full"></div>

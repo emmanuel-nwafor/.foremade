@@ -88,6 +88,7 @@ import UserAgreement from './pages/UserAgreement';
 import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import ProductBumpInfo from './seller/ProductBumpInfo';
+import OrderTracking from './profile/OrderTracking';
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
 const Layout = ({ children }) => {
@@ -214,6 +215,7 @@ function App() {
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/seller-chat" element={<SellerChat />} />
+                <Route path="/order-tracking" element={<OrderTracking />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
                 <Route path="/user-agreement" element={<UserAgreement />} />
 

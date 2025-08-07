@@ -306,7 +306,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             )}
           </h3>
           {(mergedProduct.stock <= 2 && mergedProduct.stock > 0) && (
-            <span className="inline-block border border-red-500 text-red-500 text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="inline-block border border-red-500 text-red-500 text-xs font-semibold px-[5px] py-[2px] rounded-full">
               Almost Gone
             </span>
           )}
@@ -370,13 +370,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               style={{ fontSize: "10px" }}
             >
               <PriceFormatter price={originalDisplayPrice} />
-            </span>
-          )}
-          {mergedProduct.isDailyDeal && mergedProduct.discountPercentage > 0 && (
-            <span
-              className="text-green-600 text-xs font-semibold"
-            >
-              -{mergedProduct.discountPercentage}%
             </span>
           )}
         </div>

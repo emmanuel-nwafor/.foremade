@@ -139,12 +139,11 @@ export default function AdminTransactions() {
         transition={{ duration: 0.5 }}
         className="flex-1 ml-0 md:ml-64 p-4 md:p-6 lg:p-8"
       >
-        <div className="max-w-7xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 lg:p-10">
+        <div className="max-w-8xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 lg:p-10">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 flex items-center gap-2">
-              <HistoryIcon className="w-8 h-8" />
-              Transaction History
-            </h2>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 bg-clip-text text-transparent bg-gradient-to-r from-blue-900 to-amber-500 flex items-center gap-2">
+              All Transactions
+            </h1>
           </div>
           <div className="mb-6">
             <div className="relative">

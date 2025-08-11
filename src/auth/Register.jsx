@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import logo from '../assets/logi.png';
+import { UserCheck2Icon } from 'lucide-react';
 
 // Validation functions
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -289,7 +290,9 @@ export default function Register() {
           </div>
         </div>
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white relative">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Sign Up</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Sign Up</h2>
+          </div>
           <p className="text-gray-600 mb-6">
             Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Sign In</Link>
           </p>

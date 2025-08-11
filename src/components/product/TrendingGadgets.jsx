@@ -147,7 +147,7 @@ export default function TrendingGadgets() {
             Trending in {category}
           </h2>
           <div className="flex items-center gap-3">
-            <Link to={`/products?category=${categoryId}`} className="text-blue-600 text-sm hover:text-blue-400">
+            <Link to="/trending-gadgets" className="text-blue-600 text-sm hover:text-blue-400">
               See All
             </Link>
             <button

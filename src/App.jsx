@@ -90,6 +90,8 @@ import RefundPolicy from './pages/RefundPolicy';
 import ProductBumpInfo from './seller/ProductBumpInfo';
 import OrderTracking from './profile/OrderTracking';
 import DailyDeals from './pages/DailyDeals';
+import AllTrendingFashion from './pages/AllTrendingFashion';
+import AllTrendingGadgets from './pages/AllTrendingGadgets';
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
 const Layout = ({ children }) => {
@@ -220,6 +222,8 @@ function App() {
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
                 <Route path="/user-agreement" element={<UserAgreement />} />
                 <Route path="/daily-deals" element={<DailyDeals />} />
+                <Route path="/trending-fashions" element={<AllTrendingFashion />} />
+                <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs, getDoc, deleteDoc, doc } from 'firebase/firestore';
 import Sidebar from '../profile/Sidebar';
 import ProductCard from '../components/home/ProductCard';
+import Spinner from '../components/common/Spinner';
+import { HeartHandshakeIcon } from 'lucide-react';
 
 export default function Favorites() {
   const [loading, setLoading] = useState(true);
@@ -131,6 +133,7 @@ export default function Favorites() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
+        <Spinner />
         <p className="text-gray-600">Loading...</p>
       </div>
     );
@@ -166,12 +169,12 @@ export default function Favorites() {
         <div className="md:w-3/4">
           <div className="rounded-lg p-6  bg-gray-100">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Wish List</h3>
+              <h3 className="text-lg font-semibold">Favorites</h3>
             </div>
             {favoriteProducts.length === 0 ? (
               <div className="text-center">
                 <div className="inline-block p-4 rounded-full mb-2 bg-gray-100">
-                  <span className="text-2xl">❤️</span>
+                  <span className="text-2xl"><HeartHandshakeIcon /></span>
                 </div>
                 <p className="text-gray-400">No items in your wish list!</p>
               </div>

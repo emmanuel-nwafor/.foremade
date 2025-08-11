@@ -47,6 +47,7 @@ import AdminManager from './Admin/AdminManager';
 import AdminSellerWallet from './Admin/AdminSellerWallet';
 import AdminProSellerRequests from './Admin/AdminProSellerRequests';
 import AdminBumpedProducts from './Admin/AdminBumpedProducts';
+import AdminTransactions from './Admin/AdminTransactions';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -87,6 +88,7 @@ import UserAgreement from './pages/UserAgreement';
 import BuyerProtectionPolicy from './pages/BuyerProtectionPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import ProductBumpInfo from './seller/ProductBumpInfo';
+import OrderTracking from './profile/OrderTracking';
 // import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
 
 const Layout = ({ children }) => {
@@ -130,6 +132,7 @@ const Layout = ({ children }) => {
     '/dashboard',
     '/admin/sellers-wallet',
     '/seller-chat',
+    '/admin/transactions',
   ].includes(location.pathname);
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
@@ -212,11 +215,13 @@ function App() {
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/seller-chat" element={<SellerChat />} />
+                <Route path="/order-tracking" element={<OrderTracking />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
-             <Route path="/user-agreement" element={<UserAgreement />} />
+                <Route path="/user-agreement" element={<UserAgreement />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/transactions" element={<AdminTransactions />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/products" element={<Admin />} />
                 <Route path="/admin/sellers/payouts" element={<AdminPayoutMonitor />} />

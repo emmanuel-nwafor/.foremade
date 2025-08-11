@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { User, Package, Heart, Map, Settings } from 'lucide-react'; // Importing lucide-react icons
+import { User, Package, Heart, Map, Settings, CalendarCheck2 } from 'lucide-react'; // Importing lucide-react icons
 
 // Validation functions (to match Register)
 const generateUsername = (firstName, lastName) => {
@@ -123,35 +123,42 @@ export default function Sidebar() {
           to="/profile"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <User className="w-7 h-7 text-black dark:text-blue-400" />
+          <User className="w-6 h-6 text-black dark:text-white" />
           <span>Profile</span>
         </Link>
         <Link
           to="/orders"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Package className="w-7 h-7 text-black dark:text-green-400" />
+          <Package className="w-6 h-6 text-black dark:text-white" />
           <span>Orders</span>
+        </Link>
+        <Link
+          to="/order-tracking"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-800 p-2 rounded-lg transition-colors duration-300"
+        >
+          <CalendarCheck2 className="w-6 h-6 text-black dark:text-white" />
+          <span>Track Orders</span>
         </Link>
         <Link
           to="/favorites"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Heart className="w-7 h-7 text-black dark:text-red-400" />
-          <span>Wishlist</span>
+          <Heart className="w-6 h-6 text-black dark:text-white" />
+          <span>Favorites</span>
         </Link>
         <Link
           to="/address"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Map className="w-7 h-7 text-black dark:text-purple-400" />
+          <Map className="w-6 h-6 text-black dark:text-white" />
           <span>Addresses</span>
         </Link>
         <Link
           to="/setting"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-800 p-2 rounded-lg transition-colors duration-300"
         >
-          <Settings className="w-7 h-7 text-black dark:text-orange-400" />
+          <Settings className="w-6 h-6 text-black dark:text-white" />
           <span>Settings</span>
         </Link>
       </nav>

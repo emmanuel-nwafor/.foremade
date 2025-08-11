@@ -32,7 +32,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   });
   const [isProSeller, setIsProSeller] = useState(false);
 
-  let mergedProduct = { ...product };
+  let mergedProduct = { ...product, stock: product.stock || 0 }; // Default stock to 0 if not provided
   if (Array.isArray(dailyDeals) && product.id) {
     const deal = dailyDeals.find(
       (d) =>
@@ -44,7 +44,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     if (deal) {
       mergedProduct.isDailyDeal = true;
       mergedProduct.discountPercentage =
-        typeof deal.discount === "number" ? deal.discount * 100 : 0;
+        typeof deal.discount === "number" ? (deal.discount * 100).toFixed(2) : 0;
     }
   }
 
@@ -94,11 +94,8 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     const checkProSellerStatus = async () => {
       if (mergedProduct.sellerId) {
         try {
-          // Fetch pro sellers
           const proSellersSnapshot = await getDocs(collection(db, "proSellers"));
           const proSellers = proSellersSnapshot.docs.map((doc) => doc.data());
-
-          // Check if sellerId matches any userId in proSellers
           const isMatch = proSellers.some(
             (proSeller) => proSeller.userId === mergedProduct.sellerId
           );
@@ -149,8 +146,11 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     discount = mergedProduct.discount;
   }
   const hasDiscount = discount > 0;
-  const discountedTotalPrice = hasDiscount
-    ? Math.round(fees.totalEstimatedPrice * (1 - discount / 100))
+  const discountedPrice = hasDiscount
+    ? Math.round(maxPrice * (1 - discount / 100))
+    : maxPrice;
+  const totalEstimatedPrice = hasDiscount
+    ? Math.round((maxPrice + fees.buyerProtectionFee + fees.handlingFee) * (1 - discount / 100))
     : fees.totalEstimatedPrice;
 
   const truncateText = (text, maxLength = 35) => {
@@ -175,7 +175,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             (userId &&
               Array.isArray(data.favoritedBy) &&
               data.favoritedBy.includes(userId)) ||
-              false
+            false
           );
           setFavoriteCount(data.favoriteCount || 0);
         } else {
@@ -186,7 +186,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
         console.error("Error fetching favorite status:", err);
       }
     };
-
     fetchFavoriteStatus();
   }, [product.id]);
 
@@ -198,7 +197,6 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
       toast.error("Please sign in to favorite a product.");
       return;
     }
-
     try {
       const productRef = doc(db, "products", product.id);
       const docSnap = await getDoc(productRef);
@@ -206,11 +204,9 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
         toast.error("Product not found.");
         return;
       }
-
       const data = docSnap.data();
       const currentCount = data.favoriteCount || 0;
       const favoritedBy = data.favoritedBy || [];
-
       if (isFavorited) {
         await updateDoc(productRef, {
           favoritedBy: arrayRemove(userId),
@@ -309,7 +305,11 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               </span>
             )}
           </h3>
-
+          {(mergedProduct.stock <= 2 && mergedProduct.stock > 0) && (
+            <span className="inline-block border border-red-500 text-red-500 text-xs font-semibold px-[5px] py-[2px] rounded-full">
+              Almost Gone
+            </span>
+          )}
           <div className="flex items-center justify-between">
           {mergedProduct.condition && (
             <p
@@ -356,21 +356,15 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
                 gap: "0.5rem",
               }}
             >
-              {hasDiscount ? (
-                <>
-                  <span className="" style={{ fontSize: "16px" }}>
-                    <PriceFormatter price={discountedTotalPrice} />
-                  </span>
-                </>
+              {mergedProduct.isDailyDeal ? (
+                <PriceFormatter price={discountedPrice} />
               ) : (
-                <>
-                  <PriceFormatter price={fees.totalEstimatedPrice} />
-                </>
+                <PriceFormatter price={totalEstimatedPrice} />
               )}
             </span>
           </div>
 
-          {hasDiscount && (
+          {mergedProduct.isDailyDeal && (
             <span
               className="text-gray-400 line-through mr-1"
               style={{ fontSize: "10px" }}

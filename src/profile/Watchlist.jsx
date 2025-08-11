@@ -94,7 +94,7 @@ const Watchlist = () => {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <Spinner />
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
       </div>
     );
   }

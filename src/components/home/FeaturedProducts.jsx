@@ -16,7 +16,7 @@ const FeaturedProducts = () => {
         const productSnapshot = await getDocs(productsCollection);
         const productList = productSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((product) => product.status === 'approved');
+          .filter((product) => product.status === 'approved' && product.isBumped && product.bumpExpiry && new Date(product.bumpExpiry) > new Date());
         setProducts(productList);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -30,7 +30,7 @@ const FeaturedProducts = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-3">
         <SkeletonLoader type="productCard" count={6} />
       </div>
     );

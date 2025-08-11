@@ -124,7 +124,7 @@ export default function Profile() {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <Spinner />
-        <p className="text-gray-600 dark:text-gray-300 mt-4">Loading your profile...</p>
+        <p className="text-gray-600 dark:text-gray-300 mt-4">Loading...</p>
       </div>
     );
   }
@@ -176,7 +176,6 @@ export default function Profile() {
               <Link to="/orders" className="block">
                 <Package className="w-6 h-6 text-blue-500 mb-2 mx-auto" />
                 <p className="text-gray-400 dark:text-gray-300">Orders</p>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">9</p>
               </Link>
             </div>
 

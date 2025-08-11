@@ -98,7 +98,7 @@ const Carousel = () => {
           )}
         </div>
       ))}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+      {/* <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
         {slides.map((_, index) => (
           <button
             key={index}
@@ -108,7 +108,7 @@ const Carousel = () => {
             }`}
           />
         ))}
-      </div>
+      </div> */}
     </div>
   );
 };

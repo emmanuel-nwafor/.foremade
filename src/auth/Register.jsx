@@ -12,6 +12,7 @@ import {
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 import { UserCheck2Icon } from 'lucide-react';
+import { motion } from 'framer-motion'; // <-- added for modal animations
 
 // Validation functions
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -69,6 +70,9 @@ export default function Register() {
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
 
+  // NEW: seller choice modal state
+  const [showSellerModal, setShowSellerModal] = useState(false);
+
   // Password strength state
   const [passwordStrength, setPasswordStrength] = useState(0);
 
@@ -81,6 +85,12 @@ export default function Register() {
       setPasswordError('');
     }
   }, [password]);
+
+  // Show seller modal on first render of this page
+  useEffect(() => {
+    // Show immediately when user arrives at the register page
+    setShowSellerModal(true);
+  }, []);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -276,6 +286,17 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Seller modal handlers
+  const chooseStandardSeller = () => {
+    // Close modal and stay on same page
+    setShowSellerModal(false);
+  };
+
+  const chooseProSeller = () => {
+    // Redirect to pro seller registration route
+    navigate('/register/pro-seller');
   };
 
   return (
@@ -478,6 +499,81 @@ export default function Register() {
                 </form>
               </div>
             </div>
+          )}
+
+          {/* NEW: Seller Choice Modal (shows on page load) */}
+          {showSellerModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center"
+              aria-modal="true"
+              role="dialog"
+            >
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.6 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black"
+              />
+              {/* Modal Card */}
+              <motion.div
+                initial={{ y: 40, scale: 0.95, opacity: 0 }}
+                animate={{ y: 0, scale: 1, opacity: 1 }}
+                exit={{ y: 40, scale: 0.95, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <UserCheck2Icon className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800">Choose Seller Type</h3>
+                      <p className="text-sm text-gray-600">Would you like to register as a Standard or Pro seller?</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSellerModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Close seller selection"
+                  >
+                    <i className="bx bx-x text-2xl"></i>
+                  </button>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={chooseStandardSeller}
+                    className="flex flex-col items-start p-4 border rounded-lg bg-white hover:shadow-lg transition-shadow"
+                  >
+                    <span className="text-lg font-medium text-gray-800">Standard Seller</span>
+                    <span className="text-sm text-gray-500 mt-1">Quick signup, sell basic items, simpler verification.</span>
+                    <span className="mt-3 inline-flex items-center text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">Learn more</span>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={chooseProSeller}
+                    className="flex flex-col items-start p-4 border rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg transition-shadow"
+                  >
+                    <span className="text-lg font-medium">Pro Seller</span>
+                    <span className="text-sm mt-1">Advanced features, premium placement, detailed verification.</span>
+                    <span className="mt-3 inline-flex items-center text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Recommended</span>
+                  </motion.button>
+                </div>
+
+                <div className="mt-6 text-sm text-gray-500">
+                  You can switch seller type later from your account settings.
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </div>
       </div>

@@ -296,7 +296,7 @@ export default function Register() {
 
   const chooseProSeller = () => {
     // Redirect to pro seller registration route
-    navigate('/register/pro-seller');
+    navigate('/pro-seller-form');
   };
 
   return (

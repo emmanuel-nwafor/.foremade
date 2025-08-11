@@ -31,7 +31,7 @@ const ProSellerRegistrationForm = () => {
 
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h1 style={{ textAlign: 'center' }}>FOremaDE Pro Seller Registration Form</h1>
+      <h1 style={{ textAlign: 'center' }}>FOremade Pro Seller Registration Form</h1>
       <form onSubmit={handleSubmit} encType="multipart/form-data">
         <div style={{ margin: '10px 0' }}>
           <label htmlFor="businessType" style={{ display: 'block', marginBottom: '5px' }}>

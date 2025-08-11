@@ -224,7 +224,7 @@ function App() {
                 <Route path="/daily-deals" element={<DailyDeals />} />
                 <Route path="/trending-fashions" element={<AllTrendingFashion />} />
                 <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
-
+                
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/transactions" element={<AdminTransactions />} />

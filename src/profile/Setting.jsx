@@ -451,12 +451,12 @@ export default function Setting() {
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-200">
             </h3>
             <div className="flex flex-wrap gap-4 mb-6">
-              {/* <button
+              <button
                 onClick={handleLogout}
-                className="px-3 py-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-colors flex items-center gap-1"
+                className="px-3 py-2 bg-gray-900 text-white rounded-lg shadow-md hover:bg-red-900 transition-colors flex items-center gap-1"
               >
                 <LogOut size={16} /> Log Out
-              </button> */}
+              </button>
               <Link
                 to="/profile"
                 className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400 transition-colors dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 flex items-center gap-1"

@@ -145,7 +145,7 @@ const Layout = ({ children }) => {
       {!hideHeaderFooter && <TopNavigation />}
       {!hideHeaderFooter && <Header />}
       <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
-        {children} {/* Ensure children are always rendered */}
+        {children}
       </main>
       {showFooter && <Footer />}
     </>
@@ -165,83 +165,295 @@ function App() {
               <Route path="/add-phone" element={<AddPhone />} />
               <Route path="/pro-seller-form" element={<ProSellerForm />} />
               <Route path="/sellers-guide" element={<HowItWorks />} />
-              <Route path="/" element={<Home />} />
-              
-              <Route element={<ProtectedRoute />}>
-                
-                <Route path="/smile" element={<Wallet />} />
-                <Route path="/sell" element={<Dashboard />} />
-                <Route path="/sellers/products" element={<SellersProducts />} />
-                <Route path="/products-upload" element={<SellerProductUpload />} />
-                <Route path="/products-upload-variant" element={<SellerProductVariants />} />
-                <Route path="/products-gallery" element={<SellerProductGallery />} />
-                <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/sellers/orders" element={<UsersOrdersPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/seller-onboarding" element={<SellerOnboarding />} />
-                <Route path="/bulk-upload" element={<BulkUpload />} />
-                <Route path="/product-bump" element={<ProductBump />} />
-                <Route path="/product-bump-info" element={<ProductBumpInfo />} />
-                <Route path="/seller-transactions" element={<SellerTransactions />} />
-                <Route path="/pro-seller-analytics" element={<ProSellerAnalytics />} />
-                <Route path="/terms-conditions" element={<TermsConditions />} />
-                <Route path="/seller-agreement" element={<SellerAgreement />} />
-                <Route path="/pro-seller-guide" element={<ProSellerGuide />} />
-                <Route path="/pro-seller-guide-full" element={<ProSellerFullGuide />} />
-                <Route path="/support" element={<Support />} />
-                <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
-                <Route path="/refund-policy" element={<RefundPolicy />} />
-                <Route path="/empowerment-hub" element={<EmpowermentHub />} />
-                <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
-                <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/product/:id" element={<Product />} />
-                <Route path="/best-selling" element={<BestSelling />} />
-                <Route path="/electronics" element={<Electronics />} />
-                <Route path="/tablet-phones" element={<TabletsPhones />} />
-                <Route path="/smart-watches" element={<SmartWatches />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/shipping-policy" element={<ShippingPolicy />} />
-                <Route path="/privacy-policy/:type" element={<AllPolicies />} />
-                <Route path="/privacy-policy/eu/access" element={<GDPRAccess />} />
-                <Route path="/pages/other-products/:category" element={<OtherProductsPage />} />
-                <Route path="/stores" element={<Store />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="/order-confirmation" element={<OrderConfirmation />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/address" element={<Address />} />
-                <Route path="/setting" element={<Setting />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/about" element={<AboutUs />} />
-                <Route path="/seller-chat" element={<SellerChat />} />
-                <Route path="/order-tracking" element={<OrderTracking />} />
-                <Route path="/category/:categoryName" element={<CategoryPage />} />
-                <Route path="/user-agreement" element={<UserAgreement />} />
-                <Route path="/daily-deals" element={<DailyDeals />} />
-                <Route path="/trending-fashions" element={<AllTrendingFashion />} />
-                <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
+                <Route
+                  path="/"
+                  element={<Home />}
+                />
+              {/* <Route element={<ProtectedRoute />}> */}
+
+                <Route
+                  path="/smile"
+                  element={<Wallet />}
+                />
+                <Route
+                  path="/sell"
+                  element={<Dashboard />}
+                />
+                <Route
+                  path="/sellers/products"
+                  element={<SellersProducts />}
+                />
+                <Route
+                  path="/products-upload"
+                  element={<SellerProductUpload />}
+                />
+                <Route
+                  path="/products-upload-variant"
+                  element={<SellerProductVariants />}
+                />
+                <Route
+                  path="/products-gallery"
+                  element={<SellerProductGallery />}
+                />
+                <Route
+                  path="/seller/edit-product/:productId"
+                  element={<SellerEditProduct />}
+                />
+                <Route
+                  path="/dashboard"
+                  element={<Dashboard />}
+                />
+                <Route
+                  path="/sellers/orders"
+                  element={<UsersOrdersPage />}
+                />
+                <Route
+                  path="/settings"
+                  element={<SettingsPage />}
+                />
+                <Route
+                  path="/seller-onboarding"
+                  element={<SellerOnboarding />}
+                />
+                <Route
+                  path="/bulk-upload"
+                  element={<BulkUpload />}
+                />
+                <Route
+                  path="/product-bump"
+                  element={<ProductBump />}
+                />
+                <Route
+                  path="/product-bump-info"
+                  element={<ProductBumpInfo />}
+                />
+                <Route
+                  path="/seller-transactions"
+                  element={<SellerTransactions />}
+                />
+                <Route
+                  path="/pro-seller-analytics"
+                  element={<ProSellerAnalytics />}
+                />
+                <Route
+                  path="/terms-conditions"
+                  element={<TermsConditions />}
+                />
+                <Route
+                  path="/seller-agreement"
+                  element={<SellerAgreement />}
+                />
+                <Route
+                  path="/pro-seller-guide"
+                  element={<ProSellerGuide />}
+                />
+                <Route
+                  path="/pro-seller-guide-full"
+                  element={<ProSellerFullGuide />}
+                />
+                <Route
+                  path="/support"
+                  element={<Support />}
+                />
+                <Route
+                  path="/buyer-protection-policy"
+                  element={<BuyerProtectionPolicy />}
+                />
+                <Route
+                  path="/refund-policy"
+                  element={<RefundPolicy />}
+                />
+                <Route
+                  path="/empowerment-hub"
+                  element={<EmpowermentHub />}
+                />
+                <Route
+                  path="/youth-empowerment-form"
+                  element={<YouthEmpowermentForm />}
+                />
+                <Route
+                  path="/youth-empowerment-terms"
+                  element={<YouthEmpowermentTerms />}
+                />
+                <Route
+                  path="/products"
+                  element={<Products />}
+                />
+                <Route
+                  path="/product/:id"
+                  element={<Product />}
+                />
+                <Route
+                  path="/best-selling"
+                  element={<BestSelling />}
+                />
+                <Route
+                  path="/electronics"
+                  element={<Electronics />}
+                />
+                <Route
+                  path="/tablet-phones"
+                  element={<TabletsPhones />}
+                />
+                <Route
+                  path="/smart-watches"
+                  element={<SmartWatches />}
+                />
+                <Route
+                  path="/privacy-policy"
+                  element={<PrivacyPolicy />}
+                />
+                <Route
+                  path="/shipping-policy"
+                  element={<ShippingPolicy />}
+                />
+                <Route
+                  path="/privacy-policy/:type"
+                  element={<AllPolicies />}
+                />
+                <Route
+                  path="/privacy-policy/eu/access"
+                  element={<GDPRAccess />}
+                />
+                <Route
+                  path="/pages/other-products/:category"
+                  element={<OtherProductsPage />}
+                />
+                <Route
+                  path="/stores"
+                  element={<Store />}
+                />
+                <Route
+                  path="/cart"
+                  element={<Cart />}
+                />
+                <Route
+                  path="/checkout"
+                  element={<Checkout />}
+                />
+                <Route
+                  path="/favorites"
+                  element={<Favorites />}
+                />
+                <Route
+                  path="/order-confirmation"
+                  element={<OrderConfirmation />}
+                />
+                <Route
+                  path="/profile"
+                  element={<Profile />}
+                />
+                <Route
+                  path="/orders"
+                  element={<Orders />}
+                />
+                <Route
+                  path="/address"
+                  element={<Address />}
+                />
+                <Route
+                  path="/setting"
+                  element={<Setting />}
+                />
+                <Route
+                  path="/search"
+                  element={<Search />}
+                />
+                <Route
+                  path="/notifications"
+                  element={<Notifications />}
+                />
+                <Route
+                  path="/about"
+                  element={<AboutUs />}
+                />
+                <Route
+                  path="/seller-chat"
+                  element={<SellerChat />}
+                />
+                <Route
+                  path="/order-tracking"
+                  element={<OrderTracking />}
+                />
+                <Route
+                  path="/category/:categoryName"
+                  element={<CategoryPage />}
+                />
+                <Route
+                  path="/user-agreement"
+                  element={<UserAgreement />}
+                />
+                <Route
+                  path="/daily-deals"
+                  element={<DailyDeals />}
+                />
+                <Route
+                  path="/trending-fashions"
+                  element={<AllTrendingFashion />}
+                />
+                <Route
+                  path="/trending-gadgets"
+                  element={<AllTrendingGadgets />}
+                />
 
                 {/* Admin Routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/transactions" element={<AdminTransactions />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/products" element={<Admin />} />
-                <Route path="/admin/sellers/payouts" element={<AdminPayoutMonitor />} />
-                <Route path="/admin/edit/fees" element={<AdminEditFees />} />
-                <Route path="/admin/edit/categories" element={<AdminCategoryEdit />} />
-                <Route path="/admin/notifications" element={<AdminNotifications />} />
-                <Route path="/admin/edit/banners" element={<AdminEditBannerAndOthers />} />
-                <Route path="/admin/edit/daily-deals" element={<AdminEditDeals />} />
-                <Route path="/admin/manager" element={<AdminManager />} />
-                <Route path="/admin/sellers-wallet" element={<AdminSellerWallet />} />
-                <Route path="/admin/pro-sellers-requests" element={<AdminProSellerRequests />} />
-                <Route path="/admin/bumped-products" element={<AdminBumpedProducts />} />
-              </Route>
+                <Route
+                  path="/admin/dashboard"
+                  element={<AdminDashboard />}
+                />
+                <Route
+                  path="/admin/transactions"
+                  element={<AdminTransactions />}
+                />
+                <Route
+                  path="/admin/users"
+                  element={<AdminUsers />}
+                />
+                <Route
+                  path="/admin/products"
+                  element={<Admin />}
+                />
+                <Route
+                  path="/admin/sellers/payouts"
+                  element={<AdminPayoutMonitor />}
+                />
+                <Route
+                  path="/admin/edit/fees"
+                  element={<AdminEditFees />}
+                />
+                <Route
+                  path="/admin/edit/categories"
+                  element={<AdminCategoryEdit />}
+                />
+                <Route
+                  path="/admin/notifications"
+                  element={<AdminNotifications />}
+                />
+                <Route
+                  path="/admin/edit/banners"
+                  element={<AdminEditBannerAndOthers />}
+                />
+                <Route
+                  path="/admin/edit/daily-deals"
+                  element={<AdminEditDeals />}
+                />
+                <Route
+                  path="/admin/manager"
+                  element={<AdminManager />}
+                />
+                <Route
+                  path="/admin/sellers-wallet"
+                  element={<AdminSellerWallet />}
+                />
+                <Route
+                  path="/admin/pro-sellers-requests"
+                  element={<AdminProSellerRequests />}
+                />
+                <Route
+                  path="/admin/bumped-products"
+                  element={<AdminBumpedProducts />}
+                />
+              {/* </Route> */}
 
               <Route path="*" element={<NotFound />} />
             </Routes>

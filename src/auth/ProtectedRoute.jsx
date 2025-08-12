@@ -1,24 +1,48 @@
-import React, { useEffect } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getAuth, onAuthStateChanged, getIdToken } from "firebase/auth";
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
+  const auth = getAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const isDirectAccess = !location.state?.fromValidNavigation; // Check if navigation is direct
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isDirectAccess && location.pathname !== '/') {
-      // Show popup or alert for security reasons
-      // alert('For security reasons, you are not allowed to access pages via direct URL entry. Redirecting to home...');
-      // Redirect to home page after alert
-      setTimeout(() => navigate('/'), 1000); // Delay to let user see the alert
-    }
-  }, [isDirectAccess, location.pathname, navigate]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        navigate("/login", { replace: true, state: { from: location.pathname } });
+        return;
+      }
 
-  // Allow access only if not direct access or on home page
-  if (isDirectAccess && location.pathname !== '/') {
-    return null; // Render nothing until redirect completes
-  }
+      try {
+        const token = await getIdToken(user);
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/auth/check`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || (requireAdmin && !data.isAdmin)) {
+          navigate("/login", { replace: true, state: { from: location.pathname } });
+          return;
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        navigate("/login", { replace: true, state: { from: location.pathname } });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, location.pathname, navigate, requireAdmin]);
+
+  if (loading) return <div>Loading...</div>;
 
   return children;
 };

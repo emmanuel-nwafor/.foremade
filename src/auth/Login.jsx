@@ -142,12 +142,15 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      // Verify role with server
+      const token = await user.getIdToken();
       const response = await fetch(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmedEmail }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 

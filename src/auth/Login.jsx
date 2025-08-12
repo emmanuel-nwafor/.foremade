@@ -49,6 +49,16 @@ export default function Login() {
     }
   }, [state]);
 
+  // Utility function for authenticated requests
+  const fetchWithAuth = async (url, options = {}) => {
+    const userData = JSON.parse(localStorage.getItem('userData')) || {};
+    const headers = {
+      ...options.headers,
+      'x-user-email': userData.email, // Send email in custom header
+    };
+    return fetch(url, { ...options, headers });
+  };
+
   const handleSocialLogin = async (user) => {
     try {
       const userDoc = doc(db, 'users', user.uid);
@@ -57,7 +67,6 @@ export default function Login() {
       if (userSnapshot.exists()) {
         userData = userSnapshot.data();
       } else {
-        const role = (await getDocs(query(collection(db, 'admins'), where('email', '==', user.email)))).size > 0 ? 'admin' : 'buyer';
         const displayName = user.displayName || '';
         const [firstName, lastName] = displayName.split(' ').length > 1 ? displayName.split(' ') : [displayName, ''];
         userData = {
@@ -67,18 +76,30 @@ export default function Login() {
           lastName: lastName || '',
           username: (user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)),
           phoneNumber: user.phoneNumber || '',
-          role,
+          role: 'buyer', // Default role, server will override
         };
         await setDoc(userDoc, userData);
       }
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
+
+      // Verify role with server
+      const response = await fetch(`${BACKEND_URL}/authenticate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Server error');
+
+      userData.role = data.role;
+      localStorage.setItem('userData', JSON.stringify(userData));
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate(userData.role === 'admin' ? '/admin/dashboard' : '/profile');
+        navigate(data.redirectUrl);
       }, 2000);
     } catch (err) {
       console.error('Social login error:', err);
@@ -121,21 +142,23 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
+      // Verify role with server
       const response = await fetch(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmedEmail }),
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Server error');
-      }
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Server error');
+
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
-      const userData = userSnapshot.exists() ? userSnapshot.data() : { uid: user.uid, email: trimmedEmail };
+      let userData = userSnapshot.exists() ? userSnapshot.data() : { uid: user.uid, email: trimmedEmail, role: data.role };
+      userData.role = data.role; // Update role from server
       localStorage.setItem('userData', JSON.stringify(userData));
-      setSuccessMessage(`Welcome, ${userData.name?.split(' ')[0] || 'User'}!`);
+
+      const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
+      setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingEmail(false);
         navigate(data.redirectUrl);
@@ -185,6 +208,14 @@ export default function Login() {
       setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }
   };
+
+  // Handle navigation to protected routes
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('userData')) || {};
+    if (location.pathname === '/admin/dashboard' && !userData.email) {
+      navigate('/login'); // Redirect if not authenticated
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

@@ -1,64 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import React, { useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
-const ProtectedRoute = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ProtectedRoute = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isDirectAccess = !location.state?.fromValidNavigation; // Check if navigation is direct
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setIsAuthenticated(true);
-        const userDoc = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userDoc);
-        if (userSnap.exists()) {
-          const role = userSnap.data().role;
-          setUserRole(role);
-          console.log('User role loaded:', role); // Debug log
-        } else {
-          setUserRole(null);
-        }
-      } else {
-        setIsAuthenticated(false);
-        setUserRole(null);
-      }
-      setLoading(false);
-    });
+    if (isDirectAccess && location.pathname !== '/') {
+      // Show popup or alert for security reasons
+      // alert('For security reasons, you are not allowed to access pages via direct URL entry. Redirecting to home...');
+      // Redirect to home page after alert
+      setTimeout(() => navigate('/'), 1000); // Delay to let user see the alert
+    }
+  }, [isDirectAccess, location.pathname, navigate]);
 
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return <div>Loading...</div>; // Simple loading state
+  // Allow access only if not direct access or on home page
+  if (isDirectAccess && location.pathname !== '/') {
+    return null; // Render nothing until redirect completes
   }
 
-  const path = location.pathname;
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: path }} />;
-  }
-
-  // if (path.startsWith('/admin') && userRole !== 'Admin') {
-  //   console.log('Redirecting from admin path, role:', userRole); // Debug log
-  //   return <Navigate to="/profile" replace />;
-  // }
-
-  // if (path.startsWith('/admin') && userRole == 'Admin') {
-  //   console.log('Redirecting from admin path, role:', userRole); // Debug log
-  //   return <Navigate to="/admin/dashboard" replace />;
-  // }
-
-  // if (path.startsWith('/seller') && !['Seller', 'Admin'].includes(userRole)) {
-  //   console.log('Redirecting from seller path, role:', userRole); // Debug log
-  //   return <Navigate to="/profile" replace />;
-  // }
-
-  return <Outlet />;
+  return children;
 };
 
 export default ProtectedRoute;

@@ -37,7 +37,7 @@ import TermsConditions from './pages/TermsAndConditions';
 import Admin from './Admin/Admin';
 import AdminDashboard from './Admin/AdminDashboard';
 import AdminNotifications from './Admin/AdminNotifications';
-import AdminUsers from '/src/Admin/AdminUsers';
+import AdminUsers from './Admin/AdminUsers';
 import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
 import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
 import AdminEditDeals from './Admin/AdminEditDeals';
@@ -45,7 +45,7 @@ import AdminEditFees from './Admin/AdminEditFees';
 import AdminCategoryEdit from './Admin/AdminCategoryEdit';
 import AdminManager from './Admin/AdminManager';
 import AdminSellerWallet from './Admin/AdminSellerWallet';
-import AdminProSellerRequests from './Admin/AdminProSellerRequests'
+import AdminProSellerRequests from './Admin/AdminProSellerRequests';
 import AdminBumpedProducts from './Admin/AdminBumpedProducts';
 import AdminTransactions from './Admin/AdminTransactions';
 
@@ -92,7 +92,7 @@ import OrderTracking from './profile/OrderTracking';
 import DailyDeals from './pages/DailyDeals';
 import AllTrendingFashion from './pages/AllTrendingFashion';
 import AllTrendingGadgets from './pages/AllTrendingGadgets';
-// import ProtectedRoute from '/src/auth/ProtectedRoute.jsx';
+import ProtectedRoute from './auth/ProtectedRoute'; // Ensure correct path
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -125,7 +125,7 @@ const Layout = ({ children }) => {
     '/admin/bumped-products',
     '/bulk-upload',
     '/product-bump',
-    '/product-bump-info', 
+    '/product-bump-info',
     '/seller-transactions',
     '/seller/edit-product:id',
     '/pro-seller-analytics',
@@ -145,7 +145,7 @@ const Layout = ({ children }) => {
       {!hideHeaderFooter && <TopNavigation />}
       {!hideHeaderFooter && <Header />}
       <main className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white">
-        {children}
+        {children} {/* Ensure children are always rendered */}
       </main>
       {showFooter && <Footer />}
     </>
@@ -165,9 +165,10 @@ function App() {
               <Route path="/add-phone" element={<AddPhone />} />
               <Route path="/pro-seller-form" element={<ProSellerForm />} />
               <Route path="/sellers-guide" element={<HowItWorks />} />
-
-              {/* <Route element={<ProtectedRoute />}> */}
-                <Route path="/" element={<Home />} />
+              <Route path="/" element={<Home />} />
+              
+              <Route element={<ProtectedRoute />}>
+                
                 <Route path="/smile" element={<Wallet />} />
                 <Route path="/sell" element={<Dashboard />} />
                 <Route path="/sellers/products" element={<SellersProducts />} />
@@ -224,7 +225,7 @@ function App() {
                 <Route path="/daily-deals" element={<DailyDeals />} />
                 <Route path="/trending-fashions" element={<AllTrendingFashion />} />
                 <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
-                
+
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/transactions" element={<AdminTransactions />} />
@@ -240,7 +241,7 @@ function App() {
                 <Route path="/admin/sellers-wallet" element={<AdminSellerWallet />} />
                 <Route path="/admin/pro-sellers-requests" element={<AdminProSellerRequests />} />
                 <Route path="/admin/bumped-products" element={<AdminBumpedProducts />} />
-              {/* </Route> */}
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>

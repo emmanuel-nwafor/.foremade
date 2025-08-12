@@ -169,7 +169,6 @@ function App() {
                   path="/"
                   element={<Home />}
                 />
-              {/* <Route element={<ProtectedRoute />}> */}
 
                 <Route
                   path="/smile"
@@ -395,7 +394,8 @@ function App() {
                   path="/trending-gadgets"
                   element={<AllTrendingGadgets />}
                 />
-
+                
+              <Route element={<ProtectedRoute />}>
                 {/* Admin Routes */}
                 <Route
                   path="/admin/dashboard"
@@ -453,7 +453,7 @@ function App() {
                   path="/admin/bumped-products"
                   element={<AdminBumpedProducts />}
                 />
-              {/* </Route> */}
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>

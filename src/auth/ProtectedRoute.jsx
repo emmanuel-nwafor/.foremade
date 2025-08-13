@@ -1,54 +1,51 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getAuth, onAuthStateChanged, getIdToken } from "firebase/auth";
-import { fetchWithAuth } from '../utils/auth';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const auth = getAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
+        console.log('No user authenticated, redirecting to login');
         navigate("/login", { replace: true, state: { from: location.pathname } });
         setLoading(false);
         return;
       }
 
-      try {
-        const token = await getIdToken(user);
-        console.log("Sending token:", token);
-        const res = await fetchWithAuth(`${import.meta.env.VITE_BACKEND_URL}/auth/check`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const adminEmails = ['Foremade@icloud.com', 'echinecherem729@gmail.com'];
+      const userEmail = user.email.toLowerCase();
+      const isAdmin = adminEmails.some(email => email.toLowerCase() === userEmail);
 
-        console.log("Response status:", res.status);
-        const data = await res.json();
+      console.log("Authenticated user email:", user.email);
+      console.log("Normalized user email:", userEmail);
+      console.log("Admin emails:", adminEmails);
+      console.log("Is admin?", isAdmin);
 
-        if (!res.ok || (requireAdmin && !data.isAdmin)) {
-          navigate("/login", { replace: true, state: { from: location.pathname } });
-          return;
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Auth check failed:", error);
+      if (requireAdmin && !isAdmin) {
+        console.log('Non-admin access attempted, redirecting to login');
         navigate("/login", { replace: true, state: { from: location.pathname } });
+      } else {
+        setHasAccess(true); // Grant access if not redirected
       }
+
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [auth, location.pathname, navigate, requireAdmin]);
 
-  if (loading) return <div>Loading...</div>;
+  console.log("Rendering ProtectedRoute, loading:", loading, "hasAccess:", hasAccess); // Debug render
 
-  return children;
+  if (loading) return <div>Loading...</div>;
+  if (!hasAccess) return null; // Prevent rendering if access is denied
+
+  return children; // Render children only if access is granted
 };
 
 export default ProtectedRoute;

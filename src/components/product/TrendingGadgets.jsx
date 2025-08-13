@@ -23,6 +23,15 @@ export default function TrendingGadgets() {
     'game & fun',
   ];
 
+  const shuffleArray = (array) => {
+    let shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const fetchTrendingProducts = async () => {
     try {
       setLoading(true);
@@ -100,6 +109,15 @@ export default function TrendingGadgets() {
       setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
   }, []);
+
+  useEffect(() => {
+    if (!loading && trendingProducts.length > 0) {
+      const interval = setInterval(() => {
+        setTrendingProducts(prev => shuffleArray(prev));
+      }, 1 * 60 * 60 * 1000); // Shuffle every 1 hrs
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
 
   const scrollLeft = () => {
     if (scrollRef.current) {

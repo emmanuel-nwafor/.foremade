@@ -10,6 +10,15 @@ function BestSelling() {
   const [error, setError] = useState(null);
   const [dailyDeals, setDailyDeals] = useState([]);
 
+  const shuffleArray = (array) => {
+    let shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   useEffect(() => {
     getDocs(collection(db, 'dailyDeals')).then(snapshot => {
       setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -80,8 +89,17 @@ function BestSelling() {
     fetchBestSellingProducts();
   }, []);
 
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const interval = setInterval(() => {
+        setProducts(prev => shuffleArray(prev));
+      }, 1 * 60 * 60 * 1000); // Shuffle every 1 hrs
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-1">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-1">
       {error ? (
         <p className="text-red-600 col-span-full text-center">{error}</p>
       ) : loading ? (
@@ -91,7 +109,7 @@ function BestSelling() {
           ))}
         </>
       ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No best-selling products found. Check your database for products.</p>
+        <p className="text-gray-600 col-span-full text-center">No best-selling products found.</p>
       ) : (
         products.map((product) => (
           // Remove the extra <div> wrapper around ProductCard

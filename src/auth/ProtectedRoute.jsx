@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged, getIdToken } from "firebase/auth";
+import { fetchWithAuth } from '../utils/auth';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const auth = getAuth();
@@ -12,12 +13,14 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         navigate("/login", { replace: true, state: { from: location.pathname } });
+        setLoading(false);
         return;
       }
 
       try {
         const token = await getIdToken(user);
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/auth/check`, {
+        console.log("Sending token:", token);
+        const res = await fetchWithAuth(`${import.meta.env.VITE_BACKEND_URL}/auth/check`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -25,6 +28,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
           },
         });
 
+        console.log("Response status:", res.status);
         const data = await res.json();
 
         if (!res.ok || (requireAdmin && !data.isAdmin)) {

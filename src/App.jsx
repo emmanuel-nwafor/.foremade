@@ -395,7 +395,7 @@ function App() {
                   element={<AllTrendingGadgets />}
                 />
                 
-              <Route element={<ProtectedRoute />}>
+              {/* <Route element={<ProtectedRoute />}> */}
                 {/* Admin Routes */}
                 <Route
                   path="/admin/dashboard"
@@ -453,7 +453,7 @@ function App() {
                   path="/admin/bumped-products"
                   element={<AdminBumpedProducts />}
                 />
-              </Route>
+              {/* </Route> */}
 
               <Route path="*" element={<NotFound />} />
             </Routes>

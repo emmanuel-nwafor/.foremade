@@ -8,9 +8,11 @@ import {
   FacebookAuthProvider,
   setPersistence,
   browserSessionPersistence,
+  getIdToken, // Added missing import
 } from 'firebase/auth';
 import { doc, getDoc, collection, getDocs, query, where, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
+import { fetchWithAuth } from '../utils/auth';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.code) {
@@ -38,6 +40,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  console.log('Backend URL:', BACKEND_URL); // Debug log
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -48,16 +51,6 @@ export default function Login() {
       setPasswordError('Use Google Sign-In for this account.');
     }
   }, [state]);
-
-  // Utility function for authenticated requests
-  const fetchWithAuth = async (url, options = {}) => {
-    const userData = JSON.parse(localStorage.getItem('userData')) || {};
-    const headers = {
-      ...options.headers,
-      'x-user-email': userData.email, // Send email in custom header
-    };
-    return fetch(url, { ...options, headers });
-  };
 
   const handleSocialLogin = async (user) => {
     try {
@@ -80,11 +73,8 @@ export default function Login() {
         };
         await setDoc(userDoc, userData);
       }
-      localStorage.setItem('userData', JSON.stringify(userData));
-      localStorage.removeItem('socialEmail');
-
-      // Verify role with server
-      const response = await fetch(`${BACKEND_URL}/authenticate`, {
+      // Update userData with role from server before setting localStorage
+      const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email }),
@@ -93,13 +83,15 @@ export default function Login() {
       if (!response.ok) throw new Error(data.error || 'Server error');
 
       userData.role = data.role;
-      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('userData', JSON.stringify(userData)); // Set after role is fetched
+      localStorage.removeItem('socialEmail');
+
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate(data.redirectUrl);
+        navigate(data.redirectUrl, { state: { fromValidNavigation: true } });
       }, 2000);
     } catch (err) {
       console.error('Social login error:', err);
@@ -142,29 +134,42 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      const token = await user.getIdToken();
-      const response = await fetch(`${BACKEND_URL}/authenticate`, {
+      // Initial userData setup
+      let userData = {
+        uid: user.uid,
+        email: trimmedEmail,
+        role: 'buyer', // Default role, will be updated
+      };
+
+      const token = await getIdToken(user); // Now defined
+      console.log('Fetching with token:', token); // Debug log
+      const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ email: trimmedEmail }),
       });
-
+      console.log('Sent body:', { email: trimmedEmail }); // Debug log
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 
+      userData.role = data.role; // Update role from server
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
-      let userData = userSnapshot.exists() ? userSnapshot.data() : { uid: user.uid, email: trimmedEmail, role: data.role };
-      userData.role = data.role; // Update role from server
-      localStorage.setItem('userData', JSON.stringify(userData));
+      if (!userSnapshot.exists()) {
+        await setDoc(userDoc, userData);
+      } else {
+        userData = { ...userSnapshot.data(), ...userData, role: data.role };
+      }
+      localStorage.setItem('userData', JSON.stringify(userData)); // Set after role is fetched
 
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingEmail(false);
-        navigate(data.redirectUrl);
+        navigate(data.redirectUrl, { state: { fromValidNavigation: true } });
       }, 2000);
     } catch (err) {
       console.error('Login error:', err);
@@ -211,14 +216,6 @@ export default function Login() {
       setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
     }
   };
-
-  // Handle navigation to protected routes
-  useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('userData')) || {};
-    if (location.pathname === '/admin/dashboard' && !userData.email) {
-      navigate('/login'); // Redirect if not authenticated
-    }
-  }, [location.pathname, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

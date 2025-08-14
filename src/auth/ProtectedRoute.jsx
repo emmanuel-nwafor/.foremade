@@ -24,7 +24,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
       console.log("Authenticated user email:", user.email);
       console.log("Normalized user email:", userEmail);
-      console.log("Admin emails:", adminEmails);
       console.log("Is admin?", isAdmin);
 
       if (requireAdmin && !isAdmin) {
@@ -42,7 +41,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
   console.log("Rendering ProtectedRoute, loading:", loading, "hasAccess:", hasAccess); // Debug render
 
-  if (loading) return <div>Loading...</div>;
+  // if (loading) return <div>Loading...</div>;
   if (!hasAccess) return null; // Prevent rendering if access is denied
 
   return children; // Render children only if access is granted

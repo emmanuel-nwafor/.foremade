@@ -146,50 +146,53 @@ const ProSellerForm = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const submissionData = {
-        ...formData,
-        submittedAt: new Date().toISOString(),
-        timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        formType: 'Pro Seller Application'
-      };
-      console.log('Submitting Pro Seller Application:', submissionData);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
-      let idToken = null;
-      if (user) {
-        idToken = await user.getIdToken();
-      }
-      const response = await fetch(`${backendUrl}/api/pro-seller`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
-        },
-        body: JSON.stringify(submissionData),
-      });
-      const result = await response.json();
-      console.log('API Response:', result);
-      if (!response.ok) {
-        throw new Error(result.message || 'Submission failed');
-      }
-      if (result.redirectUrl) {
-        window.location.href = result.redirectUrl;
-        return;
-      }
-      addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
-      setFormData(initialFormData);
-      setCurrentStep(1);
-    } catch (error) {
-      addAlert('There was an error submitting your application. Please try again or contact support.', 'error');
-      console.error('Submission error:', error);
-    } finally {
-      setIsSubmitting(false);
+const handleSubmit = async () => {
+  setIsSubmitting(true);
+  try {
+    const submissionData = {
+      ...formData,
+      submittedAt: new Date().toISOString(),
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      formType: 'Pro Seller Application',
+    };
+    console.log('Submitting Pro Seller Application:', submissionData);
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+    let idToken = null;
+    if (user) {
+      idToken = await user.getIdToken();
+      console.log('Fetched ID Token:', idToken ? 'Present' : 'Null');
+    } else {
+      console.log('No authenticated user found');
     }
-  };
+    const response = await fetch(`${backendUrl}/api/pro-seller`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+      },
+      body: JSON.stringify(submissionData),
+    });
+    const result = await response.json();
+    console.log('API Response:', result, 'Status:', response.status, 'Headers:', Object.fromEntries(response.headers.entries()));
+    if (!response.ok) {
+      throw new Error(result.message || 'Submission failed');
+    }
+    if (result.redirectUrl) {
+      window.location.href = result.redirectUrl;
+      return;
+    }
+    addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
+    setFormData(initialFormData);
+    setCurrentStep(1);
+  } catch (error) {
+    console.error('Submission error:', error.message, error);
+    addAlert('There was an error submitting your application. Please try again or contact support.', 'error');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleBack = () => {
     if (currentStep > 1) {

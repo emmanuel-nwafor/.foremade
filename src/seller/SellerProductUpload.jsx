@@ -902,7 +902,7 @@ export default function SellerProductUpload() {
 </Link>
 
 </div>
-        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-9xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add a New Product
@@ -1850,13 +1850,13 @@ export default function SellerProductUpload() {
             <CustomAlert alerts={alerts} removeAlert={removeAlert} />
 
             {/* Variant Popup */}
-            {isVariantPopupOpen && (
+            {/* {isVariantPopupOpen && (
               <SellerProductUploadPopup
                 onYes={handleVariantYes}
                 onNo={handleVariantNo}
                 message="Would you like to add variants for this product (e.g., different sizes or colors)?"
               />
-            )}
+            )} */}
 
             {/* Success Popup */}
             {isSuccessPopupOpen && (
@@ -1864,23 +1864,18 @@ export default function SellerProductUpload() {
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
                   <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <i className="bx bx-check-circle text-green-500"></i>
-                    Product Added Successfully!
+                    Product Uploaded Successfully!
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    Your product has been uploaded and is now live.
+                   <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Your product has been uploaded and is pending quick admin review. Once approved, you'll receive an email, 
+                    and it will go live promptly.
                   </p>
                   <div className="mt-4 flex justify-end gap-2">
                     <button
-                      onClick={() => navigate('/seller-products')}
+                      onClick={() => navigate('/sellers/products')}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                     >
                       View Products
-                    </button>
-                    <button
-                      onClick={() => setIsSuccessPopupOpen(false)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Add Another
                     </button>
                   </div>
                 </div>

@@ -115,7 +115,7 @@ export default function TrendingFashion() {
     if (!loading && trendingProducts.length > 0) {
       const interval = setInterval(() => {
         setTrendingProducts(prev => shuffleArray(prev));
-      }, 3600000); // Shuffle every 1 hrs
+      }, 120000); // Shuffle every 5 mins
       return () => clearInterval(interval);
     }
   }, [loading]);

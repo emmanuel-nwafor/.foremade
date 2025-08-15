@@ -164,14 +164,12 @@ export default function SellerEditProduct() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-4">
-          <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
-            <div className="flex flex-col items-center">
-              <i className="bx bx-loader bx-spin text-2xl"></i>
-              <p className="mt-4 text-xl font-semibold text-gray-800">Loading...</p>
-            </div>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
           </div>
         </div>
       </div>
@@ -181,8 +179,8 @@ export default function SellerEditProduct() {
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
       <SellerSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-8 max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+      <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start mb-14">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center">
             <i className="bx bx-edit-alt text-blue-500 mr-2"></i> Edit Product
           </h1>
@@ -312,37 +310,6 @@ export default function SellerEditProduct() {
                 </div>
               </div>
             </div>
-            <div className="relative group">
-              <label className="block text-sm font-medium text-gray-700">Daily Deal</label>
-              <input
-                type="checkbox"
-                id="isDailyDeal"
-                name="isDailyDeal"
-                checked={product.isDailyDeal}
-                onChange={handleChange}
-                className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              {product.isDailyDeal && (
-                <div className="mt-2">
-                  <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700">
-                    Discount Percentage (%) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    id="discountPercentage"
-                    name="discountPercentage"
-                    value={product.discountPercentage}
-                    onChange={handleChange}
-                    min="0"
-                    max="100"
-                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
-                      errors.discountPercentage ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                    }`}
-                  />
-                  {errors.discountPercentage && <p className="text-red-600 text-xs mt-1">{errors.discountPercentage}</p>}
-                </div>
-              )}
-            </div>
             {/* <SellerLocationForm
               locationData={product.locationData}
               setLocationData={handleLocationChange}
@@ -352,7 +319,7 @@ export default function SellerEditProduct() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-md hover:from-blue-700 hover:to-purple-700 transition focus:outline-blue-400 focus:ring-4 focus:ring-blue-300 mt-4 sm:mt-0"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-gray-800 text-white hover:bg-gray-700 font-bold shadow-md hover:from-blue-700 hover:to-purple-700 transition focus:outline-blue-400 focus:ring-4 focus:ring-blue-300 mt-4 sm:mt-0"
               >
                 Save Changes
               </button>

@@ -94,7 +94,7 @@ function FeaturedProducts() {
     if (!loading && products.length > 0) {
       const interval = setInterval(() => {
         setProducts(prev => shuffleArray(prev));
-      }, 1 * 60 * 60 * 1000); // Shuffle every 1 hrs
+      }, 120000); // Shuffle every 2 mins
       return () => clearInterval(interval);
     }
   }, [loading]);

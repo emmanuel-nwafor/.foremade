@@ -93,7 +93,7 @@ function BestSelling() {
     if (!loading && products.length > 0) {
       const interval = setInterval(() => {
         setProducts(prev => shuffleArray(prev));
-      }, 1 * 60 * 60 * 1000); // Shuffle every 1 hrs
+      }, 240000); // Shuffle every 3 mins
       return () => clearInterval(interval);
     }
   }, [loading]);

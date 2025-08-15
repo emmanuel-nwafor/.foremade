@@ -887,26 +887,20 @@ export default function SellerProductUpload() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <SellerSidebar />
-      <div className="flex-1 ml-0 md:ml-64 p-4 sm:p-8 max-w-7xl mx-auto">
-        
-            {/* Bulk Upload Button */}
-
-            <div className="flex justify-end mb-6">
-
-<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
-
-  Bulk Upload
-
-</Link>
-
-</div>
-        <div className="w-full max-w-9xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
-            <i className="bx bx-package text-blue-500"></i>
-            Add a New Product
-          </h2>
+          
+      <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+           <div className="flex justify-between items-center">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+                <i className="bx bx-package text-blue-500"></i>
+                Add a New Product
+              </h2>
+              <Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
+                Bulk Upload
+              </Link>
+           </div>
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* Image Upload Section */}
             <div className="relative group">
@@ -1779,6 +1773,10 @@ export default function SellerProductUpload() {
                   disabled={loading}
                 />
               </div>
+
+              <Link to="/products-upload-variant" className='text-sm mt-10 text-gray-600 hover:underline'>
+                  Have products with multiple variants(eg colors, sizes etc) ?
+              </Link>
 
               {/* Location Section */}
               <div>

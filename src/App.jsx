@@ -96,7 +96,9 @@ import ProtectedRoute from './auth/ProtectedRoute'; // Ensure correct path
 
 const Layout = ({ children }) => {
   const location = useLocation();
-  const hideHeaderFooter = [
+
+  // Define static routes to hide header and footer
+  const staticHideHeaderFooterRoutes = [
     '/login',
     '/register',
     '/recover-password',
@@ -107,7 +109,6 @@ const Layout = ({ children }) => {
     '/products-gallery',
     '/products-upload',
     '/products-upload-variant',
-    '/seller/edit-product/:productId',
     '/admin',
     '/admin/payouts',
     '/admin/dashboard',
@@ -127,7 +128,6 @@ const Layout = ({ children }) => {
     '/product-bump',
     '/product-bump-info',
     '/seller-transactions',
-    '/seller/edit-product:id',
     '/pro-seller-analytics',
     '/sellers/orders',
     '/sellers/products',
@@ -136,7 +136,11 @@ const Layout = ({ children }) => {
     '/admin/sellers-wallet',
     '/seller-chat',
     '/admin/transactions',
-  ].includes(location.pathname);
+  ];
+
+  // Check if the current path matches any static routes or dynamic patterns
+  const isDynamicEditProductRoute = /^\/seller\/edit-product\/[^/]+$/.test(location.pathname);
+  const hideHeaderFooter = staticHideHeaderFooterRoutes.includes(location.pathname) || isDynamicEditProductRoute;
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
 

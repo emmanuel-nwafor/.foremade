@@ -114,7 +114,7 @@ export default function TrendingGadgets() {
     if (!loading && trendingProducts.length > 0) {
       const interval = setInterval(() => {
         setTrendingProducts(prev => shuffleArray(prev));
-      }, 1 * 60 * 60 * 1000); // Shuffle every 1 hrs
+      }, 120000); // Shuffle every 2 mins
       return () => clearInterval(interval);
     }
   }, [loading]);

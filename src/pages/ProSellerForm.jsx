@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
+import { Building, User, CreditCard, Package, CheckCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const initialFormData = {
   businessName: '',
@@ -20,6 +22,7 @@ const initialFormData = {
   phone: '',
   phoneCode: '+234',
   email: '',
+  password: '',
   manager: '',
   managerEmail: '',
   managerPhone: '',
@@ -32,7 +35,8 @@ const initialFormData = {
   accountVerified: false,
   accountVerifying: false,
   accountError: '',
-  agree: false
+  agree: false,
+  signup: false,
 };
 
 const ProSellerForm = () => {
@@ -47,7 +51,6 @@ const ProSellerForm = () => {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { user } = useAuth();
 
-  // Fetch categories and banks on mount
   useEffect(() => {
     let didCancel = false;
     setCategoriesLoading(true);
@@ -109,14 +112,15 @@ const ProSellerForm = () => {
       if (!formData.regNumber) newErrors.regNumber = 'Registration number is required';
       if (!formData.address) newErrors.address = 'Business address is required';
       if (!formData.country) newErrors.country = 'Country is required';
+      if (formData.regError) newErrors.regNumber = formData.regError;
+      if (formData.taxError) newErrors.taxRef = formData.taxError;
     }
     if (step === 2) {
       if (!formData.phone) newErrors.phone = 'Phone number is required';
       if (!formData.email) newErrors.email = 'Email is required';
+      if (formData.signup && !formData.password) newErrors.password = 'Password is required for signup';
       if (!formData.manager) newErrors.manager = 'Manager name is required';
       if (!formData.managerEmail) newErrors.managerEmail = 'Manager email is required';
-      if (!formData.managerPhone) newErrors.managerPhone = 'Manager phone is required';
-      // Prevent manager/company email from being the same as person's email
       if (
         formData.managerEmail &&
         formData.email &&
@@ -131,6 +135,7 @@ const ProSellerForm = () => {
       if (!formData.accountName) newErrors.accountName = 'Account name is required';
       if (!formData.accountNumber) newErrors.accountNumber = 'Account number is required';
       if (!formData.agree) newErrors.agree = 'You must agree to the terms';
+      if (formData.accountError) newErrors.accountNumber = formData.accountError;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -146,53 +151,56 @@ const ProSellerForm = () => {
     }
   };
 
-const handleSubmit = async () => {
-  setIsSubmitting(true);
-  try {
-    const submissionData = {
-      ...formData,
-      submittedAt: new Date().toISOString(),
-      timestamp: Date.now(),
-      userAgent: navigator.userAgent,
-      formType: 'Pro Seller Application',
-    };
-    console.log('Submitting Pro Seller Application:', submissionData);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
-    let idToken = null;
-    if (user) {
-      idToken = await user.getIdToken();
-      console.log('Fetched ID Token:', idToken ? 'Present' : 'Null');
-    } else {
-      console.log('No authenticated user found');
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const submissionData = {
+        ...formData,
+        submittedAt: new Date().toISOString(),
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        formType: 'Pro Seller Application',
+      };
+      console.log('Submitting Pro Seller Application:', submissionData);
+
+      let uid = user?.uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      let idToken = user ? await user.getIdToken(true) : null;
+
+      if (!user && formData.signup && formData.email && formData.password) {
+        const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        uid = credential.user.uid;
+        idToken = await credential.user.getIdToken(true);
+        addAlert('Account created successfully! Proceeding with Pro Seller submission.', 'success');
+      }
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await fetch(`${backendUrl}/api/pro-seller`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ ...submissionData, uid }),
+      });
+
+      const result = await response.json();
+      console.log('API Response:', result, 'Status:', response.status, 'Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Submission failed');
+      }
+
+      addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
+      setFormData(initialFormData);
+      setCurrentStep(1);
+    } catch (error) {
+      console.error('Submission error:', error.message, error);
+      addAlert(`There was an error submitting your application: ${error.message}. Please try again or contact support.`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-    const response = await fetch(`${backendUrl}/api/pro-seller`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
-      },
-      body: JSON.stringify(submissionData),
-    });
-    const result = await response.json();
-    console.log('API Response:', result, 'Status:', response.status, 'Headers:', Object.fromEntries(response.headers.entries()));
-    if (!response.ok) {
-      throw new Error(result.message || 'Submission failed');
-    }
-    if (result.redirectUrl) {
-      window.location.href = result.redirectUrl;
-      return;
-    }
-    addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
-    setFormData(initialFormData);
-    setCurrentStep(1);
-  } catch (error) {
-    console.error('Submission error:', error.message, error);
-    addAlert('There was an error submitting your application. Please try again or contact support.', 'error');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -201,27 +209,59 @@ const handleSubmit = async () => {
   };
 
   const handleRegNumberBlur = async () => {
-    if (!formData.regNumber || !formData.businessName) return;
+    if (!formData.regNumber || !formData.country) return;
     setFormData(prev => ({ ...prev, regVerifying: true, regError: '', regVerified: false }));
     try {
-      const payload = { country: formData.country === 'Nigeria' ? 'NG' : formData.country, regNumber: formData.regNumber };
-      console.log('Verifying reg number:', payload);
+      const payload = { regNumber: formData.regNumber, country: formData.country, taxRef: formData.taxRef };
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      const res = await fetch(`${backendUrl}/verify-business-reg-number`, {
+      const res = await fetch(`${backendUrl}/api/pro-seller/verify-business`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      console.log('Reg number verification response:', data);
-      if (res.ok && data.status === 'success' && data.data && data.data.isValid) {
-        setFormData(prev => ({ ...prev, regVerified: true, regVerifying: false, regError: '' }));
+      if (res.ok && data.status === 'success') {
+        setFormData(prev => ({ ...prev, regVerified: data.data.regValid, regVerifying: false, regError: '' }));
+        if (formData.taxRef && !data.data.taxValid) {
+          setFormData(prev => ({ ...prev, taxVerified: false, taxError: 'Tax reference not valid' }));
+        } else if (formData.taxRef) {
+          setFormData(prev => ({ ...prev, taxVerified: true, taxError: '' }));
+        }
       } else {
-        setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: (data.data && data.data.message) || data.message || 'Verification failed.' }));
+        setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: 'Business registration number not valid' }));
+        if (formData.taxRef && data.details?.taxError) {
+          setFormData(prev => ({ ...prev, taxVerified: false, taxError: 'Tax reference not valid' }));
+        }
       }
     } catch (err) {
       setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: 'Network or server error.' }));
+      if (formData.taxRef) {
+        setFormData(prev => ({ ...prev, taxVerified: false, taxError: 'Network or server error.' }));
+      }
       console.error('Reg number verification error:', err);
+    }
+  };
+
+  const handleTaxRefBlur = async () => {
+    if (!formData.taxRef || !formData.country || !formData.regNumber) return;
+    setFormData(prev => ({ ...prev, taxVerifying: true, taxError: '', taxVerified: false }));
+    try {
+      const payload = { regNumber: formData.regNumber, country: formData.country, taxRef: formData.taxRef };
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/pro-seller/verify-business`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setFormData(prev => ({ ...prev, taxVerified: data.data.taxValid, taxVerifying: false, taxError: '' }));
+      } else {
+        setFormData(prev => ({ ...prev, taxVerified: false, taxVerifying: false, taxError: 'Tax reference not valid' }));
+      }
+    } catch (err) {
+      setFormData(prev => ({ ...prev, taxVerified: false, taxVerifying: false, taxError: 'Network or server error.' }));
+      console.error('Tax reference verification error:', err);
     }
   };
 
@@ -230,15 +270,13 @@ const handleSubmit = async () => {
     setFormData(prev => ({ ...prev, accountVerifying: true, accountError: '', accountVerified: false, accountName: '' }));
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
-      console.log('Verifying bank account:', payload);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      console.log('Bank account verification response:', data);
       if (res.ok && (data.accountName || data.account_name)) {
         setFormData(prev => ({ ...prev, accountVerified: true, accountVerifying: false, accountError: '', accountName: data.accountName || data.account_name }));
       } else {
@@ -254,7 +292,7 @@ const handleSubmit = async () => {
     const variants = {
       enter: { x: 50, opacity: 0 },
       center: { x: 0, opacity: 1 },
-      exit: { x: -50, opacity: 0 }
+      exit: { x: -50, opacity: 0 },
     };
     return (
       <AnimatePresence mode="wait">
@@ -275,7 +313,15 @@ const handleSubmit = async () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Business Name <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Business Name" value={formData.businessName} onChange={e => handleInputChange('businessName', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.businessName ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Business Name"
+                  value={formData.businessName}
+                  onChange={e => handleInputChange('businessName', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.businessName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.businessName && <p className="text-red-500 text-xs mt-1">{errors.businessName}</p>}
               </div>
               <div>
@@ -291,21 +337,53 @@ const handleSubmit = async () => {
                   value={formData.regNumber}
                   onChange={e => handleInputChange('regNumber', e.target.value)}
                   onBlur={handleRegNumberBlur}
-                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${formData.regError ? 'border-red-500' : formData.regVerified ? 'border-green-500' : errors.regNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    formData.regError ? 'border-red-500' : formData.regVerified ? 'border-green-500' : errors.regNumber ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Tax Reference</label>
-                <input type="text" placeholder="Tax Reference (optional)" value={formData.taxRef} onChange={e => handleInputChange('taxRef', e.target.value)} className="w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all border-gray-300" />
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                  Tax Reference
+                  {formData.taxVerifying && <span className="ml-2 text-xs text-orange-500 animate-pulse">Verifying...</span>}
+                  {formData.taxVerified && !formData.taxError && <CheckCircle className="ml-2 w-5 h-5 text-green-500" />}
+                  {formData.taxError && <span className="ml-2 text-xs text-red-500">{formData.taxError}</span>}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Tax Reference (optional)"
+                  value={formData.taxRef}
+                  onChange={e => handleInputChange('taxRef', e.target.value)}
+                  onBlur={handleTaxRefBlur}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    formData.taxError ? 'border-red-500' : formData.taxVerified ? 'border-green-500' : 'border-gray-300'
+                  }`}
+                />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Business Address <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Business Address" value={formData.address} onChange={e => handleInputChange('address', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.address ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Business Address"
+                  value={formData.address}
+                  onChange={e => handleInputChange('address', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.address ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Country <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Country" value={formData.country} onChange={e => handleInputChange('country', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.country ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Country"
+                  value={formData.country}
+                  onChange={e => handleInputChange('country', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.country ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
               </div>
             </div>
@@ -315,31 +393,95 @@ const handleSubmit = async () => {
               <div className="mb-6 text-center">
                 <User className="w-6 h-6 text-orange-500 mx-auto mb-3" />
                 <h2 className="text-xl font-bold text-orange-800 mb-2">Contact Information</h2>
-                <p className="text-orange-600">How can we reach you?</p>
+                <p className="text-orange-600">How can we reach you? <span className="text-sm text-gray-500">(Sign up option available)</span></p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Phone Number" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.phone ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Phone Number"
+                  value={formData.phone}
+                  onChange={e => handleInputChange('phone', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.phone ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address <span className="text-red-500">*</span></label>
-                <input type="email" placeholder="Email Address" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={formData.email}
+                  onChange={e => handleInputChange('email', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.signup}
+                  onChange={e => handleInputChange('signup', e.target.checked)}
+                  className="accent-orange-500 w-4 h-4"
+                />
+                <label className="text-sm text-gray-700">Create an account with this email</label>
+              </div>
+              {formData.signup && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Password <span className="text-red-500">*</span></label>
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={formData.password}
+                    onChange={e => handleInputChange('password', e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                      errors.password ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Manager Name <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Manager Name" value={formData.manager} onChange={e => handleInputChange('manager', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.manager ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Manager Name"
+                  value={formData.manager}
+                  onChange={e => handleInputChange('manager', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.manager ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.manager && <p className="text-red-500 text-xs mt-1">{errors.manager}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Manager Email <span className="text-red-500">*</span></label>
-                <input type="email" placeholder="Manager Email" value={formData.managerEmail} onChange={e => handleInputChange('managerEmail', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.managerEmail ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="email"
+                  placeholder="Manager Email"
+                  value={formData.managerEmail}
+                  onChange={e => handleInputChange('managerEmail', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.managerEmail ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.managerEmail && <p className="text-red-500 text-xs mt-1">{errors.managerEmail}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Manager Phone <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="Manager Phone" value={formData.managerPhone} onChange={e => handleInputChange('managerPhone', e.target.value)} className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.managerPhone ? 'border-red-500' : 'border-gray-300'}`} />
+                <input
+                  type="text"
+                  placeholder="Manager Phone"
+                  value={formData.managerPhone}
+                  onChange={e => handleInputChange('managerPhone', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.managerPhone ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.managerPhone && <p className="text-red-500 text-xs mt-1">{errors.managerPhone}</p>}
               </div>
             </div>
@@ -390,7 +532,9 @@ const handleSubmit = async () => {
                     handleInputChange('bankName', selected ? selected.name : '');
                     console.log('Selected bank:', selected);
                   }}
-                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${errors.bankName ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.bankName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 >
                   <option value="">Select Bank</option>
                   {banksLoading ? (
@@ -417,7 +561,9 @@ const handleSubmit = async () => {
                   value={formData.accountNumber}
                   onChange={e => handleInputChange('accountNumber', e.target.value)}
                   onBlur={handleAccountNumberBlur}
-                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${formData.accountError ? 'border-red-500' : formData.accountVerified ? 'border-green-500' : errors.accountNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    formData.accountError ? 'border-red-500' : formData.accountVerified ? 'border-green-500' : errors.accountNumber ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
                 {formData.accountName && (
                   <div className="mt-2 flex items-center text-green-600 text-sm font-semibold">
@@ -452,6 +598,7 @@ const handleSubmit = async () => {
                 <div><span className="font-semibold">Country:</span> {formData.country}</div>
                 <div><span className="font-semibold">Phone:</span> {formData.phoneCode} {formData.phone}</div>
                 <div><span className="font-semibold">Email:</span> {formData.email}</div>
+                {formData.signup && <div><span className="font-semibold">Password:</span> [Set for new account]</div>}
                 <div><span className="font-semibold">Manager:</span> {formData.manager}</div>
                 <div><span className="font-semibold">Manager Email:</span> {formData.managerEmail}</div>
                 <div><span className="font-semibold">Manager Phone:</span> {formData.managerPhone}</div>
@@ -473,7 +620,7 @@ const handleSubmit = async () => {
     { label: 'Business Info' },
     { label: 'Contact Info' },
     { label: 'Products & Banking' },
-    { label: 'Review & Submit' }
+    { label: 'Review & Submit' },
   ];
 
   return (
@@ -486,7 +633,6 @@ const handleSubmit = async () => {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-orange-700 dark:text-orange-400 tracking-tight">Pro Seller Registration</h1>
               <CheckCircle className="w-9 h-9 text-orange-500 self-center" />
             </div>
-            {/* Mobile Stepper */}
             <div className="block sm:hidden mb-10">
               <div className="flex items-center w-full mb-2">
                 {steps.map((step, idx) => (
@@ -507,7 +653,6 @@ const handleSubmit = async () => {
                 ))}
               </div>
             </div>
-            {/* Desktop Stepper */}
             <div className="hidden sm:flex items-center justify-center mb-10 gap-4">
               {steps.map((step, idx) => (
                 <React.Fragment key={step.label}>
@@ -523,13 +668,16 @@ const handleSubmit = async () => {
               <div className="max-h-[60vh] md:max-h-[65vh] overflow-y-auto pb-4 custom-scrollbar px-1 md:px-2">
                 {renderStepContent()}
               </div>
-              {/* Sticky Button Footer */}
               <div className="sticky bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent px-0 pt-6 pb-4 mt-8 border-t border-orange-100 dark:border-gray-800 shadow-2xl flex flex-col items-center gap-2">
                 <div className="flex flex-col sm:flex-row w-full gap-3 sm:gap-4">
                   {currentStep > 1 && (
                     <button type="button" onClick={handleBack} className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200">Back</button>
                   )}
-                  <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
                     {isSubmitting ? 'Submitting...' : currentStep < 4 ? 'Continue' : 'Submit'}
                   </button>
                 </div>
@@ -542,4 +690,4 @@ const handleSubmit = async () => {
   );
 };
 
-export default ProSellerForm; 
+export default ProSellerForm;

@@ -103,6 +103,24 @@ const ProSellerForm = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+    if (field === 'regNumber') {
+      validateRegNumber(value);
+    }
+  };
+
+  const validateRegNumber = (value) => {
+    const country = formData.country;
+    let isValid = false;
+    if (country === 'Nigeria' || country === 'NG') {
+      isValid = /^\d{7,8}$/.test(value); // 7-8 digits
+    } else if (country === 'United Kingdom' || country === 'UK' || country === 'GB') {
+      isValid = /^(\d{8}|[A-Za-z]{2}\d{6})$/.test(value); // 8 digits or 2 letters + 6 digits
+    }
+    if (!isValid && value) {
+      setFormData(prev => ({ ...prev, regError: 'Invalid business registration number format' }));
+    } else {
+      setFormData(prev => ({ ...prev, regError: '' }));
+    }
   };
 
   const validateStep = (step) => {
@@ -110,9 +128,9 @@ const ProSellerForm = () => {
     if (step === 1) {
       if (!formData.businessName) newErrors.businessName = 'Business name is required';
       if (!formData.regNumber) newErrors.regNumber = 'Registration number is required';
+      if (formData.regError) newErrors.regNumber = formData.regError;
       if (!formData.address) newErrors.address = 'Business address is required';
       if (!formData.country) newErrors.country = 'Country is required';
-      if (formData.regError) newErrors.regNumber = formData.regError;
       if (formData.taxError) newErrors.taxRef = formData.taxError;
     }
     if (step === 2) {
@@ -234,11 +252,11 @@ const ProSellerForm = () => {
         }
       }
     } catch (err) {
+      console.error('Reg number verification error:', err);
       setFormData(prev => ({ ...prev, regVerified: false, regVerifying: false, regError: 'Network or server error.' }));
       if (formData.taxRef) {
         setFormData(prev => ({ ...prev, taxVerified: false, taxError: 'Network or server error.' }));
       }
-      console.error('Reg number verification error:', err);
     }
   };
 
@@ -260,8 +278,8 @@ const ProSellerForm = () => {
         setFormData(prev => ({ ...prev, taxVerified: false, taxVerifying: false, taxError: 'Tax reference not valid' }));
       }
     } catch (err) {
-      setFormData(prev => ({ ...prev, taxVerified: false, taxVerifying: false, taxError: 'Network or server error.' }));
       console.error('Tax reference verification error:', err);
+      setFormData(prev => ({ ...prev, taxVerified: false, taxVerifying: false, taxError: 'Network or server error.' }));
     }
   };
 
@@ -333,14 +351,28 @@ const ProSellerForm = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Registration Number"
+                  placeholder={formData.country === 'Nigeria' || formData.country === 'NG' ? '7-8 digits (e.g., 1234567)' : '8 digits or 2 letters + 6 digits (e.g., AB123456)'}
                   value={formData.regNumber}
-                  onChange={e => handleInputChange('regNumber', e.target.value)}
+                  onChange={e => {
+                    const value = e.target.value;
+                    // Allow only valid characters based on country
+                    let filteredValue = value;
+                    if (formData.country === 'Nigeria' || formData.country === 'NG') {
+                      filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8); // Only digits, max 8
+                    } else if (formData.country === 'United Kingdom' || formData.country === 'UK' || formData.country === 'GB') {
+                      filteredValue = value.replace(/[^A-Za-z0-9]/g, '').slice(0, 8); // Letters and digits, max 8
+                    }
+                    handleInputChange('regNumber', filteredValue);
+                  }}
                   onBlur={handleRegNumberBlur}
+                  pattern={formData.country === 'Nigeria' || formData.country === 'NG' ? '\\d{7,8}' : '[A-Za-z]{0,2}\\d{6,8}'}
+                  title={formData.country === 'Nigeria' || formData.country === 'NG' ? 'Must be 7-8 digits' : 'Must be 8 digits or 2 letters followed by 6 digits'}
                   className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
                     formData.regError ? 'border-red-500' : formData.regVerified ? 'border-green-500' : errors.regNumber ? 'border-red-500' : 'border-gray-300'
                   }`}
+                  required
                 />
+                {errors.regNumber && <p className="text-red-500 text-xs mt-1">{errors.regNumber}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
@@ -379,7 +411,12 @@ const ProSellerForm = () => {
                   type="text"
                   placeholder="Country"
                   value={formData.country}
-                  onChange={e => handleInputChange('country', e.target.value)}
+                  onChange={e => {
+                    handleInputChange('country', e.target.value);
+                    // Reset regNumber and error when country changes
+                    handleInputChange('regNumber', '');
+                    setFormData(prev => ({ ...prev, regError: '', regVerified: false }));
+                  }}
                   className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
                     errors.country ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -613,6 +650,7 @@ const ProSellerForm = () => {
           )}
         </motion.div>
       </AnimatePresence>
+
     );
   };
 
@@ -620,7 +658,7 @@ const ProSellerForm = () => {
     { label: 'Business Info' },
     { label: 'Contact Info' },
     { label: 'Products & Banking' },
-    { label: 'Review & Submit' },
+    { label: 'Review & Submit' }
   ];
 
   return (
@@ -673,11 +711,7 @@ const ProSellerForm = () => {
                   {currentStep > 1 && (
                     <button type="button" onClick={handleBack} className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200">Back</button>
                   )}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
+                  <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed">
                     {isSubmitting ? 'Submitting...' : currentStep < 4 ? 'Continue' : 'Submit'}
                   </button>
                 </div>

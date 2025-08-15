@@ -643,50 +643,49 @@ export default function SellerProductUpload() {
     }, 0);
   };
 
-// =========== Form Validation ============= //
-const validateForm = () => {
-  const newErrors = {};
-  if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
-  if (!formData.name.trim()) newErrors.name = 'Product name is required.';
-  if (!formData.price || isNaN(formData.price) || formData.price <= 0)
-    newErrors.price = 'Enter a valid price greater than 0.';
-  if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
-    newErrors.stock = 'Enter a valid stock quantity (0 or more).';
-  if (!formData.category || !categories.includes(formData.category))
-    newErrors.category = 'Select a valid category.';
-  if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
-  if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
-  if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
-  if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
-  if (
-    formData.category === 'Clothing' &&
-    formData.subcategory &&
-    formData.sizes.length === 0
-  ) {
-    newErrors.sizes = 'Select or enter at least one size for clothing products.';
-  }
-  if (
-    formData.category === 'Footwear' &&
-    formData.subcategory &&
-    formData.sizes.length === 0
-  ) {
-    newErrors.sizes = 'Select or enter at least one size for footwear products.';
-  }
-  if (
-    formData.category === 'Perfumes' &&
-    formData.subcategory &&
-    formData.sizes.length === 0
-  ) {
-    newErrors.sizes = 'Select or enter at least one size for perfume products.';
-  }
-  if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
-  return newErrors;
-};
+  // =========== Form Validation ============= //
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
+    if (!formData.name.trim()) newErrors.name = 'Product name is required.';
+    if (!formData.price || isNaN(formData.price) || formData.price <= 0)
+      newErrors.price = 'Enter a valid price greater than 0.';
+    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0)
+      newErrors.stock = 'Enter a valid stock quantity (0 or more).';
+    if (!formData.category || !categories.includes(formData.category))
+      newErrors.category = 'Select a valid category.';
+    if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
+    if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
+    if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
+    if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
+    if (
+      formData.category === 'Clothing' &&
+      formData.subcategory &&
+      formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for clothing products.';
+    }
+    if (
+      formData.category === 'Footwear' &&
+      formData.subcategory &&
+      formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for footwear products.';
+    }
+    if (
+      formData.category === 'Perfumes' &&
+      formData.subcategory &&
+      formData.sizes.length === 0
+    ) {
+      newErrors.sizes = 'Select or enter at least one size for perfume products.';
+    }
+    return newErrors;
+  };
 
-const validateLocationForm = () => {
-  const newLocationErrors = {};
-  return newLocationErrors;
-};
+  const validateLocationForm = () => {
+    const newLocationErrors = {};
+    return newLocationErrors;
+  };
 
   const uploadFile = async (file, isVideo = false) => {
     const uploadData = new FormData();
@@ -776,7 +775,7 @@ const validateLocationForm = () => {
         handlingFee: fees.handlingFee,
         totalEstimatedPrice: fees.totalEstimatedPrice,
         sellerEarnings: fees.sellerEarnings,
-        manualSize: formData.manualSize,
+        manualSize: formData.manualSize || '',
         location: {
           country: locationData.country,
           state: locationData.state,
@@ -896,14 +895,14 @@ const validateLocationForm = () => {
 
             <div className="flex justify-end mb-6">
 
-<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-[#112d4e] font-semibold shadow">
+<Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
 
   Bulk Upload
 
 </Link>
 
 </div>
-        <div className="w-full max-w-7\xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add a New Product
@@ -1286,7 +1285,7 @@ const validateLocationForm = () => {
               </div>
               <div className="mt-6 relative group">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Size <span className="text-red-500">*</span>
+                  Product Size
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
                 </label>
                 <select
@@ -1394,11 +1393,17 @@ const validateLocationForm = () => {
                       Loading categories...
                     </p>
                   )}
+                  {formData.category && formData.category.toLowerCase().includes('food') && (
+                    <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-info-circle"></i>
+                      All food-related categories must meet NAFDAC/FSA food safety standards.
+                    </p>
+                  )}
                 </div>
                 {formData.category && (
                   <div className="relative group">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
-                      Subcategory <span className="text-red-500">*</span>
+                      Subcategory
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
                     </label>
                     <div className="relative mt-1">
@@ -1451,7 +1456,7 @@ const validateLocationForm = () => {
                 {formData.subcategory && customSubSubcategories[formData.category]?.[formData.subcategory] && (
                   <div className="relative group">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Sub-Subcategory <span className="text-red-500">*</span>
+                      Sub-Subcategory
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
                     </label>
                     <div className="relative mt-1">
@@ -1626,45 +1631,69 @@ const validateLocationForm = () => {
                         onMouseDown={() => handleColorToggle(color.name)}
                         className="flex items-center w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
                         disabled={loading}
-                      >
-                        <span
-                          className="w-4 h-4 rounded-full mr-2"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        {color.name}
-                      </button>
-                    ))}
-                  </div>
+                        >
+                          <span
+                            className="w-4 h-4 rounded-full mr-2"
+                            style={{ backgroundColor: color.hex }}
+                          />
+                          {color.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {errors.colors && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.colors}
+                  </p>
                 )}
               </div>
-              {errors.colors && (
-                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.colors}
-                </p>
-              )}
-            </div>
 
-            {/* Tags Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-purchase-tag text-blue-500"></i>
-                Tags
-              </h3>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Tags (Optional)
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
-              </label>
-              <div className="relative mt-1">
+              {/* Tags Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-purchase-tag text-blue-500"></i>
+                  Tags
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
+                  Tags
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve searchability"></i>
+                </label>
+                <div className="flex flex-wrap gap-2 mt-2 mb-2">
+                  {formData.tags.map((tag) => (
+                    <div
+                      key={tag}
+                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleTagToggle(tag)}
+                        className="text-red-500 hover:text-red-700"
+                        disabled={loading}
+                        title="Remove tag"
+                      >
+                        <i className="bx bx-x"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
                 <input
                   type="text"
-                  value={formData.tags.join(', ')}
-                  onChange={(e) => {
-                    const tags = e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag);
-                    setFormData((prev) => ({ ...prev, tags }));
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const tag = e.target.value.trim();
+                      if (tag.length > 20) {
+                        addAlert('Tag must be 20 characters or less.', 'error');
+                        return;
+                      }
+                      handleTagToggle(tag);
+                      e.target.value = '';
+                    }
                   }}
-                  placeholder="e.g., Vintage, Leather, Smartphone"
-                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  placeholder="Type a tag and press Enter (e.g., Vintage)"
+                  className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                   disabled={loading}
                 />
                 {suggestedTags.length > 0 && (
@@ -1672,6 +1701,24 @@ const validateLocationForm = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {suggestedTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleTagToggle(tag)}
+                          className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm shadow-sm"
+                          disabled={loading}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {authenticityTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Authenticity Tags:</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {authenticityTags.map((tag) => (
                         <button
                           key={tag}
                           type="button"
@@ -1694,14 +1741,10 @@ const validateLocationForm = () => {
               {/* Condition Section */}
               <div>
                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-star text-blue-500"></i>
+                  <i className="bx bx-check-circle text-blue-500"></i>
                   Condition
                 </h3>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Condition <span className="text-red-500">*</span>
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
-                </label>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2">
                   {['New', 'Used', 'Refurbished'].map((condition) => (
                     <button
                       key={condition}
@@ -1718,12 +1761,6 @@ const validateLocationForm = () => {
                     </button>
                   ))}
                 </div>
-                {errors.condition && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.condition}
-                  </p>
-                )}
               </div>
 
               {/* Product URL Section */}
@@ -1732,34 +1769,16 @@ const validateLocationForm = () => {
                   <i className="bx bx-link text-blue-500"></i>
                   Product URL (Optional)
                 </h3>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  External Product URL
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Link to external product page (optional)"></i>
-                </label>
                 <input
                   type="url"
                   name="productUrl"
                   value={formData.productUrl}
                   onChange={handleChange}
                   placeholder="e.g., https://example.com/product"
-                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                    errors.productUrl ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
                   disabled={loading}
                 />
-                {errors.productUrl && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.productUrl}
-                  </p>
-                )}
               </div>
-
-              <Link to="/products-upload-variant">
-                <p className="text-orange-500 text-sm mt-5 mb-5 hover:underline">
-                  Have a product with multiple variants (e.g., different sizes, colors)?
-                </p>
-              </Link>
 
               {/* Location Section */}
               <div>
@@ -1771,15 +1790,43 @@ const validateLocationForm = () => {
                   locationData={locationData}
                   setLocationData={setLocationData}
                   errors={locationErrors}
+                  setErrors={setLocationErrors}
                   disabled={loading}
                 />
               </div>
 
+              {/* Stepper */}
+              <div className="mt-6">
+                <div className="flex justify-between items-center">
+                  {steps.map((step) => (
+                    <div key={step.key} className="flex-1 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleStepClick(step.key)}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto ${
+                          currentStep >= step.key
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                        } ${isSectionComplete(step.key) ? 'border-2 border-green-500' : ''} transition-all duration-200`}
+                        disabled={loading || currentStep < step.key}
+                      >
+                        {isSectionComplete(step.key) ? (
+                          <i className="bx bx-check text-lg"></i>
+                        ) : (
+                          step.key
+                        )}
+                      </button>
+                      <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">{step.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Submit Button */}
-              <div className="flex justify-end mt-8">
+              <div className="mt-8 flex justify-end">
                 <button
                   type="submit"
-                  className={`flex items-center gap-2 px-6 py-3 bg-[#112d4e] text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2 ${
                     loading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={loading}
@@ -1797,40 +1844,59 @@ const validateLocationForm = () => {
                   )}
                 </button>
               </div>
-              </div>
             </form>
 
-            {/* Custom Alerts */}
+            {/* Alerts */}
             <CustomAlert alerts={alerts} removeAlert={removeAlert} />
 
             {/* Variant Popup */}
-            {/* <SellerProductUploadPopup
-              isOpen={isVariantPopupOpen}
-              onClose={handleVariantNo}
-              message="Does this product have variants (e.g., different sizes, colors)?"
-              icon="bx-question-mark"
-              type="question"
-              showYesNoButtons={true}
-              onYes={handleVariantYes}
-              onNo={handleVariantNo}
-            /> */}
+            {isVariantPopupOpen && (
+              <SellerProductUploadPopup
+                onYes={handleVariantYes}
+                onNo={handleVariantNo}
+                message="Would you like to add variants for this product (e.g., different sizes or colors)?"
+              />
+            )}
 
             {/* Success Popup */}
-            <SellerProductUploadPopup
-              isOpen={isSuccessPopupOpen}
-              onClose={() => {
-                setIsSuccessPopupOpen(false);
-              }}
-              message="Product added successfully!"
-              icon="bx-check-circle"
-              type="success"
-              showYesNoButtons={false}
-            />
+            {isSuccessPopupOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <i className="bx bx-check-circle text-green-500"></i>
+                    Product Added Successfully!
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    Your product has been uploaded and is now live.
+                  </p>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button
+                      onClick={() => navigate('/seller-products')}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                    >
+                      View Products
+                    </button>
+                    <button
+                      onClick={() => setIsSuccessPopupOpen(false)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Add Another
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Zoomed Media Modal */}
             {zoomedMedia && (
               <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
                 <div className="relative max-w-4xl w-full">
+                  <button
+                    onClick={() => setZoomedMedia(null)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                  >
+                    <i className="bx bx-x text-lg"></i>
+                  </button>
                   {zoomedMedia.type === 'image' ? (
                     <img
                       src={zoomedMedia.src}
@@ -1844,13 +1910,6 @@ const validateLocationForm = () => {
                       className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
                     />
                   )}
-                  <button
-                    onClick={() => setZoomedMedia(null)}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                    title="Close"
-                  >
-                    <i className="bx bx-x text-xl"></i>
-                  </button>
                 </div>
               </div>
             )}

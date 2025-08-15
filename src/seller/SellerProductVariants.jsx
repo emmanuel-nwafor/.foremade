@@ -767,7 +767,7 @@ export default function SellerProductVariants() {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <SellerSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start">
-        <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
             Add Product with Variants

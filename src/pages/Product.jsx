@@ -563,6 +563,13 @@ const Product = () => {
     }
   };
 
+  const calculateAdditionalShippingFee = () => {
+    const basePrice = selectedVariant?.price || product.price;
+    const total = basePrice * quantity;
+    const percentage = total > 10000 ? 0.01 : 0.02; // 1% if total > 10000, else 2%
+    return Math.round(total * percentage);
+  };
+
   const handlePayNow = async () => {
     if (!product) return;
 
@@ -626,13 +633,15 @@ const Product = () => {
         selectedSize
       );
 
+      const additionalFee = calculateAdditionalShippingFee();
+
       setTimeout(() => {
         navigate(
           `/checkout?productId=${
             product.id
           }&quantity=${quantity}&color=${encodeURIComponent(
             selectedColor || ""
-          )}&size=${encodeURIComponent(selectedSize || "")}`
+          )}&size=${encodeURIComponent(selectedSize || "")}&additionalShippingFee=${additionalFee}`
         );
       }, 100);
     } catch (err) {
@@ -884,12 +893,6 @@ const Product = () => {
         ).toFixed(1)
       : product.rating.toFixed(1);
 
-  // Placeholder for shipping fee calculation (to be provided later)
-  const calculateShippingFee = () => {
-    // Replace with actual shipping fee logic when provided
-    return 5000; // Example placeholder value in NGN
-  };
-
   return (
     <div className="mb-[140px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
@@ -1108,7 +1111,7 @@ const Product = () => {
               />. 
               You will incur an additional shipping fee of{" "}
               <PriceFormatter
-                price={calculateShippingFee()}
+                price={calculateAdditionalShippingFee()}
                 currency={product.currency || localStorage.getItem("currency") || "NGN"}
               />.
               Would you like to proceed?

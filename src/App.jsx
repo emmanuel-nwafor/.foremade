@@ -93,6 +93,7 @@ import DailyDeals from './pages/DailyDeals';
 import AllTrendingFashion from './pages/AllTrendingFashion';
 import AllTrendingGadgets from './pages/AllTrendingGadgets';
 import ProtectedRoute from './auth/ProtectedRoute'; // Ensure correct path
+import SellersPage from './seller/SellersPage';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -132,9 +133,9 @@ const Layout = ({ children }) => {
     '/sellers/orders',
     '/sellers/products',
     '/seller-onboarding',
+    '/seller-chat',
     '/dashboard',
     '/admin/sellers-wallet',
-    '/seller-chat',
     '/admin/transactions',
   ];
 
@@ -212,20 +213,21 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/address" element={<ProtectedRoute><Address /></ProtectedRoute>} />
-              <Route path="/setting" element={<ProtectedRoute><Setting /></ProtectedRoute>} />
-              <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/about" element={<ProtectedRoute><AboutUs /></ProtectedRoute>} />
-              <Route path="/seller-chat" element={<ProtectedRoute><SellerChat /></ProtectedRoute>} />
-              <Route path="/order-tracking" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
-              <Route path="/category/:categoryName" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
-              <Route path="/user-agreement" element={<ProtectedRoute><UserAgreement /></ProtectedRoute>} />
-              <Route path="/daily-deals" element={<ProtectedRoute><DailyDeals /></ProtectedRoute>} />
-              <Route path="/trending-fashions" element={<ProtectedRoute><AllTrendingFashion /></ProtectedRoute>} />
-              <Route path="/trending-gadgets" element={<ProtectedRoute><AllTrendingGadgets /></ProtectedRoute>} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/address" element={<Address />} />
+              <Route path="/setting" element={<Setting />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/notifications" elemen={<Notifications />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/seller-chat" element={<SellerChat />} />
+              <Route path="/seller/:sellerId" element={<SellersPage />} />
+              <Route path="/order-tracking" element={<OrderTracking />} />
+              <Route path="/category/:categoryName" element={<CategoryPage />} />
+              <Route path="/user-agreement" element={<UserAgreement />} />
+              <Route path="/daily-deals" element={<DailyDeals />} />
+              <Route path="/trending-fashions" element={<AllTrendingFashion />} />
+              <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
 
               {/* Admin Routes with requireAdmin */}
               <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />

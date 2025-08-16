@@ -316,23 +316,21 @@ function Admin() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />
-        <main className="flex-1 ml-0 md:ml-64 p-6">
-          <div className="container mx-auto px-4 py-8 text-center">
-            <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
-              <i className="bx bx-loader bx-spin text-2xl"></i>
-              <span>Loading...</span>
-            </div>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />
         <main className="flex-1 ml-0 md:ml-64 p-6">
           <div className="container mx-auto px-4 py-8">
@@ -350,8 +348,8 @@ function Admin() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6">
-        <div className="container mx-auto px-4 py-8">
+      <main className="flex-1 ml-0 md:ml-64 p-4">
+        <div className="container mx-auto px-4 py-7">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-4 sm:mb-0 flex items-center gap-2">
               <CheckCircle2 size={24} className="text-green-600 dark:text-green-400" />
@@ -359,7 +357,7 @@ function Admin() {
             </h1>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="py-2 px-4 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2 transition-all duration-200 shadow-md"
+              className="py-2 px-4 bg-blue-950 text-white rounded-lg text-sm hover:bg-blue-900 flex items-center gap-2 transition-all duration-200 shadow-md"
             >
               <i className={`bx bx-${isFilterOpen ? 'x' : 'filter-alt'}`}></i>
               {isFilterOpen ? 'Close Filters' : 'Filters & Sort'}
@@ -391,10 +389,10 @@ function Admin() {
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stats</label>
                   <div className="flex gap-2">
-                    <div className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
+                    <div className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
                       Approved: {approvedCount}
                     </div>
-                    <div className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
+                    <div className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm shadow-md">
                       Not Approved: {notApprovedCount}
                     </div>
                   </div>

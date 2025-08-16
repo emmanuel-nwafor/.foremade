@@ -183,14 +183,14 @@ export default function Profile() {
               <Link to="/favorites" className="block">
                 <Heart className="w-6 h-6 text-purple-500 mb-2 mx-auto" />
                 <p className="text-gray-400 dark:text-gray-300">Wish List</p>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockWishlistCount}</p>
+                {/* <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockWishlistCount}</p> */}
               </Link>
             </div>
 
             <div className="rounded-lg p-4 text-center bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900 dark:to-gray-800 border border-yellow-100 dark:border-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-800 cursor-pointer transition-colors duration-300">
               <Star className="w-6 h-6 text-yellow-500 mb-2 mx-auto" />
               <p className="text-gray-400 dark:text-gray-300">Loyalty Points</p>
-              <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockLoyaltyPoints} <Star className="w-4 h-4 text-yellow-500 inline" /></p>
+              {/* <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{mockLoyaltyPoints} <Star className="w-4 h-4 text-yellow-500 inline" /></p> */}
             </div>
           </div>
 

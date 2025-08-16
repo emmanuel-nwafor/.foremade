@@ -5,12 +5,9 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, col
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
-import { Chart as ChartJS, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
+import Chart from 'react-apexcharts';
 import CurrencyConverter from '/src/components/layout/CurrencyConverter';
 import PriceFormatter from '/src/components/layout/PriceFormatter';
-
-ChartJS.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 const handleCheckout = async (sellerId, productPrice, totalAmount) => {
   console.log(`Checkout for seller ${sellerId}: price ₦${productPrice}, total ₦${totalAmount}`);
@@ -69,7 +66,8 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState(null);
-  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const [isProSeller, setIsProSeller] = useState(false);
+  const [chartData, setChartData] = useState({ series: [], options: {} });
   const pendingBalanceRef = useRef(0);
 
   useEffect(() => {
@@ -103,8 +101,10 @@ export default function Wallet() {
 
         const userSnap = await getDoc(userRef);
         const onboarded = userSnap.exists() && userSnap.data().isOnboarded === true;
-        console.log(`Seller ${auth.currentUser.uid} onboarding status: ${onboarded ? 'onboarded' : 'not onboarded'}`);
-        setIsOnboarded(onboarded);
+        const proSeller = userSnap.exists() && userSnap.data().isProSeller === true;
+        console.log(`Seller ${auth.currentUser.uid} onboarding status: ${onboarded ? 'onboarded' : 'not onboarded'}, pro status: ${proSeller ? 'pro' : 'standard'}`);
+        setIsOnboarded(onboarded || proSeller); // Override with pro seller status
+        setIsProSeller(proSeller);
 
         setLoading(false);
       } catch (err) {
@@ -241,30 +241,26 @@ export default function Wallet() {
 
   const updateChartData = (availableBalance = balance, pendingBalance = 0) => {
     setChartData({
-      labels: ['Available Balance', 'Pending Balance'],
-      datasets: [
-        {
-          data: [availableBalance, pendingBalance],
-          backgroundColor: ['#2563EB', '#c08640'],
-          borderColor: ['#2563EB', '#c08640'],
-          borderWidth: 1,
+      series: [availableBalance, pendingBalance],
+      options: {
+        chart: { type: 'area', height: '100%', width: '100%', animations: { enabled: true } },
+        xaxis: { categories: ['Balance'] },
+        yaxis: { title: { text: 'Amount (NGN)' }, min: 0 },
+        stroke: { curve: 'smooth' },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.9, stops: [0, 90, 100] } },
+        colors: ['#2563EB', '#c08640'],
+        legend: { position: 'top', horizontalAlign: 'center' },
+        tooltip: {
+          y: { formatter: (value) => `₦${value.toFixed(2)}` },
+          custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+            return `<div class="p-2 bg-gray-800 text-white rounded-lg">
+              ${w.globals.seriesNames[seriesIndex]}: ₦${series[seriesIndex][dataPointIndex].toFixed(2)}
+            </div>`;
+          },
         },
-      ],
+        dataLabels: { enabled: false },
+      },
     });
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top', labels: { font: { size: 12 } } },
-      title: { display: true, text: 'Wallet Balance Overview', font: { size: 16 } },
-      tooltip: {
-        callbacks: {
-          label: (context) => `${context.label}: ₦${context.raw.toFixed(2)}`
-        }
-      }
-    },
   };
 
   if (loading) {
@@ -301,7 +297,7 @@ export default function Wallet() {
                       : 'text-red-600 bg-red-100'
                   }`}
                 >
-                  {isOnboarded ? 'Status: Onboarded' : 'Please Onboard'}
+                  {isOnboarded ? `Status: Onboarded (${isProSeller ? 'Pro' : 'Standard'} Seller)` : 'Please Onboard'}
                 </span>
               )}
             </div>
@@ -371,7 +367,7 @@ export default function Wallet() {
               Wallet Balance
             </h2>
             <div className="h-64 sm:h-80">
-              <Doughnut data={chartData} options={chartOptions} />
+              <Chart options={chartData.options} series={chartData.series} type="area" height="100%" />
             </div>
           </div>
           {isModalOpen && (

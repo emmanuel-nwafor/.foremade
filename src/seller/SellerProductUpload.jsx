@@ -897,7 +897,7 @@ export default function SellerProductUpload() {
                 <i className="bx bx-package text-blue-500"></i>
                 Add a New Product
               </h2>
-              <Link to="/bulk-upload" className="inline-block px-5 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
+              <Link to="/bulk-upload" className="inline-block px-3 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
                 Bulk Upload
               </Link>
            </div>

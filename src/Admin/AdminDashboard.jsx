@@ -53,7 +53,7 @@ export default function AdminDashboard() {
       if (!user) throw new Error('Not authenticated');
       const idToken = await user.getIdToken();
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      const res = await fetch(`${backendUrl}/api/admin/pro-seller-approvals`, {
+      const res = await fetch(`${backendUrl}/api/admin/all-pro-sellers`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const data = await res.json();

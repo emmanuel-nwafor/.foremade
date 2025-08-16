@@ -1289,7 +1289,7 @@ const Product = () => {
                     </p>
                     {isDailyDeal && (
                       <div className="text-right">
-                        <p className="text-sm line-through opacity-80">
+                        <p className="text-sm line-through text-black opacity-80">
                           <PriceFormatter
                             price={originalPrice}
                             currency={

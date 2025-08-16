@@ -9,6 +9,7 @@ import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
 import Home from './pages/Home';
 import Products from './pages/Products';
+import ChatSystem from '/src/components/chat/ChatInterface';
 import Login from './auth/Login';
 import Register from './auth/Register';
 import NotFound from './pages/NotFound';
@@ -92,7 +93,7 @@ import OrderTracking from './profile/OrderTracking';
 import DailyDeals from './pages/DailyDeals';
 import AllTrendingFashion from './pages/AllTrendingFashion';
 import AllTrendingGadgets from './pages/AllTrendingGadgets';
-import ProtectedRoute from './auth/ProtectedRoute'; // Ensure correct path
+import ProtectedRoute from './auth/ProtectedRoute';
 import SellersPage from './seller/SellersPage';
 
 const Layout = ({ children }) => {
@@ -134,14 +135,20 @@ const Layout = ({ children }) => {
     '/sellers/products',
     '/seller-onboarding',
     '/seller-chat',
-    '/dashboard',
     '/admin/sellers-wallet',
     '/admin/transactions',
   ];
 
+  // Define dynamic route patterns to hide header and footer
+  const dynamicHideHeaderFooterPatterns = [
+    /^\/seller\/edit-product\/[^/]+$/,
+    /^\/seller-chat\/[^/]+$/, // Matches /seller-chat/:chatId
+  ];
+
   // Check if the current path matches any static routes or dynamic patterns
-  const isDynamicEditProductRoute = /^\/seller\/edit-product\/[^/]+$/.test(location.pathname);
-  const hideHeaderFooter = staticHideHeaderFooterRoutes.includes(location.pathname) || isDynamicEditProductRoute;
+  const hideHeaderFooter =
+    staticHideHeaderFooterRoutes.includes(location.pathname) ||
+    dynamicHideHeaderFooterPatterns.some((pattern) => pattern.test(location.pathname));
 
   const showFooter = ['/profile', '/about'].includes(location.pathname);
 
@@ -218,9 +225,11 @@ function App() {
               <Route path="/address" element={<Address />} />
               <Route path="/setting" element={<Setting />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/notifications" elemen={<Notifications />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/about" element={<AboutUs />} />
               <Route path="/seller-chat" element={<SellerChat />} />
+              <Route path="/seller-chat/:chatId" element={<SellerChat />} />
+              <Route path="/chat/:orderId" element={<ChatSystem />} />
               <Route path="/seller/:sellerId" element={<SellersPage />} />
               <Route path="/order-tracking" element={<OrderTracking />} />
               <Route path="/category/:categoryName" element={<CategoryPage />} />

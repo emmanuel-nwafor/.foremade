@@ -22,8 +22,8 @@ export default function Profile() {
   const [isAuthError, setIsAuthError] = useState(false);
   const [userData, setUserData] = useState(null);
   const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || null);
-  const mockWishlistCount = 3;
-  const mockLoyaltyPoints = 0;
+  // const mockWishlistCount = 3;
+  // const mockLoyaltyPoints = 0;
   const [activeSection, setActiveSection] = useState(null);
 
   useEffect(() => {

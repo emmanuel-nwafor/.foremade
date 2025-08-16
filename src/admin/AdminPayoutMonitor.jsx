@@ -112,42 +112,66 @@ export default function AdminPayoutMonitor() {
       const transactionData = [];
       for (const docSnapshot of snapshot.docs) {
         const txn = { id: docSnapshot.id, ...docSnapshot.data() };
-        const sellerRef = doc(db, 'sellers', txn.userId);
+        // Ensure critical fields are strings or have fallback values
+        txn.id = String(txn.id || 'N/A');
+        txn.sellerId = String(txn.sellerId || 'N/A');
+
+        // Validate sellerId before creating document reference
+        if (!txn.sellerId || txn.sellerId === 'N/A' || !/^[a-zA-Z0-9]+$/.test(txn.sellerId)) {
+          console.warn(`Invalid sellerId for transaction ${txn.id}: ${txn.sellerId}`);
+          txn.sellerName = 'Unknown';
+          txn.bankName = 'N/A';
+          txn.accountNumber = 'N/A';
+          transactionData.push(txn);
+          continue;
+        }
+
+        const sellerRef = doc(db, 'sellers', txn.sellerId);
         try {
           const sellerSnap = await getDoc(sellerRef);
           if (sellerSnap.exists()) {
             const sellerData = sellerSnap.data();
-            txn.sellerName = sellerData.fullName || 'Unknown';
-            txn.accountNumber = sellerData.accountNumber || 'N/A';
+            txn.sellerName = String(sellerData.fullName || 'Unknown');
+            txn.accountNumber = String(sellerData.accountNumber || 'N/A');
             if (sellerData.bankCode) {
               const bankRef = doc(db, 'banks', sellerData.bankCode);
               const bankSnap = await getDoc(bankRef);
-              txn.bankName = bankSnap.exists() ? bankSnap.data().name || 'N/A' : 'N/A';
+              txn.bankName = String(bankSnap.exists() ? bankSnap.data().name || 'N/A' : 'N/A');
             } else {
               txn.bankName = 'N/A';
             }
           } else {
+            console.warn(`Seller document not found for sellerId: ${txn.sellerId}`);
             txn.sellerName = 'Unknown';
             txn.bankName = 'N/A';
             txn.accountNumber = 'N/A';
           }
         } catch (error) {
-          console.error(`Failed to fetch seller or bank data for ${txn.userId}:`, error);
+          console.error(`Failed to fetch seller or bank data for ${txn.sellerId}:`, error);
           txn.sellerName = 'Unknown';
           txn.bankName = 'N/A';
           txn.accountNumber = 'N/A';
         }
         transactionData.push(txn);
       }
+      console.log('Fetched transaction data:', transactionData);
       setTransactions(transactionData);
-      setFilteredTransactions(
-        transactionData.filter(
-          (txn) =>
-            (txn.id?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-            (txn.sellerId?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-            (txn.sellerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) // Search by seller name
-        )
-      );
+
+      // Simplified filtering logic using sellerId
+      if (!searchQuery.trim()) {
+        setFilteredTransactions(transactionData);
+      } else {
+        const lowerQuery = searchQuery.toLowerCase().trim();
+        setFilteredTransactions(
+          transactionData.filter((txn) => {
+            const fields = [txn.id, txn.sellerId, txn.sellerName];
+            return fields.some((field) => {
+              if (!field || typeof field !== 'string') return false;
+              return field.toLowerCase() === lowerQuery || field.toLowerCase().includes(lowerQuery);
+            });
+          })
+        );
+      }
     }, (error) => {
       addAlert('Failed to fetch transactions.', 'error');
       console.error('Firestore listener error:', error);
@@ -212,7 +236,7 @@ export default function AdminPayoutMonitor() {
                           <span className="font-medium">Transaction ID:</span> {txn.id || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-medium">Seller ID:</span> {txn.userId || 'N/A'}
+                          <span className="font-medium">Seller ID:</span> {txn.sellerId || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
                           <span className="font-medium">Seller Name:</span> {txn.sellerName || 'N/A'}
@@ -262,20 +286,20 @@ export default function AdminPayoutMonitor() {
                     )}
                     <div className="mt-4 flex gap-2">
                       <button
-                        onClick={() => handleApprove(txn.id, txn.userId, txn.amount)}
-                        disabled={loading || txn.status !== 'Pending'}
+                        onClick={() => handleApprove(txn.id, txn.sellerId, txn.amount)}
+                        disabled={loading || txn.status !== 'Pending' || txn.sellerId === 'N/A'}
                         className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 ${
-                          loading || txn.status !== 'Pending' ? 'opacity-50 cursor-not-allowed' : ''
+                          loading || txn.status !== 'Pending' || txn.sellerId === 'N/A' ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
                         <i className="bx bx-check"></i>
                         Approve
                       </button>
                       <button
-                        onClick={() => handleReject(txn.id, txn.userId)}
-                        disabled={loading || txn.status !== 'Pending'}
+                        onClick={() => handleReject(txn.id, txn.sellerId)}
+                        disabled={loading || txn.status !== 'Pending' || txn.sellerId === 'N/A'}
                         className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 ${
-                          loading || txn.status !== 'Pending' ? 'opacity-50 cursor-not-allowed' : ''
+                          loading || txn.status !== 'Pending' || txn.sellerId === 'N/A' ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
                         <i className="bx bx-x"></i>

@@ -189,19 +189,19 @@ const Orders = () => {
                             className="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-600"
                           />
                           <div>
-                            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-400">
+                              Seller
+                            </p>
+                            <h2 className="text-xs text-gray-800 dark:text-gray-100">
                               Order #{order.orderId}
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Seller: {order.seller.displayName}
-                            </p>
                           </div>
                         </div>
                         <motion.button
                           onClick={() => handleChatWithSeller(order)}
-                          whileHover={{ scale: 1.05 }}
+                          whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.95 }}
-                          className="mt-2 sm:mt-0 px-4 py-2 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 transition"
+                          className="mt-2 sm:mt-0 px-4 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-600 dark:bg-amber-500 dark:hover:bg-amber-600 transition"
                         >
                           Chat with Seller
                         </motion.button>
@@ -227,9 +227,6 @@ const Orders = () => {
                           </div>
                         ))}
                       </div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-4">
-                        Total: {formatPrice(order.total)}
-                      </p>
                     </motion.div>
                   ))}
                 </AnimatePresence>

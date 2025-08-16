@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
-import { collection, getDocs, query, where, orderBy, onSnapshot, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import ChatTemplates, { templates } from '/src/components/chat/ChatTemplates';
 import SellerSidebar from '/src/seller/SellerSidebar';
 
@@ -29,108 +29,109 @@ const SellerChat = () => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        if (!auth.currentUser) {
-          toast.error('Please sign in to view chats.');
-          navigate('/login');
-          setLoading(false);
-          return;
-        }
+    const fetchChats = () => {
+      if (!auth.currentUser) {
+        toast.error('Please sign in to view chats.');
+        navigate('/login');
+        setLoading(false);
+        return () => {};
+      }
 
-        const chatsQuery = query(collection(db, 'chats'), where('sellerId', '==', auth.currentUser.uid));
-        const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
-          try {
-            const fetchedChats = await Promise.all(
-              snapshot.docs.map(async (chatDoc) => {
-                const chatData = chatDoc.data();
-                const orderRef = doc(db, 'orders', chatData.orderId);
-                const orderSnap = await getDoc(orderRef);
-                const orderData = orderSnap.exists() ? orderSnap.data() : {};
-                const buyerRef = doc(db, 'users', chatData.userId);
-                const buyerSnap = await getDoc(buyerRef);
-                const buyerData = buyerSnap.exists() ? buyerSnap.data() : {};
-                const productRef = doc(db, 'products', chatData.productId);
-                const productSnap = await getDoc(productRef);
-                const productData = productSnap.exists() ? productSnap.data() : {};
+      const chatsQuery = query(collection(db, 'chats'), where('sellerId', '==', auth.currentUser.uid));
+      const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
+        try {
+          const fetchedChats = await Promise.all(
+            snapshot.docs.map(async (chatDoc) => {
+              const chatData = chatDoc.data();
+              const orderRef = doc(db, 'orders', chatData.orderId);
+              const orderSnap = await getDoc(orderRef);
+              const orderData = orderSnap.exists() ? orderSnap.data() : {};
+              const buyerRef = doc(db, 'users', chatData.userId);
+              const buyerSnap = await getDoc(buyerRef);
+              const buyerData = buyerSnap.exists() ? buyerSnap.data() : {};
+              const productRef = doc(db, 'products', chatData.productId);
+              const productSnap = await getDoc(productRef);
+              const productData = productSnap.exists() ? productSnap.data() : {};
 
-                return {
-                  chatId: chatDoc.id,
-                  orderId: chatData.orderId,
-                  buyerName: buyerData.displayName || 'Unknown Buyer',
-                  buyerAvatar: buyerData.avatar || 'https://ui-avatars.com/api/?name=B&background=3b82f6&color=fff&size=40',
-                  productName: orderData.items?.[0]?.name || productData.name || 'Product',
-                  lastMessage: chatData.lastMessage || '',
-                  lastMessageTime: chatData.lastMessageTime || chatData.createdAt || new Date(),
-                };
-              })
-            );
+              return {
+                chatId: chatDoc.id,
+                orderId: chatData.orderId,
+                buyerName: buyerData.displayName || 'Unknown Buyer',
+                buyerAvatar: buyerData.avatar || 'https://ui-avatars.com/api/?name=B&background=3b82f6&color=fff&size=40',
+                productName: orderData.items?.[0]?.name || productData.name || 'Product',
+                lastMessage: chatData.lastMessage || '',
+                lastMessageTime: chatData.lastMessageTime || chatData.createdAt || new Date(),
+              };
+            })
+          );
 
-            setChats(fetchedChats);
+          console.log('Fetched chats:', fetchedChats); // Debug log
+          setChats(fetchedChats);
 
-            if (chatId) {
-              const selected = fetchedChats.find((chat) => chat.chatId === chatId);
-              if (selected) {
-                setSelectedChat(selected);
-                const messagesQuery = query(
-                  collection(db, 'chats', chatId, 'messages'),
-                  orderBy('timestamp', 'asc')
-                );
-                const messagesUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-                  const fetchedMessages = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                  }));
-                  setMessages(fetchedMessages);
-                  setLoading(false);
-                }, (err) => {
-                  console.error('Error fetching messages:', err.message);
-                  toast.error('Failed to load messages.');
-                  setLoading(false);
-                });
-
-                const chatRef = doc(db, 'chats', chatId);
-                const typingUnsubscribe = onSnapshot(chatRef, (doc) => {
-                  const data = doc.data();
-                  setRecipientTyping(data?.typing?.[data.userId] || false);
-                  setLoading(false);
-                }, (err) => {
-                  console.error('Error fetching typing status:', err.message);
-                  setLoading(false);
-                });
-
-                return () => {
-                  messagesUnsubscribe();
-                  typingUnsubscribe();
-                };
-              } else {
-                toast.error('Invalid chat selected.');
-                navigate('/seller-chat');
+          // Select chat based on chatId from URL
+          if (chatId) {
+            const selected = fetchedChats.find((chat) => chat.chatId === chatId);
+            if (selected) {
+              setSelectedChat(selected);
+              const messagesQuery = query(
+                collection(db, 'chats', chatId, 'messages'),
+                orderBy('timestamp', 'asc')
+              );
+              const messagesUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+                const fetchedMessages = snapshot.docs.map((doc) => ({
+                  id: doc.id,
+                  ...doc.data(),
+                }));
+                setMessages(fetchedMessages);
                 setLoading(false);
-              }
+              }, (err) => {
+                console.error('Error fetching messages:', err.message);
+                toast.error('Failed to load messages.');
+                setLoading(false);
+              });
+
+              const chatRef = doc(db, 'chats', chatId);
+              const typingUnsubscribe = onSnapshot(chatRef, (doc) => {
+                const data = doc.data();
+                setRecipientTyping(data?.typing?.[data.userId] || false);
+                setLoading(false);
+              }, (err) => {
+                console.error('Error fetching typing status:', err.message);
+                setLoading(false);
+              });
+
+              return () => {
+                messagesUnsubscribe();
+                typingUnsubscribe();
+              };
             } else {
+              console.warn(`Chat with ID ${chatId} not found.`);
+              toast.error('Chat not found.');
+              setSelectedChat(null);
+              setMessages([]);
               setLoading(false);
             }
-          } catch (err) {
-            console.error('Error fetching chats:', err.message);
-            toast.error('Failed to load chats.');
+          } else {
+            setSelectedChat(null);
+            setMessages([]);
             setLoading(false);
           }
-        }, (err) => {
-          console.error('Error in chats snapshot:', err.message);
+        } catch (err) {
+          console.error('Error fetching chats:', err.message);
           toast.error('Failed to load chats.');
           setLoading(false);
-        });
-
-        return () => unsubscribe();
-      } catch (err) {
-        console.error('Error setting up chats:', err.message);
+        }
+      }, (err) => {
+        console.error('Error in chats snapshot:', err.message);
         toast.error('Failed to load chats.');
         setLoading(false);
-      }
+      });
+
+      return unsubscribe;
     };
 
-    fetchChats();
+    const unsubscribe = fetchChats();
+    return () => unsubscribe();
   }, [chatId, navigate]);
 
   const scrollToBottom = () => {
@@ -306,7 +307,10 @@ const SellerChat = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
-                        onClick={() => navigate(`/seller-chat/${chat.chatId}`)}
+                        onClick={() => {
+                          navigate(`/seller-chat/${chat.chatId}`);
+                          setSelectedChat(chat);
+                        }}
                         className={`p-4 flex items-center gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-800 transition ${
                           selectedChat?.chatId === chat.chatId ? 'bg-blue-100 dark:bg-blue-900' : ''
                         }`}

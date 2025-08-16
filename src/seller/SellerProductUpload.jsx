@@ -893,11 +893,11 @@ export default function SellerProductUpload() {
       <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start">
         <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
            <div className="flex justify-between items-center">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+              <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
                 <i className="bx bx-package text-blue-500"></i>
                 Add a New Product
               </h2>
-              <Link to="/bulk-upload" className="inline-block px-3 py-2 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
+              <Link to="/bulk-upload" className="inline-block  px-1 py-1 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
                 Bulk Upload
               </Link>
            </div>

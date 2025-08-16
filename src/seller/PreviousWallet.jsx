@@ -158,6 +158,30 @@ export default function Wallet() {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    if (pendingBalance > 0 && pendingBalance !== pendingBalanceRef.current) {
+      console.log(`Pending balance changed to ₦${pendingBalance}, scheduling transfer`);
+      const delay = Math.floor(Math.random() * (15000 - 10000 + 1)) + 10000;
+      const walletRef = doc(db, 'wallets', auth.currentUser.uid);
+      const timeout = setTimeout(async () => {
+        try {
+          console.log(`Transferring ₦${pendingBalance} to availableBalance`);
+          await updateDoc(walletRef, {
+            availableBalance: increment(pendingBalance),
+            pendingBalance: 0,
+            updatedAt: serverTimestamp(),
+          });
+          console.log(`Transfer complete: ₦${pendingBalance} moved`);
+        } catch (err) {
+          console.error(`Transfer failed:`, err);
+          setError(`Failed to transfer: ${err.message}`);
+        }
+      }, delay);
+      pendingBalanceRef.current = pendingBalance;
+      return () => clearTimeout(timeout);
+    }
+  }, [pendingBalance]);
+
   const handleWithdraw = async (e) => {
     e.preventDefault();
     setError('');
@@ -181,7 +205,7 @@ export default function Wallet() {
       setLoading(false);
       return;
     }
-    const BACKEND_URL = 'https://foremade-backend.onrender.com';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
     try {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       const walletSnap = await getDoc(walletRef);
@@ -197,16 +221,15 @@ export default function Wallet() {
         accountDetails,
       };
       console.log('Withdrawal request:', `${BACKEND_URL}/initiate-seller-payout`, payload);
-      await updateDoc(walletRef, {
-        availableBalance: increment(-amountNum),
-        pendingBalance: increment(amountNum),
-        updatedAt: serverTimestamp(),
-      });
       const response = await axios.post(`${BACKEND_URL}/initiate-seller-payout`, payload, { timeout: 10000 });
       if (response.data.status === 'success') {
+        await updateDoc(walletRef, {
+          availableBalance: increment(-amountNum),
+          updatedAt: serverTimestamp(),
+        });
         setAmount('');
         setIsModalOpen(false);
-        alert('Withdrawal submitted. Funds will be credited upon admin approval.');
+        alert('Withdrawal submitted. Funds credited in real-time.');
       }
     } catch (err) {
       console.error('Withdrawal error:', err);

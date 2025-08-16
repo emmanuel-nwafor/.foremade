@@ -64,15 +64,29 @@ export default function AdminPayoutMonitor() {
   const handleApprove = async (transactionId, sellerId, amount) => {
     setLoading(true);
     try {
-      console.log('Attempting approval for amount:', amount);
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId }, { timeout: 15000 });
-      addAlert(response.data.message, 'success');
+      console.log('Attempting approval for transactionId:', transactionId, 'sellerId:', sellerId, 'amount:', amount);
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await axios.post(`${BACKEND_URL}/approve-payout`, { transactionId, sellerId, amount }, { timeout: 15000 });
       console.log('Approval response:', response.data);
+      if (response.data.status === 'redirect') {
+        window.location.href = response.data.redirectUrl; // Handle Stripe onboarding redirect
+      } else {
+        addAlert(response.data.message || 'Payout approved successfully', 'success');
+      }
     } catch (error) {
-      const errorMsg = error.response?.data?.details || 'Approval failed. Please check your Paystack balance.';
+      console.error('Approval error details:', error.response?.data || error.message);
+      let errorMsg = error.response?.data?.error || 'Approval failed. Please check your Paystack balance.';
+      const errorDetails = error.response?.data?.details;
+      if (errorDetails && typeof errorDetails === 'object') {
+        if (errorDetails.pendingBalance !== undefined && errorDetails.amount !== undefined) {
+          errorMsg = `Insufficient pending balance: Available ${errorDetails.pendingBalance}, Requested ${errorDetails.amount}`;
+        } else {
+          errorMsg = Object.entries(errorDetails)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+        }
+      }
       addAlert(errorMsg, 'error');
-      console.error('Approval error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -81,10 +95,12 @@ export default function AdminPayoutMonitor() {
   const handleReject = async (transactionId, sellerId) => {
     setLoading(true);
     try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+      console.log('Attempting rejection for transactionId:', transactionId, 'sellerId:', sellerId);
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const response = await axios.post(`${BACKEND_URL}/reject-payout`, { transactionId, sellerId }, { timeout: 15000 });
-      addAlert(response.data.message, 'success');
+      addAlert(response.data.message || 'Payout rejected', 'success');
     } catch (error) {
+      console.error('Rejection error details:', error.response?.data || error.message);
       addAlert(error.response?.data?.error || 'Rejection failed', 'error');
     } finally {
       setLoading(false);

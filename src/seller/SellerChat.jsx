@@ -138,7 +138,7 @@ const SellerChat = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom(); 
   }, [messages]);
 
   const handleImageUpload = (event) => {

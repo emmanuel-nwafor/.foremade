@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import { Wallet as WalletIcon, ArrowDownCircle } from 'lucide-react';
@@ -31,26 +31,24 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
     }
 
     if (!walletSnap.exists()) {
-      console.log(`Creating wallet for ${sellerId} with pendingBalance: ₦${productPrice}`);
+      console.log(`Creating wallet for ${sellerId} with availableBalance: ₦${productPrice}`);
       await setDoc(walletRef, {
-        availableBalance: 0,
-        pendingBalance: productPrice,
+        availableBalance: productPrice,
         updatedAt: serverTimestamp(),
         accountDetails,
       });
     } else {
-      console.log(`Updating wallet for ${sellerId}: increment pendingBalance by ₦${productPrice}`);
+      console.log(`Updating wallet for ${sellerId}: increment availableBalance by ₦${productPrice}`);
       await updateDoc(walletRef, {
-        pendingBalance: increment(productPrice),
+        availableBalance: increment(productPrice),
         updatedAt: serverTimestamp(),
-        accountDetails,
       });
     }
     await updateDoc(adminRef, {
       availableBalance: increment(fees),
       updatedAt: serverTimestamp(),
     });
-    console.log(`Checkout success: ₦${productPrice} to seller pendingBalance, ₦${fees} to admin`);
+    console.log(`Checkout success: ₦${productPrice} to seller availableBalance, ₦${fees} to admin`);
   } catch (err) {
     console.error(`Checkout failed for ${sellerId}:`, err);
     throw new Error(`Checkout failed: ${err.message}`);
@@ -60,7 +58,6 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [pendingBalance, setPendingBalance] = useState(0);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -68,7 +65,6 @@ export default function Wallet() {
   const [isOnboarded, setIsOnboarded] = useState(null);
   const [isProSeller, setIsProSeller] = useState(false);
   const [chartData, setChartData] = useState({ series: [], options: {} });
-  const pendingBalanceRef = useRef(0);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -76,7 +72,6 @@ export default function Wallet() {
       return;
     }
     
-    // Fetch wallet and onboarding status
     const fetchWalletAndStatus = async () => {
       const walletRef = doc(db, 'wallets', auth.currentUser.uid);
       const userRef = doc(db, 'users', auth.currentUser.uid);
@@ -93,7 +88,6 @@ export default function Wallet() {
           };
           await setDoc(walletRef, {
             availableBalance: 0,
-            pendingBalance: 0,
             updatedAt: serverTimestamp(),
             accountDetails,
           });
@@ -103,7 +97,7 @@ export default function Wallet() {
         const onboarded = userSnap.exists() && userSnap.data().isOnboarded === true;
         const proSeller = userSnap.exists() && userSnap.data().isProSeller === true;
         console.log(`Seller ${auth.currentUser.uid} onboarding status: ${onboarded ? 'onboarded' : 'not onboarded'}, pro status: ${proSeller ? 'pro' : 'standard'}`);
-        setIsOnboarded(onboarded || proSeller); // Override with pro seller status
+        setIsOnboarded(onboarded || proSeller);
         setIsProSeller(proSeller);
 
         setLoading(false);
@@ -115,46 +109,25 @@ export default function Wallet() {
     };
     fetchWalletAndStatus();
 
-    // Wallet snapshot listener
     const walletRef = doc(db, 'wallets', auth.currentUser.uid);
     const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         console.log(`Snapshot for ${auth.currentUser.uid}:`, data);
         setBalance(data.availableBalance || 0);
-        setPendingBalance(data.pendingBalance || 0);
-        updateChartData(data.availableBalance || 0, data.pendingBalance || 0);
+        updateChartData(data.availableBalance || 0);
       } else {
         console.log(`No wallet for ${auth.currentUser.uid}`);
         setBalance(0);
-        setPendingBalance(0);
-        updateChartData(0, 0);
+        updateChartData(0);
       }
     }, (err) => {
       console.error('Wallet snapshot error:', err);
       setError('Failed to update wallet: ' + err.message);
     });
 
-    // Transaction snapshot listener
-    const transactionQuery = query(
-      collection(db, 'transactions'),
-      where('sellerId', '==', auth.currentUser.uid),
-      where('type', '==', 'Withdrawal')
-    );
-    const unsubscribeTransactions = onSnapshot(
-      transactionQuery,
-      (snapshot) => {
-        console.log(`Received ${snapshot.docs.length} withdrawal transactions for seller ${auth.currentUser.uid}`);
-      },
-      (err) => {
-        console.error('Transaction snapshot error:', err);
-        setError(`Failed to fetch transactions: ${err.message}`);
-      }
-    );
-
     return () => {
       unsubscribeWallet();
-      unsubscribeTransactions();
     };
   }, [navigate]);
 
@@ -197,11 +170,6 @@ export default function Wallet() {
         accountDetails,
       };
       console.log('Withdrawal request:', `${BACKEND_URL}/initiate-seller-payout`, payload);
-      await updateDoc(walletRef, {
-        availableBalance: increment(-amountNum),
-        pendingBalance: increment(amountNum),
-        updatedAt: serverTimestamp(),
-      });
       const response = await axios.post(`${BACKEND_URL}/initiate-seller-payout`, payload, { timeout: 10000 });
       if (response.data.status === 'success') {
         setAmount('');
@@ -216,22 +184,22 @@ export default function Wallet() {
     }
   };
 
-  const updateChartData = (availableBalance = balance, pendingBalance = 0) => {
+  const updateChartData = (availableBalance = balance) => {
     setChartData({
-      series: [availableBalance, pendingBalance],
+      series: [availableBalance],
       options: {
         chart: { type: 'area', height: '100%', width: '100%', animations: { enabled: true } },
         xaxis: { categories: ['Balance'] },
         yaxis: { title: { text: 'Amount (NGN)' }, min: 0 },
         stroke: { curve: 'smooth' },
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.9, stops: [0, 90, 100] } },
-        colors: ['#2563EB', '#c08640'],
+        colors: ['#2563EB'],
         legend: { position: 'top', horizontalAlign: 'center' },
         tooltip: {
           y: { formatter: (value) => `₦${value.toFixed(2)}` },
           custom: ({ series, seriesIndex, dataPointIndex, w }) => {
             return `<div class="p-2 bg-gray-800 text-white rounded-lg">
-              ${w.globals.seriesNames[seriesIndex]}: ₦${series[seriesIndex][dataPointIndex].toFixed(2)}
+              Available Balance: ₦${series[seriesIndex][dataPointIndex].toFixed(2)}
             </div>`;
           },
         },
@@ -290,14 +258,14 @@ export default function Wallet() {
                 <PriceFormatter price={balance} />
               </p>
             </div>
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
+             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
               <div className="absolute top-2 right-2 opacity-30">
                 <WalletIcon className="w-16 h-16" />
               </div>
               <span className="text-xs font-light">Pending Transactions</span>
               <h3 className="text-lg font-semibold mt-2">Pending Balance</h3>
               <p className="text-2xl font-bold mt-2 bg-white p-2 rounded-lg text-orange-900">
-                <PriceFormatter price={pendingBalance} />
+                ****
               </p>
             </div>
           </div>
@@ -322,7 +290,7 @@ export default function Wallet() {
                 />
                 <i className="bx bx-money absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Minimum withdrawal: ₦1. Withdrawals subject to admin approval, may take up to 24 hours.</p>
+              <p className="text-xs text-gray-500 mt-1">Withdrawals processed in real-time upon admin approval.</p>
             </div>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             <button

@@ -28,7 +28,7 @@ function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, on
 
   if (!allMedia.length && !isEditing) {
     return (
-      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-2 rounded-xl">
+      <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1">
         No media available.
       </p>
     );
@@ -94,11 +94,13 @@ function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, on
 
   const handleUrlChange = (variantIndex, mediaIndex, value) => {
     if (!variants.length) {
+      // Handle product-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         imageUrls: prev.imageUrls.map((url, i) => (i === mediaIndex ? value : url)),
       }));
     } else {
+      // Handle variant-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         variants: prev.variants.map((variant, index) =>
@@ -112,11 +114,13 @@ function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, on
 
   const handleAddMedia = (variantIndex) => {
     if (!variants.length) {
+      // Add to product-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         imageUrls: [...prev.imageUrls, ''],
       }));
     } else {
+      // Add to variant-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         variants: prev.variants.map((variant, index) =>
@@ -128,11 +132,13 @@ function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, on
 
   const handleRemoveMedia = (variantIndex, mediaIndex) => {
     if (!variants.length) {
+      // Remove from product-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         imageUrls: prev.imageUrls.filter((_, i) => i !== mediaIndex),
       }));
     } else {
+      // Remove from variant-level imageUrls
       setEditedProduct((prev) => ({
         ...prev,
         variants: prev.variants.map((variant, index) =>
@@ -179,8 +185,8 @@ function MediaPreview({ variants = [], imageUrls = [], isModal, product = {}, on
   const currentMedia = allMedia[currentMediaIndex];
 
   return (
-    <div className={`relative ${isModal ? 'h-full bg-white' : 'h-64'} bg-white p-2 rounded-xl overflow-hidden shadow-md`}>
-      <div className="w-full h-full relative bg-gray-100 dark:bg-gray-800">
+    <div className={`relative ${isModal ? 'h-full' : 'h-64'} p-2 rounded-xl overflow-hidden shadow-md`}>
+      <div className="w-full h-full relative">
         {currentMedia && (
           <img
             src={currentMedia.url}

@@ -2,3 +2,6 @@ backend/.env
 # Ignore all .env files anywhere
 *.env
 **/*.env
+node_modules
+build/
+*.log

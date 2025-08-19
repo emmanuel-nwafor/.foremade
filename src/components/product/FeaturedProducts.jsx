@@ -3,7 +3,6 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-// Define the functional component FeaturedProducts
 function FeaturedProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,30 +50,30 @@ function FeaturedProducts() {
         }));
         console.log('All fetched products (Featured):', allProducts);
 
-        // Filter products with valid stock and randomize
-        const filteredProducts = allProducts
-          .filter((product) => {
-            if ((product.stock || 0) < 10) {
-              console.warn('Filtered out product with low stock:', {
-                id: product.id,
-                name: product.name,
-                stock: product.stock,
-              });
-              return false;
-            }
-            return true;
-          })
-          .sort(() => Math.random() - 0.5);
+        // Filter products with valid stock
+        const filteredProducts = allProducts.filter((product) => {
+          if ((product.stock || 0) < 10) {
+            console.warn('Filtered out product with low stock:', {
+              id: product.id,
+              name: product.name,
+              stock: product.stock,
+            });
+            return false;
+          }
+          return true;
+        });
 
         console.log('Fetched products (Featured - After Filter):', filteredProducts);
 
         if (filteredProducts.length === 0) {
           console.warn('No products passed the filters (Featured). Relaxing stock filter...');
-          const relaxedProducts = allProducts.sort(() => Math.random() - 0.5);
+          const relaxedProducts = shuffleArray(allProducts).slice(0, 8);
           console.log('Products with relaxed stock filter (Featured):', relaxedProducts);
-          setProducts(relaxedProducts.slice(0, 8));
+          setProducts(relaxedProducts);
         } else {
-          setProducts(filteredProducts.slice(0, 8));
+          // Shuffle filtered products and take up to 8
+          const shuffledProducts = shuffleArray(filteredProducts).slice(0, 8);
+          setProducts(shuffledProducts);
         }
       } catch (err) {
         console.error('Error loading featured products:', {
@@ -90,15 +89,6 @@ function FeaturedProducts() {
     fetchFeaturedProducts();
   }, []);
 
-  useEffect(() => {
-    if (!loading && products.length > 0) {
-      const interval = setInterval(() => {
-        setProducts(prev => shuffleArray(prev));
-      }, 120000); // Shuffle every 2 mins
-      return () => clearInterval(interval);
-    }
-  }, [loading]);
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-1">
       {error ? (
@@ -113,13 +103,11 @@ function FeaturedProducts() {
         <p className="text-gray-600 col-span-full text-center">No Product Found</p>
       ) : (
         products.map((product) => (
-          <div className="">
-            <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
-          </div>
+          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
         ))
       )}
     </div>
   );
 }
 
-export default FeaturedProducts; // Export the component
+export default FeaturedProducts;

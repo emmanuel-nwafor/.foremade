@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import debounce from 'lodash.debounce';
+import PriceFormatter from '/src/components/layout/PriceFormatter';
 
 const ProductFilter = ({ onFilterChange }) => {
   const [priceRange, setPriceRange] = useState([0, 100000]);
@@ -34,7 +35,8 @@ const ProductFilter = ({ onFilterChange }) => {
   // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((value) => {
-      onFilterChange({ priceRange, selectedCategories, sortOption, searchTerm: value });
+      console.log('Applying filters:', { priceRange, selectedCategories, sortOption, searchTerm: value, status: 'approved' });
+      onFilterChange({ priceRange, selectedCategories, sortOption, searchTerm: value, status: 'approved' });
     }, 300),
     [priceRange, selectedCategories, sortOption]
   );
@@ -49,21 +51,24 @@ const ProductFilter = ({ onFilterChange }) => {
     const [min, max] = newRange;
     if (min > max) return; // Prevent invalid range
     setPriceRange(newRange);
-    onFilterChange({ priceRange: newRange, selectedCategories, sortOption, searchTerm });
+    console.log('Price range updated:', newRange);
+    onFilterChange({ priceRange: newRange, selectedCategories, sortOption, searchTerm, status: 'approved' });
   };
 
-  const handleCategoryChange = (categoryId) => {
-    const updatedCategories = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter((id) => id !== categoryId)
-      : [...selectedCategories, categoryId];
+  const handleCategoryChange = (categoryName) => {
+    const updatedCategories = selectedCategories.includes(categoryName)
+      ? selectedCategories.filter((name) => name !== categoryName)
+      : [...selectedCategories, categoryName];
     setSelectedCategories(updatedCategories);
-    onFilterChange({ priceRange, selectedCategories: updatedCategories, sortOption, searchTerm });
+    console.log('Selected categories updated:', updatedCategories);
+    onFilterChange({ priceRange, selectedCategories: updatedCategories, sortOption, searchTerm, status: 'approved' });
   };
 
   const handleSortChange = (e) => {
     const newSortOption = e.target.value;
     setSortOption(newSortOption);
-    onFilterChange({ priceRange, selectedCategories, sortOption: newSortOption, searchTerm });
+    console.log('Sort option updated:', newSortOption);
+    onFilterChange({ priceRange, selectedCategories, sortOption: newSortOption, searchTerm, status: 'approved' });
   };
 
   const clearFilters = () => {
@@ -71,7 +76,8 @@ const ProductFilter = ({ onFilterChange }) => {
     setSelectedCategories([]);
     setSortOption('default');
     setSearchTerm('');
-    onFilterChange({ priceRange: [0, 100000], selectedCategories: [], sortOption: 'default', searchTerm: '' });
+    console.log('Filters cleared');
+    onFilterChange({ priceRange: [0, 100000], selectedCategories: [], sortOption: 'default', searchTerm: '', status: 'approved' });
   };
 
   return (
@@ -102,7 +108,7 @@ const ProductFilter = ({ onFilterChange }) => {
       {/* Price Range */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Price Range: ₦{priceRange[0].toLocaleString()} - ₦{priceRange[1].toLocaleString()}
+          Price Range: <PriceFormatter price={priceRange[0]} /> - <PriceFormatter price={priceRange[1]} />
         </label>
         <div className="flex flex-col gap-2">
           <input
@@ -154,9 +160,9 @@ const ProductFilter = ({ onFilterChange }) => {
               >
                 <input
                   type="checkbox"
-                  value={category.id}
-                  checked={selectedCategories.includes(category.id)}
-                  onChange={() => handleCategoryChange(category.id)}
+                  value={category.name}
+                  checked={selectedCategories.includes(category.name)}
+                  onChange={() => handleCategoryChange(category.name)}
                   className="accent-blue-500"
                   aria-label={`Select ${category.name} category`}
                 />

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
-// import { collection, getDocs } from 'firebase/firestore'; // Removed duplicate import
 import { toast } from 'react-toastify';
 
 export default function TrendingGadgets() {
@@ -45,6 +44,7 @@ export default function TrendingGadgets() {
       const trendingSnapshot = await getDocs(trendingQuery);
       const trendingItems = trendingSnapshot.docs.map((doc) => doc.data());
 
+      let products = [];
       if (trendingItems.length > 0) {
         // Fetch product details for trending items
         const productPromises = trendingItems.map(async (item) => {
@@ -54,41 +54,49 @@ export default function TrendingGadgets() {
           }
           return null;
         });
-        const products = (await Promise.all(productPromises))
+        products = (await Promise.all(productPromises))
           .filter((p) => p && p.status === 'approved')
           .slice(0, 10);
         console.log('Admin-selected trending Gadgets products:', products);
-        return products;
       }
 
-      // Fallback to original logic if no trending items
-      console.warn('No admin-selected trending items for Gadgets. Using fallback...');
-      const q = query(
-        collection(db, 'products'),
-        where('status', '==', 'approved'),
-        where('category', 'in', firestoreCategories)
-      );
-      const querySnapshot = await getDocs(q);
-      const allProducts = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      console.log('All fetched products (Gadgets):', allProducts);
+      if (products.length < 10) {
+        // Fallback to category-based filtering if fewer than 10 trending items
+        console.warn('No or insufficient admin-selected trending items for Gadgets. Using fallback...');
+        const q = query(
+          collection(db, 'products'),
+          where('status', '==', 'approved'),
+          where('category', 'in', firestoreCategories)
+        );
+        const querySnapshot = await getDocs(q);
+        const allProducts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        console.log('All fetched products (Gadgets):', allProducts);
 
-      const filteredProducts = allProducts
-        .filter((product) => (product.stock || 0) >= 10)
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        .slice(0, 10);
+        // Filter products with valid stock
+        const filteredProducts = allProducts
+          .filter((product) => (product.stock || 0) >= 10)
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
-      console.log(`Fetched ${category} products:`, filteredProducts);
+        console.log(`Fetched ${category} products:`, filteredProducts);
 
-      if (filteredProducts.length === 0) {
-        console.warn('No products passed the filters (Gadgets). Relaxing stock filter...');
-        const relaxedProducts = allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
-        console.log('Products with relaxed stock filter (Gadgets):', relaxedProducts);
-        return relaxedProducts;
+        if (filteredProducts.length === 0) {
+          console.warn('No products passed the filters (Gadgets). Relaxing stock filter...');
+          const relaxedProducts = shuffleArray(allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))).slice(0, 10);
+          console.log('Products with relaxed stock filter (Gadgets):', relaxedProducts);
+          setTrendingProducts(relaxedProducts);
+        } else {
+          // Combine admin-selected and filtered products, shuffle, and take up to 10
+          const combinedProducts = [...products, ...filteredProducts].slice(0, 10);
+          const shuffledProducts = shuffleArray(combinedProducts);
+          setTrendingProducts(shuffledProducts);
+        }
+      } else {
+        // Shuffle admin-selected products if 10 or more
+        setTrendingProducts(shuffleArray(products));
       }
-      return filteredProducts;
     } catch (err) {
       console.error(`Error loading ${category} products:`, {
         message: err.message,
@@ -96,28 +104,18 @@ export default function TrendingGadgets() {
       });
       setError(`Failed to load ${category} products.`);
       toast.error('Failed to load trending products.');
-      return [];
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTrendingProducts().then(setTrendingProducts);
+    fetchTrendingProducts();
     // Fetch daily deals
     getDocs(collection(db, 'dailyDeals')).then(snapshot => {
       setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
   }, []);
-
-  useEffect(() => {
-    if (!loading && trendingProducts.length > 0) {
-      const interval = setInterval(() => {
-        setTrendingProducts(prev => shuffleArray(prev));
-      }, 120000); // Shuffle every 2 mins
-      return () => clearInterval(interval);
-    }
-  }, [loading]);
 
   const scrollLeft = () => {
     if (scrollRef.current) {

@@ -311,7 +311,7 @@ export default function AdminPayoutMonitor() {
                         <i className="bx bx-check"></i>
                         Approve
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => handleReject(txn.id, txn.sellerId)}
                         disabled={loading || txn.status !== 'Pending' || txn.sellerId === 'N/A'}
                         className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 ${
@@ -320,7 +320,7 @@ export default function AdminPayoutMonitor() {
                       >
                         <i className="bx bx-x"></i>
                         Reject
-                      </button>
+                      </button> */}
                     </div>
                   </motion.div>
                 ))}

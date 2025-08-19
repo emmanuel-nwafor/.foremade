@@ -3,7 +3,6 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 
-// Define the functional component BestSelling
 function BestSelling() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,42 +37,40 @@ function BestSelling() {
         }));
         console.log('All fetched products (Best Selling - Raw Firestore Data):', allProducts);
 
-        // Filter products with valid stock and sort by rating
-        const filteredProducts = allProducts
-          .filter((product) => {
-            // Check if product.variants exists and if any variant has stock < 10,
-            // or if it's a non-variant product and its overall stock is < 10.
-            if (product.variants && product.variants.length > 0) {
-              const totalStock = product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
-              if (totalStock < 10) {
-                console.warn('Filtered out variant product with low total stock:', {
-                  id: product.id,
-                  name: product.name,
-                  totalStock: totalStock,
-                });
-                return false;
-              }
-            } else if ((product.stock || 0) < 10) {
-              console.warn('Filtered out single-variant product with low stock:', {
+        // Filter products with valid stock
+        const filteredProducts = allProducts.filter((product) => {
+          if (product.variants && product.variants.length > 0) {
+            const totalStock = product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+            if (totalStock < 10) {
+              console.warn('Filtered out variant product with low total stock:', {
                 id: product.id,
                 name: product.name,
-                stock: product.stock,
+                totalStock: totalStock,
               });
               return false;
             }
-            return true;
-          })
-          .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          } else if ((product.stock || 0) < 10) {
+            console.warn('Filtered out single-variant product with low stock:', {
+              id: product.id,
+              name: product.name,
+              stock: product.stock,
+            });
+            return false;
+          }
+          return true;
+        }).sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
         console.log('Fetched products (Best Selling - After Filter):', filteredProducts);
 
         if (filteredProducts.length === 0) {
           console.warn('No products passed the filters (Best Selling). Relaxing stock filter...');
-          const relaxedProducts = allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          const relaxedProducts = shuffleArray(allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))).slice(0, 8);
           console.log('Products with relaxed stock filter (Best Selling):', relaxedProducts);
-          setProducts(relaxedProducts.slice(0, 8));
+          setProducts(relaxedProducts);
         } else {
-          setProducts(filteredProducts.slice(0, 8));
+          // Shuffle filtered products and take up to 8
+          const shuffledProducts = shuffleArray(filteredProducts).slice(0, 8);
+          setProducts(shuffledProducts);
         }
       } catch (err) {
         console.error('Error loading best-selling products:', {
@@ -89,15 +86,6 @@ function BestSelling() {
     fetchBestSellingProducts();
   }, []);
 
-  useEffect(() => {
-    if (!loading && products.length > 0) {
-      const interval = setInterval(() => {
-        setProducts(prev => shuffleArray(prev));
-      }, 240000); // Shuffle every 3 mins
-      return () => clearInterval(interval);
-    }
-  }, [loading]);
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-1">
       {error ? (
@@ -112,7 +100,6 @@ function BestSelling() {
         <p className="text-gray-600 col-span-full text-center">No best-selling products found.</p>
       ) : (
         products.map((product) => (
-          // Remove the extra <div> wrapper around ProductCard
           <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
         ))
       )}
@@ -120,4 +107,4 @@ function BestSelling() {
   );
 }
 
-export default BestSelling; // Export the component
+export default BestSelling;

@@ -568,10 +568,6 @@ export default function Register() {
                     <span className="mt-3 inline-flex items-center text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Recommended</span>
                   </motion.button>
                 </div>
-
-                <div className="mt-6 text-sm text-gray-500">
-                  You can switch seller type later from your account settings.
-                </div>
               </motion.div>
             </motion.div>
           )}

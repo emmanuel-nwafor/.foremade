@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Building, User, CreditCard, Package, CheckCircle, Lock } from 'lucide-react';
+import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { Link, useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, updateProfile, getAuth } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
 const initialFormData = {
   businessName: '',
@@ -23,6 +24,8 @@ const initialFormData = {
   phoneCode: '+234',
   email: '',
   password: '',
+  firstName: '',
+  lastName: '',
   manager: '',
   managerEmail: '',
   managerPhone: '',
@@ -39,6 +42,15 @@ const initialFormData = {
   signup: false,
 };
 
+const generateUsername = (firstName, lastName) => {
+  const nameParts = [firstName, lastName].filter(part => part?.trim());
+  const firstPart = nameParts[0]?.slice(0, 4).toLowerCase() || 'user';
+  const secondPart = nameParts[1]?.slice(0, 3).toLowerCase() || '';
+  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const usernameBase = (firstPart + secondPart).replace(/[^a-z0-9]/g, '');
+  return usernameBase + randomNum;
+};
+
 const ProSellerForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,13 +61,14 @@ const ProSellerForm = () => {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [banksLoading, setBanksLoading] = useState(true);
   const { alerts, addAlert, removeAlert } = useAlerts();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let didCancel = false;
     setCategoriesLoading(true);
     setBanksLoading(true);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
@@ -91,8 +104,15 @@ const ProSellerForm = () => {
       })
       .catch(err => {
         if (!didCancel) {
-          setBanks([]);
+          setBanks([
+            { code: '044', name: 'Access Bank' },
+            { code: '063', name: 'Diamond Bank' },
+            { code: '050', name: 'Ecobank' },
+            { code: '011', name: 'First Bank' },
+            { code: '033', name: 'United Bank for Africa' },
+          ]);
           setBanksLoading(false);
+          addAlert('Failed to fetch banks. Using fallback data.', 'error');
         }
       });
     return () => { didCancel = true; };
@@ -109,7 +129,7 @@ const ProSellerForm = () => {
   };
 
   const validateRegNumber = (value) => {
-    const isValid = /^\d{7,8}$/.test(value); // Nigeria CAC: 7-8 digits
+    const isValid = /^\d{7,8}$/.test(value);
     if (!isValid && value) {
       setFormData(prev => ({ ...prev, regError: 'Registration number must be 7-8 digits' }));
     } else {
@@ -127,6 +147,8 @@ const ProSellerForm = () => {
       if (!formData.country) newErrors.country = 'Country is required';
     }
     if (step === 2) {
+      if (!formData.firstName) newErrors.firstName = 'First name is required';
+      if (!formData.lastName) newErrors.lastName = 'Last name is required';
       if (!formData.phone) newErrors.phone = 'Phone number is required';
       if (!formData.email) newErrors.email = 'Email is required';
       if (formData.signup && !formData.password) newErrors.password = 'Password is required for signup';
@@ -141,9 +163,8 @@ const ProSellerForm = () => {
       }
     }
     if (step === 3) {
-      if (!formData.productLines) newErrors.productLines = 'Product line is required';
+      if (!formData.productLines.length) newErrors.productLines = 'At least one product line is required';
       if (!formData.bankName) newErrors.bankName = 'Bank name is required';
-      if (!formData.accountName) newErrors.accountName = 'Account name is required';
       if (!formData.accountNumber) newErrors.accountNumber = 'Account number is required';
       if (!formData.agree) newErrors.agree = 'You must agree to the terms';
       if (formData.accountError) newErrors.accountNumber = formData.accountError;
@@ -163,26 +184,83 @@ const ProSellerForm = () => {
   };
 
   const handleSubmit = async () => {
+    if (!validateStep(3)) {
+      setIsSubmitting(false);
+      return;
+    }
     setIsSubmitting(true);
     try {
+      let uid = user?.uid;
+      let idToken = null;
+
+      // Ensure fresh auth state
+      const currentAuth = getAuth();
+      const currentUser = currentAuth.currentUser;
+
+      if (!currentUser && formData.signup && formData.email && formData.password) {
+        const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        uid = credential.user.uid;
+        idToken = await credential.user.getIdToken(true);
+        await updateProfile(credential.user, { displayName: `${formData.firstName} ${formData.lastName}` });
+        if (typeof setUser === 'function') {
+          setUser(credential.user);
+        } else {
+          console.warn('setUser is not a function. Skipping auth context update.');
+        }
+
+        // Create user profile in Firestore with retry
+        const username = generateUsername(formData.firstName, formData.lastName);
+        const userDocRef = doc(db, 'users', uid);
+        let attempts = 0;
+        const maxAttempts = 3;
+        while (attempts < maxAttempts) {
+          try {
+            await setDoc(userDocRef, {
+              email: formData.email,
+              username,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              createdAt: new Date().toISOString(),
+              phoneNumber: formData.phoneCode + formData.phone,
+              country: formData.country,
+              addresses: [{ street: formData.address, city: '', state: '', postalCode: '', country: formData.country }],
+              proStatus: 'pending',
+            }, { merge: true });
+            addAlert('Account and profile created successfully!', 'success');
+            break;
+          } catch (error) {
+            attempts++;
+            if (attempts === maxAttempts) {
+              console.error('Firestore profile creation failed after retries:', error);
+              throw new Error('Failed to create user profile in Firestore after multiple attempts.');
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+          }
+        }
+      } else if (currentUser) {
+        uid = currentUser.uid;
+        try {
+          idToken = await currentUser.getIdToken(true); // Refresh token
+        } catch (error) {
+          if (error.code === 'auth/user-token-expired') {
+            addAlert('Your session has expired. Please sign in again.', 'error');
+            navigate('/login');
+            return;
+          }
+          throw error;
+        }
+      } else {
+        throw new Error('No authenticated user found and signup not selected.');
+      }
+
       const submissionData = {
         ...formData,
         submittedAt: new Date().toISOString(),
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
         formType: 'Pro Seller Application',
+        uid: uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       };
-      console.log('Submitting Pro Seller Application:', submissionData);
-
-      let uid = user?.uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      let idToken = user ? await user.getIdToken(true) : null;
-
-      if (!user && formData.signup && formData.email && formData.password) {
-        const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        uid = credential.user.uid;
-        idToken = await credential.user.getIdToken(true);
-        addAlert('Account created successfully! Proceeding with Pro Seller submission.', 'success');
-      }
 
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const response = await fetch(`${backendUrl}/api/pro-seller`, {
@@ -192,12 +270,10 @@ const ProSellerForm = () => {
           'Accept': 'application/json',
           ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
         },
-        body: JSON.stringify({ ...submissionData, uid }),
+        body: JSON.stringify(submissionData),
       });
 
       const result = await response.json();
-      console.log('API Response:', result, 'Status:', response.status, 'Headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         throw new Error(result.error || result.message || 'Submission failed');
       }
@@ -205,9 +281,15 @@ const ProSellerForm = () => {
       addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
       setFormData(initialFormData);
       setCurrentStep(1);
+      navigate('/profile');
     } catch (error) {
       console.error('Submission error:', error.message, error);
-      addAlert(`There was an error submitting your application: ${error.message}. Please try again or contact support.`, 'error');
+      if (error.code === 'auth/user-token-expired') {
+        addAlert('Your session has expired. Please sign in again.', 'error');
+        navigate('/login');
+      } else {
+        addAlert(`There was an error submitting your application: ${error.message}. Please try again or contact support.`, 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -220,12 +302,10 @@ const ProSellerForm = () => {
   };
 
   const handleRegNumberBlur = () => {
-    // Local validation on blur
     validateRegNumber(formData.regNumber);
   };
 
   const handleTaxRefBlur = () => {
-    // No strict validation for taxRef, just clear any error
     setFormData(prev => ({ ...prev, taxError: '', taxVerified: true }));
   };
 
@@ -234,7 +314,7 @@ const ProSellerForm = () => {
     setFormData(prev => ({ ...prev, accountVerifying: true, accountError: '', accountVerified: false, accountName: '' }));
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +381,7 @@ const ProSellerForm = () => {
                   value={formData.regNumber}
                   onChange={e => {
                     const value = e.target.value;
-                    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8); // Only digits, max 8
+                    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8);
                     handleInputChange('regNumber', filteredValue);
                   }}
                   onBlur={handleRegNumberBlur}
@@ -353,7 +433,7 @@ const ProSellerForm = () => {
                   value={formData.country}
                   onChange={e => {
                     handleInputChange('country', e.target.value);
-                    handleInputChange('regNumber', ''); // Reset regNumber when country changes
+                    handleInputChange('regNumber', '');
                     setFormData(prev => ({ ...prev, regError: '', regVerified: false }));
                   }}
                   className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
@@ -370,6 +450,32 @@ const ProSellerForm = () => {
                 <User className="w-6 h-6 text-orange-500 mx-auto mb-3" />
                 <h2 className="text-xl font-bold text-orange-800 mb-2">Contact Information</h2>
                 <p className="text-orange-600">How can we reach you? <span className="text-sm text-gray-500">(Sign up option available)</span></p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">First Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={formData.firstName}
+                  onChange={e => handleInputChange('firstName', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.firstName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={formData.lastName}
+                  onChange={e => handleInputChange('lastName', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.lastName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
@@ -476,7 +582,10 @@ const ProSellerForm = () => {
                     <span className="text-gray-400 italic">Loading categories...</span>
                   ) : categories.length > 0 ? (
                     categories.map((cat, idx) => (
-                      <label key={cat.value || cat.code || cat.name || idx} className="flex items-center space-x-2 bg-orange-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-orange-100 transition">
+                      <label
+                        key={cat.value || cat.code || cat.name || idx}
+                        className="flex items-center space-x-2 bg-orange-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-orange-100 transition"
+                      >
                         <input
                           type="checkbox"
                           checked={formData.productLines.includes(cat.value || cat.name || cat)}
@@ -485,7 +594,6 @@ const ProSellerForm = () => {
                               ? formData.productLines.filter(v => v !== (cat.value || cat.name || cat))
                               : [...formData.productLines, cat.value || cat.name || cat];
                             handleInputChange('productLines', newLines);
-                            console.log('Selected product lines:', newLines);
                           }}
                           className="accent-orange-500 w-4 h-4"
                         />
@@ -506,7 +614,6 @@ const ProSellerForm = () => {
                     const selected = banks.find(b => b.code === e.target.value);
                     handleInputChange('bankCode', e.target.value);
                     handleInputChange('bankName', selected ? selected.name : '');
-                    console.log('Selected bank:', selected);
                   }}
                   className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
                     errors.bankName ? 'border-red-500' : 'border-gray-300'
@@ -526,7 +633,8 @@ const ProSellerForm = () => {
                 {errors.bankName && <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">Account Number <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                  Account Number <span className="text-red-500">*</span>
                   {formData.accountVerifying && <span className="ml-2 text-xs text-orange-500 animate-pulse">Verifying...</span>}
                   {formData.accountVerified && !formData.accountError && <CheckCircle className="ml-2 w-5 h-5 text-green-500" />}
                   {formData.accountError && <span className="ml-2 text-xs text-red-500">{formData.accountError}</span>}
@@ -549,10 +657,22 @@ const ProSellerForm = () => {
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                <input type="checkbox" checked={formData.agree} onChange={e => handleInputChange('agree', e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={formData.agree}
+                  onChange={e => handleInputChange('agree', e.target.checked)}
+                  className="accent-orange-500 w-4 h-4"
+                />
                 <label className="text-sm text-gray-700">
                   I agree to the
-                  <Link to="/terms-conditions" target="_blank" rel="noopener noreferrer" className="text-orange-600 underline hover:text-orange-800 ml-1">Pro Seller Terms & Conditions</Link>
+                  <Link
+                    to="/terms-conditions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-orange-600 underline hover:text-orange-800 ml-1"
+                  >
+                    Pro Seller Terms & Conditions
+                  </Link>
                   <span className="text-red-500">*</span>
                 </label>
                 {errors.agree && <p className="text-red-500 text-xs mt-1">{errors.agree}</p>}
@@ -568,20 +688,31 @@ const ProSellerForm = () => {
               </div>
               <div className="bg-orange-50 rounded-xl p-4 shadow space-y-3 text-sm">
                 <div><span className="font-semibold">Business Name:</span> {formData.businessName}</div>
-                <div><span className="font-semibold">Registration Number:</span> {formData.regNumber} {formData.regVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}</div>
-                <div><span className="font-semibold">Tax Reference:</span> {formData.taxRef} {formData.taxVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}</div>
+                <div>
+                  <span className="font-semibold">Registration Number:</span> {formData.regNumber}{' '}
+                  {formData.regVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}
+                </div>
+                <div>
+                  <span className="font-semibold">Tax Reference:</span> {formData.taxRef || 'Not provided'}{' '}
+                  {formData.taxVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}
+                </div>
                 <div><span className="font-semibold">Business Address:</span> {formData.address}</div>
                 <div><span className="font-semibold">Country:</span> {formData.country}</div>
+                <div><span className="font-semibold">First Name:</span> {formData.firstName}</div>
+                <div><span className="font-semibold">Last Name:</span> {formData.lastName}</div>
                 <div><span className="font-semibold">Phone:</span> {formData.phoneCode} {formData.phone}</div>
                 <div><span className="font-semibold">Email:</span> {formData.email}</div>
                 {formData.signup && <div><span className="font-semibold">Password:</span> [Set for new account]</div>}
                 <div><span className="font-semibold">Manager:</span> {formData.manager}</div>
                 <div><span className="font-semibold">Manager Email:</span> {formData.managerEmail}</div>
                 <div><span className="font-semibold">Manager Phone:</span> {formData.managerPhone}</div>
-                <div><span className="font-semibold">Product Lines:</span> {formData.productLines.join(', ')}</div>
+                <div><span className="font-semibold">Product Lines:</span> {formData.productLines.join(', ') || 'None'}</div>
                 <div><span className="font-semibold">Bank:</span> {formData.bankName}</div>
-                <div><span className="font-semibold">Account Number:</span> {formData.accountNumber} {formData.accountVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}</div>
-                <div><span className="font-semibold">Account Name:</span> {formData.accountName}</div>
+                <div>
+                  <span className="font-semibold">Account Number:</span> {formData.accountNumber}{' '}
+                  {formData.accountVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}
+                </div>
+                <div><span className="font-semibold">Account Name:</span> {formData.accountName || 'Not verified'}</div>
                 <div><span className="font-semibold">Agreed to Terms:</span> {formData.agree ? 'Yes' : 'No'}</div>
               </div>
               <div className="text-xs text-gray-500 text-center">By submitting, you confirm all information is correct and consent to verification.</div>
@@ -606,7 +737,9 @@ const ProSellerForm = () => {
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-orange-100 dark:border-gray-800 overflow-hidden">
           <div className="px-4 sm:px-8 md:px-12 pt-10 pb-4 md:pt-14 md:pb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-orange-700 dark:text-orange-400 tracking-tight">Pro Seller Registration</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-orange-700 dark:text-orange-400 tracking-tight">
+                Pro Seller Registration
+              </h1>
               <CheckCircle className="w-9 h-9 text-orange-500 self-center" />
             </div>
             <div className="block sm:hidden mb-10">
@@ -614,8 +747,18 @@ const ProSellerForm = () => {
                 {steps.map((step, idx) => (
                   <React.Fragment key={step.label}>
                     <div className="flex-1 flex flex-col items-center">
-                      <div className={`w-7 h-7 flex items-center justify-center rounded-full border-2 text-sm font-bold
-                        ${idx < currentStep - 1 ? 'border-orange-600 bg-orange-100 text-orange-600' : idx === currentStep - 1 ? 'border-orange-700 bg-orange-200 text-orange-700' : 'border-gray-200 bg-gray-100 text-gray-400'}`}>{idx + 1}</div>
+                      <div
+                        className={`w-7 h-7 flex items-center justify-center rounded-full border-2 text-sm font-bold
+                        ${
+                          idx < currentStep - 1
+                            ? 'border-orange-600 bg-orange-100 text-orange-600'
+                            : idx === currentStep - 1
+                            ? 'border-orange-700 bg-orange-200 text-orange-700'
+                            : 'border-gray-200 bg-gray-100 text-gray-400'
+                        }`}
+                      >
+                        {idx + 1}
+                      </div>
                     </div>
                     {idx < steps.length - 1 && (
                       <div className={`flex-1 h-1 mx-1 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200'}`}></div>
@@ -625,29 +768,67 @@ const ProSellerForm = () => {
               </div>
               <div className="flex justify-between w-full px-1">
                 {steps.map((step, idx) => (
-                  <span key={step.label} className={`text-[10px] font-semibold uppercase tracking-wide text-center flex-1 ${idx === currentStep - 1 ? 'text-orange-700' : 'text-gray-400'}`}>{step.label}</span>
+                  <span
+                    key={step.label}
+                    className={`text-[10px] font-semibold uppercase tracking-wide text-center flex-1 ${
+                      idx === currentStep - 1 ? 'text-orange-700' : 'text-gray-400'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 ))}
               </div>
             </div>
             <div className="hidden sm:flex items-center justify-center mb-10 gap-4">
               {steps.map((step, idx) => (
                 <React.Fragment key={step.label}>
-                  <div className={`flex flex-col items-center ${idx < currentStep - 1 ? 'text-orange-600' : idx === currentStep - 1 ? 'text-orange-700 font-bold dark:text-orange-300' : 'text-gray-300 dark:text-gray-600'}`}>
-                    <div className={`w-9 h-9 flex items-center justify-center rounded-full border-4 ${idx < currentStep - 1 ? 'border-orange-600 bg-orange-100' : idx === currentStep - 1 ? 'border-orange-700 bg-orange-200 dark:bg-orange-900' : 'border-gray-200 bg-gray-100 dark:bg-gray-800'} text-lg font-bold`}>{idx + 1}</div>
+                  <div
+                    className={`flex flex-col items-center ${
+                      idx < currentStep - 1
+                        ? 'text-orange-600'
+                        : idx === currentStep - 1
+                        ? 'text-orange-700 font-bold dark:text-orange-300'
+                        : 'text-gray-300 dark:text-gray-600'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 flex items-center justify-center rounded-full border-4 ${
+                        idx < currentStep - 1
+                          ? 'border-orange-600 bg-orange-100'
+                          : idx === currentStep - 1
+                          ? 'border-orange-700 bg-orange-200 dark:bg-orange-900'
+                          : 'border-gray-200 bg-gray-100 dark:bg-gray-800'
+                      } text-lg font-bold`}
+                    >
+                      {idx + 1}
+                    </div>
                     <span className="text-xs mt-2 font-semibold tracking-wide uppercase whitespace-nowrap">{step.label}</span>
                   </div>
-                  {idx < steps.length - 1 && <div className={`flex-1 h-1 mx-2 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>}
+                  {idx < steps.length - 1 && (
+                    <div className={`flex-1 h-1 mx-2 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                  )}
                 </React.Fragment>
               ))}
             </div>
-            <form onSubmit={e => { e.preventDefault(); handleContinue(); }}>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                handleContinue();
+              }}
+            >
               <div className="max-h-[60vh] md:max-h-[65vh] overflow-y-auto pb-4 custom-scrollbar px-1 md:px-2">
                 {renderStepContent()}
               </div>
               <div className="sticky bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent px-0 pt-6 pb-4 mt-8 border-t border-orange-100 dark:border-gray-800 shadow-2xl flex flex-col items-center gap-2">
                 <div className="flex flex-col sm:flex-row w-full gap-3 sm:gap-4">
                   {currentStep > 1 && (
-                    <button type="button" onClick={handleBack} className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200">Back</button>
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200"
+                    >
+                      Back
+                    </button>
                   )}
                   <button
                     type="submit"

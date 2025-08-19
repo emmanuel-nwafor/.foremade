@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { db } from '../firebase';
 import ProductList from '../components/product/ProductList';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import ProductFilter from '../components/product/ProductFilter';
 
 const Products = () => {
@@ -28,20 +28,26 @@ const Products = () => {
     []
   );
 
+  const shuffleArray = (array) => {
+    let shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const querySnapshot = await getDocs(collection(db, 'products'));
+        // Only fetch approved products
+        const q = query(collection(db, 'products'), where('status', '==', 'approved'));
+        const querySnapshot = await getDocs(q);
         console.log('Total products fetched from Firestore:', querySnapshot.docs.length);
         const products = querySnapshot.docs
           .map((doc) => {
             const data = doc.data();
-            const productStatus = data.status || 'pending';
-            if (productStatus !== 'approved') {
-              console.log(`Product ${doc.id} not approved, skipping (status: ${productStatus})`, data);
-              return null;
-            }
 
             let imageUrl = null;
             if (Array.isArray(data.variants) && data.variants.length > 0 && data.variants[0]?.imageUrls) {
@@ -75,14 +81,24 @@ const Products = () => {
               maxPrice = Math.max(...variantPrices);
             }
 
+            // Calculate total stock for variants
+            const totalStock = hasVariants
+              ? data.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+              : data.stock || 0;
+
+            if (totalStock < 10) {
+              console.warn(`Product ${doc.id} filtered out due to low stock:`, { name: data.name, totalStock });
+              return null;
+            }
+
             return {
               id: doc.id,
               name: data.name || 'Unknown Product',
               description: data.description || '',
-              price: hasVariants ? minPrice : data.price || 0, // Use minPrice for variants, else base price
+              price: hasVariants ? minPrice : data.price || 0,
               minPrice: hasVariants ? minPrice : null,
               maxPrice: hasVariants ? maxPrice : null,
-              stock: data.stock || 0,
+              stock: totalStock,
               category: data.category || 'uncategorized',
               categoryId: categoryMap[data.category?.toLowerCase()] || 11,
               colors: data.colors || [],
@@ -94,19 +110,19 @@ const Products = () => {
               seller: data.seller || { name: data.sellerName || 'Unknown Seller', id: data.sellerId || '' },
               rating: data.rating || 0,
               reviews: data.reviews || [],
-              status: productStatus,
+              status: data.status || 'pending',
               bumpExpiry: data.bumpExpiry || null,
             };
           })
           .filter((product) => product !== null && product.id);
 
-        console.log('Fetched approved products from Firestore:', products);
+        console.log('Fetched approved products with sufficient stock:', products);
         if (products.length === 0) {
-          console.warn('No approved products found in Firestore. Check if products have status: "approved".');
+          console.warn('No approved products with sufficient stock found. Check Firestore data.');
           setError('No approved products available at the moment.');
         }
         setInitialProducts(products);
-        setFilteredProducts(products);
+        setFilteredProducts(shuffleArray(products));
       } catch (err) {
         console.error('Error fetching products:', err);
         setError('Failed to load products. Please try again.');
@@ -121,33 +137,33 @@ const Products = () => {
     });
   }, [categoryMap]);
 
-  useEffect(() => {
-    console.log('Filtered products passed to ProductList:', filteredProducts);
-  }, [filteredProducts]);
-
   const handleFilterChange = useCallback(
-    ({ priceRange, selectedCategories, sortOption, searchTerm }) => {
+    ({ priceRange, selectedCategories, sortOption, searchTerm, status }) => {
       let updatedProducts = [...initialProducts].filter((product) => product !== null);
 
-      updatedProducts.sort((a, b) => {
-        const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
-        const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;
-        if (aBump && bBump) return bBump - aBump;
-        if (aBump) return -1;
-        if (bBump) return 1;
-        return 0;
-      });
-
+      // Filter by price range
       updatedProducts = updatedProducts.filter((product) => {
         const withinPriceRange =
           (product.minPrice !== null ? product.minPrice : product.price) >= priceRange[0] &&
           (product.maxPrice !== null ? product.maxPrice : product.price) <= priceRange[1];
-        const inSelectedCategories =
-          selectedCategories.length === 0 || selectedCategories.includes(product.categoryId);
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        return withinPriceRange && inSelectedCategories && matchesSearch;
+        return withinPriceRange;
       });
 
+      // Filter by categories (using categoryId)
+      if (selectedCategories.length > 0) {
+        updatedProducts = updatedProducts.filter((product) =>
+          selectedCategories.includes(product.categoryId)
+        );
+      }
+
+      // Filter by search term
+      if (searchTerm) {
+        updatedProducts = updatedProducts.filter((product) =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Sort products
       if (sortOption === 'price-low-high') {
         updatedProducts.sort((a, b) => (a.minPrice || a.price) - (b.minPrice || b.price));
       } else if (sortOption === 'price-high-low') {
@@ -155,11 +171,21 @@ const Products = () => {
       } else if (sortOption === 'alpha-asc') {
         updatedProducts.sort((a, b) => a.name.localeCompare(b.name));
       } else if (sortOption === 'alpha-desc') {
-        updatedProducts.sort((a, b) => b.name.localeCompare(a.name));
+        updatedProducts.sort((a, b) => b.name.localeCompare(b.name));
+      } else {
+        // Default sort by bumpExpiry
+        updatedProducts.sort((a, b) => {
+          const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
+          const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;
+          if (aBump && bBump) return bBump - aBump;
+          if (aBump) return -1;
+          if (bBump) return 1;
+          return 0;
+        });
       }
 
       console.log('Updated filtered products:', updatedProducts);
-      setFilteredProducts(updatedProducts);
+      setFilteredProducts(shuffleArray(updatedProducts));
     },
     [initialProducts]
   );
@@ -179,10 +205,10 @@ const Products = () => {
       </div>
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full rounded-lg border md:w-1/4">
-          <ProductFilter onFilterChange={handleFilterChange} />
+          <ProductFilter onFilterChange={handleFilterChange} categoryMap={categoryMap} />
         </div>
         <div className="w-full rounded-lg border">
-          <ProductList products={filteredProducts} loading={loading} dailyDeals={dailyDeals} />
+          <ProductList products={filteredProducts} dailyDeals={dailyDeals} />
         </div>
       </div>
     </div>

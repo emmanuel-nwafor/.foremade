@@ -9,6 +9,16 @@ import { addToCart } from '/src/utils/cartUtils';
 const ProductList = ({ products = [] }) => {
   const [dailyDeals, setDailyDeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shuffledProducts, setShuffledProducts] = useState([]);
+
+  const shuffleArray = (array) => {
+    let shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   useEffect(() => {
     getDocs(collection(db, 'dailyDeals')).then((snapshot) => {
@@ -20,6 +30,8 @@ const ProductList = ({ products = [] }) => {
 
   useEffect(() => {
     if (products.length > 0) {
+      // Shuffle products whenever the prop changes (e.g., on refresh or filter change)
+      setShuffledProducts(shuffleArray(products));
       setLoading(false);
     } else {
       const timer = setTimeout(() => setLoading(false), 500);
@@ -70,7 +82,7 @@ const ProductList = ({ products = [] }) => {
     <div className="container mx-auto px-4 py-8">
       {loading ? (
         <SkeletonLoader count={8} />
-      ) : products.length === 0 ? (
+      ) : shuffledProducts.length === 0 ? (
         <div
           className="text-center col-span-full py-12"
           role="alert"
@@ -86,7 +98,7 @@ const ProductList = ({ products = [] }) => {
             role="grid"
             aria-label="Product list"
           >
-            {products.map((product) => (
+            {shuffledProducts.map((product) => (
               <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
             ))}
           </div>

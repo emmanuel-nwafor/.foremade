@@ -3,5 +3,5 @@ backend/.env
 *.env
 **/*.env
 node_modules
-build/
+# build/
 *.log

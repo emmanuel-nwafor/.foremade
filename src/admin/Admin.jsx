@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
-import MediaPreview from '/src/Admin/MediaPreview.jsx';
+import MediaPreview from './MediaPreview.jsx';
 import AdminActionButtons from './AdminActionbuttons';
 import axios from 'axios';
 import { Camera, User, ShoppingBag, Edit2, CheckCircle2, XCircle } from 'lucide-react';

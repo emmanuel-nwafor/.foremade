@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
-import MediaPreview from './MediaPreview';
+import MediaPreview from '/src/Admin/MediaPreview.jsx';
 import AdminActionButtons from './AdminActionbuttons';
 import axios from 'axios';
 import { Camera, User, ShoppingBag, Edit2, CheckCircle2, XCircle } from 'lucide-react';
@@ -20,7 +20,7 @@ function CustomAlert({ alerts, removeAlert }) {
         <div
           key={alert.id}
           className={`p-4 rounded-xl shadow-lg transform transition-all duration-300 ease-in-out animate-slide-in ${
-            alert.type === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+            alert.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
           } flex items-center gap-2`}
         >
           {alert.type === 'error' ? <XCircle size={20} /> : <CheckCircle2 size={20} />}
@@ -230,8 +230,8 @@ function Admin() {
   };
 
   const handleCardClick = (product, e) => {
-    e.stopPropagation(); // Prevent clicks on child elements from bubbling up
-    console.log('Card clicked:', product.id, product.name); // Debug log
+    e.stopPropagation();
+    console.log('Card clicked:', product.id, product.name);
     setSelectedProduct(product);
   };
 
@@ -316,27 +316,25 @@ function Admin() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />
-        <main className="flex-1 ml-0 md:ml-64 p-6">
-          <div className="container mx-auto px-4 py-8 text-center">
-            <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300">
-              <i className="bx bx-loader bx-spin text-2xl"></i>
-              <span>Loading...</span>
-            </div>
+        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i className="bx bx-loader bx-spin text-2xl"></i>
+            <span>Loading...</span>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
         <AdminSidebar />
         <main className="flex-1 ml-0 md:ml-64 p-6">
           <div className="container mx-auto px-4 py-8">
-            <div className="bg-red-600 text-white p-4 rounded-xl shadow-md flex items-center gap-2">
+            <div className="bg-red-500 text-white p-4 rounded-xl shadow-md flex items-center gap-2">
               <XCircle size={20} />
               <p>{error}</p>
             </div>
@@ -348,35 +346,35 @@ function Admin() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       <AdminSidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6">
-        <div className="container mx-auto px-4 py-8">
+      <main className="flex-1 ml-0 md:ml-64 p-4">
+        <div className="container mx-auto px-4 py-7">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4 sm:mb-0 flex items-center gap-2">
-              <CheckCircle2 size={24} className="text-blue-500" />
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-4 sm:mb-0 flex items-center gap-2">
+              <CheckCircle2 size={24} className="text-green-600 dark:text-green-400" />
               Product Verification Hub
             </h1>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="py-2 px-4 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2 transition-all duration-200 shadow-md"
+              className="py-2 px-4 bg-blue-950 text-white rounded-lg text-sm hover:bg-blue-900 flex items-center gap-2 transition-all duration-200 shadow-md"
             >
               <i className={`bx bx-${isFilterOpen ? 'x' : 'filter-alt'}`}></i>
               {isFilterOpen ? 'Close Filters' : 'Filters & Sort'}
             </button>
           </div>
           {isFilterOpen && (
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-md mb-6 animate-slide-down">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md mb-6 animate-slide-down">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 items-center gap-1">
                     Sort Products
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Sort products by name, price, or status"></i>
+                    <i className="bx bx-info-circle text-gray-500 dark:text-gray-400 group-hover:text-blue-500 cursor-help" title="Sort products by name, price, or status"></i>
                   </label>
                   <select
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   >
                     <option value="default">Default</option>
                     <option value="name-asc">Name (A-Z)</option>
@@ -391,10 +389,10 @@ function Admin() {
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stats</label>
                   <div className="flex gap-2">
-                    <div className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
+                    <div className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
                       Approved: {approvedCount}
                     </div>
-                    <div className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm shadow-md">
+                    <div className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm shadow-md">
                       Not Approved: {notApprovedCount}
                     </div>
                   </div>
@@ -402,20 +400,20 @@ function Admin() {
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
             {sortedProducts.map((product) => (
               <div
                 key={product.id}
-                className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-lg transition-all duration-200 shadow-md"
+                className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-lg transition-all duration-200 shadow-md"
                 onClick={(e) => handleCardClick(product, e)}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{product.name || 'Unnamed Product'}</h2>
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{product.name || 'Unnamed Product'}</h2>
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      product.status === 'pending' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
-                      product.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' :
-                      'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      product.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                      product.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                     }`}
                   >
                     {product.status === 'pending' ? 'Pending' : product.status === 'approved' ? 'Approved' : 'Not Approved'}
@@ -448,7 +446,7 @@ function Admin() {
               </div>
             ))}
             {sortedProducts.length === 0 && (
-              <p className="text-gray-600 dark:text-gray-300 text-center mt-4 col-span-3 italic">No products to verify.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-center mt-4 col-span-3 italic">No products to verify.</p>
             )}
           </div>
         </div>
@@ -456,63 +454,63 @@ function Admin() {
 
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 p-6 m-4 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-lg flex flex-col md:flex-row gap-6">
+          <div className="bg-white dark:bg-gray-800 p-6 m-4 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-lg flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-1/2 space-y-6">
               <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   {selectedProduct.name || 'Unnamed Product'}
                 </h2>
                 <button
                   onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 text-2xl"
                   title="Close"
                 >
                   <i className="bx bx-x"></i>
                 </button>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Camera size={18} className="text-blue-500" /> Details
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Camera size={18} className="text-green-600 dark:text-green-400" /> Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Seller:</span> {selectedProduct.sellerName || 'Unknown Seller'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Status:</span> {selectedProduct.status === 'pending' ? 'Pending' : selectedProduct.status === 'approved' ? 'Approved' : 'Not Approved'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Category:</span> {selectedProduct.category || 'Uncategorized'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Condition:</span> {selectedProduct.condition || 'New'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Rating:</span> {selectedProduct.rating || 'N/A'}</p>
-                  <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Buyers:</span> {selectedProduct.buyerCount || 0}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Seller:</span> {selectedProduct.sellerName || 'Unknown Seller'}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Status:</span> {selectedProduct.status === 'pending' ? 'Pending' : selectedProduct.status === 'approved' ? 'Approved' : 'Not Approved'}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Category:</span> {selectedProduct.category || 'Uncategorized'}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Condition:</span> {selectedProduct.condition || 'New'}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Rating:</span> {selectedProduct.rating || 'N/A'}</p>
+                  <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Buyers:</span> {selectedProduct.buyerCount || 0}</p>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Edit2 size={18} className="text-blue-500" /> Tags
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Edit2 size={18} className="text-green-600 dark:text-green-400" /> Tags
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-sm">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {Array.isArray(selectedProduct.tags) ? selectedProduct.tags.join(', ') : 'None'}
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <User size={18} className="text-blue-500" /> Seller Info
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <User size={18} className="text-green-600 dark:text-green-400" /> Seller Info
                 </h3>
-                <p className="text-[13px] mt-3"><span className="bg-amber-100 rounded-full p-1">Name:</span> {selectedProduct.seller?.name || 'Unknown Seller'}</p>
-                <p className="text-[13px] mt-4"><span className="bg-amber-100 rounded-full p-1">ID:</span> {selectedProduct.seller?.id || 'N/A'}</p>
+                <p className="text-[13px] mt-3"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Name:</span> {selectedProduct.seller?.name || 'Unknown Seller'}</p>
+                <p className="text-[13px] mt-4"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">ID:</span> {selectedProduct.seller?.id || 'N/A'}</p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <ShoppingBag size={18} className="text-blue-500" /> Variants
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <ShoppingBag size={18} className="text-green-600 dark:text-green-400" /> Variants
                 </h3>
                 {selectedProduct.variants && selectedProduct.variants.length > 0 ? (
                   <div className="space-y-4 mt-2">
                     {selectedProduct.variants.map((variant, index) => (
-                      <div key={index} className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Variant {index + 1}</h4>
+                      <div key={index} className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Variant {index + 1}</h4>
                         <div className="grid grid-cols-2 gap-2 mt-2">
-                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Color:</span> {variant.color || 'N/A'}</p>
-                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Size:</span> {variant.size || 'N/A'}</p>
-                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Price:</span> ₦{(variant.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
-                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Stock:</span> {variant.stock || 0} units</p>
-                          <p className="text-[13px]"><span className="bg-blue-100 rounded-full p-1">Images:</span> {variant.imageUrls?.length || 0}</p>
+                          <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Color:</span> {variant.color || 'N/A'}</p>
+                          <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Size:</span> {variant.size || 'N/A'}</p>
+                          <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Price:</span> ₦{(variant.price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</p>
+                          <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Stock:</span> {variant.stock || 0} units</p>
+                          <p className="text-[13px]"><span className="bg-green-100 dark:bg-green-900 rounded-full p-1">Images:</span> {variant.imageUrls?.length || 0}</p>
                         </div>
                       </div>
                     ))}
@@ -522,8 +520,8 @@ function Admin() {
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <ShoppingBag size={18} className="text-blue-500" /> Reviews
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <ShoppingBag size={18} className="text-green-600 dark:text-green-400" /> Reviews
                 </h3>
                 {Array.isArray(selectedProduct.reviews) && selectedProduct.reviews.length > 0 ? (
                   <ul className="list-disc pl-5 space-y-2">
@@ -548,8 +546,8 @@ function Admin() {
               />
             </div>
             <div className="w-full md:w-1/2">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-4">
-                <Camera size={18} className="text-blue-500" /> Variant Media Preview
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
+                <Camera size={18} className="text-green-600 dark:text-green-400" /> Variant Media Preview
               </h3>
               <MediaPreview
                 variants={selectedProduct.variants || []}
@@ -565,14 +563,14 @@ function Admin() {
 
       {isRejectionModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl w-full max-w-md shadow-lg">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md shadow-lg">
             <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <XCircle size={20} className="text-red-500" /> Reject Product
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <XCircle size={20} className="text-red-600 dark:text-red-400" /> Reject Product
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 text-2xl"
                 title="Close"
               >
                 <i className="bx bx-x"></i>
@@ -584,7 +582,7 @@ function Admin() {
                 <select
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="">Select a reason</option>
                   <option value="Missing product image">Missing product image</option>
@@ -601,7 +599,7 @@ function Admin() {
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
                     placeholder="Enter custom reason..."
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     rows="4"
                   />
                 </div>
@@ -609,7 +607,7 @@ function Admin() {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={closeModal}
-                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg text-sm hover:bg-gray-400 transition-all duration-200"
+                  className="py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200"
                 >
                   Cancel
                 </button>

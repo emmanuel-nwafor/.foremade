@@ -264,7 +264,7 @@ const Header = () => {
             <Link to="/">
               <img
                 src={logo}
-                className="h-12 w-auto"
+                className="h-11 w-auto"
                 alt="Foremade"
               />
             </Link>
@@ -336,7 +336,7 @@ const Header = () => {
         {/* Center: Filler */}
         <div className="flex-1 min-w-0"></div>
         {/* Right: Icons */}
-        <div className="flex items-center justify-end flex-1 min-w-0">
+        <div className="flex mt-4 items-center justify-end flex-1 min-w-0">
           <Link to="/cart" className="relative flex items-center justify-center">
             <i className="bx bx-cart-alt text-xl text-white"></i>
             {cartCount > 0 && (

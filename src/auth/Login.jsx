@@ -8,9 +8,9 @@ import {
   FacebookAuthProvider,
   setPersistence,
   browserSessionPersistence,
-  getIdToken, // Added missing import
+  getIdToken,
 } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, query, where, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 import { fetchWithAuth } from '../utils/auth';
 
@@ -40,9 +40,44 @@ export default function Login() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-  console.log('Backend URL:', BACKEND_URL); // Debug log
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  // Check inactivity and trigger email if needed
+  const checkInactivity = async (user) => {
+    if (!user) return;
+
+    const lastLoginStr = localStorage.getItem('lastLogin');
+    const inactiveEmailSent = localStorage.getItem('inactiveEmailSent');
+    if (!lastLoginStr || inactiveEmailSent === 'true') return; // No login or email already sent
+
+    const lastLogin = new Date(lastLoginStr);
+    const now = new Date();
+    const daysInactive = (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
+
+    // Check if user has been inactive for 14-21 days
+    if (daysInactive >= 14 && daysInactive <= 21) {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/send-inactive-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.displayName || null,
+          }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          console.log('Inactive user email triggered:', result.message);
+          localStorage.setItem('inactiveEmailSent', 'true'); // Mark email as sent
+        } else {
+          console.error('Failed to trigger inactive email:', result.error);
+        }
+      } catch (error) {
+        console.error('Error triggering inactive email:', error.message);
+      }
+    }
+  };
 
   useEffect(() => {
     const socialEmail = localStorage.getItem('socialEmail') || state?.email || '';
@@ -50,7 +85,16 @@ export default function Login() {
       setEmail(socialEmail);
       setPasswordError('Use Google Sign-In for this account.');
     }
-  }, [state]);
+
+    // Check for authenticated user and inactivity on page load
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        checkInactivity(user);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleSocialLogin = async (user) => {
     try {
@@ -69,11 +113,10 @@ export default function Login() {
           lastName: lastName || '',
           username: (user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)),
           phoneNumber: user.phoneNumber || '',
-          role: 'buyer', // Default role, server will override
+          role: 'buyer',
         };
         await setDoc(userDoc, userData);
       }
-      // Update userData with role from server before setting localStorage
       const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,8 +126,10 @@ export default function Login() {
       if (!response.ok) throw new Error(data.error || 'Server error');
 
       userData.role = data.role;
-      localStorage.setItem('userData', JSON.stringify(userData)); // Set after role is fetched
+      localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
+      localStorage.setItem('lastLogin', new Date().toISOString()); // Store last login
+      localStorage.removeItem('inactiveEmailSent'); // Reset email flag on login
 
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
@@ -134,15 +179,13 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const user = userCredential.user;
 
-      // Initial userData setup
       let userData = {
         uid: user.uid,
         email: trimmedEmail,
-        role: 'buyer', // Default role, will be updated
+        role: 'buyer',
       };
 
-      const token = await getIdToken(user); // Now defined
-      console.log('Fetching with token:', token); // Debug log
+      const token = await getIdToken(user);
       const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
         headers: {
@@ -151,11 +194,10 @@ export default function Login() {
         },
         body: JSON.stringify({ email: trimmedEmail }),
       });
-      console.log('Sent body:', { email: trimmedEmail }); // Debug log
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 
-      userData.role = data.role; // Update role from server
+      userData.role = data.role;
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       if (!userSnapshot.exists()) {
@@ -163,7 +205,9 @@ export default function Login() {
       } else {
         userData = { ...userSnapshot.data(), ...userData, role: data.role };
       }
-      localStorage.setItem('userData', JSON.stringify(userData)); // Set after role is fetched
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('lastLogin', new Date().toISOString()); // Store last login
+      localStorage.removeItem('inactiveEmailSent'); // Reset email flag on login
 
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);

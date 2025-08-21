@@ -666,15 +666,15 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      console.log("Backend URL:", backendUrl);
-      console.log("Sending order confirmation email with payload:", {
-        orderId: order.paymentId || "unknown",
-        email: order.shippingDetails?.email || "unknown",
-        items: order.items,
-        total: order.totalAmount || 0,
-        currency: order.currency || "unknown",
-        shippingDetails: order.shippingDetails || {},
-      });
+      // console.log("Backend URL:", backendUrl);
+      // console.log("Sending order confirmation email with payload:", {
+      //   orderId: order.paymentId || "unknown",
+      //   email: order.shippingDetails?.email || "unknown",
+      //   items: order.items,
+      //   total: order.totalAmount || 0,
+      //   currency: order.currency || "unknown",
+      //   shippingDetails: order.shippingDetails || {},
+      // });
 
       const payload = {
         orderId: order.paymentId || `fallback-${Date.now()}`,

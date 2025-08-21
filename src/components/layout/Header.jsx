@@ -4,7 +4,7 @@ import { auth, db } from '/src/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
-import logo from '/src/assets/logi.png';
+import logo from '/src/assets/foremade.png';
 import FreeShipping from '../home/FreeShipping';
 
 const Header = () => {
@@ -330,7 +330,7 @@ const Header = () => {
         {/* Left: Logo */}
         <div className="flex items-center min-w-0">
           <Link to="/">
-            <img src={logo} className="h-10" alt="Foremade" />
+            <img src={logo} className="h-9" alt="Foremade" />
           </Link>
         </div>
         {/* Center: Filler */}

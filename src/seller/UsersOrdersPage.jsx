@@ -54,6 +54,11 @@ export default function UsersOrdersPage() {
               .map((orderDoc) => ({
                 id: orderDoc.id,
                 ...orderDoc.data(),
+                total: Array.isArray(orderDoc.data().items)
+                  ? orderDoc.data().items
+                      .filter((item) => sellerProductIds.includes(item.productId))
+                      .reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0)
+                  : 0,
               }))
               .filter((order) =>
                 order.items.some((item) => sellerProductIds.includes(item.productId))
@@ -145,6 +150,7 @@ export default function UsersOrdersPage() {
       </div>
     );
   }
+
   if (error) {
     return (
       <div className="flex min-h-screen bg-gray-50">
@@ -167,7 +173,7 @@ export default function UsersOrdersPage() {
     <div className="flex min-h-screen bg-gray-50">
       <SellerSidebar />
       <main className="flex-1 ml-0 md:ml-64 p-4">
-        <div className="max-w-7xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-8xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-800">Your Orders</h1>
           </div>
@@ -201,18 +207,10 @@ export default function UsersOrdersPage() {
                         <td className="p-3 text-sm">{order.orderId || order.id}</td>
                         <td className="p-3 text-sm">{order.shippingDetails?.name || 'N/A'}</td>
                         <td className="p-3 text-sm">{formatDate(order.createdAt)}</td>
-                        <td className="p-3 text-sm">{formatCurrency(order.sellerShare, order.currency)}</td>
+                        <td className="p-3 text-sm">{formatCurrency(order.total, order.currency)}</td>
                         <td className="p-3 text-sm">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                              order.status === 'completed'
-                                ? 'bg-green-100 text-green-700'
-                                : order.status === 'pending-approval'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {order.status || 'N/A'}
+                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            Placed
                           </span>
                         </td>
                         <td className="p-3 text-sm">
@@ -268,20 +266,12 @@ export default function UsersOrdersPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm font-semibold text-gray-700">Total:</span>
-                        <span className="text-sm">{formatCurrency(order.sellerShare, order.currency)}</span>
+                        <span className="text-sm">{formatCurrency(order.total, order.currency)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm font-semibold text-gray-700">Status:</span>
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            order.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : order.status === 'pending-approval'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
-                        >
-                          {order.status || 'N/A'}
+                        <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          Placed
                         </span>
                       </div>
                       <div className="flex justify-between items-center">

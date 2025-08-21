@@ -95,6 +95,7 @@ import AllTrendingFashion from './pages/AllTrendingFashion';
 import AllTrendingGadgets from './pages/AllTrendingGadgets';
 import ProtectedRoute from './auth/ProtectedRoute';
 import SellersPage from './seller/SellersPage';
+import AdminUsersPhone from './admin/AdminUsersPhone';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -126,6 +127,7 @@ const Layout = ({ children }) => {
     '/admin/edit/daily-deals',
     '/admin/pro-sellers-requests',
     '/admin/bumped-products',
+    '/admin/users-phone',
     '/bulk-upload',
     '/product-bump',
     '/product-bump-info',
@@ -137,6 +139,7 @@ const Layout = ({ children }) => {
     '/seller-chat',
     '/admin/sellers-wallet',
     '/admin/transactions',
+    '/dashboard',
   ];
 
   // Define dynamic route patterns to hide header and footer
@@ -253,6 +256,7 @@ function App() {
               <Route path="/admin/sellers-wallet" element={<ProtectedRoute requireAdmin={true}><AdminSellerWallet /></ProtectedRoute>} />
               <Route path="/admin/pro-sellers-requests" element={<ProtectedRoute requireAdmin={true}><AdminProSellerRequests /></ProtectedRoute>} />
               <Route path="/admin/bumped-products" element={<ProtectedRoute requireAdmin={true}><AdminBumpedProducts /></ProtectedRoute>} />
+              <Route path="/admin/users-phone" element={<ProtectedRoute requireAdmin={true}><AdminUsersPhone /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

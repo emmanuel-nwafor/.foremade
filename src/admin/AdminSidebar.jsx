@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X, Award, TrendingUp, CalendarArrowUp } from 'lucide-react';
+import { Home, Phone, Users, Settings, DollarSign, Package, List, Calculator, Bell, Image, Tag, MessageSquarePlus, Menu, X, Award, TrendingUp, CalendarArrowUp } from 'lucide-react';
 import logo from '/src/assets/logi.png';
 
 export default function AdminSidebar() {
@@ -34,6 +34,7 @@ export default function AdminSidebar() {
     { path: '/admin/manager', icon: MessageSquarePlus, label: 'Admin Manager' },
     { path: '/admin/pro-sellers-requests', icon: Award, label: 'Admin Pro Sellers' },
     { path: '/admin/bumped-products', icon: TrendingUp, label: 'Admin Bumped Products' },
+    { path: '/admin/users-phone', icon: Phone, label: 'Users Phone' },
   ];
 
   return (

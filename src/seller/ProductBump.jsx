@@ -72,10 +72,13 @@ const ProductBump = () => {
     }
   };
 
-  const fetchBumpQuota = async (firebaseToken) => {
+  const fetchBumpQuota = async () => {
     try {
       const response = await fetch('https://foremade-backend.onrender.com/api/pro-seller/bump-quota', {
-        headers: { 'Authorization': `Bearer ${firebaseToken}` },
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       const text = await response.text();
       if (!response.ok) {
@@ -85,15 +88,20 @@ const ProductBump = () => {
       const data = text ? JSON.parse(text) : {};
       setBumpQuota(data.quota || 0);
     } catch (error) {
+      console.error('Fetch bump quota error:', error.message);
       setBumpQuota(0);
-      toast.error('Failed to load bump quota. Buttons may be disabled.');
+      toast.error('Failed to load bump quota. Please try again.');
     }
   };
 
   const handlePaymentSuccess = async (paymentData, productId, durationHours) => {
     try {
       setIsProcessing(true);
-      const firebaseToken = await auth.currentUser?.getIdToken();
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      const firebaseToken = await user.getIdToken(true); // Force refresh token
       const durationMap = { '72h': '72h', '168h': '168h' };
       const mappedDuration = durationMap[durationHours] || '24h';
       const backendUrl = 'https://foremade-backend.onrender.com';
@@ -105,7 +113,10 @@ const ProductBump = () => {
 
       const response = await fetch(`${backendUrl}/api/bump-product`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firebaseToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${firebaseToken}`,
+        },
         body: JSON.stringify({
           productId,
           bumpDuration: mappedDuration,
@@ -133,7 +144,7 @@ const ProductBump = () => {
 
       await addDoc(collection(db, 'bumpTransactions'), {
         productId,
-        sellerId: auth.currentUser?.uid,
+        sellerId: user.uid,
         bumpDuration: mappedDuration,
         paymentIntentId: paymentData.reference || `fallback-${Date.now()}`,
         bumpExpiry,
@@ -145,9 +156,12 @@ const ProductBump = () => {
 
       const emailResponse = await fetch(`${backendUrl}/api/send-bump-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firebaseToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${firebaseToken}`,
+        },
         body: JSON.stringify({
-          sellerId: auth.currentUser?.uid,
+          sellerId: user.uid,
           productId,
           productName: products.find((p) => p.id === productId)?.name || 'Unnamed Product',
           expiryDate: bumpExpiry.toISOString(),
@@ -164,6 +178,7 @@ const ProductBump = () => {
       );
       setBumpQuota((prev) => prev - 1);
     } catch (error) {
+      console.error('Bump product error:', error.message);
       toast.error(error.message || 'Failed to bump product');
     } finally {
       setIsProcessing(false);
@@ -183,12 +198,20 @@ const ProductBump = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
-    const fetchQuotaOnAuth = async () => {
-      const firebaseToken = await auth.currentUser?.getIdToken();
-      if (firebaseToken) fetchBumpQuota(firebaseToken);
+    let unsubscribe;
+    const setupAuthListener = () => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          fetchProducts();
+          fetchBumpQuota();
+        } else {
+          setError('Please log in to view your products.');
+          setLoading(false);
+        }
+      });
     };
-    fetchQuotaOnAuth();
+    setupAuthListener();
+    return () => unsubscribe && unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -285,7 +308,7 @@ const ProductBump = () => {
       <div className={`flex-1 p-2 sm:p-4 ${sidebarOpen ? 'ml-64' : 'ml-0'} mt-6 transition-all duration-300 md:ml-64`}>
         <div className="mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Product Bump</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Boost your products' visibility with the bump feature</p>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Boost your products' visibility with the bump feature. Quota: {bumpQuota}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">

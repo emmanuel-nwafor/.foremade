@@ -72,7 +72,7 @@ export default function Profile() {
                       ? `${userAddresses[0].street}, ${userAddresses[0].city || ''}, ${userAddresses[0].state || ''}, ${userAddresses[0].postalCode || ''}, ${userAddresses[0].country || ''}`
                       : 'Not provided',
                     country: firestoreData.country || 'Not provided',
-                    phone: firestoreData.phoneNumber || 'Not provided',
+                    phone: firestoreData.phoneNumber || 'Not Provided',
                     uid: user.uid,
                   });
                   setEditForm({
@@ -101,7 +101,7 @@ export default function Profile() {
                     createdAt: new Date().toISOString(),
                     address: 'Not provided',
                     country: 'Not provided',
-                    phone: 'Not provided',
+                    phone: 'Not Provided',
                     uid: user.uid,
                   });
                   setEditForm({
@@ -192,7 +192,6 @@ export default function Profile() {
         return;
       }
 
-      // Update Firestore profile
       const userDocRef = doc(db, 'users', user.uid);
       let attempts = 0;
       const maxAttempts = 3;
@@ -216,10 +215,8 @@ export default function Profile() {
         }
       }
 
-      // Update Firebase Auth displayName
       await updateProfile(user, { displayName: `${editForm.firstName} ${editForm.lastName}` });
 
-      // Update password if provided
       if (editForm.newPassword && editForm.currentPassword) {
         const credential = EmailAuthProvider.credential(user.email, editForm.currentPassword);
         await reauthenticateWithCredential(user, credential);

@@ -255,7 +255,7 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="bg-[#112D4E] hidden sm:flex text-white w-full py-0 h-9.5 items-center">
+      <div className="bg-[#112639] hidden sm:flex text-white w-full py-0 h-9.5 items-center">
        
         <div className="flex w-full h-full items-center justify-between"> {/* Removed max-w-7xl, mx-auto, and px-4 */}
 
@@ -324,7 +324,7 @@ const Header = () => {
       </div>
       <div className="hidden sm:block bg-[#eb9325] h-2 w-full"></div>
       {/* Mobile Header */}
-      <div className="sm:hidden bg-[#112D4E] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
+      <div className="sm:hidden bg-[#112639] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Left: Logo */}

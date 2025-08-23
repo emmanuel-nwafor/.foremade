@@ -250,11 +250,11 @@ const ProductCard = ({
     <Link
       to={`/product/${mergedProduct.id}`}
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName || 'h-[200px]'}`} // Default to h-[200px] if no cardClassName
+      className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
       tabIndex={0}
       aria-label={mergedProduct.name}
     >
-      <div className={`relative h-[200px] overflow-hidden rounded-t-lg min-w-0 ${imageClassName || ''}`}>
+      <div className={`relative h-[200px] overflow-hidden rounded-t-lg min-w-0 ${imageClassName}`}>
         <img
           src={imageFailed ? placeholder : imageUrl}
           alt={mergedProduct.name || "Product Image"}

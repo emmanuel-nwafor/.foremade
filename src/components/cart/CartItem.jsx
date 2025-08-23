@@ -92,6 +92,22 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
     fetchProduct();
   }, [item]);
 
+  const handleIncrement = () => {
+    if (item.quantity < product.stock) {
+      const newQuantity = item.quantity + 1;
+      console.log('Incrementing quantity:', { productId: item.productId, newQuantity });
+      updateCartQuantity(item.productId, newQuantity);
+    }
+  };
+
+  const handleDecrement = () => {
+    if (item.quantity > 1) {
+      const newQuantity = item.quantity - 1;
+      console.log('Decrementing quantity:', { productId: item.productId, newQuantity });
+      updateCartQuantity(item.productId, newQuantity);
+    }
+  };
+
   if (!item || !item.productId || !product) {
     return (
       <div className="flex items-center gap-4 p-4 bg-gray-100 rounded-lg">
@@ -197,20 +213,29 @@ const CartItem = ({ item, updateCartQuantity, removeFromCart }) => {
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min="1"
-          max={product.stock}
-          value={item.quantity}
-          onChange={(e) => {
-            const value = parseInt(e.target.value) || 1;
-            console.log('Updating quantity:', { productId: item.productId, newQuantity: value });
-            updateCartQuantity(item.productId, value);
-          }}
-          className="w-16 p-1 border border-gray-300 rounded"
-          disabled={isOutOfStock}
-          aria-label={`Quantity of ${product.name}`}
-        />
+        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+          <button
+            onClick={handleDecrement}
+            className={`px-1 py-1 text-gray-600 hover:bg-gray-200 transition ${
+              item.quantity <= 1 || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={item.quantity <= 1 || isOutOfStock}
+            aria-label={`Decrease quantity of ${product.name}`}
+          >
+            <i className="bx bx-minus"></i>
+          </button>
+          <span className="px-3 py-1 text-gray-800 font-medium">{item.quantity}</span>
+          <button
+            onClick={handleIncrement}
+            className={`px-1 py-1 text-gray-600 hover:bg-gray-200 transition ${
+              item.quantity >= product.stock || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={item.quantity >= product.stock || isOutOfStock}
+            aria-label={`Increase quantity of ${product.name}`}
+          >
+            <i className="bx bx-plus"></i>
+          </button>
+        </div>
         <button
           onClick={() => {
             console.log('Removing item:', { productId: item.productId, name: product.name });

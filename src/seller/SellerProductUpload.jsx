@@ -204,7 +204,7 @@ export default function SellerProductUpload() {
     '8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"', '11.5"', '12"', '12.5"'
   ];
   const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
-  const manualSizes = ['Small', 'Medium', 'Large', 'X-Large'];
+  const manualSizes = ['1 to 5kg', '5 to 10kg ', '10 to 20kg', '20kg above'];
   const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
   const MAX_IMAGES = 8;
   const MAX_VIDEOS = 1;
@@ -1295,6 +1295,7 @@ export default function SellerProductUpload() {
                   {manualSizes.map((size) => (
                     <option key={size} value={size}>
                       {size}
+                      {/*  */}
                     </option>
                   ))}
                 </select>

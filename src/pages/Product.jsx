@@ -566,7 +566,7 @@ const Product = () => {
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
-    const percentage = total > 10000 ? 0.01 : 0.02; // 1% if total > 10000, else 2%
+    const percentage = total > 10000 ? 0.10 : 0.02 || total < 10000 ? 0.50 : 0.02; // 1% if total > 10000, else 2%
     return Math.round(total * percentage);
   };
 
@@ -1518,6 +1518,7 @@ const Product = () => {
                     className="flex-1 px-6 py-3 rounded-lg bg-[#112d4e] text-[#F0F0F0] font-semibold hover:bg-[#007F8B] focus:outline-none focus:ring-2 focus:ring-[#112d4e] focus:ring-offset-2 transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Pay Now
+                    {/*  */}
                   </button>
                 </div>
               </div>
@@ -1706,9 +1707,9 @@ const Product = () => {
                         onClick={() => handleProductClick(p.id)}
                         isFavorite={favorites.includes(p.id)}
                         toggleFavorite={toggleFavorite}
-                        cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
-                        imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
-                        priceClassName="!text-[#112d4e]"
+                        cardClassName="h-[300px]"
+                        imageClassName="!rounded-md h-[900px]"
+                        priceClassName="!text-[#112d4e] h-[400px]"
                         nameClassName="!text-[#333333]"
                         minPrice={minPrice}
                         maxPrice={maxPrice}
@@ -1758,9 +1759,9 @@ const Product = () => {
                         onClick={() => handleProductClick(p.id)}
                         isFavorite={favorites.includes(p.id)}
                         toggleFavorite={toggleFavorite}
-                        cardClassName="!shadow-none !border !border-[#CCCCCC] hover:!border-[#112d4e] !bg-[#F0F0F0] !text-[#333333] min-h-[180px] max-h-[220px] lg:min-h-[80px] lg:max-h-[110px]"
-                        imageClassName="!rounded-md h-[80px] min-h-0 max-h-[100px] lg:h-[40px] lg:max-h-[50px]"
-                        priceClassName="!text-[#112d4e]"
+                        cardClassName="h-[300px]"
+                        imageClassName="!rounded-md h-[900px]"
+                        priceClassName="!text-[#112d4e] h-[400px]"
                         nameClassName="!text-[#333333]"
                         minPrice={minPrice}
                         maxPrice={maxPrice}

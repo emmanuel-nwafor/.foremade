@@ -13,13 +13,25 @@ import {
   where,
 } from "firebase/firestore";
 import { toast } from "react-toastify";
-import { Heart } from "lucide-react";
+import { Heart, Palette, Ruler, ShieldCheck } from "lucide-react";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
-import { ShieldCheck, Palette, Ruler } from "lucide-react";
 import placeholder from "/src/assets/placeholder.png";
 
-const ProductCard = ({ product, dailyDeals = [] }) => {
-  const [isFavorited, setIsFavorited] = useState(false);
+const ProductCard = ({
+  product,
+  dailyDeals = [],
+  selectedColor = "",
+  selectedSize = "",
+  selectedVariant = null,
+  onClick,
+  isFavorite = false,
+  toggleFavorite,
+  cardClassName = "",
+  imageClassName = "",
+  priceClassName = "",
+  nameClassName = "",
+}) => {
+  const [isFavorited, setIsFavorited] = useState(isFavorite);
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [imageUrl, setImageUrl] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
@@ -32,7 +44,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   });
   const [isProSeller, setIsProSeller] = useState(false);
 
-  let mergedProduct = { ...product, stock: product.stock || 0 }; // Default stock to 0 if not provided
+  let mergedProduct = { ...product, stock: Number(product.stock) || 0 };
   if (Array.isArray(dailyDeals) && product.id) {
     const deal = dailyDeals.find(
       (d) =>
@@ -44,40 +56,16 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
     if (deal) {
       mergedProduct.isDailyDeal = true;
       mergedProduct.discountPercentage =
-        typeof deal.discount === "number" ? (deal.discount * 100).toFixed(2) : 0;
+        Number((deal.discount * 100).toFixed(2)) || 0;
     }
   }
 
-  let minPrice = mergedProduct.price || 0;
-  let maxPrice = mergedProduct.price || 0;
-  let hasVariants = Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
+  const hasVariants = Array.isArray(mergedProduct.variants) && mergedProduct.variants.length > 0;
 
-  if (hasVariants) {
-    const variantPrices = mergedProduct.variants.map((v) => (v.price || 0));
-    minPrice = Math.min(...variantPrices);
-    maxPrice = Math.max(...variantPrices);
-  }
+  // Determine base price
+  const basePrice = Number(selectedVariant?.price || product.price) || 0;
 
   useEffect(() => {
-    let initialImage = placeholder;
-    if (hasVariants && mergedProduct.variants[0]?.imageUrls) {
-      const firstValidUrl = mergedProduct.variants[0].imageUrls.find((url) =>
-        typeof url === "string" && url.trim() && url.startsWith("https://")
-      );
-      initialImage = firstValidUrl || (mergedProduct.variants[0].imageUrls[0] || placeholder);
-    } else if (Array.isArray(mergedProduct.imageUrls) && mergedProduct.imageUrls.length > 0) {
-      const firstValidUrl = mergedProduct.imageUrls.find((url) =>
-        typeof url === "string" && url.trim() && url.startsWith("https://")
-      );
-      initialImage = firstValidUrl || mergedProduct.imageUrls[0] || placeholder;
-    } else if (mergedProduct.imageUrl && typeof mergedProduct.imageUrl === "string" && mergedProduct.imageUrl.startsWith("https://")) {
-      initialImage = mergedProduct.imageUrl;
-    } else {
-      console.warn(`Product ${mergedProduct.id} has no valid imageUrl or imageUrls`);
-    }
-    setImageUrl(initialImage);
-    setImageFailed(false);
-
     const fetchFeeConfig = async () => {
       try {
         const docRef = doc(db, "feeConfigurations", "categoryFees");
@@ -107,56 +95,36 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
       }
     };
     checkProSellerStatus();
-  }, [product, hasVariants, mergedProduct.sellerId]);
 
-  useEffect(() => {
-    if (feeConfig && mergedProduct.category && maxPrice > 0) {
-      const config = feeConfig[mergedProduct.category] || {
-        minPrice: 1000,
-        maxPrice: Infinity,
-        buyerProtectionRate: 0.08,
-        handlingRate: 0.20,
-      };
-      const buyerProtectionFee = maxPrice * config.buyerProtectionRate;
-      const handlingFee = maxPrice * config.handlingRate;
-      const totalEstimatedPrice = maxPrice + buyerProtectionFee + handlingFee;
-      const sellerEarnings = maxPrice;
-      setFees({
-        buyerProtectionFee,
-        handlingFee,
-        totalEstimatedPrice,
-        sellerEarnings,
-      });
+    // Image handling
+    let initialImage = placeholder;
+    if (selectedVariant?.imageUrls?.length > 0) {
+      const firstValidUrl = selectedVariant.imageUrls.find(
+        (url) => typeof url === "string" && url.startsWith("https://")
+      );
+      initialImage = firstValidUrl || selectedVariant.imageUrls[0] || placeholder;
+    } else if (hasVariants && mergedProduct.variants[0]?.imageUrls) {
+      const firstValidUrl = mergedProduct.variants[0].imageUrls.find(
+        (url) => typeof url === "string" && url.startsWith("https://")
+      );
+      initialImage = firstValidUrl || mergedProduct.variants[0].imageUrls[0] || placeholder;
+    } else if (Array.isArray(mergedProduct.imageUrls) && mergedProduct.imageUrls.length > 0) {
+      const firstValidUrl = mergedProduct.imageUrls.find(
+        (url) => typeof url === "string" && url.startsWith("https://")
+      );
+      initialImage = firstValidUrl || mergedProduct.imageUrls[0] || placeholder;
+    } else if (
+      mergedProduct.imageUrl &&
+      typeof mergedProduct.imageUrl === "string" &&
+      mergedProduct.imageUrl.startsWith("https://")
+    ) {
+      initialImage = mergedProduct.imageUrl;
+    } else {
+      console.warn(`Product ${mergedProduct.id} has no valid imageUrl or imageUrls`);
     }
-  }, [feeConfig, mergedProduct.category, maxPrice]);
-
-  const originalDisplayPrice = maxPrice;
-  let discount = 0;
-  if (
-    mergedProduct.isDailyDeal &&
-    typeof mergedProduct.discountPercentage === "number" &&
-    mergedProduct.discountPercentage > 0
-  ) {
-    discount = mergedProduct.discountPercentage;
-  } else if (
-    typeof mergedProduct.discount === "number" &&
-    mergedProduct.discount > 0 &&
-    mergedProduct.discount < 100
-  ) {
-    discount = mergedProduct.discount;
-  }
-  const hasDiscount = discount > 0;
-  const discountedPrice = hasDiscount
-    ? Math.round(maxPrice * (1 - discount / 100))
-    : maxPrice;
-  const totalEstimatedPrice = hasDiscount
-    ? Math.round((maxPrice + fees.buyerProtectionFee + fees.handlingFee) * (1 - discount / 100))
-    : fees.totalEstimatedPrice;
-
-  const truncateText = (text, maxLength = 35) => {
-    if (!text || typeof text !== "string") return "No name available";
-    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
-  };
+    setImageUrl(initialImage);
+    setImageFailed(false);
+  }, [mergedProduct.id, mergedProduct.imageUrls, mergedProduct.imageUrl, mergedProduct.variants, selectedVariant]);
 
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
@@ -175,7 +143,7 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
             (userId &&
               Array.isArray(data.favoritedBy) &&
               data.favoritedBy.includes(userId)) ||
-            false
+            isFavorite
           );
           setFavoriteCount(data.favoriteCount || 0);
         } else {
@@ -187,51 +155,88 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
       }
     };
     fetchFavoriteStatus();
-  }, [product.id]);
+  }, [product.id, isFavorite]);
+
+  useEffect(() => {
+    if (feeConfig && mergedProduct.category && basePrice > 0) {
+      const config = feeConfig[mergedProduct.category] || {
+        minPrice: 1000,
+        maxPrice: Infinity,
+        buyerProtectionRate: 0.08,
+        handlingRate: 0.20,
+      };
+      const buyerProtectionFee = basePrice * config.buyerProtectionRate;
+      const handlingFee = basePrice * config.handlingRate;
+      const totalEstimatedPrice = basePrice + buyerProtectionFee + handlingFee;
+      const sellerEarnings = basePrice;
+      setFees({
+        buyerProtectionFee,
+        handlingFee,
+        totalEstimatedPrice,
+        sellerEarnings,
+      });
+    }
+  }, [feeConfig, mergedProduct.category, basePrice]);
+
+  // Calculate prices for display
+  const originalPrice = basePrice;
+  const totalPrice = fees.totalEstimatedPrice;
+  const discountedTotalPrice = mergedProduct.isDailyDeal
+    ? Math.round(totalPrice * (1 - mergedProduct.discountPercentage / 100))
+    : totalPrice;
 
   const handleFavorite = async (e) => {
-    e.preventPropagation();
+    e.preventDefault();
     e.stopPropagation();
-    const userId = auth.currentUser?.uid;
-    if (!userId || !product?.id) {
-      toast.error("Please sign in to favorite a product.");
-      return;
-    }
-    try {
-      const productRef = doc(db, "products", product.id);
-      const docSnap = await getDoc(productRef);
-      if (!docSnap.exists()) {
-        toast.error("Product not found.");
+    if (toggleFavorite) {
+      toggleFavorite();
+    } else {
+      const userId = auth.currentUser?.uid;
+      if (!userId || !product?.id) {
+        toast.error("Please sign in to favorite a product.");
         return;
       }
-      const data = docSnap.data();
-      const currentCount = data.favoriteCount || 0;
-      const favoritedBy = data.favoritedBy || [];
-      if (isFavorited) {
-        await updateDoc(productRef, {
-          favoritedBy: arrayRemove(userId),
-          favoriteCount: Math.max(0, currentCount - 1),
-        });
-        setIsFavorited(false);
-        setFavoriteCount(Math.max(0, currentCount - 1));
-        toast.success("Removed from favorites!");
-      } else {
-        if (favoritedBy.includes(userId)) {
-          toast.info("You have already favorited this product.");
+      try {
+        const productRef = doc(db, "products", product.id);
+        const docSnap = await getDoc(productRef);
+        if (!docSnap.exists()) {
+          toast.error("Product not found.");
           return;
         }
-        await updateDoc(productRef, {
-          favoritedBy: arrayUnion(userId),
-          favoriteCount: currentCount + 1,
-        });
-        setIsFavorited(true);
-        setFavoriteCount(currentCount + 1);
-        toast.success("Added to favorites!");
+        const data = docSnap.data();
+        const currentCount = data.favoriteCount || 0;
+        const favoritedBy = data.favoritedBy || [];
+        if (isFavorited) {
+          await updateDoc(productRef, {
+            favoritedBy: arrayRemove(userId),
+            favoriteCount: Math.max(0, currentCount - 1),
+          });
+          setIsFavorited(false);
+          setFavoriteCount(Math.max(0, currentCount - 1));
+          toast.success("Removed from favorites!");
+        } else {
+          if (favoritedBy.includes(userId)) {
+            toast.info("You have already favorited this product.");
+            return;
+          }
+          await updateDoc(productRef, {
+            favoritedBy: arrayUnion(userId),
+            favoriteCount: currentCount + 1,
+          });
+          setIsFavorited(true);
+          setFavoriteCount(currentCount + 1);
+          toast.success("Added to favorites!");
+        }
+      } catch (err) {
+        console.error("Error updating favorite:", err);
+        toast.error("Failed to update favorite. Try again!");
       }
-    } catch (err) {
-      console.error("Error updating favorite:", err);
-      toast.error("Failed to update favorite. Try again!");
     }
+  };
+
+  const truncateText = (text, maxLength = 35) => {
+    if (!text || typeof text !== "string") return "No name available";
+    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   };
 
   const uniqueColors = hasVariants
@@ -244,11 +249,12 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
   return (
     <Link
       to={`/product/${mergedProduct.id}`}
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden"
+      onClick={onClick}
+      className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName || 'h-[200px]'}`} // Default to h-[200px] if no cardClassName
       tabIndex={0}
       aria-label={mergedProduct.name}
     >
-      <div className="relative h-[200px] overflow-hidden rounded-t-lg min-w-0">
+      <div className={`relative h-[200px] overflow-hidden rounded-t-lg min-w-0 ${imageClassName || ''}`}>
         <img
           src={imageFailed ? placeholder : imageUrl}
           alt={mergedProduct.name || "Product Image"}
@@ -271,22 +277,23 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
         <button
           onClick={handleFavorite}
           className="absolute top-2 right-2 p-1.5 flex items-center justify-evenly bg-white/70 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
-          aria-label={
-            isFavorited ? "Remove from favorites" : "Add to favorites"
-          }
+          aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
         >
           <Heart
-            className={`w-5 h-5 ${
-              isFavorited ? "text-gray-600 fill-gray-600" : "text-gray-600"
-            }`}
+            className={`w-5 h-5 ${isFavorited ? "text-gray-600 fill-gray-600" : "text-gray-600"}`}
           />
           <p className="mx-1 text-sm">{favoriteCount}</p>
         </button>
+        {mergedProduct.isDailyDeal && (
+          <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
+            {mergedProduct.discountPercentage}% OFF
+          </div>
+        )}
       </div>
       <div className="flex flex-col justify-between flex-grow p-3 min-w-0 overflow-hidden">
         <div>
           <h3
-            className="mb-1 break-words line-clamp-2 min-h-[48px]"
+            className={`mb-1 break-words line-clamp-2 min-h-[48px] ${nameClassName}`}
             title={mergedProduct.name}
             style={{
               fontSize: "15px",
@@ -310,24 +317,22 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
               Almost Gone
             </span>
           )}
-          <div className="flex items-center justify-between">
-          {mergedProduct.condition && (
-            <p
-              style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
-              className="mb-2 mt-2"
-            >
-              <span>{mergedProduct.condition}</span>
-            </p>
-          )}
-
-          {isProSeller && (
+          <div className="flex items-center justify-between mt-2">
+            {mergedProduct.condition && (
+              <p
+                style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
+                className="mb-2"
+              >
+                <span>{mergedProduct.condition}</span>
+              </p>
+            )}
+            {isProSeller && (
               <div className="p-[5px] flex items-center justify-center bg-gray-100 rounded-full">
                 <ShieldCheck className="w-4 h-4 text-green-500" />
               </div>
-          )}
+            )}
           </div>
-
-          {hasVariants && (
+          {hasVariants && (uniqueColors.length > 0 || uniqueSizes.length > 0) && (
             <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-gray-600">
               {uniqueColors.length > 0 && (
                 <span className="flex items-center">
@@ -347,29 +352,23 @@ const ProductCard = ({ product, dailyDeals = [] }) => {
         <div className="mt-auto">
           <div className="flex items-center justify-between">
             <span
-              style={{
-                fontSize: "16px",
-                fontWeight: 500,
-                color: "#222",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
+              className={`text-[16px] font-medium text-[#222] flex items-center gap-0.5rem ${priceClassName}`}
             >
-              {mergedProduct.isDailyDeal ? (
-                <PriceFormatter price={discountedPrice} />
-              ) : (
-                <PriceFormatter price={totalEstimatedPrice} />
-              )}
+              <PriceFormatter
+                price={mergedProduct.isDailyDeal ? discountedTotalPrice : totalPrice}
+                currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+              />
             </span>
           </div>
-
           {mergedProduct.isDailyDeal && (
             <span
-              className="text-gray-400 line-through mr-1"
+              className="text-gray-400 line-through text-[10px]"
               style={{ fontSize: "10px" }}
             >
-              <PriceFormatter price={originalDisplayPrice} />
+              <PriceFormatter
+                price={originalPrice}
+                currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+              />
             </span>
           )}
         </div>

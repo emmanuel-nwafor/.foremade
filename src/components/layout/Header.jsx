@@ -257,14 +257,14 @@ const Header = () => {
       {/* Desktop Header */}
       <div className="bg-[#112639] hidden sm:flex text-white w-full py-0 h-9.5 items-center">
        
-        <div className="flex w-full h-full items-center justify-between"> {/* Removed max-w-7xl, mx-auto, and px-4 */}
+        <div className="p-2 flex w-full h-full items-center justify-between"> {/* Removed max-w-7xl, mx-auto, and px-4 */}
 
           {/* Left Group: Logo and nav links - add px-4 directly here if you want internal padding */}
           <div className="flex items-center h-full pl-4"> {/* Added pl-4 for internal padding here */}
             <Link to="/">
               <img
                 src={logo}
-                className="h-11 w-auto"
+                className="h-10 w-auto"
                 alt="Foremade"
               />
             </Link>
@@ -324,7 +324,7 @@ const Header = () => {
       </div>
       <div className="hidden sm:block bg-[#eb9325] h-2 w-full"></div>
       {/* Mobile Header */}
-      <div className="sm:hidden bg-[#112639] text-white py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
+      <div className="sm:hidden bg-[#112639] text-white p-2 py-3 w-full flex items-center fixed top-0 left-0 right-0 z-40 overflow-x-hidden"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Left: Logo */}

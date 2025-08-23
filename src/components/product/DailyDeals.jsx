@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
+import { useCurrency } from '/src/CurrencyContext';
 import ProductCard from '/src/components/home/ProductCard';
 
 const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
@@ -20,6 +21,7 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
 const FALLBACK_IMAGE = 'https://via.placeholder.com/200?text=No+Image';
 
 const DailyDeals = () => {
+  const { convertPrice } = useCurrency();
   const [dealProducts, setDealProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,7 +59,9 @@ const DailyDeals = () => {
         }));
         console.log('Raw deals:', dealData);
 
-        const validDeals = dealData.filter((deal) => new Date(deal.endDate) > new Date());
+        const validDeals = dealData.filter(
+          (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
+        );
         console.log('Valid deals:', validDeals);
 
         const dealsWithDetails = await Promise.all(
@@ -69,25 +73,24 @@ const DailyDeals = () => {
             console.log(`Product for deal ${deal.id}:`, productData);
 
             const imageUrl = Array.isArray(productData.imageUrls) && productData.imageUrls.length > 0
-              ? productData.imageUrls[0]
+              ? productData.imageUrls.find((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')) || FALLBACK_IMAGE
+              : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
+              ? productData.imageUrl
               : FALLBACK_IMAGE;
             console.log(`Image for deal ${deal.id}:`, imageUrl);
 
-            // Update or create document with isDailyDeal flag
-            const dealRef = doc(db, 'dailyDeals', deal.id);
-            await setDoc(dealRef, { isDailyDeal: true }, { merge: true });
+            const basePrice = Number(productData.price) || 0;
+            const discountPercentage = Number((deal.discount * 100).toFixed(2)) || 0;
 
             return {
               id: deal.id,
               productId: deal.productId,
               productName: productData.name || 'Unnamed Product',
-              originalPrice: productData.price || 0,
-              discountPercent: (deal.discount * 100).toFixed(2),
+              price: basePrice,
+              discountPercentage,
               imageUrl,
               description: productData.description || 'No description available',
               condition: productData.condition || '',
-              startDate: deal.startDate,
-              endDate: deal.endDate,
               isDailyDeal: true,
             };
           })
@@ -105,8 +108,9 @@ const DailyDeals = () => {
         setLoading(false);
       }
     };
+
     fetchDailyDeals();
-  }, []);
+  }, [convertPrice]);
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -227,23 +231,30 @@ const DailyDeals = () => {
             dealProducts.slice(0, 8).map((deal) => (
               <div
                 key={deal.id}
-                className="flex-shrink-0 w-[200px] xs:w-[200px] sm:w-[200px] md:w-[220px] snap-start"
+                className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[200px] md:w-[220px] snap-start"
               >
                 <div className="relative">
                   <ProductCard
                     product={{
                       id: deal.productId,
                       name: deal.productName,
-                      price: deal.originalPrice * (1 - parseFloat(deal.discountPercent) / 100),
+                      price: deal.price,
                       imageUrl: deal.imageUrl,
                       condition: deal.condition,
+                      category: deal.category || 'default', // Add category for fee calculations
+                      variants: deal.variants || [],
+                      stock: deal.stock || 0,
+                      sellerId: deal.sellerId || '',
+                      currency: localStorage.getItem("currency") || "USD", // Add currency
                       isDailyDeal: deal.isDailyDeal,
-                      discountPercentage: parseFloat(deal.discountPercent),
+                      discountPercentage: deal.discountPercentage,
                     }}
                   />
-                  <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
-                    {deal.discountPercent}% OFF
-                  </div>
+                  {deal.isDailyDeal && (
+                    <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">
+                      {deal.discountPercentage}% OFF
+                    </div>
+                  )}
                 </div>
               </div>
             ))

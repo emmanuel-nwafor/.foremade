@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth, db } from "/src/firebase";
 import {
   doc,
@@ -257,6 +257,7 @@ const StripeCheckoutForm = ({
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [cart, setCart] = useState([]);
   const [loadingState, setLoadingState] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -286,6 +287,10 @@ const Checkout = () => {
   const [minimumPurchase, setMinimumPurchase] = useState(25000);
   const formRef = useRef(null);
   const debugMode = import.meta.env.VITE_DEBUG_MODE === "true";
+
+  // Extract additional shipping fee from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const additionalShippingFeeFromProduct = parseFloat(queryParams.get("additionalShippingFee")) || 0;
 
   useEffect(() => {
     localStorage.setItem("checkoutFormData", JSON.stringify(formData));
@@ -604,16 +609,26 @@ const Checkout = () => {
       total + (item.product?.totalPrice || 0) * (item.quantity || 0),
     0
   );
+  // Use additionalShippingFee from query params if cart has only one item, otherwise calculate it
+  const additionalShippingFee = cart.length === 1 && additionalShippingFeeFromProduct > 0
+    ? additionalShippingFeeFromProduct
+    : subtotalNgn < minimumPurchase ? 500 : 0;
   const belowMinimumPrice = subtotalNgn < minimumPurchase;
   const currency = formData.country === "United Kingdom" ? "GBP" : "NGN";
   const conversionRateNgnToGbp = 0.00048;
   const totalAmount =
-    currency === "GBP" ? subtotalNgn * conversionRateNgnToGbp : subtotalNgn;
+    currency === "GBP"
+      ? (subtotalNgn + additionalShippingFee) * conversionRateNgnToGbp
+      : subtotalNgn + additionalShippingFee;
 
   useEffect(() => {
     console.log(
       "Subtotal NGN:",
       subtotalNgn.toLocaleString("en-NG", { minimumFractionDigits: 2 })
+    );
+    console.log(
+      "Additional Shipping Fee:",
+      additionalShippingFee.toLocaleString("en-NG", { minimumFractionDigits: 2 })
     );
     console.log(
       "Total Amount:",
@@ -622,7 +637,7 @@ const Checkout = () => {
       currency,
       ")"
     );
-  }, [subtotalNgn, totalAmount, currency]);
+  }, [subtotalNgn, additionalShippingFee, totalAmount, currency]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -666,16 +681,6 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      // console.log("Backend URL:", backendUrl);
-      // console.log("Sending order confirmation email with payload:", {
-      //   orderId: order.paymentId || "unknown",
-      //   email: order.shippingDetails?.email || "unknown",
-      //   items: order.items,
-      //   total: order.totalAmount || 0,
-      //   currency: order.currency || "unknown",
-      //   shippingDetails: order.shippingDetails || {},
-      // });
-
       const payload = {
         orderId: order.paymentId || `fallback-${Date.now()}`,
         email: order.shippingDetails?.email || formData.email,
@@ -790,8 +795,8 @@ const Checkout = () => {
         );
         const totalAmount =
           currency === "GBP"
-            ? sellerSubtotal * conversionRateNgnToGbp
-            : sellerSubtotal;
+            ? (sellerSubtotal + additionalShippingFee) * conversionRateNgnToGbp
+            : sellerSubtotal + additionalShippingFee;
 
         const payload = {
           orderId: sellerOrderId,
@@ -1009,8 +1014,8 @@ const Checkout = () => {
             );
             const sellerShare =
               currency === "GBP"
-                ? sellerSubtotalNgn * conversionRateNgnToGbp
-                : sellerSubtotalNgn;
+                ? (sellerSubtotalNgn + additionalShippingFee) * conversionRateNgnToGbp
+                : sellerSubtotalNgn + additionalShippingFee;
 
             const order = {
               id: orderId,
@@ -1171,6 +1176,7 @@ const Checkout = () => {
       navigate,
       totalItems,
       debugMode,
+      additionalShippingFee,
     ]
   );
 
@@ -1720,6 +1726,12 @@ const Checkout = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Additional Shipping Fee</span>
+                  <span>
+                    <PriceFormatter price={additionalShippingFee} currency={currency} />
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span>Shipping</span>
                   <span className="text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-full">
                     Free
@@ -1728,7 +1740,7 @@ const Checkout = () => {
                 <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
                   <span>Grand Total</span>
                   <span>
-                    <PriceFormatter price={subtotalNgn} currency={currency} />
+                    <PriceFormatter price={totalAmount} currency={currency} />
                   </span>
                 </div>
               </div>
@@ -1781,7 +1793,7 @@ const Checkout = () => {
                     {formData.country === "United Kingdom" ? (
                       <Elements stripe={stripePromise}>
                         <StripeCheckoutForm
-                          totalPrice={subtotalNgn * conversionRateNgnToGbp}
+                          totalPrice={totalAmount}
                           formData={formData}
                           onSuccess={(paymentIntent) =>
                             setShowConfirmModal(true)
@@ -1794,7 +1806,7 @@ const Checkout = () => {
                     ) : formData.country === "Nigeria" ? (
                       <PaystackCheckout
                         email={formData.email}
-                        amount={subtotalNgn * 100}
+                        amount={totalAmount * 100}
                         onSuccess={(paymentData) => setShowConfirmModal(true)}
                         onClose={handleCancel}
                         disabled={
@@ -1852,6 +1864,7 @@ const Checkout = () => {
                 imageLoading,
                 imageErrors,
                 minimumPurchase,
+                additionalShippingFee,
               },
               null,
               2

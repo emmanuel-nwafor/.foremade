@@ -52,25 +52,24 @@ export default function DailyDeals() {
             console.log(`Product for deal ${deal.id}:`, productData);
 
             const imageUrl = Array.isArray(productData.imageUrls) && productData.imageUrls.length > 0
-              ? productData.imageUrls[0]
+              ? productData.imageUrls.find((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')) || FALLBACK_IMAGE
+              : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
+              ? productData.imageUrl
               : FALLBACK_IMAGE;
             console.log(`Image for deal ${deal.id}:`, imageUrl);
 
-            // Update or create document with isDailyDeal flag
-            const dealRef = doc(db, 'dailyDeals', deal.id);
-            await setDoc(dealRef, { isDailyDeal: true }, { merge: true });
+            const basePrice = Number(productData.price) || 0;
+            const discountPercentage = Number((deal.discount * 100).toFixed(2)) || 0;
 
             return {
               id: deal.id,
               productId: deal.productId,
               productName: productData.name || 'Unnamed Product',
-              originalPrice: productData.price || 0,
-              discountPercent: (deal.discount * 100).toFixed(2),
+              price: basePrice,
+              discountPercentage,
               imageUrl,
               description: productData.description || 'No description available',
               condition: productData.condition || '',
-              startDate: deal.startDate,
-              endDate: deal.endDate,
               isDailyDeal: true,
             };
           })
@@ -156,11 +155,16 @@ export default function DailyDeals() {
                     product={{
                       id: deal.productId,
                       name: deal.productName,
-                      price: deal.originalPrice * (1 - parseFloat(deal.discountPercent) / 100),
+                      price: deal.price,
                       imageUrl: deal.imageUrl,
                       condition: deal.condition,
+                      category: deal.category || 'default', // Add category for fee calculations
+                      variants: deal.variants || [],
+                      stock: deal.stock || 0,
+                      sellerId: deal.sellerId || '',
+                      currency: localStorage.getItem("currency") || "USD", // Add currency
                       isDailyDeal: deal.isDailyDeal,
-                      discountPercentage: parseFloat(deal.discountPercent),
+                      discountPercentage: deal.discountPercentage,
                     }}
                   />
                   <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs font-bold">

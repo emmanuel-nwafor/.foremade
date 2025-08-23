@@ -231,7 +231,7 @@ const DailyDeals = () => {
             dealProducts.slice(0, 8).map((deal) => (
               <div
                 key={deal.id}
-                className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[200px] md:w-[220px] snap-start"
+                className="flex-shrink-0 w-[140px] xs:w-[180px] sm:w-[220px] md:w-[220px] snap-start"
               >
                 <div className="relative">
                   <ProductCard

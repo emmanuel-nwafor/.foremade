@@ -247,7 +247,7 @@ const ProductCard = ({
     : [];
 
   return (
-    <Link
+      <Link
       to={`/product/${mergedProduct.id}`}
       onClick={onClick}
       className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}

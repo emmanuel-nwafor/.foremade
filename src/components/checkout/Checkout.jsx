@@ -9,6 +9,7 @@ import {
   addDoc,
   serverTimestamp,
   runTransaction,
+  getDocs,
 } from "firebase/firestore";
 import { getCart, clearCart, updateCart } from "/src/utils/cartUtils";
 import { loadStripe } from "@stripe/stripe-js";
@@ -259,6 +260,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [cart, setCart] = useState([]);
+  const [dailyDeals, setDailyDeals] = useState([]);
   const [loadingState, setLoadingState] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState(() => {
@@ -302,16 +304,30 @@ const Checkout = () => {
         setLoadingState(true);
         const user = auth.currentUser;
 
+        // Fetch minimum purchase amount
         const minRef = doc(db, "settings", "minimumPurchase");
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
           setMinimumPurchase(minSnap.data().amount || 25000);
         }
 
+        // Fetch fee configurations
         const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         setFeeConfig(feeSnap.exists() ? feeSnap.data() : {});
 
+        // Fetch daily deals
+        const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const dealData = dealSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        const validDeals = dealData.filter(
+          (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
+        );
+        setDailyDeals(validDeals);
+
+        // Fetch and process cart items
         const cartItems = await getCart(user?.uid);
         console.log("Loaded cart items:", JSON.stringify(cartItems, null, 2));
 
@@ -373,9 +389,16 @@ const Checkout = () => {
               handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-            const buyerProtectionFee = basePrice * config.buyerProtectionRate;
-            const handlingFee = basePrice * config.handlingRate;
-            const totalPrice = basePrice + buyerProtectionFee + handlingFee;
+
+            // Apply daily deal discount if applicable
+            const deal = validDeals.find((d) => d.productId === item.productId);
+            const discountPercentage = deal ? Number((deal.discount * 100).toFixed(2)) : 0;
+            const discountedPrice = discountPercentage
+              ? basePrice * (1 - deal.discount)
+              : basePrice;
+            const buyerProtectionFee = discountedPrice * config.buyerProtectionRate;
+            const handlingFee = discountedPrice * config.handlingRate;
+            const totalPrice = discountedPrice + buyerProtectionFee + handlingFee;
 
             return {
               ...item,
@@ -386,6 +409,8 @@ const Checkout = () => {
                 sellerId,
                 totalPrice,
                 stock,
+                isDailyDeal: !!deal,
+                discountPercentage,
               },
               currentImage: filteredImageUrls[0],
               slideDirection: "right",
@@ -423,7 +448,7 @@ const Checkout = () => {
           }
         }
       } catch (err) {
-        console.error("Error loading cart or user data:", err);
+        console.error("Error loading cart, deals, or user data:", err);
         console.log("Logging to Sentry:", err);
         setCart([]);
         toast.error("Failed to load data.", {
@@ -442,6 +467,16 @@ const Checkout = () => {
         const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         const feeConfig = feeSnap.exists() ? feeSnap.data() : {};
+
+        // Fetch daily deals for cart update
+        const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const dealData = dealSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        const validDeals = dealData.filter(
+          (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
+        );
 
         const processedCart = await Promise.all(
           cartItems.map(async (item) => {
@@ -501,9 +536,16 @@ const Checkout = () => {
               handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-            const buyerProtectionFee = basePrice * config.buyerProtectionRate;
-            const handlingFee = basePrice * config.handlingRate;
-            const totalPrice = basePrice + buyerProtectionFee + handlingFee;
+
+            // Apply daily deal discount if applicable
+            const deal = validDeals.find((d) => d.productId === item.productId);
+            const discountPercentage = deal ? Number((deal.discount * 100).toFixed(2)) : 0;
+            const discountedPrice = discountPercentage
+              ? basePrice * (1 - deal.discount)
+              : basePrice;
+            const buyerProtectionFee = discountedPrice * config.buyerProtectionRate;
+            const handlingFee = discountedPrice * config.handlingRate;
+            const totalPrice = discountedPrice + buyerProtectionFee + handlingFee;
 
             return {
               ...item,
@@ -514,6 +556,8 @@ const Checkout = () => {
                 sellerId,
                 totalPrice,
                 stock,
+                isDailyDeal: !!deal,
+                discountPercentage,
               },
               currentImage: filteredImageUrls[0],
               slideDirection: "right",
@@ -609,7 +653,6 @@ const Checkout = () => {
       total + (item.product?.totalPrice || 0) * (item.quantity || 0),
     0
   );
-  // Use additionalShippingFee from query params if cart has only one item, otherwise calculate it
   const additionalShippingFee = cart.length === 1 && additionalShippingFeeFromProduct > 0
     ? additionalShippingFeeFromProduct
     : subtotalNgn < minimumPurchase ? 500 : 0;
@@ -693,6 +736,8 @@ const Checkout = () => {
           imageUrls: Array.isArray(item.imageUrls)
             ? item.imageUrls
             : [placeholder],
+          isDailyDeal: item.isDailyDeal || false,
+          discountPercentage: item.discountPercentage || 0,
         })),
         total: order.totalAmount || 0,
         currency: order.currency || currency,
@@ -809,6 +854,8 @@ const Checkout = () => {
             imageUrls: Array.isArray(item.product?.imageUrls)
               ? item.product.imageUrls
               : [placeholder],
+            isDailyDeal: item.product?.isDailyDeal || false,
+            discountPercentage: item.product?.discountPercentage || 0,
           })),
           total: totalAmount,
           currency,
@@ -1028,6 +1075,8 @@ const Checkout = () => {
                 name: item.product?.name || "Unknown",
                 sellerId: item.product?.sellerId || sellerId,
                 imageUrls: item.product?.imageUrls || [placeholder],
+                isDailyDeal: item.product?.isDailyDeal || false,
+                discountPercentage: item.product?.discountPercentage || 0,
               })),
               totalAmount: sellerShare,
               date: new Date().toISOString(),
@@ -1121,6 +1170,8 @@ const Checkout = () => {
               name: item.product?.name || "Unknown",
               sellerId: item.product?.sellerId || "unknown",
               imageUrls: item.product?.imageUrls || [placeholder],
+              isDailyDeal: item.product?.isDailyDeal || false,
+              discountPercentage: item.product?.discountPercentage || 0,
             })),
           });
         }
@@ -1349,7 +1400,7 @@ const Checkout = () => {
                   Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <i className="bx bx-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <i className="bx bx-envelope absolute left-3 top支0 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="email"
                     id="email"
@@ -1569,7 +1620,7 @@ const Checkout = () => {
                 >
                   <i className="bx bx-info-circle" />
                   <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-2 -top-10 left-0 w-48 z-10">
-                    Prices include buyer protection and handling fees.
+                    Prices Overview.
                   </span>
                 </span>
               </h2>
@@ -1607,6 +1658,11 @@ const Checkout = () => {
                     {imageErrors[item.productId] && (
                       <div className="absolute bottom-0 left-0 bg-red-600 text-white text-xs px-1 rounded">
                         Image Failed
+                      </div>
+                    )}
+                    {item.product?.isDailyDeal && (
+                      <div className="absolute top-2 left-2 bg-red-600 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                        {item.product.discountPercentage}% OFF
                       </div>
                     )}
                   </div>
@@ -1716,6 +1772,11 @@ const Checkout = () => {
                         }
                         currency={currency}
                       />
+                      {item.product?.isDailyDeal && (
+                        <span className="text-red-600 text-[10px] ml-2">
+                          {item.product.discountPercentage}% OFF
+                        </span>
+                      )}
                     </span>
                   </div>
                 ))}
@@ -1859,6 +1920,7 @@ const Checkout = () => {
             {JSON.stringify(
               {
                 cart,
+                dailyDeals,
                 formData,
                 formErrors,
                 imageLoading,

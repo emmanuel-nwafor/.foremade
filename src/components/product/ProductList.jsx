@@ -6,10 +6,11 @@ import placeholder from '/src/assets/placeholder.png';
 import PriceFormatter from '/src/components/layout/PriceFormatter';
 import { addToCart } from '/src/utils/cartUtils';
 
-const ProductList = ({ products = [] }) => {
+const ProductList = () => {
+  const [products, setProducts] = useState([]);
   const [dailyDeals, setDailyDeals] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [shuffledProducts, setShuffledProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const shuffleArray = (array) => {
     let shuffled = [...array];
@@ -21,23 +22,33 @@ const ProductList = ({ products = [] }) => {
   };
 
   useEffect(() => {
-    getDocs(collection(db, 'dailyDeals')).then((snapshot) => {
-      setDailyDeals(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    }).catch((err) => {
-      console.error('Error fetching daily deals:', err);
-    });
-  }, []);
+    const fetchData = async () => {
+      try {
+        // Fetch products from Firebase
+        const productsSnapshot = await getDocs(collection(db, 'products'));
+        const productsData = productsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProducts(productsData);
+        setShuffledProducts(shuffleArray(productsData));
 
-  useEffect(() => {
-    if (products.length > 0) {
-      // Shuffle products whenever the prop changes (e.g., on refresh or filter change)
-      setShuffledProducts(shuffleArray(products));
-      setLoading(false);
-    } else {
-      const timer = setTimeout(() => setLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [products]);
+        // Fetch daily deals from Firebase
+        const dailyDealsSnapshot = await getDocs(collection(db, 'dailyDeals'));
+        const dailyDealsData = dailyDealsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setDailyDeals(dailyDealsData);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleAddToCart = async (product) => {
     try {
@@ -88,8 +99,8 @@ const ProductList = ({ products = [] }) => {
           role="alert"
           aria-label="No products found"
         >
-          <p className="text-gray-600 text-lg">No products match your filters.</p>
-          <p className="text-gray-400 text-sm mt-2">Try adjusting your search or filters.</p>
+          <p className="text-gray-600 text-lg">No products available.</p>
+          <p className="text-gray-400 text-sm mt-2">Please check back later.</p>
         </div>
       ) : (
         <div>

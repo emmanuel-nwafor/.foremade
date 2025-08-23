@@ -264,11 +264,17 @@ const SellerChat = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-        <SellerSidebar />
-        <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
+        <div
+          className={`fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:translate-x-0 md:static md:w-64 md:flex-shrink-0`}
+        >
+          <SellerSidebar />
+        </div>
+        <div className="flex-1 p-4 sm:p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-            <i className="bx bx-loader bx-spin text-2xl"></i>
-            <span>Loading...</span>
+            <i className="bx bx-loader bx-spin text-xl sm:text-2xl"></i>
+            <span className="text-sm sm:text-base">Loading...</span>
           </div>
         </div>
       </div>
@@ -279,7 +285,7 @@ const SellerChat = () => {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 md:static md:w-64 md:flex-shrink-0`}
       >
@@ -292,30 +298,22 @@ const SellerChat = () => {
         className="md:hidden fixed top-4 left-4 z-40 p-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
         aria-label="Toggle sidebar"
       >
-        <i className={`bx ${isSidebarOpen ? 'bx-x' : 'bx-menu'} text-xl`}></i>
+        <i className={`bx ${isSidebarOpen ? 'bx-x' : 'bx-menu'} text-lg sm:text-xl`}></i>
       </button>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 sm:p-6">
-        {/* Overlay for Sidebar on Mobile */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
-            onClick={toggleSidebar}
-          ></div>
-        )}
-
-        <div className="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-600">
-          <div className="mb-4 sm:mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-              <i className="bx bx-chat text-blue-500 mr-2"></i>
+      <div className="flex-1 p-2 sm:p-4 md:p-6">
+        <div className="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 border border-gray-200 dark:border-gray-600">
+          <div className="mb-3 sm:mb-4 md:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+              <i className="bx bx-chat text-blue-500 mr-2 text-lg sm:text-xl md:text-2xl"></i>
               Seller Chats
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">
               Manage your conversations with buyers.
             </p>
           </div>
-          <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-12rem)] sm:h-[calc(100vh-10rem)]">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 h-[calc(100vh-8rem)] sm:h-[calc(100vh-9rem)] md:h-[calc(100vh-10rem)]">
             {/* Chat List */}
             <motion.div
               className="md:w-1/3 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-600"
@@ -323,13 +321,13 @@ const SellerChat = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900 border-b border-gray-200 dark:border-gray-600">
-                <h2 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">Chats</h2>
+              <div className="p-2 sm:p-3 md:p-4 bg-blue-50 dark:bg-blue-900 border-b border-gray-200 dark:border-gray-600">
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Chats</h2>
               </div>
               {chats.length === 0 ? (
-                <p className="p-3 sm:p-4 text-gray-600 dark:text-gray-400 text-sm">No chats found.</p>
+                <p className="p-2 sm:p-3 md:p-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">No chats found.</p>
               ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-600 max-h-[calc(100vh-16rem)] sm:max-h-[calc(100vh-14rem)] overflow-y-auto">
+                <div className="divide-y divide-gray-200 dark:divide-gray-600 max-h-[calc(100vh-12rem)] sm:max-h-[calc(100vh-13rem)] md:max-h-[calc(100vh-14rem)] overflow-y-auto">
                   <AnimatePresence>
                     {chats.map((chat) => (
                       <motion.div
@@ -341,22 +339,22 @@ const SellerChat = () => {
                         onClick={() => {
                           navigate(`/seller-chat/${chat.chatId}`);
                           setSelectedChat(chat);
-                          setIsSidebarOpen(false); // Close sidebar on chat selection
+                          setIsSidebarOpen(false);
                         }}
-                        className={`p-3 sm:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-800 transition ${
+                        className={`p-2 sm:p-3 md:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-800 transition ${
                           selectedChat?.chatId === chat.chatId ? 'bg-blue-100 dark:bg-blue-900' : ''
                         }`}
                       >
                         <img
                           src={chat.buyerAvatar}
                           alt="Buyer"
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-200 dark:border-gray-600"
+                          className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full border border-gray-200 dark:border-gray-600"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm sm:text-base text-gray-800 dark:text-gray-100 truncate">{chat.buyerName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{chat.lastMessage || 'No messages yet'}</p>
+                          <p className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 dark:text-gray-100 truncate">{chat.buyerName}</p>
+                          <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{chat.lastMessage || 'No messages yet'}</p>
                         </div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">{formatChatTime(chat.lastMessageTime)}</p>
+                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-400 dark:text-gray-500">{formatChatTime(chat.lastMessageTime)}</p>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -373,18 +371,18 @@ const SellerChat = () => {
             >
               {selectedChat ? (
                 <>
-                  <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-blue-600 dark:bg-blue-700 text-white border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 bg-blue-600 dark:bg-blue-700 text-white border-b border-gray-200 dark:border-gray-600">
                     <img
                       src={selectedChat.buyerAvatar}
                       alt="Buyer"
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white"
+                      className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full border-2 border-white"
                     />
                     <div className="flex-1">
-                      <div className="font-semibold text-base sm:text-lg">{selectedChat.buyerName}</div>
-                      <div className="text-xs text-blue-100 dark:text-blue-200 truncate">Product: {selectedChat.productName}</div>
+                      <div className="font-semibold text-sm sm:text-base md:text-lg">{selectedChat.buyerName}</div>
+                      <div className="text-[10px] sm:text-xs md:text-sm text-blue-100 dark:text-blue-200 truncate">Product: {selectedChat.productName}</div>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 bg-gray-100 dark:bg-gray-900 max-h-[calc(100vh-20rem)] sm:max-h-[calc(100vh-16rem)]">
+                  <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 bg-gray-100 dark:bg-gray-900 max-h-[calc(100vh-14rem)] sm:max-h-[calc(100vh-15rem)] md:max-h-[calc(100vh-16rem)]">
                     <AnimatePresence>
                       {messages.map((msg) => (
                         <motion.div
@@ -398,21 +396,21 @@ const SellerChat = () => {
                           }`}
                         >
                           <div
-                            className={`max-w-[80%] sm:max-w-[70%] rounded-lg p-2 sm:p-3 shadow-sm relative ${
+                            className={`max-w-[80%] sm:max-w-[75%] md:max-w-[70%] rounded-lg p-2 sm:p-2.5 md:p-3 shadow-sm relative ${
                               msg.senderId === auth.currentUser.uid
                                 ? 'bg-blue-500 text-white rounded-br-none'
                                 : 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-bl-none'
                             }`}
                           >
-                            {msg.text && <div className="text-xs sm:text-sm">{msg.text}</div>}
+                            {msg.text && <div className="text-xs sm:text-sm md:text-base">{msg.text}</div>}
                             {msg.image && (
                               <img
                                 src={msg.image}
                                 alt="chat-img"
-                                className="max-w-[120px] sm:max-w-[150px] rounded-md border border-gray-200 dark:border-gray-600 mb-1"
+                                className="max-w-[100px] sm:max-w-[120px] md:max-w-[150px] rounded-md border border-gray-200 dark:border-gray-600 mb-1"
                               />
                             )}
-                            <div className="flex items-center justify-end gap-1 text-xs mt-1">
+                            <div className="flex items-center justify-end gap-1 text-[10px] sm:text-xs md:text-sm mt-1">
                               <span
                                 className={
                                   msg.senderId === auth.currentUser.uid
@@ -442,15 +440,15 @@ const SellerChat = () => {
                           exit={{ opacity: 0 }}
                           className="flex justify-start"
                         >
-                          <div className="bg-white dark:bg-gray-600 rounded-lg p-2 sm:p-3 shadow-sm">
+                          <div className="bg-white dark:bg-gray-600 rounded-lg p-2 sm:p-2.5 md:p-3 shadow-sm">
                             <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"></div>
                               <div
-                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"
                                 style={{ animationDelay: '0.1s' }}
                               ></div>
                               <div
-                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"
                                 style={{ animationDelay: '0.2s' }}
                               ></div>
                             </div>
@@ -460,30 +458,30 @@ const SellerChat = () => {
                     </AnimatePresence>
                     <div ref={messagesEndRef} />
                   </div>
-                  <div className="bg-white dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 dark:border-gray-600">
-                    <div className="mb-2 sm:mb-3">
+                  <div className="bg-white dark:bg-gray-800 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 border-t border-gray-200 dark:border-gray-600">
+                    <div className="mb-2 sm:mb-2.5 md:mb-3">
                       <ChatTemplates
                         role="seller"
                         onSelect={setSelectedTemplate}
                         selectedTemplate={selectedTemplate}
-                        className="w-full p-2 sm:p-3 pl-8 sm:pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-xs sm:text-sm"
+                        className="w-full p-2 sm:p-2.5 md:p-3 pl-6 sm:pl-8 md:pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-xs sm:text-sm md:text-base"
                       />
                     </div>
                     {selectedImage && imagePreview && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="mb-2 sm:mb-3 p-2 bg-gray-100 dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-600"
+                        className="mb-2 sm:mb-2.5 md:mb-3 p-2 sm:p-2.5 md:p-3 bg-gray-100 dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-600"
                       >
                         <img
                           src={imagePreview}
                           alt="preview"
-                          className="max-w-[60px] sm:max-w-[80px] max-h-[60px] sm:max-h-[80px] rounded-md"
+                          className="max-w-[50px] sm:max-w-[60px] md:max-w-[80px] max-h-[50px] sm:max-h-[60px] md:max-h-[80px] rounded-md"
                         />
                       </motion.div>
                     )}
-                    <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <div className="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-600 rounded-lg p-2">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+                      <div className="flex-1 flex items-center gap-2 sm:gap-3 bg-gray-100 dark:bg-gray-600 rounded-lg p-2 sm:p-2.5 md:p-3">
                         {canSendImage(messages) && (
                           <>
                             <input
@@ -498,10 +496,10 @@ const SellerChat = () => {
                               htmlFor="image-upload"
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              className="text-gray-600 dark:text-gray-300 p-1 sm:p-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                              className="text-gray-600 dark:text-gray-300 p-1 sm:p-1.5 md:p-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                             >
                               <svg
-                                className="w-4 h-4 sm:w-5 sm:h-5"
+                                className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
                                 fill="none"
                                 stroke="currentColor"
                                 strokeWidth="2"
@@ -522,13 +520,13 @@ const SellerChat = () => {
                             disabled={isTyping}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className={`ml-auto py-1 sm:py-2 px-3 sm:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm ${
+                            className={`ml-auto py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base ${
                               isTyping ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             onMouseDown={handleTyping}
                           >
                             <svg
-                              className="w-4 h-4 sm:w-5 sm:h-5"
+                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
                               fill="none"
                               stroke="currentColor"
                               strokeWidth="2"
@@ -547,10 +545,10 @@ const SellerChat = () => {
                             onClick={() => navigate('/support')}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="ml-auto py-1 sm:py-2 px-3 sm:px-4 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm"
+                            className="ml-auto py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base"
                           >
                             <svg
-                              className="w-4 h-4 sm:w-5 sm:h-5"
+                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
                               fill="none"
                               stroke="currentColor"
                               strokeWidth="2"
@@ -572,12 +570,12 @@ const SellerChat = () => {
                           disabled={isTyping}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className={`py-1 sm:py-2 px-3 sm:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm ${
+                          className={`py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base ${
                             isTyping ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
                           <svg
-                            className="w-4 h-4 sm:w-5 sm:h-5"
+                            className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
@@ -597,7 +595,7 @@ const SellerChat = () => {
                 </>
               ) : (
                 <motion.div
-                  className="flex-1 flex items-center justify-center text-gray-600 dark:text-gray-400 text-sm sm:text-base"
+                  className="flex-1 flex items-center justify-center text-gray-600 dark:text-gray-400 text-xs sm:text-sm md:text-base"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
+import { Building, User, Package, CheckCircle, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomAlert, { useAlerts } from '../components/common/CustomAlert';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +40,7 @@ const initialFormData = {
   accountError: '',
   agree: false,
   signup: false,
+  otp: '',
 };
 
 const generateUsername = (firstName, lastName) => {
@@ -51,6 +52,55 @@ const generateUsername = (firstName, lastName) => {
   return usernameBase + randomNum;
 };
 
+// Popup component for successful submission
+const SuccessPopup = ({ isOpen, onClose, onConfirm }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-orange-200 dark:border-gray-700"
+            initial={{ scale: 0.8, y: 50, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.8, y: 50, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+            </div>
+            <h2 className="text-xl font-bold text-orange-800 dark:text-orange-400 text-center mb-4">
+              Pro Seller Account Created Successfully!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
+              Would you like to complete your onboarding process by providing your account details?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={onConfirm}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-base shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition"
+              >
+                Yes
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base shadow hover:bg-orange-200 transition border-2 border-orange-200"
+              >
+                No
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const ProSellerForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,15 +110,18 @@ const ProSellerForm = () => {
   const [banks, setBanks] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [banksLoading, setBanksLoading] = useState(true);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
 
   useEffect(() => {
     let didCancel = false;
     setCategoriesLoading(true);
     setBanksLoading(true);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
@@ -164,13 +217,55 @@ const ProSellerForm = () => {
     }
     if (step === 3) {
       if (!formData.productLines.length) newErrors.productLines = 'At least one product line is required';
-      if (!formData.bankName) newErrors.bankName = 'Bank name is required';
-      if (!formData.accountNumber) newErrors.accountNumber = 'Account number is required';
       if (!formData.agree) newErrors.agree = 'You must agree to the terms';
-      if (formData.accountError) newErrors.accountNumber = formData.accountError;
+    }
+    if (step === 5) {
+      if (!formData.otp) newErrors.otp = 'Verification code is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const sendOtp = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send OTP');
+      }
+      setOtpSent(true);
+      addAlert('OTP sent to your email. Please check your inbox.', 'success');
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      addAlert(`Failed to send OTP: ${error.message}. Please try again.`, 'error');
+      setIsSubmitting(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    setOtpVerifying(true);
+    try {
+      const response = await fetch(`${backendUrl}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp: formData.otp }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'OTP verification failed');
+      }
+      return true;
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      addAlert(error.message, 'error');
+      return false;
+    } finally {
+      setOtpVerifying(false);
+    }
   };
 
   const handleContinue = async () => {
@@ -178,22 +273,51 @@ const ProSellerForm = () => {
       if (validateStep(currentStep)) {
         setCurrentStep(currentStep + 1);
       }
-    } else {
-      await handleSubmit();
+    } else if (currentStep === 4) {
+      if (validateStep(4)) {
+        if (formData.signup && !user) {
+          await sendOtp();
+          if (otpSent) {
+            setCurrentStep(5); // Move to OTP verification step
+          }
+        } else {
+          await handleSubmit();
+        }
+      }
+    } else if (currentStep === 5) {
+      if (validateStep(5)) {
+        const verified = await verifyOtp();
+        if (verified) {
+          await handleSubmit();
+        }
+      }
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to resend OTP');
+      }
+      addAlert('New OTP sent to your email. Please check your inbox.', 'success');
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      addAlert(`Failed to resend OTP: ${error.message}. Please try again.`, 'error');
     }
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(3)) {
-      setIsSubmitting(false);
-      return;
-    }
     setIsSubmitting(true);
     try {
       let uid = user?.uid;
       let idToken = null;
 
-      // Ensure fresh auth state
       const currentAuth = getAuth();
       const currentUser = currentAuth.currentUser;
 
@@ -208,7 +332,6 @@ const ProSellerForm = () => {
           console.warn('setUser is not a function. Skipping auth context update.');
         }
 
-        // Create user profile in Firestore with retry
         const username = generateUsername(formData.firstName, formData.lastName);
         const userDocRef = doc(db, 'users', uid);
         let attempts = 0;
@@ -226,7 +349,6 @@ const ProSellerForm = () => {
               addresses: [{ street: formData.address, city: '', state: '', postalCode: '', country: formData.country }],
               proStatus: 'pending',
             }, { merge: true });
-            addAlert('Account and profile created successfully!', 'success');
             break;
           } catch (error) {
             attempts++;
@@ -234,13 +356,13 @@ const ProSellerForm = () => {
               console.error('Firestore profile creation failed after retries:', error);
               throw new Error('Failed to create user profile in Firestore after multiple attempts.');
             }
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
       } else if (currentUser) {
         uid = currentUser.uid;
         try {
-          idToken = await currentUser.getIdToken(true); // Refresh token
+          idToken = await currentUser.getIdToken(true);
         } catch (error) {
           if (error.code === 'auth/user-token-expired') {
             addAlert('Your session has expired. Please sign in again.', 'error');
@@ -262,7 +384,6 @@ const ProSellerForm = () => {
         uid: uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       };
 
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const response = await fetch(`${backendUrl}/api/pro-seller`, {
         method: 'POST',
         headers: {
@@ -278,10 +399,10 @@ const ProSellerForm = () => {
         throw new Error(result.error || result.message || 'Submission failed');
       }
 
-      addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
       setFormData(initialFormData);
       setCurrentStep(1);
-      navigate('/profile');
+      setOtpSent(false);
+      setShowSuccessPopup(true); // Show the success popup
     } catch (error) {
       console.error('Submission error:', error.message, error);
       if (error.code === 'auth/user-token-expired') {
@@ -293,6 +414,16 @@ const ProSellerForm = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePopupClose = () => {
+    setShowSuccessPopup(false);
+    navigate('/profile');
+  };
+
+  const handlePopupConfirm = () => {
+    setShowSuccessPopup(false);
+    navigate('/seller-onboarding');
   };
 
   const handleBack = () => {
@@ -314,7 +445,6 @@ const ProSellerForm = () => {
     setFormData(prev => ({ ...prev, accountVerifying: true, accountError: '', accountVerified: false, accountName: '' }));
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -606,56 +736,6 @@ const ProSellerForm = () => {
                 </div>
                 {errors.productLines && <p className="text-red-500 text-xs mt-1">{errors.productLines}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Name <span className="text-red-500">*</span></label>
-                <select
-                  value={formData.bankCode}
-                  onChange={e => {
-                    const selected = banks.find(b => b.code === e.target.value);
-                    handleInputChange('bankCode', e.target.value);
-                    handleInputChange('bankName', selected ? selected.name : '');
-                  }}
-                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
-                    errors.bankName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select Bank</option>
-                  {banksLoading ? (
-                    <option value="">Loading banks...</option>
-                  ) : banks.length > 0 ? (
-                    banks.map((bank, idx) => (
-                      <option key={bank.code || idx} value={bank.code}>{bank.name}</option>
-                    ))
-                  ) : (
-                    <option value="">No banks available.</option>
-                  )}
-                </select>
-                {errors.bankName && <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                  Account Number <span className="text-red-500">*</span>
-                  {formData.accountVerifying && <span className="ml-2 text-xs text-orange-500 animate-pulse">Verifying...</span>}
-                  {formData.accountVerified && !formData.accountError && <CheckCircle className="ml-2 w-5 h-5 text-green-500" />}
-                  {formData.accountError && <span className="ml-2 text-xs text-red-500">{formData.accountError}</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Account Number"
-                  value={formData.accountNumber}
-                  onChange={e => handleInputChange('accountNumber', e.target.value)}
-                  onBlur={handleAccountNumberBlur}
-                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
-                    formData.accountError ? 'border-red-500' : formData.accountVerified ? 'border-green-500' : errors.accountNumber ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formData.accountName && (
-                  <div className="mt-2 flex items-center text-green-600 text-sm font-semibold">
-                    <CheckCircle className="w-5 h-5 mr-1" />
-                    {formData.accountName}
-                  </div>
-                )}
-              </div>
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -707,15 +787,40 @@ const ProSellerForm = () => {
                 <div><span className="font-semibold">Manager Email:</span> {formData.managerEmail}</div>
                 <div><span className="font-semibold">Manager Phone:</span> {formData.managerPhone}</div>
                 <div><span className="font-semibold">Product Lines:</span> {formData.productLines.join(', ') || 'None'}</div>
-                <div><span className="font-semibold">Bank:</span> {formData.bankName}</div>
-                <div>
-                  <span className="font-semibold">Account Number:</span> {formData.accountNumber}{' '}
-                  {formData.accountVerified && <CheckCircle className="inline w-4 h-4 text-green-500 ml-1" />}
-                </div>
-                <div><span className="font-semibold">Account Name:</span> {formData.accountName || 'Not verified'}</div>
                 <div><span className="font-semibold">Agreed to Terms:</span> {formData.agree ? 'Yes' : 'No'}</div>
               </div>
               <div className="text-xs text-gray-500 text-center">By submitting, you confirm all information is correct and consent to verification.</div>
+            </div>
+          )}
+          {currentStep === 5 && (
+            <div className="space-y-4 sm:space-y-6">
+              <div className="mb-6 text-center">
+                <Mail className="w-6 h-6 text-orange-500 mx-auto mb-3" />
+                <h2 className="text-xl font-bold text-orange-800 mb-2">Verify Your Email</h2>
+                <p className="text-orange-600">Enter the 6-digit code sent to {formData.email}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Verification Code <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={formData.otp}
+                  onChange={e => handleInputChange('otp', e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.otp ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.otp && <p className="text-red-500 text-xs mt-1">{errors.otp}</p>}
+              </div>
+              <div className="text-center">
+                <button
+                  onClick={handleResendOtp}
+                  className="text-orange-600 underline hover:text-orange-800 text-sm"
+                  disabled={otpVerifying}
+                >
+                  Resend OTP
+                </button>
+              </div>
             </div>
           )}
         </motion.div>
@@ -724,15 +829,21 @@ const ProSellerForm = () => {
   };
 
   const steps = [
-    { label: 'Business Info' },
-    { label: 'Contact Info' },
-    { label: 'Products & Banking' },
-    { label: 'Review & Submit' },
+    { label: 'Business' },
+    { label: 'Contact' },
+    { label: 'Product' },
+    { label: 'Review' },
+    { label: 'Verification', conditional: formData.signup && !user },
   ];
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex items-center justify-center py-8 px-2 sm:px-4">
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+      <SuccessPopup
+        isOpen={showSuccessPopup}
+        onClose={handlePopupClose}
+        onConfirm={handlePopupConfirm}
+      />
       <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 md:px-8">
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-orange-100 dark:border-gray-800 overflow-hidden">
           <div className="px-4 sm:px-8 md:px-12 pt-10 pb-4 md:pt-14 md:pb-6">
@@ -744,71 +855,80 @@ const ProSellerForm = () => {
             </div>
             <div className="block sm:hidden mb-10">
               <div className="flex items-center w-full mb-2">
-                {steps.map((step, idx) => (
-                  <React.Fragment key={step.label}>
-                    <div className="flex-1 flex flex-col items-center">
-                      <div
-                        className={`w-7 h-7 flex items-center justify-center rounded-full border-2 text-sm font-bold
-                        ${
-                          idx < currentStep - 1
-                            ? 'border-orange-600 bg-orange-100 text-orange-600'
-                            : idx === currentStep - 1
-                            ? 'border-orange-700 bg-orange-200 text-orange-700'
-                            : 'border-gray-200 bg-gray-100 text-gray-400'
-                        }`}
-                      >
-                        {idx + 1}
+                {steps.map((step, idx) => {
+                  if (step.conditional && !step.conditional) return null;
+                  return (
+                    <React.Fragment key={step.label}>
+                      <div className="flex-1 flex flex-col items-center">
+                        <div
+                          className={`w-7 h-7 flex items-center justify-center rounded-full border-2 text-sm font-bold
+                          ${
+                            idx < currentStep - 1
+                              ? 'border-orange-600 bg-orange-100 text-orange-600'
+                              : idx === currentStep - 1
+                              ? 'border-orange-700 bg-orange-200 text-orange-700'
+                              : 'border-gray-200 bg-gray-100 text-gray-400'
+                          }`}
+                        >
+                          {idx + 1}
+                        </div>
                       </div>
-                    </div>
-                    {idx < steps.length - 1 && (
-                      <div className={`flex-1 h-1 mx-1 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200'}`}></div>
-                    )}
-                  </React.Fragment>
-                ))}
+                      {idx < steps.length - 1 && (!steps[idx + 1].conditional || steps[idx + 1].conditional) && (
+                        <div className={`flex-1 h-1 mx-1 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200'}`}></div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
               <div className="flex justify-between w-full px-1">
-                {steps.map((step, idx) => (
-                  <span
-                    key={step.label}
-                    className={`text-[10px] font-semibold uppercase tracking-wide text-center flex-1 ${
-                      idx === currentStep - 1 ? 'text-orange-700' : 'text-gray-400'
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                ))}
+                {steps.map((step, idx) => {
+                  if (step.conditional && !step.conditional) return null;
+                  return (
+                    <span
+                      key={step.label}
+                      className={`text-[10px] font-semibold uppercase tracking-wide text-center flex-1 ${
+                        idx === currentStep - 1 ? 'text-orange-700' : 'text-gray-400'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
             <div className="hidden sm:flex items-center justify-center mb-10 gap-4">
-              {steps.map((step, idx) => (
-                <React.Fragment key={step.label}>
-                  <div
-                    className={`flex flex-col items-center ${
-                      idx < currentStep - 1
-                        ? 'text-orange-600'
-                        : idx === currentStep - 1
-                        ? 'text-orange-700 font-bold dark:text-orange-300'
-                        : 'text-gray-300 dark:text-gray-600'
-                    }`}
-                  >
+              {steps.map((step, idx) => {
+                if (step.conditional && !step.conditional) return null;
+                return (
+                  <React.Fragment key={step.label}>
                     <div
-                      className={`w-9 h-9 flex items-center justify-center rounded-full border-4 ${
+                      className={`flex flex-col items-center ${
                         idx < currentStep - 1
-                          ? 'border-orange-600 bg-orange-100'
+                          ? 'text-orange-600'
                           : idx === currentStep - 1
-                          ? 'border-orange-700 bg-orange-200 dark:bg-orange-900'
-                          : 'border-gray-200 bg-gray-100 dark:bg-gray-800'
-                      } text-lg font-bold`}
+                          ? 'text-orange-700 font-bold dark:text-orange-300'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
                     >
-                      {idx + 1}
+                      <div
+                        className={`w-9 h-9 flex items-center justify-center rounded-full border-4 ${
+                          idx < currentStep - 1
+                            ? 'border-orange-600 bg-orange-100'
+                            : idx === currentStep - 1
+                            ? 'border-orange-700 bg-orange-200 dark:bg-orange-900'
+                            : 'border-gray-200 bg-gray-100 dark:bg-gray-800'
+                        } text-lg font-bold`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <span className="text-xs mt-2 font-semibold tracking-wide uppercase whitespace-nowrap">{step.label}</span>
                     </div>
-                    <span className="text-xs mt-2 font-semibold tracking-wide uppercase whitespace-nowrap">{step.label}</span>
-                  </div>
-                  {idx < steps.length - 1 && (
-                    <div className={`flex-1 h-1 mx-2 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                  )}
-                </React.Fragment>
-              ))}
+                    {idx < steps.length - 1 && (!steps[idx + 1].conditional || steps[idx + 1].conditional) && (
+                      <div className={`flex-1 h-1 mx-2 rounded-full ${idx < currentStep - 1 ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
             <form
               onSubmit={e => {
@@ -826,16 +946,25 @@ const ProSellerForm = () => {
                       type="button"
                       onClick={handleBack}
                       className="flex-1 px-6 py-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-base sm:text-lg shadow hover:bg-orange-200 transition border-2 border-orange-200"
+                      disabled={isSubmitting || otpVerifying}
                     >
                       Back
                     </button>
                   )}
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || otpVerifying}
                     className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? 'Submitting...' : currentStep < 4 ? 'Continue' : 'Submit'}
+                    {isSubmitting || otpVerifying
+                      ? 'Processing...'
+                      : currentStep < 4
+                      ? 'Continue'
+                      : currentStep === 4
+                      ? formData.signup && !user
+                        ? 'Send OTP'
+                        : 'Submit'
+                      : 'Verify OTP'}
                   </button>
                 </div>
               </div>

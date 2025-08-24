@@ -31,17 +31,17 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
     }
 
     if (!walletSnap.exists()) {
-      console.log(`Creating wallet for ${sellerId} with pendingBalance: ₦${productPrice}`);
+      console.log(`Creating wallet for ${sellerId} with availableBalance: ₦${productPrice}`);
       await setDoc(walletRef, {
-        availableBalance: 0,
-        pendingBalance: productPrice,
+        availableBalance: productPrice,
+        pendingWithdrawals: 0,
         updatedAt: serverTimestamp(),
         accountDetails,
       });
     } else {
-      console.log(`Updating wallet for ${sellerId}: increment pendingBalance by ₦${productPrice}`);
+      console.log(`Updating wallet for ${sellerId}: increment availableBalance by ₦${productPrice}`);
       await updateDoc(walletRef, {
-        pendingBalance: increment(productPrice),
+        availableBalance: increment(productPrice),
         updatedAt: serverTimestamp(),
         accountDetails,
       });
@@ -50,7 +50,7 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
       availableBalance: increment(fees),
       updatedAt: serverTimestamp(),
     });
-    console.log(`Checkout success: ₦${productPrice} to seller pendingBalance, ₦${fees} to admin`);
+    console.log(`Checkout success: ₦${productPrice} to seller availableBalance, ₦${fees} to admin`);
   } catch (err) {
     console.error(`Checkout failed for ${sellerId}:`, err);
     throw new Error(`Checkout failed: ${err.message}`);
@@ -60,7 +60,7 @@ const handleCheckout = async (sellerId, productPrice, totalAmount) => {
 export default function Wallet() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [pendingBalance, setPendingBalance] = useState(0);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,6 @@ export default function Wallet() {
   const [isOnboarded, setIsOnboarded] = useState(null);
   const [isProSeller, setIsProSeller] = useState(false);
   const [chartData, setChartData] = useState({ series: [], options: {} });
-  const pendingBalanceRef = useRef(0);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -93,7 +92,7 @@ export default function Wallet() {
           };
           await setDoc(walletRef, {
             availableBalance: 0,
-            pendingBalance: 0,
+            pendingWithdrawals: 0,
             updatedAt: serverTimestamp(),
             accountDetails,
           });
@@ -122,12 +121,12 @@ export default function Wallet() {
         const data = docSnap.data();
         console.log(`Snapshot for ${auth.currentUser.uid}:`, data);
         setBalance(data.availableBalance || 0);
-        setPendingBalance(data.pendingBalance || 0);
-        updateChartData(data.availableBalance || 0, data.pendingBalance || 0);
+        setPendingWithdrawals(data.pendingWithdrawals || 0);
+        updateChartData(data.availableBalance || 0, data.pendingWithdrawals || 0);
       } else {
         console.log(`No wallet for ${auth.currentUser.uid}`);
         setBalance(0);
-        setPendingBalance(0);
+        setPendingWithdrawals(0);
         updateChartData(0, 0);
       }
     }, (err) => {
@@ -197,11 +196,7 @@ export default function Wallet() {
         accountDetails,
       };
       console.log('Withdrawal request:', `${BACKEND_URL}/initiate-seller-payout`, payload);
-      await updateDoc(walletRef, {
-        availableBalance: increment(-amountNum),
-        pendingBalance: increment(amountNum),
-        updatedAt: serverTimestamp(),
-      });
+      // NEW: Removed local updateDoc; backend handles balance updates
       const response = await axios.post(`${BACKEND_URL}/initiate-seller-payout`, payload, { timeout: 10000 });
       if (response.data.status === 'success') {
         setAmount('');
@@ -216,9 +211,9 @@ export default function Wallet() {
     }
   };
 
-  const updateChartData = (availableBalance = balance, pendingBalance = 0) => {
+  const updateChartData = (availableBalance = balance, pendingWithdrawals = 0) => {
     setChartData({
-      series: [availableBalance, pendingBalance],
+      series: [availableBalance, pendingWithdrawals],
       options: {
         chart: { type: 'area', height: '100%', width: '100%', animations: { enabled: true } },
         xaxis: { categories: ['Balance'] },
@@ -295,9 +290,9 @@ export default function Wallet() {
                 <WalletIcon className="w-16 h-16" />
               </div>
               <span className="text-xs font-light">Pending Transactions</span>
-              <h3 className="text-lg font-semibold mt-2">Pending Balance</h3>
+              <h3 className="text-lg font-semibold mt-2">Pending Withdrawals</h3>
               <p className="text-2xl font-bold mt-2 bg-white p-2 rounded-lg text-orange-900">
-                <PriceFormatter price={pendingBalance} />
+                <PriceFormatter price={pendingWithdrawals} />
               </p>
             </div>
           </div>

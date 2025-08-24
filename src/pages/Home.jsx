@@ -179,7 +179,7 @@ const Home = () => {
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
       {/* Privacy Policies and Terms & Conditions Links */}
-      <div className="footer-bar">
+      <div className="footer-bar mb-10">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-row justify-center items-center gap-4 text-sm">
             <Link 

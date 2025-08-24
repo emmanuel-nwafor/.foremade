@@ -42,7 +42,6 @@ const Home = () => {
       console.log('🏷️ CATEGORIES SNAPSHOT:');
       console.log('Categories docs count:', snapshot.docs.length);
       
-      // Log individual category documents
       snapshot.docs.forEach((doc, index) => {
         console.log(`Category ${index + 1}:`, {
           id: doc.id,
@@ -135,16 +134,16 @@ const Home = () => {
       {/* Welcome banner for new visitors (eBay-inspired) */}
       {isNewVisitor && (
         <div className="welcome-banner">
-          <div className="container mx-auto flex items-center justify-between">
+          <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8">
             <div>
-              <h3 className="font-bold text-primary">Welcome to Foremade!</h3>
-              <p className="text-sm text-secondary">Discover amazing deals from trusted sellers</p>
+              <h3 className="font-bold text-primary text-base sm:text-lg">Welcome to Foremade!</h3>
+              <p className="text-sm sm:text-base text-secondary">Discover amazing deals from trusted sellers</p>
             </div>
             <button 
               onClick={() => setIsNewVisitor(false)}
               className="text-primary hover:text-primary-dark"
             >
-              <i className="bx bx-x text-xl"></i>
+              <i className="bx bx-x text-xl sm:text-2xl"></i>
             </button>
           </div>
         </div>
@@ -179,26 +178,26 @@ const Home = () => {
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
       {/* Privacy Policies and Terms & Conditions Links */}
-      <div className="footer-bar mb-10">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-row justify-center items-center gap-4 text-sm">
+      <div className="footer-bar py-6 sm:py-8 bg-background-light border-t border-gray-200">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 text-xs sm:text-sm md:text-base text-secondary">
             <Link 
               to="/privacy-policy" 
-              className="footer-link"
+              className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
             >
               Privacy Policy
             </Link>
-            <span className="footer-separator">|</span>
+            <span className="footer-separator hidden sm:inline">|</span>
             <Link 
               to="/terms-conditions" 
-              className="footer-link"
+              className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
             >
               Terms & Conditions
             </Link>
-            <span className="footer-separator">|</span>
+            <span className="footer-separator hidden sm:inline">|</span>
             <Link 
               to="/user-agreement" 
-              className="footer-link"
+              className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
             >
               User Agreement
             </Link>

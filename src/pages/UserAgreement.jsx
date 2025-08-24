@@ -247,7 +247,7 @@ const UserAgreement = () => {
             <li>Abusing platform systems, wallets, or other users.</li>
           </ul>
           <p className="mb-4 text-secondary">You may close your account at any time. If eligible, your remaining wallet balance will be made available for withdrawal, subject to any pending investigations or disputes.</p>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex">
             <button
               onClick={() => setShowDeletePopup(true)}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-base shadow-lg hover:from-red-600 hover:to-red-700 focus:ring-4 focus:ring-red-200 transition"

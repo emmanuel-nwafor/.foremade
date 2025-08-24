@@ -182,6 +182,12 @@ const Home = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 text-xs sm:text-sm md:text-base text-secondary">
             <Link 
+              to="/user-agreement" 
+              className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
+            >
+              User Agreement
+            </Link>
+            <Link 
               to="/privacy-policy" 
               className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
             >
@@ -195,12 +201,6 @@ const Home = () => {
               Terms & Conditions
             </Link>
             <span className="footer-separator hidden sm:inline">|</span>
-            <Link 
-              to="/user-agreement" 
-              className="footer-link px-3 py-2 hover:text-primary transition-colors min-w-[100px] text-center"
-            >
-              User Agreement
-            </Link>
           </div>
         </div>
       </div>

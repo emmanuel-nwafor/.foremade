@@ -19,6 +19,15 @@ import { Palette, Ruler } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
 
+// Utility to debounce a function
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 const colorMap = {
   red: "#DC2626",
   blue: "#2563EB",
@@ -117,6 +126,7 @@ const Product = () => {
     fetchMinimumPurchase();
   }, [addAlert]);
 
+  // Fetch daily deals
   useEffect(() => {
     const fetchDailyDeals = async () => {
       try {
@@ -129,6 +139,7 @@ const Product = () => {
     fetchDailyDeals();
   }, []);
 
+  // Fetch fee configurations
   useEffect(() => {
     const fetchFeeConfig = async () => {
       try {
@@ -144,8 +155,9 @@ const Product = () => {
     fetchFeeConfig();
   }, []);
 
+  // Calculate fees
   useEffect(() => {
-    if (feeConfig && product?.category && (selectedVariant?.price || product.price) > 0) {
+    if (feeConfig && product?.category && (selectedVariant?.price || product?.price) > 0) {
       const basePrice = selectedVariant?.price || product.price;
       const config = feeConfig[product.category] || {
         minPrice: 1000,
@@ -166,6 +178,7 @@ const Product = () => {
     }
   }, [feeConfig, product?.category, selectedVariant?.price, product?.price]);
 
+  // Format description
   const formatDescription = (text) => {
     if (!text || typeof text !== "string") return "";
     const sanitized = text.replace(/<[^>]+>/g, "");
@@ -197,62 +210,57 @@ const Product = () => {
     return output;
   };
 
-  const fetchFavorites = useCallback(async () => {
-    if (!auth.currentUser) {
-      setFavorites([]);
-      return;
-    }
-    try {
-      const favoritesQuery = query(
-        collection(db, "favorites"),
-        where("userId", "==", auth.currentUser.uid)
-      );
-      const favoritesSnapshot = await getDocs(favoritesQuery);
-      const favoriteIds = favoritesSnapshot.docs.map(
-        (doc) => doc.data().productId
-      );
-      setFavorites(favoriteIds);
-    } catch (err) {
-      console.error("Error fetching favorites:", err);
-      addAlert("Failed to load favorites.", "error", 3000);
-    }
-  }, [addAlert]);
+  // Fetch favorites with debouncing
+  const fetchFavorites = useCallback(
+    debounce(async (user) => {
+      if (!user) {
+        setFavorites([]);
+        return;
+      }
+      try {
+        const favoritesQuery = query(
+          collection(db, "favorites"),
+          where("userId", "==", user.uid)
+        );
+        const favoritesSnapshot = await getDocs(favoritesQuery);
+        const favoriteIds = favoritesSnapshot.docs.map(
+          (doc) => doc.data().productId
+        );
+        setFavorites(favoriteIds);
+      } catch (err) {
+        console.error("Error fetching favorites:", err);
+        addAlert("Failed to load favorites.", "error", 3000);
+      }
+    }, 500),
+    [addAlert]
+  );
 
+  // Handle auth state changes
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchFavorites();
-      } else {
-        setFavorites([]);
-      }
+      fetchFavorites(user);
     });
     return () => unsubscribe();
   }, [fetchFavorites]);
 
+  // Fetch product and related data
   useEffect(() => {
     window.scrollTo(0, 0);
     setLoading(true);
 
-    if (!id || typeof id !== "string" || id.trim() === "") {
-      setLoading(false);
-      addAlert("Invalid product ID", "error", 3000);
-      navigate("/products");
-      return;
-    }
-
     const fetchProduct = async () => {
       try {
-        console.log("Fetching product ID:", id);
-        if (
-          !id ||
-          typeof id !== "string" ||
-          id.trim() === "" ||
-          id.includes("/")
-        ) {
+        if (!id || typeof id !== "string" || id.trim() === "" || id.includes("/")) {
           throw new Error("Invalid product ID");
         }
+
+        // Batch Firebase requests
         const productRef = doc(db, "products", id);
-        const productSnap = await getDoc(productRef);
+        const [productSnap, dealsSnapshot] = await Promise.all([
+          getDoc(productRef),
+          getDocs(collection(db, "dailyDeals")),
+        ]);
+
         if (!productSnap.exists()) {
           throw new Error("Product not found");
         }
@@ -260,10 +268,16 @@ const Product = () => {
         if (data.status !== "approved") {
           throw new Error("Product not approved");
         }
+
+        // Fetch seller and reviews
         let location = "";
+        let reviews = [];
         if (data.sellerId) {
           const sellerRef = doc(db, "users", data.sellerId);
-          const sellerSnap = await getDoc(sellerRef);
+          const [sellerSnap, reviewsSnapshot] = await Promise.all([
+            getDoc(sellerRef),
+            getDocs(collection(db, `products/${id}/reviews`)),
+          ]);
           if (sellerSnap.exists()) {
             const sellerData = sellerSnap.data();
             location = sellerData.location
@@ -274,7 +288,20 @@ const Product = () => {
                   .replace(/, ,/g, ",")
               : "";
           }
+          reviews = reviewsSnapshot.docs.map((reviewDoc) => {
+            const reviewData = reviewDoc.data();
+            let userName = reviewData.userName || "Anonymous";
+            if (typeof userName === "object" && userName.name) {
+              userName = userName.name;
+            }
+            return {
+              id: reviewDoc.id,
+              ...reviewData,
+              userName,
+            };
+          });
         }
+
         setSellerLocation(location);
 
         let imageUrls = Array.isArray(data.imageUrls)
@@ -288,21 +315,7 @@ const Product = () => {
         }
         const category = data.category?.trim().toLowerCase() || "uncategorized";
         const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-        const reviewsSnapshot = await getDocs(
-          collection(db, `products/${id}/reviews`)
-        );
-        const reviews = reviewsSnapshot.docs.map((reviewDoc) => {
-          const reviewData = reviewDoc.data();
-          let userName = reviewData.userName || "Anonymous";
-          if (typeof userName === "object" && userName.name) {
-            userName = userName.name;
-          }
-          return {
-            id: reviewDoc.id,
-            ...reviewData,
-            userName,
-          };
-        });
+
         const productData = {
           id: productSnap.id,
           name: data.name || "Unnamed Product",
@@ -327,7 +340,6 @@ const Product = () => {
           variants: data.variants || [],
         };
 
-        const dealsSnapshot = await getDocs(collection(db, "dailyDeals"));
         const activeDeal = dealsSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           .find(
@@ -344,7 +356,6 @@ const Product = () => {
           setDiscountPercentage(0);
         }
 
-        console.log("Fetched product:", productData);
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
@@ -363,10 +374,9 @@ const Product = () => {
           setSelectedSize(firstValidVariant.size);
         }
 
+        // Update recent searches
         const updateRecentSearches = () => {
-          const recent = JSON.parse(
-            localStorage.getItem("recentSearches") || "[]"
-          );
+          const recent = JSON.parse(localStorage.getItem("recentSearches") || "[]");
           const variantData =
             productData.variants.length && selectedVariant
               ? {
@@ -395,6 +405,7 @@ const Product = () => {
         };
         updateRecentSearches();
 
+        // Fetch similar products
         const similarQuery = query(
           collection(db, "products"),
           where("category", "==", productData.category)
@@ -459,12 +470,9 @@ const Product = () => {
       }
     };
     fetchProduct();
-
-    return () => {
-      setLoading(false);
-    };
   }, [id, navigate]);
 
+  // Load recent searches
   useEffect(() => {
     try {
       const recent = JSON.parse(localStorage.getItem("recentSearches") || "[]");
@@ -489,6 +497,7 @@ const Product = () => {
     }
   }, []);
 
+  // Update media when product or variant changes
   useEffect(() => {
     if (!product) return;
     const currentVariant = product.variants.length
@@ -510,6 +519,7 @@ const Product = () => {
     setCurrentMediaIndex(0);
   }, [product, selectedVariant]);
 
+  // Update media index
   useEffect(() => {
     if (!product) return;
     const currentVariant = product.variants.length
@@ -567,7 +577,7 @@ const Product = () => {
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
-    const percentage = total > 10000 ? 0.10 : 0.02 || total < 10000 ? 0.50 : 0.02;
+    const percentage = total > 10000 ? 0.10 : 0.02;
     return Math.round(total * percentage);
   };
 
@@ -758,21 +768,26 @@ const Product = () => {
     }
   };
 
-  const handleMediaClick = (media, index) => {
-    if (
-      typeof media === "string" &&
-      (media.startsWith("https://res.cloudinary.com/") ||
-        media.includes(".mp4"))
-    ) {
-      setSlideDirection(index > currentMediaIndex ? "right" : "left");
-      setMainMedia(media);
-      setCurrentMediaIndex(index);
-      setIsVideoPlaying(media.includes(".mp4"));
-    }
-  };
+  // Debounced media click handler
+  const handleMediaClick = useCallback(
+    debounce((media, index) => {
+      if (
+        typeof media === "string" &&
+        (media.startsWith("https://res.cloudinary.com/") ||
+          media.includes(".mp4"))
+      ) {
+        setSlideDirection(index > currentMediaIndex ? "right" : "left");
+        setMainMedia(media);
+        setCurrentMediaIndex(index);
+        setIsVideoPlaying(media.includes(".mp4"));
+      }
+    }, 300),
+    [currentMediaIndex]
+  );
 
+  // Debounced variant change handler
   const handleVariantChange = useCallback(
-    (color, size) => {
+    debounce((color, size) => {
       if (!product?.variants) return;
       const variant = product.variants.find(
         (v) => v.color === color && v.size === size
@@ -808,7 +823,7 @@ const Product = () => {
       setCurrentMediaIndex(0);
       setQuantity(1);
       addAlert("Variant selected successfully!", "success", 3000);
-    },
+    }, 300),
     [product, selectedVariant, addAlert]
   );
 
@@ -985,10 +1000,10 @@ const Product = () => {
             margin-bottom: 1rem;
             transition: all 0.3s ease;
           }
-          // .product-info-card:hover {
-          //   transform: translateY(-2px);
-          //   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-          // }
+        //   .product-info-card:hover {
+        //     transform: translateY(-2px);
+        //     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        //   }
           .price-section {
             background: #f0f0f0;
             border: 1px solid #cccccc;

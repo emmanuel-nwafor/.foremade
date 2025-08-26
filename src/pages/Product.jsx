@@ -78,7 +78,7 @@ const Product = () => {
     totalEstimatedPrice: 0,
     sellerEarnings: 0,
   });
-  const [minimumPurchase, setMinimumPurchase] = useState(25000); // Default from AdminSetMinimumPurchase
+  const [minimumPurchase, setMinimumPurchase] = useState(25000);
   const [showShippingFeeModal, setShowShippingFeeModal] = useState(false);
 
   const { alerts, addAlert, removeAlert } = useAlerts();
@@ -356,10 +356,11 @@ const Product = () => {
           setSelectedSize(productData.sizes[0]);
         }
         if (productData.variants.length > 0) {
-          setSelectedVariant(productData.variants[0]);
-          setPreviousVariant(productData.variants[0]);
-          setSelectedColor(productData.variants[0].color);
-          setSelectedSize(productData.variants[0].size);
+          const firstValidVariant = productData.variants.find(v => v.stock > 0) || productData.variants[0];
+          setSelectedVariant(firstValidVariant);
+          setPreviousVariant(firstValidVariant);
+          setSelectedColor(firstValidVariant.color);
+          setSelectedSize(firstValidVariant.size);
         }
 
         const updateRecentSearches = () => {
@@ -566,7 +567,7 @@ const Product = () => {
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
-    const percentage = total > 10000 ? 0.10 : 0.02 || total < 10000 ? 0.50 : 0.02; // 1% if total > 10000, else 2%
+    const percentage = total > 10000 ? 0.10 : 0.02 || total < 10000 ? 0.50 : 0.02;
     return Math.round(total * percentage);
   };
 
@@ -776,30 +777,39 @@ const Product = () => {
       const variant = product.variants.find(
         (v) => v.color === color && v.size === size
       );
-      if (variant) {
-        setPreviousVariant(selectedVariant);
-        setSelectedVariant(variant);
-        setSelectedColor(color);
-        setSelectedSize(size);
-        setProduct((prev) => ({
-          ...prev,
-          price: variant.price,
-          stock: variant.stock,
-          imageUrls:
-            variant.imageUrls && variant.imageUrls.length > 0
-              ? variant.imageUrls
-              : prev.imageUrls,
-        }));
-        setMainMedia(
-          variant.imageUrls && variant.imageUrls.length > 0
-            ? variant.imageUrls[0]
-            : product.imageUrls[0]
-        );
-        setCurrentMediaIndex(0);
-        setQuantity(1);
+      if (!variant) {
+        addAlert("Selected variant combination is unavailable.", "error", 3000);
+        revertToPreviousVariant();
+        return;
       }
+      if (variant.stock <= 0) {
+        addAlert("Selected variant is out of stock.", "error", 3000);
+        revertToPreviousVariant();
+        return;
+      }
+      setPreviousVariant(selectedVariant);
+      setSelectedVariant(variant);
+      setSelectedColor(color);
+      setSelectedSize(size);
+      setProduct((prev) => ({
+        ...prev,
+        price: variant.price,
+        stock: variant.stock,
+        imageUrls:
+          variant.imageUrls && variant.imageUrls.length > 0
+            ? variant.imageUrls
+            : prev.imageUrls,
+      }));
+      setMainMedia(
+        variant.imageUrls && variant.imageUrls.length > 0
+          ? variant.imageUrls[0]
+          : product.imageUrls[0]
+      );
+      setCurrentMediaIndex(0);
+      setQuantity(1);
+      addAlert("Variant selected successfully!", "success", 3000);
     },
-    [product, selectedVariant]
+    [product, selectedVariant, addAlert]
   );
 
   const revertToPreviousVariant = () => {
@@ -824,6 +834,13 @@ const Product = () => {
       setCurrentMediaIndex(0);
       setQuantity(1);
     }
+  };
+
+  const isVariantAvailable = (color, size) => {
+    const variant = product?.variants?.find(
+      (v) => v.color === color && v.size === size
+    );
+    return variant && variant.stock > 0;
   };
 
   const getSafeImageUrl = (url) => {
@@ -968,10 +985,10 @@ const Product = () => {
             margin-bottom: 1rem;
             transition: all 0.3s ease;
           }
-          .product-info-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-          }
+          // .product-info-card:hover {
+          //   transform: translateY(-2px);
+          //   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          // }
           .price-section {
             background: #f0f0f0;
             border: 1px solid #cccccc;
@@ -993,6 +1010,12 @@ const Product = () => {
             background-color: #E0B912;
             color: #333333;
             box-shadow: 0 0 0 2px rgba(224, 185, 18, 0.2);
+          }
+          .selection-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #CCCCCC;
+            border-color: #CCCCCC;
           }
           .info-badge {
             display: inline-flex;
@@ -1222,7 +1245,7 @@ const Product = () => {
                 )}
               </div>
 
-              <div className="order-2 md:order-2 product-info-card shadow-lg">
+              <div className="order-2 md:order-2 product-info-card">
                 <div className="flex items-center mb-4">
                   <button
                     onClick={() => navigate(-1)}
@@ -1368,47 +1391,55 @@ const Product = () => {
                           </span>
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {product.colors.map((colorName) => (
-                            <button
-                              key={colorName}
-                              onClick={() =>
-                                handleVariantChange(colorName, selectedSize)
-                              }
-                              className={`selection-option p-2 rounded-lg border-2 flex items-center justify-center min-w-[32px] min-h-[32px] ${
-                                selectedColor === colorName
-                                  ? "selected"
-                                  : "border-[#CCCCCC] bg-[#F0F0F0] text-[#333333] hover:bg-[#E0B912] hover:text-[#333333]"
-                              }`}
-                              style={{
-                                backgroundColor:
-                                  colorMap[colorName.toLowerCase()] || colorName,
-                                borderColor:
+                          {product.colors.map((colorName) => {
+                            const isAvailable = product.sizes.length > 0
+                              ? product.sizes.some((size) => isVariantAvailable(colorName, size))
+                              : isVariantAvailable(colorName, selectedSize);
+                            return (
+                              <button
+                                key={colorName}
+                                onClick={() =>
+                                  isAvailable && handleVariantChange(colorName, selectedSize)
+                                }
+                                className={`selection-option p-2 rounded-lg border-2 flex items-center justify-center min-w-[32px] min-h-[32px] ${
                                   selectedColor === colorName
-                                    ? "#E0B912"
-                                    : "#CCCCCC",
-                                color:
-                                  colorName.toLowerCase() === "white" ||
-                                  colorName.toLowerCase() === "silver" ||
-                                  colorMap[colorName.toLowerCase()] === "#F0F0F0"
-                                    ? "#333333"
-                                    : "#F0F0F0",
-                              }}
-                              aria-label={`Select color ${colorName}`}
-                              title={colorName}
-                            >
-                              {selectedColor !== colorName &&
-                              (colorName.toLowerCase() === "white" ||
-                                colorName.toLowerCase() === "silver") ? (
-                                <div
-                                  className="w-5 h-5 rounded-full border border-gray-400"
-                                  style={{
-                                    backgroundColor:
-                                      colorMap[colorName.toLowerCase()] || colorName,
-                                  }}
-                                ></div>
-                              ) : null}
-                            </button>
-                          ))}
+                                    ? "selected"
+                                    : isAvailable
+                                    ? "border-[#CCCCCC] bg-[#F0F0F0] text-[#333333] hover:bg-[#E0B912] hover:text-[#333333]"
+                                    : "disabled"
+                                }`}
+                                style={{
+                                  backgroundColor:
+                                    colorMap[colorName.toLowerCase()] || colorName,
+                                  borderColor:
+                                    selectedColor === colorName
+                                      ? "#E0B912"
+                                      : "#CCCCCC",
+                                  color:
+                                    colorName.toLowerCase() === "white" ||
+                                    colorName.toLowerCase() === "silver" ||
+                                    colorMap[colorName.toLowerCase()] === "#F0F0F0"
+                                      ? "#333333"
+                                      : "#F0F0F0",
+                                }}
+                                disabled={!isAvailable}
+                                aria-label={`Select color ${colorName}`}
+                                title={isAvailable ? colorName : "Color unavailable or out of stock"}
+                              >
+                                {selectedColor !== colorName &&
+                                (colorName.toLowerCase() === "white" ||
+                                  colorName.toLowerCase() === "silver") ? (
+                                  <div
+                                    className="w-5 h-5 rounded-full border border-gray-400"
+                                    style={{
+                                      backgroundColor:
+                                        colorMap[colorName.toLowerCase()] || colorName,
+                                    }}
+                                  ></div>
+                                ) : null}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1422,22 +1453,29 @@ const Product = () => {
                           </span>
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {product.sizes.map((sizeName) => (
-                            <button
-                              key={sizeName}
-                              onClick={() =>
-                                handleVariantChange(selectedColor, sizeName)
-                              }
-                              className={`selection-option px-4 py-2 rounded-lg border-2 ${
-                                selectedSize === sizeName
-                                  ? "selected"
-                                  : "border-[#CCCCCC] bg-[#F0F0F0] text-[#333333] hover:bg-[#E0B912] hover:text-[#333333]"
-                              }`}
-                              aria-label={`Select size ${sizeName}`}
-                            >
-                              {sizeName}
-                            </button>
-                          ))}
+                          {product.sizes.map((sizeName) => {
+                            const isAvailable = isVariantAvailable(selectedColor, sizeName);
+                            return (
+                              <button
+                                key={sizeName}
+                                onClick={() =>
+                                  isAvailable && handleVariantChange(selectedColor, sizeName)
+                                }
+                                className={`selection-option px-4 py-2 rounded-lg border-2 ${
+                                  selectedSize === sizeName
+                                    ? "selected"
+                                    : isAvailable
+                                    ? "border-[#CCCCCC] bg-[#F0F0F0] text-[#333333] hover:bg-[#E0B912] hover:text-[#333333]"
+                                    : "disabled"
+                                }`}
+                                disabled={!isAvailable}
+                                aria-label={`Select size ${sizeName}`}
+                                title={isAvailable ? sizeName : "Size unavailable or out of stock"}
+                              >
+                                {sizeName}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1518,13 +1556,12 @@ const Product = () => {
                     className="flex-1 px-6 py-3 rounded-lg bg-[#112d4e] text-[#F0F0F0] font-semibold hover:bg-[#007F8B] focus:outline-none focus:ring-2 focus:ring-[#112d4e] focus:ring-offset-2 transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Pay Now
-                    {/*  */}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="product-info-card shadow-lg mt-6">
+            <div className="product-info-card mt-6">
               <h2 className="text-2xl font-bold text-[#333333] mb-4">
                 Description
               </h2>
@@ -1562,7 +1599,7 @@ const Product = () => {
               </div>
             </div>
 
-            <div className="product-info-card shadow-lg mt-6">
+            <div className="product-info-card mt-6">
               <h2 className="text-2xl font-bold text-[#333333] mb-4">
                 Customer Reviews ({product.reviews.length})
               </h2>
@@ -1681,7 +1718,7 @@ const Product = () => {
 
         <div className="lg:col-span-1">
           {similarProducts.length > 0 && (
-            <div className="product-info-card shadow-lg mb-6">
+            <div className="product-info-card mb-6">
               <h2 className="text-xl font-bold text-[#333333] mb-4">
                 Similar Products
               </h2>
@@ -1733,7 +1770,7 @@ const Product = () => {
           )}
 
           {recentSearches.length > 0 && (
-            <div className="product-info-card shadow-lg">
+            <div className="product-info-card">
               <h2 className="text-xl font-bold text-[#333333] mb-4">
                 Recently Viewed
               </h2>

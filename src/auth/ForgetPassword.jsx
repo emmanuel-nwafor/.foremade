@@ -49,7 +49,7 @@ export default function ForgetPassword() {
     }
 
     try {
-      const response = await fetch('/request-password-reset', {
+      const response = await fetch('https://foremade-backend.onrender.com/request-password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

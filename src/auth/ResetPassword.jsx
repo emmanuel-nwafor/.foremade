@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logi.png';
 
+// Dynamic base URL for API calls
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
 const getFriendlyErrorMessage = (error) => {
   switch (error.message) {
     case 'Network Error':
@@ -58,7 +61,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const response = await fetch('/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +69,14 @@ export default function ResetPassword() {
         body: JSON.stringify({ email, token, newPassword }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('JSON parse error:', jsonError);
+        throw new Error('Server returned an invalid response');
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to reset password');
       }

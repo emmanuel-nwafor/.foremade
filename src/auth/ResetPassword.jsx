@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import logo from '../assets/logi.png';
 
 // Dynamic base URL for API calls
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 const getFriendlyErrorMessage = (error) => {
   switch (error.message) {
@@ -61,7 +61,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/reset-password`, {
+      const response = await fetch(`${API_BASE_URL}/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

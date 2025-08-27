@@ -69,6 +69,7 @@ import Drinks from './pages/Drinks';
 import HomeKitchen from './pages/HomeKitchen';
 import SmartWatches from './pages/SmartWatches';
 import ForgetPassword from './auth/ForgetPassword';
+import ResetPassword from './auth/ResetPassword'
 
 import OtherProductsPage from './pages/OtherProducts';
 import AboutUs from './pages/AboutUs';

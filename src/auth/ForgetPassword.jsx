@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../firebase';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logi.png';
 
 const getFriendlyErrorMessage = (error) => {
-  switch (error.code) {
-    case 'auth/network-request-failed':
+  switch (error.message) {
+    case 'Network Error':
       return 'Check your network connection and try again.';
-    case 'auth/user-not-found':
+    case 'No user found with this email':
       return 'No user found with this email.';
-    case 'auth/invalid-email':
+    case 'Valid email is required':
       return 'Please enter a valid email address.';
     default:
       return 'An unexpected error occurred. Please try again later.';
@@ -51,7 +49,17 @@ export default function ForgetPassword() {
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      const response = await fetch('/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset link');
+      }
+
       setSuccessMessage(`Password reset email sent to ${email}. Please check your inbox.`);
       setEmail('');
       setTimeout(() => {

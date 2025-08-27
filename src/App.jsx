@@ -105,6 +105,7 @@ const Layout = ({ children }) => {
     '/login',
     '/register',
     '/recover-password',
+    '/reset-password',
     '/sell',
     '/smile',
     '/overview',
@@ -177,6 +178,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/recover-password" element={<ForgetPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/add-phone" element={<AddPhone />} />
               <Route path="/pro-seller-form" element={<ProSellerForm />} />
               <Route path="/sellers-guide" element={<HowItWorks />} />

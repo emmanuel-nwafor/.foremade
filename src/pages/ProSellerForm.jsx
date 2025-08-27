@@ -177,16 +177,43 @@ const ProSellerForm = () => {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     if (field === 'regNumber') {
-      validateRegNumber(value);
+      const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8);
+      setFormData(prev => ({ ...prev, regNumber: filteredValue }));
     }
   };
 
-  const validateRegNumber = (value) => {
-    const isValid = /^\d{7,8}$/.test(value);
-    if (!isValid && value) {
-      setFormData(prev => ({ ...prev, regError: 'Registration number must be 7-8 digits' }));
-    } else {
-      setFormData(prev => ({ ...prev, regError: '', regVerified: isValid }));
+  const validateRegNumber = async (value) => {
+    const isValidFormat = /^\d{7,8}$/.test(value);
+    if (!isValidFormat && value) {
+      setFormData(prev => ({ ...prev, regError: 'Registration number must be 7-8 digits', regVerified: false }));
+      return false;
+    }
+    return true;
+  };
+
+  const verifyBusinessReg = async () => {
+    setFormData(prev => ({ ...prev, regVerifying: true, regError: '', regVerified: false }));
+    try {
+      const response = await fetch(`${backendUrl}/api/verify-business-reg`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regNumber: formData.regNumber, country: formData.country }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify business registration');
+      }
+      if (data.success && data.verified) {
+        setFormData(prev => ({ ...prev, regVerified: true, regError: '', regVerifying: false }));
+        addAlert('Business registration verified successfully', 'success');
+      } else {
+        setFormData(prev => ({ ...prev, regVerified: false, regError: data.message || 'Verification failed', regVerifying: false }));
+        addAlert(data.message || 'Verification failed', 'error');
+      }
+    } catch (error) {
+      console.error('Business registration verification error:', error);
+      setFormData(prev => ({ ...prev, regVerified: false, regError: error.message, regVerifying: false }));
+      addAlert(`Failed to verify business registration: ${error.message}`, 'error');
     }
   };
 
@@ -195,6 +222,7 @@ const ProSellerForm = () => {
     if (step === 1) {
       if (!formData.businessName) newErrors.businessName = 'Business name is required';
       if (!formData.regNumber) newErrors.regNumber = 'Registration number is required';
+      if (!formData.regVerified) newErrors.regNumber = 'Business registration must be verified';
       if (formData.regError) newErrors.regNumber = formData.regError;
       if (!formData.address) newErrors.address = 'Business address is required';
       if (!formData.country) newErrors.country = 'Country is required';
@@ -432,8 +460,11 @@ const ProSellerForm = () => {
     }
   };
 
-  const handleRegNumberBlur = () => {
-    validateRegNumber(formData.regNumber);
+  const handleRegNumberBlur = async () => {
+    const isValidFormat = await validateRegNumber(formData.regNumber);
+    if (isValidFormat && formData.regNumber) {
+      await verifyBusinessReg();
+    }
   };
 
   const handleTaxRefBlur = () => {
@@ -509,11 +540,7 @@ const ProSellerForm = () => {
                   type="text"
                   placeholder="7-8 digits (e.g., 1234567)"
                   value={formData.regNumber}
-                  onChange={e => {
-                    const value = e.target.value;
-                    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8);
-                    handleInputChange('regNumber', filteredValue);
-                  }}
+                  onChange={e => handleInputChange('regNumber', e.target.value)}
                   onBlur={handleRegNumberBlur}
                   pattern="\d{7,8}"
                   title="Must be 7-8 digits"

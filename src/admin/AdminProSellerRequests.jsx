@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import AdminSidebar from './AdminSidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminProSellerRequests() {
   const [allProSellers, setAllProSellers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   const fetchProSellers = async () => {
     setPendingLoading(true);
@@ -163,7 +165,7 @@ export default function AdminProSellerRequests() {
                               transition={{ duration: 0.3, delay: index * 0.1 }}
                               className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                             >
-                              <td className="px-4 py-3 break-all max-w-xs">{req.proSellerId}</td>
+                              <td className="px-4 py-3 break-all max-w-xs cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/admin/pro-seller-details/${req.proSellerId}`)}>{req.proSellerId}</td>
                               <td className="px-4 py-3 break-all max-w-xs">{req.userId}</td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
@@ -216,7 +218,7 @@ export default function AdminProSellerRequests() {
                           >
                             <div className="flex flex-col gap-3 mb-3">
                               <div>
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">ProSeller ID: {req.proSellerId}</h4>
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/admin/pro-seller-details/${req.proSellerId}`)}>ProSeller ID: {req.proSellerId}</h4>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 truncate">User ID: {req.userId}</p>
                               </div>
                               <span className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>

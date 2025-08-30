@@ -43,19 +43,17 @@ export default function Login() {
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Check inactivity and trigger email if needed
   const checkInactivity = async (user) => {
     if (!user) return;
 
     const lastLoginStr = localStorage.getItem('lastLogin');
     const inactiveEmailSent = localStorage.getItem('inactiveEmailSent');
-    if (!lastLoginStr || inactiveEmailSent === 'true') return; // No login or email already sent
+    if (!lastLoginStr || inactiveEmailSent === 'true') return;
 
     const lastLogin = new Date(lastLoginStr);
     const now = new Date();
     const daysInactive = (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
 
-    // Check if user has been inactive for 14-21 days
     if (daysInactive >= 14 && daysInactive <= 21) {
       try {
         const response = await fetch(`${BACKEND_URL}/api/send-inactive-email`, {
@@ -69,7 +67,7 @@ export default function Login() {
         const result = await response.json();
         if (response.ok) {
           console.log('Inactive user email triggered:', result.message);
-          localStorage.setItem('inactiveEmailSent', 'true'); // Mark email as sent
+          localStorage.setItem('inactiveEmailSent', 'true');
         } else {
           console.error('Failed to trigger inactive email:', result.error);
         }
@@ -86,7 +84,6 @@ export default function Login() {
       setPasswordError('Use Google Sign-In for this account.');
     }
 
-    // Check for authenticated user and inactivity on page load
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         checkInactivity(user);
@@ -113,7 +110,7 @@ export default function Login() {
           lastName: lastName || '',
           username: (user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)),
           phoneNumber: user.phoneNumber || '',
-          role: 'buyer',
+          role: 'standard', // Updated to 'standard' for both buyers and sellers
         };
         await setDoc(userDoc, userData);
       }
@@ -125,11 +122,11 @@ export default function Login() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 
-      userData.role = data.role;
+      userData.role = data.role || 'standard'; // Default to 'standard' if not set
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
-      localStorage.setItem('lastLogin', new Date().toISOString()); // Store last login
-      localStorage.removeItem('inactiveEmailSent'); // Reset email flag on login
+      localStorage.setItem('lastLogin', new Date().toISOString());
+      localStorage.removeItem('inactiveEmailSent');
 
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
@@ -182,7 +179,7 @@ export default function Login() {
       let userData = {
         uid: user.uid,
         email: trimmedEmail,
-        role: 'buyer',
+        role: 'standard', // Updated to 'standard' for both buyers and sellers
       };
 
       const token = await getIdToken(user);
@@ -197,17 +194,17 @@ export default function Login() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 
-      userData.role = data.role;
+      userData.role = data.role || 'standard'; // Default to 'standard' if not set
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       if (!userSnapshot.exists()) {
         await setDoc(userDoc, userData);
       } else {
-        userData = { ...userSnapshot.data(), ...userData, role: data.role };
+        userData = { ...userSnapshot.data(), ...userData, role: data.role || 'standard' };
       }
       localStorage.setItem('userData', JSON.stringify(userData));
-      localStorage.setItem('lastLogin', new Date().toISOString()); // Store last login
-      localStorage.removeItem('inactiveEmailSent'); // Reset email flag on login
+      localStorage.setItem('lastLogin', new Date().toISOString());
+      localStorage.removeItem('inactiveEmailSent');
 
       const firstName = userData.firstName || userData.name?.split(' ')[0] || 'User';
       setSuccessMessage(`Welcome, ${firstName}!`);
@@ -218,7 +215,7 @@ export default function Login() {
     } catch (err) {
       console.error('Login error:', err);
       setLoadingEmail(false);
-      const errorMessage = err.message || getFriendlyErrorMessage(err);
+      const errorMessage = err.message ? 'Something went wrong. Please try again.' : getFriendlyErrorMessage(err);
       if (errorMessage.includes('email') || errorMessage.includes('account') || errorMessage.includes('valid')) {
         setEmailError(errorMessage);
       } else {
@@ -272,7 +269,7 @@ export default function Login() {
             <h1 className="text-3xl font-bold mb-4 flex items-center">
               Welcome to <img src={logo} alt="Logo" className="h-20 ml-2" />
             </h1>
-            <p className="text-lg text-center">Where quality meets NEEDS!</p>
+            <p className="text-lg text-center">Join our community for buyers and sellers!</p>
           </div>
         </div>
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white">

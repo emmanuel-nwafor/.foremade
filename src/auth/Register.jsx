@@ -12,7 +12,7 @@ import {
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 import { UserCheck2Icon } from 'lucide-react';
-import { motion } from 'framer-motion'; // <-- added for modal animations
+import { motion } from 'framer-motion';
 
 // Validation functions
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -44,6 +44,16 @@ const validatePhoneNumber = (phoneNumber) => {
   if (!phoneNumber.trim()) return true;
   return /^\+\d{7,15}$/.test(phoneNumber);
 };
+const calculateAge = (dob) => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 // Backend URL from env
 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -54,6 +64,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [dob, setDob] = useState('');
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [firstNameError, setFirstNameError] = useState('');
@@ -62,6 +73,7 @@ export default function Register() {
   const [passwordError, setPasswordError] = useState('');
   const [phoneNumberError, setPhoneNumberError] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [dobError, setDobError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -70,10 +82,8 @@ export default function Register() {
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
 
-  // NEW: seller choice modal state
-  const [showSellerModal, setShowSellerModal] = useState(false);
+  const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
 
-  // Password strength state
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
@@ -86,10 +96,8 @@ export default function Register() {
     }
   }, [password]);
 
-  // Show seller modal on first render of this page
   useEffect(() => {
-    // Show immediately when user arrives at the register page
-    setShowSellerModal(true);
+    setShowAccountTypeModal(true);
   }, []);
 
   const handleRegister = async (e) => {
@@ -100,6 +108,7 @@ export default function Register() {
     setPasswordError('');
     setPhoneNumberError('');
     setOtpError('');
+    setDobError('');
     setSuccessMessage('');
     setLoading(true);
 
@@ -136,6 +145,16 @@ export default function Register() {
       setPhoneNumberError('Invalid phone number (e.g., +1234567890).');
       hasError = true;
     }
+    if (!dob) {
+      setDobError('Date of birth is required.');
+      hasError = true;
+    } else {
+      const age = calculateAge(dob);
+      if (age < 18) {
+        setDobError('You must be at least 18 years old to register.');
+        hasError = true;
+      }
+    }
 
     if (hasError) {
       setLoading(false);
@@ -150,17 +169,18 @@ export default function Register() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      await updateProfile(user, { displayName: username }); // Set displayName
+      await updateProfile(user, { displayName: username });
 
       const userData = {
         email: user.email,
-        name: `${firstName} ${lastName}`, // Match previous logic
+        name: `${firstName} ${lastName}`,
         username,
         address: '',
         phoneNumber: phoneNumber || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
         profileImage: null,
+        role: 'standard',
       };
       await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -174,7 +194,7 @@ export default function Register() {
       if (data.success) {
         setSuccessMessage('Account created! Check your email for a verification code.');
         setShowOtpModal(true);
-        localStorage.setItem('userData', JSON.stringify(userData)); // Save to local storage
+        localStorage.setItem('userData', JSON.stringify(userData));
       } else {
         setEmailError(data.error || 'Something went wrong. Please try again.');
       }
@@ -202,25 +222,26 @@ export default function Register() {
 
       const username = generateUsername(socialFirstName, socialLastName);
 
-      await updateProfile(user, { displayName: username }); // Set displayName
+      await updateProfile(user, { displayName: username });
 
       const userData = {
         email: user.email,
-        name: `${socialFirstName} ${socialLastName}`, // Match previous logic
+        name: `${socialFirstName} ${socialLastName}`,
         username,
         address: '',
         phoneNumber: user.phoneNumber || '',
         createdAt: new Date().toISOString(),
         uid: user.uid,
         profileImage: user.photoURL || null,
+        role: 'standard',
       };
       await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
 
-      localStorage.setItem('userData', JSON.stringify(userData)); // Save to local storage
+      localStorage.setItem('userData', JSON.stringify(userData));
       setSuccessMessage('Account created successfully with ' + provider + '! Redirecting...');
-      setTimeout(() => navigate('/'), 2000); // Redirect to home without OTP
+      setTimeout(() => navigate('/'), 2000);
     } catch (err) {
-      setEmailError('Social signup failed: ' + err.message);
+      setEmailError('Social signup failed. Please try again.');
     } finally {
       setLoadingGoogle(false);
       setLoadingFacebook(false);
@@ -255,8 +276,6 @@ export default function Register() {
     setSuccessMessage('');
     setLoading(true);
 
-    console.log('Verifying OTP:', { email, otp });
-
     if (!otp.trim()) {
       setOtpError('Please enter the verification code.');
       setLoading(false);
@@ -273,7 +292,7 @@ export default function Register() {
 
       if (data.success) {
         setSuccessMessage('Email verified! You can log in now.');
-        await sendEmailVerification(auth.currentUser); // Match previous logic
+        await sendEmailVerification(auth.currentUser);
         setShowOtpModal(false);
         setTimeout(() => {
           navigate('/login');
@@ -288,14 +307,11 @@ export default function Register() {
     }
   };
 
-  // Seller modal handlers
-  const chooseStandardSeller = () => {
-    // Close modal and stay on same page
-    setShowSellerModal(false);
+  const chooseStandardAccount = () => {
+    setShowAccountTypeModal(false);
   };
 
   const chooseProSeller = () => {
-    // Redirect to pro seller registration route
     navigate('/pro-seller-form');
   };
 
@@ -307,7 +323,7 @@ export default function Register() {
             <h1 className="text-3xl font-bold mb-4 flex items-center">
               Join <img src={logo} alt="Formade logo" className="h-20 ml-2" />
             </h1>
-            <p className="text-lg text-center">Where quality meets NEEDS!</p>
+            <p className="text-lg text-center">Join our community for buyers and sellers!</p>
           </div>
         </div>
         <div className="w-full md:w-1/2 h-full p-9 flex flex-col justify-center bg-white relative">
@@ -377,6 +393,20 @@ export default function Register() {
             </div>
             <div className="relative">
               <input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className={`w-full p-3 border rounded-lg transition-all duration-300 ${dobError ? 'border-red-500' : successMessage ? 'border-green-500' : 'border-gray-300'}`}
+                max={new Date().toISOString().split('T')[0]}
+                required
+              />
+              {/* <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
+                Date of Birth
+              </label> */}
+              {dobError && <p className="text-red-600 text-xs mt-1">{dobError}</p>}
+            </div>
+            <div className="relative">
+              <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -394,7 +424,6 @@ export default function Register() {
                 <i className={`bx ${showPassword ? 'bx-hide' : 'bx-show'} text-xl`}></i>
               </span>
             </div>
-            {/* Password Strength Meter */}
             {password && (
               <div className="mt-2">
                 <div className="text-xs text-gray-600 mb-1">Password Strength</div>
@@ -441,7 +470,6 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Advanced OTP Modal */}
           {showOtpModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="m-4 bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
@@ -454,7 +482,7 @@ export default function Register() {
                     <i className="bx bx-x text-[24px]"></i>
                   </button>
                 </div>
-                <p className="text-gray-600 mb-4 text-sm text-center">Enter the 6-digits code sent to your email {email}.</p>
+                <p className="text-gray-600 mb-4 text-sm text-center">Enter the 6-digit code sent to your email {email}.</p>
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="flex justify-between gap-2">
                     {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -501,8 +529,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* NEW: Seller Choice Modal (shows on page load) */}
-          {showSellerModal && (
+          {showAccountTypeModal && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -511,14 +538,12 @@ export default function Register() {
               aria-modal="true"
               role="dialog"
             >
-              {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.6 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-black"
               />
-              {/* Modal Card */}
               <motion.div
                 initial={{ y: 40, scale: 0.95, opacity: 0 }}
                 animate={{ y: 0, scale: 1, opacity: 1 }}
@@ -532,14 +557,14 @@ export default function Register() {
                       <UserCheck2Icon className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-800">Choose Seller Type</h3>
-                      <p className="text-sm text-gray-600">Would you like to register as a Standard or Pro seller?</p>
+                      <h3 className="text-xl font-semibold text-gray-800">Choose Your Option</h3>
+                      <p className="text-sm text-gray-600">Merchant or Standard user</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowSellerModal(false)}
+                    onClick={() => setShowAccountTypeModal(false)}
                     className="text-gray-400 hover:text-gray-600"
-                    aria-label="Close seller selection"
+                    aria-label="Close account type selection"
                   >
                     <i className="bx bx-x text-2xl"></i>
                   </button>
@@ -549,24 +574,31 @@ export default function Register() {
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={chooseStandardSeller}
-                    className="flex flex-col items-start p-4 border rounded-lg bg-white hover:shadow-lg transition-shadow"
+                    onClick={chooseStandardAccount}
+                    className="flex flex-col items-center justify-center p-4 border rounded-lg bg-gray-800 text-white hover:shadow-lg transition-shadow w-full h-32"
                   >
-                    <span className="text-lg font-medium text-gray-800">Standard Seller</span>
-                    <span className="text-sm text-gray-500 mt-1">Quick signup, sell basic items, simpler verification.</span>
-                    <span className="mt-3 inline-flex items-center text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">Learn more</span>
+                    <span className="text-lg font-medium">ALL USERS</span>
+                    <span className="text-sm mt-1">Sign Up. Sell / Buy</span>
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={chooseProSeller}
-                    className="flex flex-col items-start p-4 border rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg transition-shadow"
+                    className="flex flex-col items-center justify-center p-4 border rounded-lg bg-orange-500 text-white hover:shadow-lg transition-shadow w-full h-32"
                   >
-                    <span className="text-lg font-medium">Pro Seller</span>
-                    <span className="text-sm mt-1">Advanced features, premium placement, detailed verification.</span>
-                    <span className="mt-3 inline-flex items-center text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Recommended</span>
+                    <span className="text-lg font-medium">MERCHANT</span>
+                    <span className="text-sm mt-1">Sign Up / Pro Seller Benefits Included</span>
+                    <span className="text-xs mt-1">Registered Businesses only</span>
                   </motion.button>
+                </div>
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowAccountTypeModal(false)}
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    Or continue with
+                  </button>
                 </div>
               </motion.div>
             </motion.div>

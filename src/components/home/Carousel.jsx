@@ -45,7 +45,7 @@ const Carousel = () => {
 
   if (slides.length === 0) {
     return (
-      <div className="relative h-[200px] sm:h-[250px] md:h-[300px] lg:h-[400px] w-full overflow-hidden">
+      <div className="relative h-[200px] sm:h-[300px] md:h-[300px] lg:h-[400px] w-full overflow-hidden">
         <div className="absolute inset-0">
           <div className="w-full h-full bg-gray-200 animate-pulse"></div>
         </div>

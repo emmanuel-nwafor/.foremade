@@ -80,10 +80,10 @@ export default function Register() {
   const [signupAttempts, setSignupAttempts] = useState(0);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
+  const [showDobModal, setShowDobModal] = useState(false); // New state for DOB modal
   const navigate = useNavigate();
 
   const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
-
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export default function Register() {
       hasError = true;
     }
     if (!dob) {
-      setDobError('Date of birth is required.');
+      setDobError('Date of Birth is required.');
       hasError = true;
     } else {
       const age = calculateAge(dob);
@@ -179,6 +179,7 @@ export default function Register() {
         uid: user.uid,
         profileImage: null,
         role: 'standard',
+        dob: dob, // Store DOB for future reference
       };
       await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -219,6 +220,17 @@ export default function Register() {
       const [socialFirstName, ...rest] = user.displayName?.split(' ') || [user.email.split('@')[0], ''];
       const socialLastName = rest.join(' ');
 
+      // Check if birthdate is available (optional, depends on provider scope)
+      let age = null;
+      if (user.birthDate) { // Note: This field may not exist unless configured
+        age = calculateAge(user.birthDate);
+      }
+
+      if (age === null || age < 18) {
+        setShowDobModal(true); // Prompt for DOB if age is unknown or under 18
+        return;
+      }
+
       const username = generateUsername(socialFirstName, socialLastName);
 
       await updateProfile(user, { displayName: username });
@@ -233,6 +245,7 @@ export default function Register() {
         uid: user.uid,
         profileImage: user.photoURL || null,
         role: 'standard',
+        dob: user.birthDate || '', // Store if available
       };
       await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
 
@@ -241,11 +254,57 @@ export default function Register() {
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       console.error('Social login error:', err.message, err.code);
-      setEmailError('Social signup failed. Please check your connection, ensure the provider is configured, or try again.');
+      if (err.code === 'auth/popup-blocked') {
+        setEmailError('Popup was blocked by your browser. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setEmailError('This domain is not authorized. Please add foremade.vercel.app to Firebase Authorized Domains.');
+      } else {
+        setEmailError('Social signup failed. Please check your connection or try again.');
+      }
     } finally {
       setLoadingGoogle(false);
       setLoadingFacebook(false);
     }
+  };
+
+  const handleDobSubmit = async (e) => {
+    e.preventDefault();
+    setDobError('');
+    const age = calculateAge(dob);
+    if (age < 18) {
+      setDobError('You must be at least 18 years old to register.');
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      setEmailError('User session expired. Please try signing in again.');
+      setShowDobModal(false);
+      return;
+    }
+
+    const [socialFirstName, ...rest] = user.displayName?.split(' ') || [user.email.split('@')[0], ''];
+    const socialLastName = rest.join(' ');
+    const username = generateUsername(socialFirstName, socialLastName);
+
+    const userData = {
+      email: user.email,
+      name: `${socialFirstName} ${socialLastName}`,
+      username,
+      address: '',
+      phoneNumber: user.phoneNumber || '',
+      createdAt: new Date().toISOString(),
+      uid: user.uid,
+      profileImage: user.photoURL || null,
+      role: 'standard',
+      dob: dob,
+    };
+    await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+
+    localStorage.setItem('userData', JSON.stringify(userData));
+    setSuccessMessage('Account created successfully! Redirecting...');
+    setShowDobModal(false);
+    setTimeout(() => navigate('/'), 2000);
   };
 
   const handleResendOtp = async () => {
@@ -526,6 +585,46 @@ export default function Register() {
                     </button>
                   </p>
                   {successMessage && <p className="text-center text-green-600 text-xs mt-2">{successMessage}</p>}
+                </form>
+              </div>
+            </div>
+          )}
+
+          {showDobModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="m-4 bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-semibold">Verify Your Age</h3>
+                  <button
+                    onClick={() => setShowDobModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <i className="bx bx-x text-[24px]"></i>
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-4 text-sm text-center">Please enter your Date of Birth to confirm you are 18 or older.</p>
+                <form onSubmit={handleDobSubmit} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      className={`w-full p-3 border rounded-lg transition-all duration-300 ${dobError ? 'border-red-500' : 'border-gray-300'}`}
+                      max={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                    <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
+                      Date of Birth
+                    </label>
+                    {dobError && <p className="text-red-600 text-xs mt-1">{dobError}</p>}
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
+                    disabled={loading}
+                  >
+                    {loading ? 'Verifying...' : 'Submit'}
+                  </button>
                 </form>
               </div>
             </div>

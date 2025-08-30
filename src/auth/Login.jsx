@@ -39,7 +39,7 @@ export default function Login() {
   const [loadingFacebook, setLoadingFacebook] = useState(false);
   const navigate = useNavigate();
   const { state } = useLocation();
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -110,19 +110,22 @@ export default function Login() {
           lastName: lastName || '',
           username: (user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000)),
           phoneNumber: user.phoneNumber || '',
-          role: 'standard', // Updated to 'standard' for both buyers and sellers
+          role: 'standard',
         };
-        await setDoc(userDoc, userData);
+        await setDoc(userDoc, userData, { merge: true });
       }
+
+      // Ensure backend authentication works with deployed URL
+      const token = await getIdToken(user);
       const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: user.email }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Server error');
+      if (!response.ok) throw new Error(data.error || 'Server authentication failed');
 
-      userData.role = data.role || 'standard'; // Default to 'standard' if not set
+      userData.role = data.role || 'standard';
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.removeItem('socialEmail');
       localStorage.setItem('lastLogin', new Date().toISOString());
@@ -133,11 +136,11 @@ export default function Login() {
       setTimeout(() => {
         setLoadingGoogle(false);
         setLoadingFacebook(false);
-        navigate(data.redirectUrl, { state: { fromValidNavigation: true } });
+        navigate(data.redirectUrl || '/', { state: { fromValidNavigation: true } });
       }, 2000);
     } catch (err) {
-      console.error('Social login error:', err);
-      setEmailError(getFriendlyErrorMessage(err) || 'Login failed. Please try again.');
+      console.error('Social login error:', err.message, err.code);
+      setEmailError(getFriendlyErrorMessage(err) || 'Social login failed. Please check your connection or try again.');
       setLoadingGoogle(false);
       setLoadingFacebook(false);
     }
@@ -179,22 +182,19 @@ export default function Login() {
       let userData = {
         uid: user.uid,
         email: trimmedEmail,
-        role: 'standard', // Updated to 'standard' for both buyers and sellers
+        role: 'standard',
       };
 
       const token = await getIdToken(user);
       const response = await fetchWithAuth(`${BACKEND_URL}/authenticate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: trimmedEmail }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
 
-      userData.role = data.role || 'standard'; // Default to 'standard' if not set
+      userData.role = data.role || 'standard';
       const userDoc = doc(db, 'users', user.uid);
       const userSnapshot = await getDoc(userDoc);
       if (!userSnapshot.exists()) {
@@ -210,10 +210,10 @@ export default function Login() {
       setSuccessMessage(`Welcome, ${firstName}!`);
       setTimeout(() => {
         setLoadingEmail(false);
-        navigate(data.redirectUrl, { state: { fromValidNavigation: true } });
+        navigate(data.redirectUrl || '/', { state: { fromValidNavigation: true } });
       }, 2000);
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Login error:', err.message, err.code);
       setLoadingEmail(false);
       const errorMessage = err.message ? 'Something went wrong. Please try again.' : getFriendlyErrorMessage(err);
       if (errorMessage.includes('email') || errorMessage.includes('account') || errorMessage.includes('valid')) {
@@ -235,9 +235,9 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       await handleSocialLogin(result.user);
     } catch (err) {
-      console.error('Google sign-in error:', err);
+      console.error('Google sign-in error:', err.message, err.code);
       setLoadingGoogle(false);
-      setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
+      setEmailError(getFriendlyErrorMessage(err) || 'Google sign-in failed. Please check your connection or try again.');
     }
   };
 
@@ -252,9 +252,9 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       await handleSocialLogin(result.user);
     } catch (err) {
-      console.error('Facebook sign-in error:', err);
+      console.error('Facebook sign-in error:', err.message, err.code);
       setLoadingFacebook(false);
-      setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
+      setEmailError(getFriendlyErrorMessage(err) || 'Facebook sign-in failed. Please check your connection or try again.');
     }
   };
 

@@ -162,8 +162,6 @@ export default function Register() {
       return;
     }
 
-    console.log('Registering with:', { firstName, lastName, email, password });
-
     try {
       const username = generateUsername(firstName, lastName);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -199,7 +197,8 @@ export default function Register() {
         setEmailError(data.error || 'Something went wrong. Please try again.');
       }
     } catch (err) {
-      setEmailError(err.message.includes('email') ? 'This email is already in use or invalid. Try another.' : 'Registration failed. Please check your details and try again.');
+      console.error('Registration error:', err.message, err.code);
+      setEmailError(err.message.includes('email') ? 'This email is already in use or invalid. Try another.' : 'Registration failed. Please check your connection or try again.');
     } finally {
       setLoading(false);
     }
@@ -241,7 +240,8 @@ export default function Register() {
       setSuccessMessage('Account created successfully with ' + provider + '! Redirecting...');
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
-      setEmailError('Social signup failed. Please try again.');
+      console.error('Social login error:', err.message, err.code);
+      setEmailError('Social signup failed. Please check your connection, ensure the provider is configured, or try again.');
     } finally {
       setLoadingGoogle(false);
       setLoadingFacebook(false);
@@ -264,6 +264,7 @@ export default function Register() {
         setEmailError(data.error || 'Failed to send code. Please try again.');
       }
     } catch (err) {
+      console.error('Resend OTP error:', err.message);
       setEmailError('Unable to send code. Check your network and try again.');
     } finally {
       setLoading(false);
@@ -301,6 +302,7 @@ export default function Register() {
         setOtpError(data.error || 'Invalid or expired code. Please try again.');
       }
     } catch (err) {
+      console.error('Verify OTP error:', err.message);
       setOtpError('Verification failed. Check your connection and try again.');
     } finally {
       setLoading(false);
@@ -400,9 +402,9 @@ export default function Register() {
                 max={new Date().toISOString().split('T')[0]}
                 required
               />
-              {/* <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
+              <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
                 Date of Birth
-              </label> */}
+              </label>
               {dobError && <p className="text-red-600 text-xs mt-1">{dobError}</p>}
             </div>
             <div className="relative">

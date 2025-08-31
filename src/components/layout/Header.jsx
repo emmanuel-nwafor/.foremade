@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'; // Added onSnapshot for real-time
 import { getCartItemCount } from '/src/utils/cartUtils';
 import { toast } from 'react-toastify';
 import logo from '/src/assets/foremade.png';
@@ -24,31 +24,10 @@ const Header = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [categoryMoreOpen, setCategoryMoreOpen] = useState(false);
   const [mobileCategoryMoreOpen, setMobileCategoryMoreOpen] = useState(false);
+  const [categories, setCategories] = useState([]); // New: Dynamic categories from Firestore
 
   // Calculate mobile header height for spacer
   const mobileHeaderHeight = "3rem"; // Adjust based on your actual header height
-
-  const categories = [
-    "Camera & Photography",
-    "Television & Accessories",
-    "Drinks & Beverages",
-    "Game & Console",
-    "Home & Living",
-    "Perfumes & Fragrances",
-    "Vehicles & Transport",
-    "Clothing",
-    "Cocoa, Coffee & Tea",
-    "Computers & Laptops",
-    "Footwear",
-    "Grills & Outdoor Cooking",
-    "Hair, Nails & Accessories",
-    "Jewellery & Accessories",
-    "Sneakers & Joggers",
-    "Sound & Audio",
-    "Sports & Outdoors",
-    "🍼 Pregnancy & Mother Care",
-    "💊 Health & Wellness"
-  ];
 
   const slugify = (name) =>
     name
@@ -56,44 +35,24 @@ const Header = () => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+  // Removed categoryAliasMap and categoryPathMap - use dynamic categories and slugify directly
+
+  // New: Fetch categories dynamically with real-time updates
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      const catList = snapshot.docs.map((doc) => doc.id).sort(); // Sort alphabetically
+      setCategories(catList);
+    }, (err) => {
+      console.error('Error fetching categories:', err);
+      toast.error('Failed to load categories');
+    });
+    return () => unsub();
+  }, []);
+
   const visibleCategories = categories.slice(0, 8);
   const hiddenCategories = categories.slice(8);
 
-  // Add category alias mapping for Shop by Category
-  const categoryAliasMap = {
-    'shoe': 'Footwear',
-    'shoes': 'Footwear',
-    'fashion': 'Clothing',
-    'clothing': 'Clothing',
-    'phone': 'Computers & Laptops',
-    'phones': 'Computers & Laptops',
-    'laptop': 'Computers & Laptops',
-    'laptops': 'Computers & Laptops',
-    'gaming': 'Game & Console',
-    'game': 'Game & Console',
-    'console': 'Game & Console',
-    // Add more aliases as needed
-  };
-
-  // Add category path mapping for Shop by Category (use actual category names as keys)
-  const categoryPathMap = {
-    'Footwear': 'footwear',
-    'Clothing': 'clothing',
-    'Computers & Laptops': 'computers-laptops',
-    'Game & Console': 'game-console',
-    // Add more as needed
-  };
-
-  // Helper to get mapped category
-  const getCategoryLink = (category) => {
-    const key = category.trim().toLowerCase();
-    return categoryAliasMap[key] || category;
-  };
-
-  // Helper to get mapped category path
-  const getCategoryPath = (category) => {
-    return `/category/${categoryPathMap[category] || slugify(category)}`;
-  };
+  const getCategoryPath = (category) => `/category/${slugify(category)}`;
 
   const showBackButton = location.pathname !== '/';
 
@@ -413,7 +372,7 @@ const Header = () => {
           )}
         </div>
         <div className="flex overflow-x-auto gap-2 text-xs text-gray-700 py-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-          {categories.map((category) => (
+          {categories.map((category) => ( // Dynamic
             <Link
               key={category}
               to={getCategoryPath(category)}
@@ -485,10 +444,10 @@ const Header = () => {
             {/* Fixed Categories Section */}
             <div className="w-full mt-2 sm:mt-4">
               <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-700 flex-wrap">
-                {visibleCategories.map((category) => (
+                {visibleCategories.map((category) => ( // Dynamic
                   <Link
                     key={category}
-                    to={`/category/${slugify(category)}`}
+                    to={getCategoryPath(category)}
                     className="hover:text-blue-600 whitespace-nowrap"
                   >
                     {category}
@@ -508,7 +467,7 @@ const Header = () => {
                         {hiddenCategories.map((category) => (
                           <Link
                             key={category}
-                            to={`/category/${slugify(category)}`}
+                            to={getCategoryPath(category)}
                             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 text-sm"
                             onClick={() => setCategoryMoreOpen(false)}
                           >
@@ -647,10 +606,10 @@ const Header = () => {
               )}
               {/* Categories */}
               <div className="space-y-1">
-                {categories.slice(0, 8).map((category) => (
+                {categories.slice(0, 8).map((category) => ( // Dynamic
                   <Link
                     key={category}
-                    to={`/category/${slugify(category)}`}
+                    to={getCategoryPath(category)}
                     className="text-[#112040] hover:text-amber-500 text-sm py-2 border-b border-[#112040]/10 block"
                     onClick={() => setSidebarOpen(false)}
                   >
@@ -671,7 +630,7 @@ const Header = () => {
                       {categories.slice(8).map((category) => (
                         <Link
                           key={category}
-                          to={`/category/${slugify(category)}`}
+                          to={getCategoryPath(category)}
                           className="text-[#112040] hover:text-amber-500 text-sm py-2 pl-4 border-b border-[#112040]/10 block"
                           onClick={() => {
                             setSidebarOpen(false);

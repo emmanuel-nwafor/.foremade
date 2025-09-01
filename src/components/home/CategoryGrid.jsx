@@ -13,8 +13,8 @@ const slugify = (name) =>
 const categoryPathMap = {
   'Shoes': 'footwear',
   'Fashion': 'clothing',
-  'Phones': 'Computers',
-  'Laptops': 'Computers',
+  'Phones': 'computers-laptops',
+  'Laptops': 'computers-laptops',
   'Gaming': 'game-console',
   'Kitchen': 'home-living',
   // Add more as needed

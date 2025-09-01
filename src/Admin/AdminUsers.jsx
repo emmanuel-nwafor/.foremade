@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, getIdToken } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
-import AdminSidebar from '/src/Admin/AdminSidebar.jsx';
+import AdminSidebar from './AdminSidebar';
 
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {

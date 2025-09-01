@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
+  OAuthProvider,
   setPersistence,
   browserSessionPersistence,
   getIdToken,
@@ -37,9 +38,25 @@ export default function Login() {
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
+  const [loadingApple, setLoadingApple] = useState(false);
   const navigate = useNavigate();
   const { state } = useLocation();
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const handleAppleSignIn = async () => {
+    setEmailError('');
+    setPasswordError('');
+    setSuccessMessage('');
+    setLoadingApple(true);
+    const provider = new OAuthProvider('apple.com');
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await handleSocialLogin(result.user);
+    } catch (err) {
+      console.error('Apple sign-in error:', err);
+      setLoadingApple(false);
+      setEmailError(getFriendlyErrorMessage(err) || 'Sign-in failed. Please try again.');
+    }
+  };
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -365,6 +382,14 @@ export default function Login() {
               >
                 <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
                 {loadingFacebook ? 'Processing...' : 'Facebook'}
+              </button>
+              <button
+                onClick={handleAppleSignIn}
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                disabled={loadingApple}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" className="w-5 h-5 mr-2" />
+                {loadingApple ? 'Processing...' : 'Apple'}
               </button>
             </div>
           </div>

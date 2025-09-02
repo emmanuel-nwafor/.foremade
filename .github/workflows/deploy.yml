@@ -3,7 +3,7 @@ name: Deploy to cPanel via FTP
 on:
   push:
     branches:
-      - main   # change this if your deployment branch is different
+      - production   # change this if your deployment branch is different
 
 jobs:
   build-and-deploy:
@@ -23,10 +23,10 @@ jobs:
         # pnpm install && pnpm build
 
       - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: samkirkland/ftp-deploy-action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
-          local-dir: dist
+          local-dir: dist/
           server-dir: /public_html/

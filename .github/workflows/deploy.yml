@@ -51,6 +51,7 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
           TEST_EMAIL_ON_DEPLOY: ${{ secrets.TEST_EMAIL_ON_DEPLOY }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }} 
           VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
 
       - name: Deploy to FTP

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
-import { doc, getDoc, setDoc, collection, deleteDoc, getDocs, onSnapshot, query, where, writeBatch } from 'firebase/firestore'; // Added writeBatch for product updates
+import { doc, getDoc, setDoc, collection, deleteDoc, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import 'boxicons/css/boxicons.min.css';
 
@@ -61,8 +61,6 @@ export default function AdminCategoryEdit() {
   const [subcategories, setSubcategories] = useState({});
   const [subSubcategories, setSubSubcategories] = useState({});
   const [newCategory, setNewCategory] = useState('');
-  const [newBannerDesktop, setNewBannerDesktop] = useState(''); // New: For dynamic banners
-  const [newBannerMobile, setNewBannerMobile] = useState('');
   const [editCategory, setEditCategory] = useState(null);
   const [feeConfig, setFeeConfig] = useState(null);
   const [newFees, setNewFees] = useState({
@@ -83,46 +81,81 @@ export default function AdminCategoryEdit() {
   useEffect(() => {
     let isMounted = true;
 
-    // New: Real-time listeners for all data
-    const unsubCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
-      const catList = snapshot.docs.map((doc) => doc.id).sort();
-      if (isMounted) setCategories(catList);
-    });
+    const fetchData = async () => {
+      const timeoutPromise = (timeoutMs) =>
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Data fetch timed out after ${timeoutMs}ms`)), timeoutMs));
 
-    const unsubSubcats = onSnapshot(collection(db, 'customSubcategories'), (snapshot) => {
-      const subcatData = {};
-      snapshot.forEach((doc) => {
-        subcatData[doc.id] = doc.data().subcategories || [];
-      });
-      if (isMounted) setSubcategories(subcatData);
-    });
+      try {
+        setLoading(true);
 
-    const unsubSubSubcats = onSnapshot(collection(db, 'customSubSubcategories'), (snapshot) => {
-      const subSubcatData = {};
-      snapshot.forEach((doc) => {
-        subSubcatData[doc.id] = doc.data() || {};
-      });
-      if (isMounted) setSubSubcategories(subSubcatData);
-    });
+        const catSnapshot = await retryWithBackoff(() =>
+          Promise.race([getDocs(collection(db, 'categories')), timeoutPromise(30000)])
+        );
+        const catList = catSnapshot.docs.map((doc) => doc.id).sort();
+        if (isMounted) setCategories(catList);
 
-    const unsubFees = onSnapshot(doc(db, 'feeConfigurations', 'categoryFees'), (docSnap) => {
-      if (docSnap.exists()) {
-        if (isMounted) setFeeConfig(docSnap.data());
-      } else {
-        const defaultFees = {};
-        setDoc(doc(db, 'feeConfigurations', 'categoryFees'), defaultFees);
-        if (isMounted) setFeeConfig(defaultFees);
+        const subcatPromises = catList.map((cat) =>
+          retryWithBackoff(() =>
+            Promise.race([getDoc(doc(db, 'customSubcategories', cat)), timeoutPromise(30000)])
+          ).then((subcatSnap) => ({
+            cat,
+            subcats: subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [],
+          }))
+        );
+
+        const subSubcatPromises = catList.map((cat) =>
+          retryWithBackoff(() =>
+            Promise.race([getDoc(doc(db, 'customSubSubcategories', cat)), timeoutPromise(30000)])
+          ).then((subSubcatSnap) => ({
+            cat,
+            subSubcats: subSubcatSnap.exists() ? subSubcatSnap.data() || {} : {},
+          }))
+        );
+
+        const [subcatResults, subSubcatResults] = await Promise.all([
+          Promise.all(subcatPromises),
+          Promise.all(subSubcatPromises),
+        ]);
+
+        const subcatData = subcatResults.reduce((acc, { cat, subcats }) => {
+          acc[cat] = subcats;
+          return acc;
+        }, {});
+        const subSubcatData = subSubcatResults.reduce((acc, { cat, subSubcats }) => {
+          acc[cat] = subSubcats;
+          return acc;
+        }, {});
+
+        if (isMounted) {
+          setSubcategories(subcatData);
+          setSubSubcategories(subSubcatData);
+        }
+
+        const docRef = doc(db, 'feeConfigurations', 'categoryFees');
+        const docSnap = await retryWithBackoff(() =>
+          Promise.race([getDoc(docRef), timeoutPromise(30000)])
+        );
+        if (docSnap.exists()) {
+          if (isMounted) setFeeConfig(docSnap.data());
+        } else {
+          const defaultFees = {};
+          await setDoc(docRef, defaultFees);
+          if (isMounted) setFeeConfig(defaultFees);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error fetching data:', err);
+          addAlert(`Failed to load data: ${err.message}`, 'error');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    });
+    };
 
-    setLoading(false);
+    fetchData();
 
     return () => {
       isMounted = false;
-      unsubCategories();
-      unsubSubcats();
-      unsubSubSubcats();
-      unsubFees();
     };
   }, []);
 
@@ -159,12 +192,7 @@ export default function AdminCategoryEdit() {
     setLoading(true);
     try {
       const catRef = doc(db, 'categories', newCategory.trim());
-      await setDoc(catRef, { 
-        name: newCategory.trim(), 
-        createdAt: new Date(),
-        bannerDesktop: newBannerDesktop || fallbackBanner, // New: Store banners
-        bannerMobile: newBannerMobile || fallbackBanner
-      });
+      await setDoc(catRef, { name: newCategory.trim(), createdAt: new Date() });
       const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
       const updatedFees = {
         ...feeConfig,
@@ -177,10 +205,9 @@ export default function AdminCategoryEdit() {
         },
       };
       await setDoc(feeRef, updatedFees);
-      // No need to setCategories, onSnapshot handles it
+      setCategories([...categories, newCategory.trim()].sort());
+      setFeeConfig(updatedFees);
       setNewCategory('');
-      setNewBannerDesktop('');
-      setNewBannerMobile('');
       setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setErrors({});
       addAlert('Category added successfully! 🎉', 'success');
@@ -225,15 +252,8 @@ export default function AdminCategoryEdit() {
     setLoading(true);
     try {
       const oldCatRef = doc(db, 'categories', oldName);
-      const oldCatSnap = await getDoc(oldCatRef); // Get existing data for banners if not changed
-      const existingData = oldCatSnap.data();
       const newCatRef = doc(db, 'categories', newCategory.trim());
-      await setDoc(newCatRef, { 
-        name: newCategory.trim(), 
-        createdAt: new Date(),
-        bannerDesktop: newBannerDesktop || existingData.bannerDesktop || fallbackBanner, // New: Update banners
-        bannerMobile: newBannerMobile || existingData.bannerMobile || fallbackBanner
-      });
+      await setDoc(newCatRef, { name: newCategory.trim(), createdAt: new Date() });
       await deleteDoc(oldCatRef);
 
       const updatedFees = { ...feeConfig };
@@ -264,20 +284,19 @@ export default function AdminCategoryEdit() {
         await deleteDoc(subSubcatRef);
       }
 
-      // New: Update products with old category to new category (lowercase for consistency)
-      const productQuery = query(collection(db, 'products'), where('category', '==', oldName.toLowerCase()));
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { category: newCategory.trim().toLowerCase() });
+      setCategories(categories.map((c) => (c === oldName ? newCategory.trim() : c)).sort());
+      setFeeConfig(updatedFees);
+      setSubcategories((prev) => {
+        const newSubcats = { ...prev, [newCategory.trim()]: prev[oldName] || [] };
+        delete newSubcats[oldName];
+        return newSubcats;
       });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to new category.`, 'success');
-
-      // onSnapshot will handle state updates
+      setSubSubcategories((prev) => {
+        const newSubSubcats = { ...prev, [newCategory.trim()]: prev[oldName] || {} };
+        delete newSubSubcats[oldName];
+        return newSubSubcats;
+      });
       setNewCategory('');
-      setNewBannerDesktop('');
-      setNewBannerMobile('');
       setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
       setEditCategory(null);
       setErrors({});
@@ -298,20 +317,20 @@ export default function AdminCategoryEdit() {
       delete updatedFees[category];
       const feeRef = doc(db, 'feeConfigurations', 'categoryFees');
       await setDoc(feeRef, updatedFees);
+      setFeeConfig(updatedFees);
       await deleteDoc(doc(db, 'customSubcategories', category));
       await deleteDoc(doc(db, 'customSubSubcategories', category));
-
-      // New: Update products to 'Uncategorized'
-      const productQuery = query(collection(db, 'products'), where('category', '==', category.toLowerCase()));
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { category: 'uncategorized' });
+      setCategories(categories.filter((c) => c !== category));
+      setSubcategories((prev) => {
+        const newSubcats = { ...prev };
+        delete newSubcats[category];
+        return newSubcats;
       });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to Uncategorized.`, 'success');
-
-      // onSnapshot handles state
+      setSubSubcategories((prev) => {
+        const newSubSubcats = { ...prev };
+        delete newSubSubcats[category];
+        return newSubSubcats;
+      });
       addAlert('Category deleted successfully! 🎉', 'success');
     } catch (err) {
       console.error('Error deleting category:', err);
@@ -338,7 +357,7 @@ export default function AdminCategoryEdit() {
       const existingSubcats = subcatSnap.exists() ? subcatSnap.data().subcategories || [] : [];
       const updatedSubcats = [...existingSubcats, subcatName];
       await setDoc(subcatRef, { subcategories: updatedSubcats });
-      // onSnapshot handles state
+      setSubcategories((prev) => ({ ...prev, [category]: updatedSubcats }));
       setNewSubcategory((prev) => ({ ...prev, [category]: '' }));
       addAlert(`Subcategory "${subcatName}" added! 🎉`, 'success');
     } catch (err) {
@@ -377,21 +396,11 @@ export default function AdminCategoryEdit() {
       );
       await setDoc(subSubcatRef, updatedSubSubcats);
 
-      // New: Update products with old subcategory
-      const productQuery = query(
-        collection(db, 'products'),
-        where('category', '==', category.toLowerCase()),
-        where('subcategory', '==', oldSubcat)
-      );
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { subcategory: newSubcatName });
-      });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to new subcategory.`, 'success');
-
-      // onSnapshot handles state
+      setSubcategories((prev) => ({ ...prev, [category]: updatedSubcats }));
+      setSubSubcategories((prev) => ({
+        ...prev,
+        [category]: updatedSubSubcats,
+      }));
       setNewSubcategory((prev) => ({ ...prev, [category]: '' }));
       setEditSubcategory(null);
       addAlert(`Subcategory "${oldSubcat}" updated to "${newSubcatName}"! 🎉`, 'success');
@@ -419,21 +428,11 @@ export default function AdminCategoryEdit() {
       delete updatedSubSubcats[subcategory];
       await setDoc(subSubcatRef, updatedSubSubcats);
 
-      // New: Update products to 'Uncategorized' subcategory
-      const productQuery = query(
-        collection(db, 'products'),
-        where('category', '==', category.toLowerCase()),
-        where('subcategory', '==', subcategory)
-      );
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { subcategory: 'uncategorized' });
-      });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to uncategorized subcategory.`, 'success');
-
-      // onSnapshot handles state
+      setSubcategories((prev) => ({ ...prev, [category]: updatedSubcats }));
+      setSubSubcategories((prev) => ({
+        ...prev,
+        [category]: updatedSubSubcats,
+      }));
       addAlert(`Subcategory "${subcategory}" deleted successfully! 🎉`, 'success');
     } catch (err) {
       console.error('Error deleting subcategory:', err);
@@ -463,7 +462,10 @@ export default function AdminCategoryEdit() {
         [subcategory]: [...(existingSubSubcats[subcategory] || []), subSubcatName],
       };
       await setDoc(subSubcatRef, updatedSubSubcats);
-      // onSnapshot handles state
+      setSubSubcategories((prev) => ({
+        ...prev,
+        [category]: updatedSubSubcats,
+      }));
       setNewSubSubcategory((prev) => ({ ...prev, [`${category}_${subcategory}`]: '' }));
       addAlert(`Sub-subcategory "${subSubcatName}" added! 🎉`, 'success');
     } catch (err) {
@@ -494,23 +496,10 @@ export default function AdminCategoryEdit() {
         [subcategory]: existingSubSubcats[subcategory].map((s) => (s === oldSubSubcat ? newSubSubcatName : s)),
       };
       await setDoc(subSubcatRef, updatedSubSubcats);
-
-      // New: Update products with old subSubcategory
-      const productQuery = query(
-        collection(db, 'products'),
-        where('category', '==', category.toLowerCase()),
-        where('subcategory', '==', subcategory),
-        where('subSubcategory', '==', oldSubSubcat)
-      );
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { subSubcategory: newSubSubcatName });
-      });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to new sub-subcategory.`, 'success');
-
-      // onSnapshot handles state
+      setSubSubcategories((prev) => ({
+        ...prev,
+        [category]: updatedSubSubcats,
+      }));
       setNewSubSubcategory((prev) => ({ ...prev, [`${category}_${subcategory}`]: '' }));
       setEditSubSubcategory(null);
       addAlert(`Sub-subcategory "${oldSubSubcat}" updated to "${newSubSubcatName}"! 🎉`, 'success');
@@ -533,23 +522,10 @@ export default function AdminCategoryEdit() {
         [subcategory]: existingSubSubcats[subcategory].filter((s) => s !== subSubcategory),
       };
       await setDoc(subSubcatRef, updatedSubSubcats);
-
-      // New: Update products to 'Uncategorized' subSubcategory
-      const productQuery = query(
-        collection(db, 'products'),
-        where('category', '==', category.toLowerCase()),
-        where('subcategory', '==', subcategory),
-        where('subSubcategory', '==', subSubcategory)
-      );
-      const productSnap = await getDocs(productQuery);
-      const batch = writeBatch(db);
-      productSnap.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { subSubcategory: 'uncategorized' });
-      });
-      await batch.commit();
-      addAlert(`Updated ${productSnap.size} products to uncategorized sub-subcategory.`, 'success');
-
-      // onSnapshot handles state
+      setSubSubcategories((prev) => ({
+        ...prev,
+        [category]: updatedSubSubcats,
+      }));
       addAlert(`Sub-subcategory "${subSubcategory}" deleted successfully! 🎉`, 'success');
     } catch (err) {
       console.error('Error deleting sub-subcategory:', err);
@@ -576,28 +552,10 @@ export default function AdminCategoryEdit() {
 
   const resetForm = () => {
     setNewCategory('');
-    setNewBannerDesktop('');
-    setNewBannerMobile('');
     setNewFees({ minPrice: '', maxPrice: '', buyerProtectionRate: '', handlingRate: '', taxRate: '' });
     setEditCategory(null);
     setErrors({});
   };
-
-  // New: When editing, prefill banners
-  useEffect(() => {
-    if (editCategory) {
-      const fetchExisting = async () => {
-        const catRef = doc(db, 'categories', editCategory);
-        const catSnap = await getDoc(catRef);
-        if (catSnap.exists()) {
-          const data = catSnap.data();
-          setNewBannerDesktop(data.bannerDesktop);
-          setNewBannerMobile(data.bannerMobile);
-        }
-      };
-      fetchExisting();
-    }
-  }, [editCategory]);
 
   if (loading || !feeConfig) {
     return (
@@ -650,35 +608,6 @@ export default function AdminCategoryEdit() {
                       {errors.newCategory}
                     </p>
                   )}
-                </div>
-                {/* New: Banner inputs */}
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Desktop Banner URL
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="URL for desktop category banner"></i>
-                  </label>
-                  <input
-                    type="url"
-                    value={newBannerDesktop}
-                    onChange={(e) => setNewBannerDesktop(e.target.value)}
-                    placeholder="https://example.com/banner-desktop.jpg"
-                    className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
-                    disabled={loading}
-                  />
-                </div>
-                <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                    Mobile Banner URL
-                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="URL for mobile category banner"></i>
-                  </label>
-                  <input
-                    type="url"
-                    value={newBannerMobile}
-                    onChange={(e) => setNewBannerMobile(e.target.value)}
-                    placeholder="https://example.com/banner-mobile.jpg"
-                    className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
-                    disabled={loading}
-                  />
                 </div>
                 <div className="relative group">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
@@ -1113,7 +1042,7 @@ export default function AdminCategoryEdit() {
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Confirm Deletion</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the category "{showDeleteModal.category}"? Products will be set to 'uncategorized'. This action cannot be undone.</p> {/* Updated warning */}
+                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the category "{showDeleteModal.category}"? This action cannot be undone.</p>
                 <div className="flex justify-end gap-4">
                   <button
                     onClick={() => setShowDeleteModal({ ...showDeleteModal, category: null })}
@@ -1140,7 +1069,7 @@ export default function AdminCategoryEdit() {
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Confirm Deletion</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the subcategory "{showDeleteModal.subcategory.subcat}" under "{showDeleteModal.subcategory.category}"? Products will be set to 'uncategorized'. This action cannot be undone.</p> {/* Updated warning */}
+                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the subcategory "{showDeleteModal.subcategory.subcat}" under "{showDeleteModal.subcategory.category}"? This action cannot be undone.</p>
                 <div className="flex justify-end gap-4">
                   <button
                     onClick={() => setShowDeleteModal({ ...showDeleteModal, subcategory: null })}
@@ -1167,7 +1096,7 @@ export default function AdminCategoryEdit() {
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Confirm Deletion</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the sub-subcategory "{showDeleteModal.subSubcategory.subSubcat}" under "{showDeleteModal.subSubcategory.subcategory}" in "{showDeleteModal.subSubcategory.category}"? Products will be set to 'uncategorized'. This action cannot be undone.</p> {/* Updated warning */}
+                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete the sub-subcategory "{showDeleteModal.subSubcategory.subSubcat}" under "{showDeleteModal.subSubcategory.subcategory}" in "{showDeleteModal.subSubcategory.category}"? This action cannot be undone.</p>
                 <div className="flex justify-end gap-4">
                   <button
                     onClick={() => setShowDeleteModal({ ...showDeleteModal, subSubcategory: null })}

@@ -97,6 +97,7 @@ export default function SellerEditProduct() {
   };
 
   const handleLocationChange = (newLocation) => {
+    console.log('SellerEditProduct handleLocationChange:', newLocation);
     setProduct((prev) => ({ ...prev, locationData: newLocation }));
   };
 
@@ -132,18 +133,25 @@ export default function SellerEditProduct() {
 
   const handleSave = async () => {
     const newErrors = validateForm();
+    console.log('handleSave called. Product:', product);
     if (Object.keys(newErrors).length > 0) {
+      console.log('Validation errors:', newErrors);
       setErrors(newErrors);
       return;
     }
 
     try {
       const userId = auth.currentUser?.uid;
+      console.log('User ID:', userId);
       const productRef = doc(db, 'products', productId);
+      console.log('Updating productRef:', productRef.path);
       await updateDoc(productRef, {
         ...product,
+        price: Number(product.price), // Ensure price is a number
+        sellerId: userId, // Always include sellerId
         updatedAt: serverTimestamp(),
       });
+      console.log('Product updated in Firestore');
 
       const adminNotificationRef = doc(collection(db, 'adminNotifications'));
       await setDoc(adminNotificationRef, {
@@ -154,10 +162,12 @@ export default function SellerEditProduct() {
         timestamp: serverTimestamp(),
         read: false,
       });
+      console.log('Admin notification sent');
 
       setSuccess('Product updated successfully!');
       setTimeout(() => navigate('/seller/products'), 2000);
     } catch (err) {
+      console.error('Error in handleSave:', err);
       setErrors({ general: 'Failed to save product: ' + err.message });
     }
   };
@@ -310,11 +320,11 @@ export default function SellerEditProduct() {
                 </div>
               </div>
             </div>
-            {/* <SellerLocationForm
+            <SellerLocationForm
               locationData={product.locationData}
               setLocationData={handleLocationChange}
               errors={errors}
-            /> */}
+            />
             <div className="flex justify-end">
               <button
                 type="button"

@@ -1,0 +1,32 @@
+name: Deploy to cPanel via FTP
+
+on:
+  push:
+    branches:
+      - main   # change this if your deployment branch is different
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies & build
+        run: |
+          npm install
+          npm run build
+        # if you use yarn or pnpm, replace with:
+        # yarn install && yarn build
+        # or
+        # pnpm install && pnpm build
+
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: dist
+          server-dir: /public_html/

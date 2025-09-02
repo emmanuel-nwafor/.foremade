@@ -23,7 +23,7 @@ jobs:
         # pnpm install && pnpm build
 
       - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v1
+        uses: samkirkland/ftp-deploy-action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}

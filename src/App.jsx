@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AuthProvider } from './contexts/AuthContext';
 import { CurrencyProvider } from './CurrencyContext';
 
-
 import Header from './components/layout/Header';
 import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
@@ -36,20 +35,20 @@ import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 import TermsConditions from './pages/TermsAndConditions';
 
-import Admin from './admin/Admin';
-import AdminDashboard from './admin/AdminDashboard';
-import AdminNotifications from './admin/AdminNotifications';
-import AdminUsers from './admin/AdminUsers';
-import AdminPayoutMonitor from './admin/AdminPayoutMonitor';
-import AdminEditBannerAndOthers from './admin/AdminEditBannerAndOthers';
-import AdminEditDeals from './admin/AdminEditDeals';
-import AdminEditFees from './admin/AdminEditFees';
-import AdminCategoryEdit from './admin/AdminCategoryEdit';
-import AdminManager from './admin/AdminManager';
-import AdminSellerWallet from './admin/AdminSellerWallet';
-import AdminProSellerRequests from './admin/AdminProSellerRequests';
-import AdminBumpedProducts from './admin/AdminBumpedProducts';
-import AdminTransactions from './admin/AdminTransactions';
+import Admin from './Admin/Admin';
+import AdminDashboard from './Admin/AdminDashboard';
+import AdminNotifications from './Admin/AdminNotifications';
+import AdminUsers from './Admin/AdminUsers';
+import AdminPayoutMonitor from './Admin/AdminPayoutMonitor';
+import AdminEditBannerAndOthers from './Admin/AdminEditBannerAndOthers';
+import AdminEditDeals from './Admin/AdminEditDeals';
+import AdminEditFees from './Admin/AdminEditFees';
+import AdminCategoryEdit from './Admin/AdminCategoryEdit';
+import AdminManager from './Admin/AdminManager';
+import AdminSellerWallet from './Admin/AdminSellerWallet';
+import AdminProSellerRequests from './Admin/AdminProSellerRequests';
+import AdminBumpedProducts from './Admin/AdminBumpedProducts';
+import AdminTransactions from './Admin/AdminTransactions';
 
 import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
@@ -97,8 +96,8 @@ import AllTrendingFashion from './pages/AllTrendingFashion';
 import AllTrendingGadgets from './pages/AllTrendingGadgets';
 import ProtectedRoute from './auth/ProtectedRoute';
 import SellersPage from './seller/SellersPage';
-import AdminUsersPhone from './admin/AdminUsersPhone';
-import AdminProSellerDetails from './admin/AdminProSellerDetails';
+import AdminUsersPhone from './Admin/AdminUsersPhone';
+import AdminProSellerDetails from './Admin/AdminProSellerDetails';
 
 const Layout = ({ children }) => {
   const location = useLocation();

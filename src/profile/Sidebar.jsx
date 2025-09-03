@@ -160,6 +160,7 @@ export default function Sidebar() {
         >
           <Settings className="w-6 h-6 text-black dark:text-white" />
           <span>Settings</span>
+          
         </Link>
       </nav>
     </div>

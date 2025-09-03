@@ -41,10 +41,10 @@ const Products = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Only fetch approved products
+        setError(null);
         const q = query(collection(db, 'products'), where('status', '==', 'approved'));
         const querySnapshot = await getDocs(q);
-        console.log('Total products fetched from Firestore:', querySnapshot.docs.length);
+        console.log('Total approved products fetched from Firestore:', querySnapshot.docs.length);
         const products = querySnapshot.docs
           .map((doc) => {
             const data = doc.data();
@@ -71,7 +71,6 @@ const Products = () => {
               });
             }
 
-            // Calculate price range for products with variants
             let minPrice = data.price || 0;
             let maxPrice = data.price || 0;
             let hasVariants = Array.isArray(data.variants) && data.variants.length > 0;
@@ -81,7 +80,6 @@ const Products = () => {
               maxPrice = Math.max(...variantPrices);
             }
 
-            // Calculate total stock for variants
             const totalStock = hasVariants
               ? data.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
               : data.stock || 0;
@@ -118,7 +116,7 @@ const Products = () => {
 
         console.log('Fetched approved products with sufficient stock:', products);
         if (products.length === 0) {
-          console.warn('No approved products with sufficient stock found. Check Firestore data.');
+          console.warn('No approved products with sufficient stock found.');
           setError('No approved products available at the moment.');
         }
         setInitialProducts(products);
@@ -141,7 +139,6 @@ const Products = () => {
     ({ priceRange, selectedCategories, sortOption, searchTerm, status }) => {
       let updatedProducts = [...initialProducts].filter((product) => product !== null);
 
-      // Filter by price range
       updatedProducts = updatedProducts.filter((product) => {
         const withinPriceRange =
           (product.minPrice !== null ? product.minPrice : product.price) >= priceRange[0] &&
@@ -149,21 +146,18 @@ const Products = () => {
         return withinPriceRange;
       });
 
-      // Filter by categories (using categoryId)
       if (selectedCategories.length > 0) {
         updatedProducts = updatedProducts.filter((product) =>
           selectedCategories.includes(product.categoryId)
         );
       }
 
-      // Filter by search term
       if (searchTerm) {
         updatedProducts = updatedProducts.filter((product) =>
           product.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
 
-      // Sort products
       if (sortOption === 'price-low-high') {
         updatedProducts.sort((a, b) => (a.minPrice || a.price) - (b.minPrice || b.price));
       } else if (sortOption === 'price-high-low') {
@@ -173,7 +167,6 @@ const Products = () => {
       } else if (sortOption === 'alpha-desc') {
         updatedProducts.sort((a, b) => b.name.localeCompare(b.name));
       } else {
-        // Default sort by bumpExpiry
         updatedProducts.sort((a, b) => {
           const aBump = a.bumpExpiry ? new Date(a.bumpExpiry) : null;
           const bBump = b.bumpExpiry ? new Date(b.bumpExpiry) : null;

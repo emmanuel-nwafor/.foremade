@@ -35,7 +35,7 @@ function BestSelling() {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log('All fetched products (Best Selling - Raw Firestore Data):', allProducts);
+        console.log('All fetched approved products (Best Selling):', allProducts);
 
         // Filter products with valid stock
         const filteredProducts = allProducts.filter((product) => {
@@ -63,12 +63,11 @@ function BestSelling() {
         console.log('Fetched products (Best Selling - After Filter):', filteredProducts);
 
         if (filteredProducts.length === 0) {
-          console.warn('No products passed the filters (Best Selling). Relaxing stock filter...');
+          console.warn('No approved products passed the filters (Best Selling). Relaxing stock filter...');
           const relaxedProducts = shuffleArray(allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))).slice(0, 8);
           console.log('Products with relaxed stock filter (Best Selling):', relaxedProducts);
           setProducts(relaxedProducts);
         } else {
-          // Shuffle filtered products and take up to 8
           const shuffledProducts = shuffleArray(filteredProducts).slice(0, 8);
           setProducts(shuffledProducts);
         }

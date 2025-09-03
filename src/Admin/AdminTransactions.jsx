@@ -59,7 +59,6 @@ export default function AdminTransactions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((value) => {
       setSearchQuery(value);
@@ -79,12 +78,14 @@ export default function AdminTransactions() {
     setLoading(true);
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-      const response = await axios.post(
-        `${BACKEND_URL}/delete-transaction`,
-        { transactionId },
+      const response = await axios.delete(
+        `${BACKEND_URL}/delete-transaction/${transactionId}`,
         { timeout: 15000 }
       );
       addAlert(response.data.message);
+      // Refresh transactions after successful delete
+      setTransactions((prev) => prev.filter((txn) => txn.id !== transactionId));
+      setFilteredTransactions((prev) => prev.filter((txn) => txn.id !== transactionId));
     } catch (error) {
       console.error('Delete error:', error.message, { transactionId, details: error.response?.data?.details });
       const errorMessage = error.response?.data?.error || error.message;
@@ -110,7 +111,7 @@ export default function AdminTransactions() {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log('Fetched all transactions:', transactionData); // Debug log
+        console.log('Fetched all transactions:', transactionData);
         setTransactions(transactionData);
         setFilteredTransactions(
           transactionData.filter(

@@ -404,7 +404,7 @@ const Header = () => {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
               />
-              <i className="bx bx-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm sm:text-base"></i>
+              <i className="bx bx-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm sm:text-base"></i>
               {showDropdown && (
                 <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto">
                   {loading ? (

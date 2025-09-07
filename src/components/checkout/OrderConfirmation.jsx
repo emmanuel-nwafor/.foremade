@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { db } from '/src/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '/src/firebase';
+import JsBarcode from 'jsbarcode';
 import 'boxicons/css/boxicons.min.css';
 
-function CustomAlert({ alerts, removeAlert }) {
+export function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
     if (alerts.length === 0) return;
     const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
@@ -31,7 +32,7 @@ function CustomAlert({ alerts, removeAlert }) {
   );
 }
 
-function useAlerts() {
+export function useAlerts() {
   const [alerts, setAlerts] = useState([]);
   const addAlert = (message, type = 'info') => {
     const id = Date.now();
@@ -48,11 +49,11 @@ export default function OrderConfirmation() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const barcodeRef = useRef(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        // Get orderId from query param first, then state
         const searchParams = new URLSearchParams(location.search);
         let orderId = searchParams.get('orderId') || location.state?.order?.id;
         console.log('Attempting to fetch order with ID:', orderId);
@@ -64,7 +65,6 @@ export default function OrderConfirmation() {
           return;
         }
 
-        // Validate orderId format
         if (!orderId.startsWith('order-')) {
           console.warn('Invalid orderId format:', orderId);
           addAlert('Invalid order ID. Please contact support.', 'error');
@@ -72,7 +72,6 @@ export default function OrderConfirmation() {
           return;
         }
 
-        // Try fetching the order with retries
         let orderData = null;
         let attempts = 3;
         while (attempts > 0) {
@@ -87,7 +86,7 @@ export default function OrderConfirmation() {
             console.warn(`Order ${orderId} not found on attempt ${4 - attempts}`);
             attempts--;
             if (attempts > 0) {
-              await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1s before retry
+              await new Promise((resolve) => setTimeout(resolve, 1000));
             }
           } catch (err) {
             console.error('Firestore fetch error:', err);
@@ -99,9 +98,8 @@ export default function OrderConfirmation() {
           }
         }
 
-        // If order not found, try base orderId (without seller suffix)
         if (!orderData && orderId.includes('-')) {
-          const baseOrderId = orderId.split('-').slice(0, 2).join('-'); // e.g., order-1234567890
+          const baseOrderId = orderId.split('-').slice(0, 2).join('-');
           console.log('Trying base orderId:', baseOrderId);
           const ordersQuery = query(
             collection(db, 'orders'),
@@ -109,15 +107,13 @@ export default function OrderConfirmation() {
           );
           const querySnap = await getDocs(ordersQuery);
           if (!querySnap.empty) {
-            // Use the first matching order
             const firstOrder = querySnap.docs[0];
             orderData = { id: firstOrder.id, ...firstOrder.data() };
             console.log('Found order with base ID:', orderData);
-            orderId = firstOrder.id; // Update orderId to full ID
+            orderId = firstOrder.id;
           }
         }
 
-        // Fallback to location.state.order if Firestore fetch fails
         if (!orderData && location.state?.order) {
           console.log('Using state.order as fallback:', location.state.order);
           orderData = { ...location.state.order, id: orderId };
@@ -144,6 +140,26 @@ export default function OrderConfirmation() {
     };
     fetchOrder();
   }, [location, addAlert]);
+
+  useEffect(() => {
+    if (order && barcodeRef.current) {
+      try {
+        const barcodeValue = order.id.replace('order-', '').slice(0, 8);
+        JsBarcode(barcodeRef.current, barcodeValue, {
+          format: 'CODE128',
+          height: 30,
+          width: 1,
+          displayValue: true,
+          fontSize: 12,
+          margin: 5,
+          background: 'transparent',
+        });
+      } catch (err) {
+        console.error('Error generating barcode:', err);
+        addAlert('Failed to generate barcode: ' + err.message, 'error');
+      }
+    }
+  }, [order, addAlert]);
 
   if (loading) {
     return (
@@ -242,6 +258,13 @@ export default function OrderConfirmation() {
               {order.shippingDetails?.country || 'Not provided'}<br />
               <strong>Email:</strong> {order.shippingDetails?.email || 'Not provided'}<br />
               <strong>Phone:</strong> {order.shippingDetails?.phone || 'Not provided'}
+            </p>
+          </div>
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Order Barcode</h4>
+            <canvas ref={barcodeRef} className="w-full bg-white dark:bg-gray-800 rounded-lg" />
+            <p className="text-gray-600 dark:text-gray-300 text-xs mt-1">
+              Barcode Value: {order.id.replace('order-', '').slice(0, 8)}
             </p>
           </div>
         </div>

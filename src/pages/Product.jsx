@@ -15,7 +15,7 @@ import {
 import { addToCart } from "/src/utils/cartUtils";
 import CustomAlert, { useAlerts } from "/src/components/common/CustomAlert";
 import ProductCard from "/src/components/home/ProductCard";
-import { Palette, Ruler } from "lucide-react";
+import { Palette, Ruler, MessageCircleMore } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
 // Utility to debounce a function
@@ -1345,6 +1345,13 @@ const Product = () => {
                   >
                     <i className="ri-store-line"></i>
                     Seller: {product.seller.name}
+                  </Link>
+
+                  <Link
+                    to={`/seller/${product.sellerId}`}
+                    className="info-badge hover:bg-gray-200"
+                  >
+                    <MessageCircleMore />
                   </Link>
                 </div>
                 {product.variants.length > 0 && (

@@ -34,6 +34,7 @@ import SellerProductVariants from './seller/SellerProductVariants';
 import SellerProductGallery from './seller/SellerProductGallery';
 import Support from './pages/Support';
 import TermsConditions from './pages/TermsAndConditions';
+import Chat from './pages/Chat';
 
 // Changed all admin imports to ./Admin/
 import Admin from './Admin/Admin';
@@ -239,7 +240,7 @@ function App() {
               <Route path="/about" element={<AboutUs />} />
               <Route path="/seller-chat" element={<SellerChat />} />
               <Route path="/seller-chat/:chatId" element={<SellerChat />} />
-              <Route path="/chat/:orderId" element={<ChatSystem />} />
+              {/* <Route path="/chat/:orderId" element={<ChatSystem />} /> */}
               <Route path="/seller/:sellerId" element={<SellersPage />} />
               <Route path="/order-tracking" element={<OrderTracking />} />
               <Route path="/category/:categoryName" element={<CategoryPage />} />
@@ -247,6 +248,7 @@ function App() {
               <Route path="/daily-deals" element={<DailyDeals />} />
               <Route path="/trending-fashions" element={<AllTrendingFashion />} />
               <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
+               <Route path="/chat/:productId" element={<Chat />} />
 
               {/* Admin Routes with requireAdmin */}
               <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />

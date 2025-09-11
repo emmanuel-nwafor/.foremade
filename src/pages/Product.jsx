@@ -15,9 +15,10 @@ import {
 import { addToCart } from "/src/utils/cartUtils";
 import CustomAlert, { useAlerts } from "/src/components/common/CustomAlert";
 import ProductCard from "/src/components/home/ProductCard";
-import { Palette, Ruler, MessageCircleMore } from "lucide-react";
+import { Palette, Ruler, MessageCircle } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
+
 // Utility to debounce a function
 const debounce = (func, wait) => {
   let timeout;
@@ -26,6 +27,7 @@ const debounce = (func, wait) => {
     timeout = setTimeout(() => func(...args), wait);
   };
 };
+
 const colorMap = {
   red: "#DC2626",
   blue: "#2563EB",
@@ -53,6 +55,7 @@ const colorMap = {
   indigo: "#6366F1",
   violet: "#8B5CF6",
 };
+
 const Product = () => {
   const [dailyDeals, setDailyDeals] = useState([]);
   const [product, setProduct] = useState(null);
@@ -91,18 +94,21 @@ const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+
   const tagStyles = {
     new: "bg-amber-100 text-amber-800 border-amber-300",
     sale: "bg-emerald-100 text-emerald-800 border-emerald-300",
     trending: "bg-blue-100 text-blue-800 border-blue-300",
     default: "bg-gray-100 text-gray-800 border-gray-300",
   };
+
   const SIZE_RELEVANT_CATEGORIES = [
     "foremade fashion",
     "clothing",
     "shoes",
     "accessories",
   ];
+
   // Fetch minimum purchase amount
   useEffect(() => {
     const fetchMinimumPurchase = async () => {
@@ -119,7 +125,8 @@ const Product = () => {
     };
     fetchMinimumPurchase();
   }, [addAlert]);
-  // Fetch additional shipping percentage (configurable by admins)
+
+  // Fetch additional shipping percentage
   useEffect(() => {
     const fetchAdditionalShippingPercentage = async () => {
       try {
@@ -135,6 +142,7 @@ const Product = () => {
     };
     fetchAdditionalShippingPercentage();
   }, [addAlert]);
+
   // Fetch daily deals
   useEffect(() => {
     const fetchDailyDeals = async () => {
@@ -147,6 +155,7 @@ const Product = () => {
     };
     fetchDailyDeals();
   }, []);
+
   // Fetch fee configurations
   useEffect(() => {
     const fetchFeeConfig = async () => {
@@ -162,6 +171,7 @@ const Product = () => {
     };
     fetchFeeConfig();
   }, []);
+
   // Calculate fees
   useEffect(() => {
     if (feeConfig && product?.category && (selectedVariant?.price || product?.price) > 0) {
@@ -184,6 +194,7 @@ const Product = () => {
       });
     }
   }, [feeConfig, product?.category, selectedVariant?.price, product?.price]);
+
   // Format description
   const formatDescription = (text) => {
     if (!text || typeof text !== "string") return "";
@@ -215,6 +226,7 @@ const Product = () => {
     if (isList) output += "</ul>";
     return output;
   };
+
   // Fetch favorites with debouncing
   const fetchFavorites = useCallback(
     debounce(async (user) => {
@@ -239,6 +251,7 @@ const Product = () => {
     }, 500),
     [addAlert]
   );
+
   // Handle auth state changes
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -246,6 +259,7 @@ const Product = () => {
     });
     return () => unsubscribe();
   }, [fetchFavorites]);
+
   // Fetch product and related data
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -461,6 +475,7 @@ const Product = () => {
     };
     fetchProduct();
   }, [id, navigate]);
+
   // Load recent searches
   useEffect(() => {
     try {
@@ -485,6 +500,7 @@ const Product = () => {
       setRecentSearches([]);
     }
   }, []);
+
   // Update media when product or variant changes
   useEffect(() => {
     if (!product) return;
@@ -506,6 +522,7 @@ const Product = () => {
     setMainMedia(allMedia[0].url);
     setCurrentMediaIndex(0);
   }, [product, selectedVariant]);
+
   // Update media index
   useEffect(() => {
     if (!product) return;
@@ -527,6 +544,7 @@ const Product = () => {
       setMainMedia("https://via.placeholder.com/600");
     }
   }, [currentMediaIndex, product, selectedVariant]);
+
   const handleAddToCart = async () => {
     if (!product) return;
     try {
@@ -559,11 +577,13 @@ const Product = () => {
       addAlert("Failed to add to cart", "error", 3000);
     }
   };
+
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
     return Math.round(total * additionalShippingPercentage);
   };
+
   const handlePayNow = async () => {
     if (!product) return;
     if (quantity > (selectedVariant?.stock || product.stock)) {
@@ -611,6 +631,7 @@ const Product = () => {
       addAlert("Failed to add to cart", "error", 3000);
     }
   };
+
   const handleConfirmPayNow = async () => {
     try {
       await addToCart(
@@ -637,13 +658,16 @@ const Product = () => {
       setShowShippingFeeModal(false);
     }
   };
+
   const handleCancelPayNow = () => {
     setShowShippingFeeModal(false);
     addAlert("Purchase cancelled.", "info", 3000);
   };
+
   const handleProductClick = (productId) => {
     navigate(`/product/${productId}`, { state: { from: location.pathname } });
   };
+
   const toggleFavorite = async () => {
     if (!product) {
       addAlert("No product selected", "error", 3000);
@@ -682,6 +706,7 @@ const Product = () => {
       addAlert("Failed to update favorites.", "error", 3000);
     }
   };
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!auth.currentUser) {
@@ -738,6 +763,7 @@ const Product = () => {
       addAlert("Failed to submit review", "error", 3000);
     }
   };
+
   // Debounced media click handler
   const handleMediaClick = useCallback(
     debounce((media, index) => {
@@ -754,6 +780,7 @@ const Product = () => {
     }, 300),
     [currentMediaIndex]
   );
+
   // Debounced variant change handler
   const handleVariantChange = useCallback(
     debounce((color, size) => {
@@ -795,6 +822,7 @@ const Product = () => {
     }, 300),
     [product, selectedVariant, addAlert]
   );
+
   const revertToPreviousVariant = () => {
     if (previousVariant) {
       setSelectedVariant(previousVariant);
@@ -818,12 +846,14 @@ const Product = () => {
       setQuantity(1);
     }
   };
+
   const isVariantAvailable = (color, size) => {
     const variant = product?.variants?.find(
       (v) => v.color === color && v.size === size
     );
     return variant && variant.stock > 0;
   };
+
   const getSafeImageUrl = (url) => {
     if (
       !url ||
@@ -834,6 +864,7 @@ const Product = () => {
     }
     return url;
   };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -842,6 +873,7 @@ const Product = () => {
       </div>
     );
   }
+
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -853,6 +885,7 @@ const Product = () => {
       </div>
     );
   }
+
   const DESCRIPTION_LIMIT = 150;
   const REVIEW_LIMIT = 5;
   const truncatedDescription =
@@ -887,6 +920,7 @@ const Product = () => {
           product.reviews.length
         ).toFixed(1)
       : product.rating.toFixed(1);
+
   return (
     <div className="mb-[140px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
@@ -962,17 +996,12 @@ const Product = () => {
             margin-bottom: 1rem;
             transition: all 0.3s ease;
           }
-        // .product-info-card:hover {
-        // transform: translateY(-2px);
-        // box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        // }
           .price-section {
-            background: #f0f0f0;
+            // background: #112d4e;
             border: 1px solid #cccccc;
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin: 1rem 0;
-            color: #F0F0F0;
           }
           .selection-option {
             transition: all 0.2s ease;
@@ -1010,6 +1039,14 @@ const Product = () => {
           .info-badge:hover {
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+          .message-icon {
+            transition: all 0.3s ease;
+            color: #25D366;
+          }
+          .message-icon:hover {
+            transform: scale(1.2);
+            color: #128C7E;
           }
           .quantity-controls {
             display: flex;
@@ -1053,7 +1090,7 @@ const Product = () => {
           }
           .favorite-button.active {
             transform: scale(1.1);
-            color: gray;
+            color: #DC2626;
           }
           .back-icon {
             transition: all 0.3s ease;
@@ -1062,31 +1099,16 @@ const Product = () => {
           .back-icon:hover {
             transform: scale(1.2);
           }
-          /* Modal Animation Styles */
           @keyframes modalFadeIn {
-            from {
-              opacity: 0;
-              transform: scale(0.8);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
           }
-          .modal-enter {
-            animation: modalFadeIn 0.3s ease-out forwards;
-          }
+          .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
           @keyframes modalBackdropFadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 0.5;
-            }
+            from { opacity: 0; }
+            to { opacity: 0.5; }
           }
-          .backdrop-enter {
-            animation: modalBackdropFadeIn 0.3s ease-out forwards;
-          }
+          .backdrop-enter { animation: modalBackdropFadeIn 0.3s ease-out forwards; }
         `}
       </style>
       {/* Shipping Fee Modal */}
@@ -1300,9 +1322,7 @@ const Product = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm mt-1 text-[#F0F0F0] opacity-90">
-                    Total price (inclusive of fees)
-                  </p>
+
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="info-badge">
@@ -1346,13 +1366,19 @@ const Product = () => {
                     <i className="ri-store-line"></i>
                     Seller: {product.seller.name}
                   </Link>
-
-                  <Link
-                    to={`/seller/${product.sellerId}`}
+                  <button
+                    onClick={() =>
+                      navigate(`/chat/${product.id}`, {
+                        state: { sellerId: product.sellerId, productId: product.id }
+                      })
+                    }
                     className="info-badge hover:bg-gray-200"
+                    aria-label="Message seller"
                   >
-                    <MessageCircleMore />
-                  </Link>
+                    <MessageCircle className="message-icon" size={20} />
+                    Message Seller
+                  </button>
+
                 </div>
                 {product.variants.length > 0 && (
                   <div className="mb-4">
@@ -1795,4 +1821,5 @@ const Product = () => {
     </div>
   );
 };
+
 export default Product;

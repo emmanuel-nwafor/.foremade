@@ -1,17 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { db, auth } from "/src/firebase";
-import {
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  getDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { ArrowLeft, Send } from "lucide-react";
+import { collection, addDoc, getDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { Send } from "lucide-react";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -23,62 +14,60 @@ const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const sellerId = location.state?.sellerId;
-  const isMountedRef = useRef(true);
   const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
   }, []);
 
+  // Restrict sensitive messages
   const restrictMessage = (text) => {
     const patterns = [
-      /\d{5,}/,
-      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
-      /\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{16}\b/,
-      /(contact me via|whatsapp|telegram|linkedin|call me|sms)/i,
-      /(http|https|www\.)/i,
+      /\d{5,}/, // long numbers (e.g., IDs, card numbers)
+      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/, // emails
+      /\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{16}\b/, // credit/debit cards
+      /(contact me via|whatsapp|telegram|linkedin|call me|sms)/i, // contact requests
+      /(http|https|www\.)/i, // URLs
+      /\b\d{10,}\b/, // phone numbers
+      /(bank account|routing number|ssn|social security)/i, // sensitive info
+      /(<script>|<\/script>|javascript:)/i, // XSS injection
+      /(password|pin|otp)/i, // login info
+      /(\bfree\s+money\b|\bclick here\b|\bsubscribe\b|\boffer\b)/i, // spammy phrases
     ];
     return patterns.some((p) => p.test(text));
   };
 
+
   const getInitials = (name) => {
     if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase();
   };
 
-  // Fetch seller and product
+  // Fetch seller and product info
   useEffect(() => {
-    isMountedRef.current = true;
-    const fetchDetails = async () => {
-      if (!sellerId || !productId) return;
+    if (!sellerId || !productId) return;
+    const fetchData = async () => {
       const sellerSnap = await getDoc(doc(db, "users", sellerId));
       const productSnap = await getDoc(doc(db, "products", productId));
-      if (sellerSnap.exists() && productSnap.exists()) {
-        setSeller({ id: sellerId, ...sellerSnap.data() });
-        setProduct({ id: productId, ...productSnap.data() });
-      }
+      if (sellerSnap.exists()) setSeller({ id: sellerId, ...sellerSnap.data() });
+      if (productSnap.exists()) setProduct({ id: productId, ...productSnap.data() });
     };
-    fetchDetails();
-    return () => (isMountedRef.current = false);
+    fetchData();
   }, [sellerId, productId]);
 
   // Listen for messages
   useEffect(() => {
     if (!auth.currentUser || !sellerId || !productId) return;
     const conversationId = [auth.currentUser.uid, sellerId, productId].sort().join("_");
-    const q = query(
-      collection(db, `conversations/${conversationId}/messages`),
-      orderBy("createdAt", "asc")
-    );
+    const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!isMountedRef.current) return;
-      const fetched = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const fetched = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter(
+          (msg) =>
+            msg.conversationId === conversationId
+        );
       setMessages(fetched);
       scrollToBottom();
     });
@@ -91,33 +80,20 @@ const Chat = () => {
     if (!newMessage.trim() || restrictMessage(newMessage)) return;
 
     const conversationId = [auth.currentUser.uid, sellerId, productId].sort().join("_");
-    const messageData = {
+
+    await addDoc(collection(db, "messages"), {
+      conversationId,
       text: newMessage.trim(),
       senderId: auth.currentUser.uid,
       senderName: auth.currentUser.displayName || "Anonymous",
+      receiverId: sellerId,
+      productId,
       createdAt: serverTimestamp(),
-    };
-
-    await addDoc(collection(db, `conversations/${conversationId}/messages`), messageData);
-
-    const recipientId = auth.currentUser.uid === sellerId ? product?.ownerId : sellerId;
-    if (recipientId) {
-      await addDoc(collection(db, "users-notifications"), {
-        userId: recipientId,
-        type: "chat_message",
-        message: `${messageData.senderName} sent you a message about ${product?.name}`,
-        productId,
-        conversationId,
-        createdAt: serverTimestamp(),
-        read: false,
-      });
-    }
+    });
 
     setNewMessage("");
     scrollToBottom();
   };
-
-  const handleBack = () => navigate(-1);
 
   if (!seller || !product)
     return <div className="flex items-center justify-center h-screen text-gray-700">Loading...</div>;
@@ -148,10 +124,7 @@ const Chat = () => {
       </div>
 
       {/* Messages */}
-      <div
-        ref={chatContainerRef}
-        className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50"
-      >
+      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
         {messages.map((msg) => {
           const isBuyer = msg.senderId === auth.currentUser.uid;
           const initials = isBuyer
@@ -165,12 +138,9 @@ const Chat = () => {
                 isBuyer ? "ml-auto flex-row-reverse" : "mr-auto"
               }`}
             >
-              {/* Initials bubble */}
               <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
                 {initials}
               </div>
-
-              {/* Message bubble */}
               <div
                 className={`p-3 rounded-2xl shadow-sm break-words ${
                   isBuyer
@@ -181,10 +151,7 @@ const Chat = () => {
                 <p>{msg.text}</p>
                 <p className="text-xs text-gray-400 mt-1 text-right">
                   {msg.createdAt
-                    ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                    ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                     : "Sending..."}
                 </p>
               </div>
@@ -195,10 +162,7 @@ const Chat = () => {
       </div>
 
       {/* Input */}
-      <form
-        onSubmit={handleSendMessage}
-        className="flex items-center gap-3 p-4 border-t border-gray-200 bg-white"
-      >
+      <form onSubmit={handleSendMessage} className="flex items-center gap-3 p-4 border-t border-gray-200 bg-white">
         <input
           type="text"
           value={newMessage}
@@ -206,10 +170,7 @@ const Chat = () => {
           placeholder="Type a message"
           className="flex-1 px-4 py-3 rounded-full border border-gray-300 focus:ring-2 focus:ring-teal-400 outline-none"
         />
-        <button
-          type="submit"
-          className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 transition"
-        >
+        <button type="submit" className="p-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 transition">
           <Send size={20} />
         </button>
       </form>

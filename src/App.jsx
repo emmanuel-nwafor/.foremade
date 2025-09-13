@@ -23,6 +23,7 @@ import Checkout from './components/checkout/Checkout';
 import Orders from './profile/Orders';
 import Address from './profile/Address';
 import Setting from './profile/Setting';
+import ChatOverview from './profile/ChatOverview';
 import OrderConfirmation from './components/checkout/OrderConfirmation';
 import UsersOrdersPage from './seller/UsersOrdersPage';
 import SettingsPage from './seller/SettingsPage';
@@ -248,7 +249,8 @@ function App() {
               <Route path="/daily-deals" element={<DailyDeals />} />
               <Route path="/trending-fashions" element={<AllTrendingFashion />} />
               <Route path="/trending-gadgets" element={<AllTrendingGadgets />} />
-               <Route path="/chat/:productId" element={<Chat />} />
+              <Route path="/chat/:productId" element={<Chat />} />
+              <Route path="/chat-overview" element={<ChatOverview />} />
 
               {/* Admin Routes with requireAdmin */}
               <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />

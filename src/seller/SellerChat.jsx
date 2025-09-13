@@ -1,609 +1,185 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { motion, AnimatePresence } from 'framer-motion';
-import { auth, db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
-import ChatTemplates, { templates } from '/src/components/chat/ChatTemplates';
-import SellerSidebar from '/src/seller/SellerSidebar';
+import React, { useState, useEffect, useRef } from "react";
+import { db, auth } from "../firebase";
+import { collection, query, orderBy, onSnapshot, addDoc, doc, getDoc } from "firebase/firestore";
+import SellerSidebar from "/src/seller/SellerSidebar";
 
-function canSendImage(messages) {
-  if (messages.length === 0) return false;
-  const lastMsg = messages[messages.length - 1];
-  return /photo|image|picture|show|damage|send us|share/i.test(lastMsg.text);
-}
+// Enhanced message restrictions
+const restrictMessage = (text) => {
+  const patterns = [
+    /\d{5,}/, // long numbers
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/, // emails
+    /\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{16}\b/, // credit/debit cards
+    /(contact me via|whatsapp|telegram|linkedin|call me|sms)/i,
+    /(http|https|www\.)/i, // URLs
+    /\b\d{10,}\b/, // phone numbers
+    /(bank account|routing number|ssn|social security)/i,
+    /(<script>|<\/script>|javascript:)/i, // XSS
+    /(password|pin|otp)/i,
+    /(\bfree\s+money\b|\bclick here\b|\bsubscribe\b|\boffer\b)/i, // spam
+  ];
+  return patterns.some((p) => p.test(text));
+};
 
 const SellerChat = () => {
-  const { chatId } = useParams();
-  const navigate = useNavigate();
-  const [chats, setChats] = useState([]);
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [recipientTyping, setRecipientTyping] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const fileInputRef = useRef(null);
+  const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
 
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+  // Fetch buyer name from users collection
+  const fetchBuyerName = async (buyerId) => {
+    const docRef = doc(db, "users", buyerId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data().name : "Unknown Buyer";
+  };
+
+  // Listen for all conversations
   useEffect(() => {
-    const fetchChats = () => {
-      if (!auth.currentUser) {
-        toast.error('Please sign in to view chats.');
-        navigate('/login');
-        setLoading(false);
-        return () => {};
-      }
+    if (!auth.currentUser) return;
 
-      const chatsQuery = query(collection(db, 'chats'), where('sellerId', '==', auth.currentUser.uid));
-      const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
-        try {
-          const fetchedChats = await Promise.all(
-            snapshot.docs.map(async (chatDoc) => {
-              const chatData = chatDoc.data();
-              const orderRef = doc(db, 'orders', chatData.orderId);
-              const orderSnap = await getDoc(orderRef);
-              const orderData = orderSnap.exists() ? orderSnap.data() : {};
-              const buyerRef = doc(db, 'users', chatData.userId);
-              const buyerSnap = await getDoc(buyerRef);
-              const buyerData = buyerSnap.exists() ? buyerSnap.data() : {};
-              const productRef = doc(db, 'products', chatData.productId);
-              const productSnap = await getDoc(productRef);
-              const productData = productSnap.exists() ? productSnap.data() : {};
+    const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const allMsgs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-              return {
-                chatId: chatDoc.id,
-                orderId: chatData.orderId,
-                buyerName: buyerData.displayName || 'Unknown Buyer',
-                buyerAvatar: buyerData.avatar || 'https://ui-avatars.com/api/?name=B&background=3b82f6&color=fff&size=40',
-                productName: orderData.items?.[0]?.name || productData.name || 'Product',
-                lastMessage: chatData.lastMessage || '',
-                lastMessageTime: chatData.lastMessageTime || chatData.createdAt || new Date(),
-              };
-            })
-          );
+      const sellerConvosObj = {};
 
-          console.log('Fetched chats:', fetchedChats);
-          setChats(fetchedChats);
+      for (let msg of allMsgs) {
+        if (msg.receiverId === auth.currentUser.uid || msg.senderId === auth.currentUser.uid) {
+          const buyerId = msg.senderId === auth.currentUser.uid ? msg.receiverId : msg.senderId;
 
-          if (chatId) {
-            const selected = fetchedChats.find((chat) => chat.chatId === chatId);
-            if (selected) {
-              setSelectedChat(selected);
-              const messagesQuery = query(
-                collection(db, 'chats', chatId, 'messages'),
-                orderBy('timestamp', 'asc')
-              );
-              const messagesUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-                const fetchedMessages = snapshot.docs.map((doc) => ({
-                  id: doc.id,
-                  ...doc.data(),
-                }));
-                setMessages(fetchedMessages);
-                setLoading(false);
-              }, (err) => {
-                console.error('Error fetching messages:', err.message);
-                toast.error('Failed to load messages.');
-                setLoading(false);
-              });
-
-              const chatRef = doc(db, 'chats', chatId);
-              const typingUnsubscribe = onSnapshot(chatRef, (doc) => {
-                const data = doc.data();
-                setRecipientTyping(data?.typing?.[data.userId] || false);
-                setLoading(false);
-              }, (err) => {
-                console.error('Error fetching typing status:', err.message);
-                setLoading(false);
-              });
-
-              return () => {
-                messagesUnsubscribe();
-                typingUnsubscribe();
-              };
-            } else {
-              console.warn(`Chat with ID ${chatId} not found.`);
-              toast.error('Chat not found.');
-              setSelectedChat(null);
-              setMessages([]);
-              setLoading(false);
-            }
+          if (!sellerConvosObj[msg.conversationId]) {
+            const name = await fetchBuyerName(buyerId);
+            sellerConvosObj[msg.conversationId] = {
+              conversationId: msg.conversationId,
+              buyerId,
+              buyerName: name,
+              lastMessage: msg.text,
+            };
           } else {
-            setSelectedChat(null);
-            setMessages([]);
-            setLoading(false);
+            sellerConvosObj[msg.conversationId].lastMessage = msg.text;
           }
-        } catch (err) {
-          console.error('Error fetching chats:', err.message);
-          toast.error('Failed to load chats.');
-          setLoading(false);
         }
-      }, (err) => {
-        console.error('Error in chats snapshot:', err.message);
-        toast.error('Failed to load chats.');
-        setLoading(false);
-      });
+      }
 
-      return unsubscribe;
-    };
+      const convArray = Object.values(sellerConvosObj);
+      setConversations(convArray);
 
-    const unsubscribe = fetchChats();
+      if (!selectedConversation && convArray.length > 0) {
+        setSelectedConversation(convArray[0]);
+      }
+    });
+
     return () => unsubscribe();
-  }, [chatId, navigate]);
+  }, [selectedConversation]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Listen for messages of selected conversation
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!selectedConversation) return;
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
+    const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((msg) => msg.conversationId === selectedConversation.conversationId);
+
+      setMessages(msgs);
+      scrollToBottom();
+    });
+
+    return () => unsubscribe();
+  }, [selectedConversation]);
 
   const handleSendMessage = async () => {
-    if (!selectedTemplate || !selectedChat) {
-      toast.error('Please select a message template.');
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    if (restrictMessage(newMessage)) {
+      console.log("connot send message")
       return;
     }
 
-    try {
-      setIsTyping(true);
-      await addDoc(collection(db, 'chats', selectedChat.chatId, 'messages'), {
-        senderId: auth.currentUser.uid,
-        text: templates.seller[selectedTemplate],
-        image: null,
-        timestamp: new Date(),
-        status: 'delivered',
-      });
+    await addDoc(collection(db, "messages"), {
+      conversationId: selectedConversation.conversationId,
+      senderId: auth.currentUser.uid,
+      receiverId: selectedConversation.buyerId,
+      text: newMessage.trim(),
+      createdAt: new Date(),
+    });
 
-      await updateDoc(doc(db, 'chats', selectedChat.chatId), {
-        lastMessage: templates.seller[selectedTemplate],
-        lastMessageTime: new Date(),
-        [`typing.${auth.currentUser.uid}`]: false,
-      });
-
-      setSelectedTemplate('');
-    } catch (err) {
-      console.error('Error sending message:', err.message);
-      toast.error('Failed to send message.');
-    } finally {
-      setIsTyping(false);
-    }
+    setNewMessage("");
+    scrollToBottom();
   };
-
-  const handleSendImage = async () => {
-    if (!selectedImage || !imagePreview || !selectedChat) return;
-
-    try {
-      setIsTyping(true);
-      await addDoc(collection(db, 'chats', selectedChat.chatId, 'messages'), {
-        senderId: auth.currentUser.uid,
-        text: '',
-        image: imagePreview,
-        timestamp: new Date(),
-        status: 'delivered',
-      });
-
-      await updateDoc(doc(db, 'chats', selectedChat.chatId), {
-        lastMessage: 'Image sent',
-        lastMessageTime: new Date(),
-        [`typing.${auth.currentUser.uid}`]: false,
-      });
-
-      setSelectedImage(null);
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (err) {
-      console.error('Error sending image:', err.message);
-      toast.error('Failed to send image.');
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleTyping = async () => {
-    if (selectedChat) {
-      try {
-        await updateDoc(doc(db, 'chats', selectedChat.chatId), {
-          [`typing.${auth.currentUser.uid}`]: true,
-        });
-      } catch (err) {
-        console.error('Error updating typing status:', err.message);
-      }
-    }
-  };
-
-  const formatMessageTime = (timestamp) => {
-    if (!timestamp) return '';
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (err) {
-      return '';
-    }
-  };
-
-  const formatChatTime = (timestamp) => {
-    if (!timestamp) return '';
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      const today = new Date();
-      if (date.toDateString() === today.toDateString()) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch (err) {
-      return '';
-    }
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-        <div
-          className={`fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out ${
-            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 md:static md:w-64 md:flex-shrink-0`}
-        >
-          <SellerSidebar />
-        </div>
-        <div className="flex-1 p-4 sm:p-6 flex justify-center items-center">
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-            <i className="bx bx-loader bx-spin text-xl sm:text-2xl"></i>
-            <span className="text-sm sm:text-base">Loading...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen">
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 md:static md:w-64 md:flex-shrink-0`}
-      >
+      <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-gray-50">
         <SellerSidebar />
       </div>
 
-      {/* Sidebar Toggle Button for Mobile */}
-      <button
-        onClick={toggleSidebar}
-        className="md:hidden fixed top-4 left-4 z-40 p-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
-        aria-label="Toggle sidebar"
-      >
-        <i className={`bx ${isSidebarOpen ? 'bx-x' : 'bx-menu'} text-lg sm:text-xl`}></i>
-      </button>
-
-      {/* Main Content */}
-      <div className="flex-1 p-2 sm:p-4 md:p-6">
-        <div className="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 border border-gray-200 dark:border-gray-600">
-          <div className="mb-3 sm:mb-4 md:mb-6">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-              <i className="bx bx-chat text-blue-500 mr-2 text-lg sm:text-xl md:text-2xl"></i>
-              Seller Chats
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">
-              Manage your conversations with buyers.
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 h-[calc(100vh-8rem)] sm:h-[calc(100vh-9rem)] md:h-[calc(100vh-10rem)]">
-            {/* Chat List */}
-            <motion.div
-              className="md:w-1/3 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-600"
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
+      {/* Conversations & Messages */}
+      <div className="flex-1 flex flex-col md:flex-row">
+        {/* Conversation list */}
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-gray-50 p-2 overflow-y-auto max-h-64 md:max-h-full">
+          {conversations.map((convo) => (
+            <div
+              key={convo.conversationId}
+              className={`p-2 cursor-pointer rounded ${
+                selectedConversation?.conversationId === convo.conversationId
+                  ? "bg-teal-200"
+                  : "hover:bg-gray-200"
+              }`}
+              onClick={() => setSelectedConversation(convo)}
             >
-              <div className="p-2 sm:p-3 md:p-4 bg-blue-50 dark:bg-blue-900 border-b border-gray-200 dark:border-gray-600">
-                <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 dark:text-gray-100">Chats</h2>
-              </div>
-              {chats.length === 0 ? (
-                <p className="p-2 sm:p-3 md:p-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">No chats found.</p>
-              ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-600 max-h-[calc(100vh-12rem)] sm:max-h-[calc(100vh-13rem)] md:max-h-[calc(100vh-14rem)] overflow-y-auto">
-                  <AnimatePresence>
-                    {chats.map((chat) => (
-                      <motion.div
-                        key={chat.chatId}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => {
-                          navigate(`/seller-chat/${chat.chatId}`);
-                          setSelectedChat(chat);
-                          setIsSidebarOpen(false);
-                        }}
-                        className={`p-2 sm:p-3 md:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-800 transition ${
-                          selectedChat?.chatId === chat.chatId ? 'bg-blue-100 dark:bg-blue-900' : ''
-                        }`}
-                      >
-                        <img
-                          src={chat.buyerAvatar}
-                          alt="Buyer"
-                          className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full border border-gray-200 dark:border-gray-600"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs sm:text-sm md:text-base text-gray-800 dark:text-gray-100 truncate">{chat.buyerName}</p>
-                          <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{chat.lastMessage || 'No messages yet'}</p>
-                        </div>
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-400 dark:text-gray-500">{formatChatTime(chat.lastMessageTime)}</p>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </motion.div>
+              <p className="font-medium truncate">Buyer: {convo.buyerName}</p>
+              <p className="text-sm text-gray-600 truncate">{convo.lastMessage}</p>
+            </div>
+          ))}
+        </div>
 
-            {/* Chat Messages */}
-            <motion.div
-              className="md:w-2/3 flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-600"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {selectedChat ? (
-                <>
-                  <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 bg-blue-600 dark:bg-blue-700 text-white border-b border-gray-200 dark:border-gray-600">
-                    <img
-                      src={selectedChat.buyerAvatar}
-                      alt="Buyer"
-                      className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full border-2 border-white"
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm sm:text-base md:text-lg">{selectedChat.buyerName}</div>
-                      <div className="text-[10px] sm:text-xs md:text-sm text-blue-100 dark:text-blue-200 truncate">Product: {selectedChat.productName}</div>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 bg-gray-100 dark:bg-gray-900 max-h-[calc(100vh-14rem)] sm:max-h-[calc(100vh-15rem)] md:max-h-[calc(100vh-16rem)]">
-                    <AnimatePresence>
-                      {messages.map((msg) => (
-                        <motion.div
-                          key={msg.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className={`flex ${
-                            msg.senderId === auth.currentUser.uid ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <div
-                            className={`max-w-[80%] sm:max-w-[75%] md:max-w-[70%] rounded-lg p-2 sm:p-2.5 md:p-3 shadow-sm relative ${
-                              msg.senderId === auth.currentUser.uid
-                                ? 'bg-blue-500 text-white rounded-br-none'
-                                : 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-bl-none'
-                            }`}
-                          >
-                            {msg.text && <div className="text-xs sm:text-sm md:text-base">{msg.text}</div>}
-                            {msg.image && (
-                              <img
-                                src={msg.image}
-                                alt="chat-img"
-                                className="max-w-[100px] sm:max-w-[120px] md:max-w-[150px] rounded-md border border-gray-200 dark:border-gray-600 mb-1"
-                              />
-                            )}
-                            <div className="flex items-center justify-end gap-1 text-[10px] sm:text-xs md:text-sm mt-1">
-                              <span
-                                className={
-                                  msg.senderId === auth.currentUser.uid
-                                    ? 'text-blue-100'
-                                    : 'text-gray-500 dark:text-gray-400'
-                                }
-                              >
-                                {formatMessageTime(msg.timestamp)}
-                              </span>
-                            </div>
-                            <div
-                              className={`absolute bottom-0 ${
-                                msg.senderId === auth.currentUser.uid ? 'right-[-6px]' : 'left-[-6px]'
-                              } w-0 h-0 border-t-[6px] border-t-transparent ${
-                                msg.senderId === auth.currentUser.uid
-                                  ? 'border-l-[6px] border-l-blue-500'
-                                  : 'border-r-[6px] border-r-white dark:border-r-gray-600'
-                              } border-b-[6px] border-b-transparent`}
-                            />
-                          </div>
-                        </motion.div>
-                      ))}
-                      {(isTyping || recipientTyping) && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex justify-start"
-                        >
-                          <div className="bg-white dark:bg-gray-600 rounded-lg p-2 sm:p-2.5 md:p-3 shadow-sm">
-                            <div className="flex items-center gap-1">
-                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                              <div
-                                className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.1s' }}
-                              ></div>
-                              <div
-                                className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.2s' }}
-                              ></div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    <div ref={messagesEndRef} />
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 border-t border-gray-200 dark:border-gray-600">
-                    <div className="mb-2 sm:mb-2.5 md:mb-3">
-                      <ChatTemplates
-                        role="seller"
-                        onSelect={setSelectedTemplate}
-                        selectedTemplate={selectedTemplate}
-                        className="w-full p-2 sm:p-2.5 md:p-3 pl-6 sm:pl-8 md:pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-xs sm:text-sm md:text-base"
-                      />
-                    </div>
-                    {selectedImage && imagePreview && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="mb-2 sm:mb-2.5 md:mb-3 p-2 sm:p-2.5 md:p-3 bg-gray-100 dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-600"
-                      >
-                        <img
-                          src={imagePreview}
-                          alt="preview"
-                          className="max-w-[50px] sm:max-w-[60px] md:max-w-[80px] max-h-[50px] sm:max-h-[60px] md:max-h-[80px] rounded-md"
-                        />
-                      </motion.div>
-                    )}
-                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
-                      <div className="flex-1 flex items-center gap-2 sm:gap-3 bg-gray-100 dark:bg-gray-600 rounded-lg p-2 sm:p-2.5 md:p-3">
-                        {canSendImage(messages) && (
-                          <>
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                              id="image-upload"
-                            />
-                            <motion.label
-                              htmlFor="image-upload"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="text-gray-600 dark:text-gray-300 p-1 sm:p-1.5 md:p-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                            >
-                              <svg
-                                className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.586-6.586M12 3v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                              </svg>
-                            </motion.label>
-                          </>
-                        )}
-                        {selectedTemplate ? (
-                          <motion.button
-                            onClick={handleSendMessage}
-                            disabled={isTyping}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`ml-auto py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base ${
-                              isTyping ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                            onMouseDown={handleTyping}
-                          >
-                            <svg
-                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                              />
-                            </svg>
-                            Send
-                          </motion.button>
-                        ) : (
-                          <motion.button
-                            onClick={() => navigate('/support')}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="ml-auto py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base"
-                          >
-                            <svg
-                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M18.364 5.636A9 9 0 1121 12h-3m-6 6v3m-6-3h-3m6-6H3m6-6V3"
-                              />
-                            </svg>
-                            Support
-                          </motion.button>
-                        )}
-                      </div>
-                      {selectedImage && imagePreview && (
-                        <motion.button
-                          onClick={handleSendImage}
-                          disabled={isTyping}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center justify-center gap-1 sm:gap-2 transition text-xs sm:text-sm md:text-base ${
-                            isTyping ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          <svg
-                            className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                            />
-                          </svg>
-                          Send Image
-                        </motion.button>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <motion.div
-                  className="flex-1 flex items-center justify-center text-gray-600 dark:text-gray-400 text-xs sm:text-sm md:text-base"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
+        {/* Messages */}
+        <div className="flex-1 flex flex-col bg-gray-100">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.senderId === auth.currentUser.uid ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`p-3 rounded-xl max-w-full sm:max-w-xs md:max-w-md break-words ${
+                    msg.senderId === auth.currentUser.uid ? "bg-blue-600 text-white" : "bg-white text-gray-800"
+                  }`}
                 >
-                  Select a chat to view messages.
-                </motion.div>
-              )}
-            </motion.div>
+                  {msg.text}
+                  <div className="text-xs text-gray-400 mt-1 text-right">
+                    {msg.createdAt?.toDate
+                      ? msg.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "Sending..."}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t bg-white flex gap-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message"
+              className="flex-1 border rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-400"
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            />
+            <button
+              onClick={handleSendMessage}
+              className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition"
+            >
+              Send
+            </button>
           </div>
         </div>
       </div>

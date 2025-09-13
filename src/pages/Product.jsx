@@ -18,6 +18,7 @@ import ProductCard from "/src/components/home/ProductCard";
 import { Palette, Ruler, MessageCircle } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
+import ShareButton from "../components/common/ShareButton";
 
 // Utility to debounce a function
 const debounce = (func, wait) => {
@@ -1262,9 +1263,10 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                  <h1 className="text-3xl font-bold text-[#333333] flex-grow">
+                  <h1 className="text-2xl font-bold text-[#333333] flex-grow">
                     {product.name}
                   </h1>
+                  <ShareButton productId={product.id} productName={product.name} />
                   <button
                     onClick={toggleFavorite}
                     className={`favorite-button p-2 rounded-full ${
@@ -1291,6 +1293,7 @@ const Product = () => {
                       />
                     </svg>
                   </button>
+
                 </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
@@ -1323,6 +1326,7 @@ const Product = () => {
                     )}
                   </div>
 
+                  {/* <ShareButton productId={product.id} productName={product.name} /> */}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="info-badge">
@@ -1340,7 +1344,7 @@ const Product = () => {
                         d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.329 1.14l1.519 4.674c.3.921-.755 1.688-1.539 1.14l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.543-1.838-.219-1.539-1.14l1.519-4.674a1 1 0 00-.329-1.14l-3.976-2.888c-.784-.57-.381-1.81.588-1.81h4.915a1 1 0 00.95-.69l1.519-4.674z"
                       />
                     </svg>
-                    {avgRating} ({product.reviews.length} reviews)
+                    {avgRating} 
                   </span>
                   <span className="info-badge">
                     <svg

@@ -6,7 +6,6 @@ import axios from 'axios';
 import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
 import SellerLocationForm from './SellerLocationForm';
-import SellerProductUploadPopup from './SellerProductUploadPopup';
 
 // Set global Axios timeout
 axios.defaults.timeout = 80000; // 80 seconds
@@ -1847,15 +1846,6 @@ export default function SellerProductUpload() {
 
             {/* Alerts */}
             <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-            {/* Variant Popup */}
-            {/* {isVariantPopupOpen && (
-              <SellerProductUploadPopup
-                onYes={handleVariantYes}
-                onNo={handleVariantNo}
-                message="Would you like to add variants for this product (e.g., different sizes or colors)?"
-              />
-            )} */}
 
             {/* Success Popup */}
             {isSuccessPopupOpen && (

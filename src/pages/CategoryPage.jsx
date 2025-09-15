@@ -1,9 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { collection, onSnapshot, getDocs, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
 import CategoryBanner from '/src/components/category/CategoryBanner';
+
+// Banner mapping for desktop and mobile
+const categoryBanners = {
+  'Transport': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485716/auto_big_k4jp8e.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485719/auto_small_fvr8do.jpg',
+  },
+  'Television': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485684/screens_big_stuvgq.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485713/screens_small_wzvifu.jpg',
+  },
+  'Scent': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485702/perfume_big_mzpohm.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485684/perfume_small_xhsxan.jpg',
+  },
+  'Home & Living': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485706/garden_big_p9bfjz.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485710/garden_small_ruvatt.jpg',
+  },
+  'Photography': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485711/camera_big_icewmf.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485703/camera_small_dv0k55.jpg',
+  },
+  'Game & Console': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/games_big_tyfg2v.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485698/games_small_s2hvrp.jpg',
+  },
+  'Beverages': {
+    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/drink_big_afnisz.jpg',
+    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/drink_small_tsaqxo.jpg',
+  },
+};
 
 // Responsive hook
 function useIsMobile() {
@@ -16,40 +48,8 @@ function useIsMobile() {
   return isMobile;
 }
 
-// Banner mapping for desktop and mobile
-const categoryBanners = {
-  'Vehicles & Transport': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485716/auto_big_k4jp8e.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485719/auto_small_fvr8do.jpg',
-  },
-  'Television & Accessories': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485684/screens_big_stuvgq.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485713/screens_small_wzvifu.jpg',
-  },
-  'Perfumes & Fragrances': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485702/perfume_big_mzpohm.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485684/perfume_small_xhsxan.jpg',
-  },
-  'Home & Living': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485706/garden_big_p9bfjz.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485710/garden_small_ruvatt.jpg',
-  },
-  'Camera & Photography': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485711/camera_big_icewmf.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485703/camera_small_dv0k55.jpg',
-  },
-  'Game & Console': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/games_big_tyfg2v.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485698/games_small_s2hvrp.jpg',
-  },
-  'Drinks & Beverages': {
-    desktop: 'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/drink_big_afnisz.jpg',
-    mobile:  'https://res.cloudinary.com/dvhogp27g/image/upload/v1750485685/drink_small_tsaqxo.jpg',
-  },
-};
-
 // Fallback image for categories without a provided banner
-const fallbackBanner = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80';
+const fallbackBanner = 'https://cdn.pixabay.com/photo/2018/08/29/17/07/ecommerce-3640321_640.jpg';
 
 function slugify(str) {
   return str
@@ -67,13 +67,15 @@ function findCategoryBySlug(slug, categories) {
 export default function CategoryPage() {
   const { categoryName } = useParams();
   const [customSubcategories, setCustomSubcategories] = useState({});
+  const [bannerDesktop, setBannerDesktop] = useState(null);
+  const [bannerMobile, setBannerMobile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeSubcategory, setActiveSubcategory] = useState('');
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const isMobile = useIsMobile();
 
-  // Fetch subcategories
+  // Fetch subcategories (real-time)
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'customSubcategories'), (snapshot) => {
       const subcatData = {};
@@ -89,9 +91,29 @@ export default function CategoryPage() {
   // Find the real category name from the slug
   const realCategoryName = findCategoryBySlug(categoryName, customSubcategories);
   const subcategories = realCategoryName ? customSubcategories[realCategoryName] : null;
-  const bannerObj = categoryBanners[realCategoryName];
-  const bannerImg = bannerObj ? (isMobile ? bannerObj.mobile : bannerObj.desktop) : fallbackBanner;
-  const showTitle = !bannerObj;
+
+  // Fetch banners from Firestore with fallback to categoryBanners
+  useEffect(() => {
+    if (realCategoryName) {
+      const fetchBanners = async () => {
+        const catDocRef = doc(db, 'categories', realCategoryName);
+        const catSnap = await getDoc(catDocRef);
+        if (catSnap.exists()) {
+          const data = catSnap.data();
+          setBannerDesktop(data.bannerDesktop || (categoryBanners[realCategoryName]?.desktop || fallbackBanner));
+          setBannerMobile(data.bannerMobile || (categoryBanners[realCategoryName]?.mobile || fallbackBanner));
+        } else {
+          // Fallback to categoryBanners if Firestore doc doesn't exist
+          setBannerDesktop(categoryBanners[realCategoryName]?.desktop || fallbackBanner);
+          setBannerMobile(categoryBanners[realCategoryName]?.mobile || fallbackBanner);
+        }
+      };
+      fetchBanners();
+    }
+  }, [realCategoryName]);
+
+  const bannerImg = isMobile ? bannerMobile : bannerDesktop;
+  const showTitle = !bannerDesktop; // Adjusted to check if custom banner exists
 
   // Set first subcategory as active when data loads or category changes
   useEffect(() => {
@@ -145,7 +167,7 @@ export default function CategoryPage() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen mb-14">
       {/* Category Banner */}
       <CategoryBanner title={showTitle ? realCategoryName : ''} imageUrl={bannerImg} />
 

@@ -13,8 +13,8 @@ const slugify = (name) =>
 const categoryPathMap = {
   'Shoes': 'footwear',
   'Fashion': 'clothing',
-  'Phones': 'computers-laptops',
-  'Laptops': 'computers-laptops',
+  'Phones': 'Computers',
+  'Laptops': 'Computers',
   'Gaming': 'game-console',
   'Kitchen': 'home-living',
   // Add more as needed
@@ -29,7 +29,7 @@ const categories = [
   "Shoes",
   "Fashion",
   "Phones",
-  "Laptops",
+  "Television",
   "Watches",
   "Gaming",
   "Kitchen",
@@ -40,7 +40,7 @@ const categoryImages = {
   "Shoes": "https://banner2.cleanpng.com/20180406/wow/kisspng-shoe-jumpman-sneakers-air-jordan-teal-jordan-5ac6ff9c2fcfe2.7959868915229910041959.jpg",
   "Fashion": "https://pngimg.com/uploads/dress_shirt/dress_shirt_PNG8088.png",
   "Phones": "https://banner2.cleanpng.com/20240415/cv/transparent-apple-logo-person-holding-iphone-11-pro-max661df755177ea1.73458741.webp",
-  "Laptops": "https://banner2.cleanpng.com/lnd/20240424/uxz/transparent-rainbow-open-laptop-with-rainbow-gradient-background-image662945f170dc49.58708681.webp",
+  "Television": "https://banner2.cleanpng.com/lnd/20240424/uxz/transparent-rainbow-open-laptop-with-rainbow-gradient-background-image662945f170dc49.58708681.webp",
   "Watches": "https://banner2.cleanpng.com/20180202/lie/av2ldq3r4.webp",
   "Gaming": "https://banner2.cleanpng.com/lnd/20240424/jfa/aav33rgh3.webp",
   "Kitchen": "https://banner2.cleanpng.com/20180809/atv/kisspng-ferm-living-asymmetric-cutting-board-ferm-living-b-5b6c3d78edff15.1714747115338202809749.jpg",

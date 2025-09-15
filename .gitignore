@@ -5,3 +5,4 @@ backend/.env
 node_modules
 # build/
 *.log
+.env.production

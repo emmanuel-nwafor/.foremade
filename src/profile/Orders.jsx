@@ -197,14 +197,14 @@ const Orders = () => {
                             </h2>
                           </div>
                         </div>
-                        <motion.button
+                        {/* <motion.button
                           onClick={() => handleChatWithSeller(order)}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.95 }}
                           className="mt-2 sm:mt-0 px-4 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-600 dark:bg-amber-500 dark:hover:bg-amber-600 transition"
                         >
                           Chat with Seller
-                        </motion.button>
+                        </motion.button> */}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                         <p className="text-sm text-gray-600 dark:text-gray-300">

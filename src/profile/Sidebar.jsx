@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { User, Package, Heart, Map, Settings, CalendarCheck2 } from 'lucide-react'; // Importing lucide-react icons
+import { User, Package, Heart, Map, Settings, CalendarCheck2, LayoutDashboard, MessageCircle } from 'lucide-react'; // Importing lucide-react icons
 
 // Validation functions (to match Register)
 const generateUsername = (firstName, lastName) => {
@@ -160,6 +160,20 @@ export default function Sidebar() {
         >
           <Settings className="w-6 h-6 text-black dark:text-white" />
           <span>Settings</span>
+        </Link>
+        <Link
+          to="/chat-overview"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-800 p-2 rounded-lg transition-colors duration-300"
+        >
+          <MessageCircle className="w-6 h-6 text-black dark:text-white" />
+          <span>All Chats</span>
+        </Link>
+        <Link
+          to="/sell"
+          className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-800 p-2 rounded-lg transition-colors duration-300"
+        >
+          <LayoutDashboard className="w-6 h-6 text-black dark:text-white" />
+          <span>My Dashbaord</span>
         </Link>
       </nav>
     </div>

@@ -99,6 +99,7 @@ const ConfirmationModal = ({ isOpen, onConfirm, onCancel }) =>
 const StripeCheckoutForm = ({
   totalPrice,
   formData,
+  cart,
   onSuccess,
   onCancel,
   currency,
@@ -120,12 +121,59 @@ const StripeCheckoutForm = ({
 
     setLoading(true);
     setIsProcessing(true);
+
     try {
+      // Calculate amount in cents
       const amountInCents = Math.round(totalPrice * 100);
+      if (!amountInCents || amountInCents <= 0) {
+        throw new Error("Invalid amount: must be greater than zero");
+      }
+
+      // Get sellerId from cart (use first item's sellerId for simplicity)
+      const sellerId = cart[0]?.product?.sellerId || "default-seller-id";
+      if (!sellerId || sellerId === "default-seller-id") {
+        console.warn("No valid sellerId found in cart, using default");
+        toast.warn("No seller specified. Using default seller.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      }
+
+      // Calculate fees from cart
+      const metadata = {
+        userId: auth.currentUser?.uid || "anonymous",
+        orderId: `order-${Date.now()}`,
+        sellerId,
+        handlingFee: cart.reduce(
+          (sum, item) =>
+            sum +
+            (item.product?.totalPrice
+              ? item.product.totalPrice * (item.product?.handlingRate || 0.2)
+              : 0) *
+            (item.quantity || 0),
+          0
+        ) * 100, // Convert to cents
+        buyerProtectionFee: cart.reduce(
+          (sum, item) =>
+            sum +
+            (item.product?.totalPrice
+              ? item.product.totalPrice * (item.product?.buyerProtectionRate || 0.08)
+              : 0) *
+            (item.quantity || 0),
+          0
+        ) * 100, // Convert to cents
+        taxFee: 0, // Adjust if tax is calculated
+      };
+
+      console.log("Sending payload to /create-payment-intent:", {
+        amount: amountInCents,
+        currency: currency.toLowerCase(),
+        metadata,
+      });
+
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
       let attempts = 3;
       let lastError = null;
-
       while (attempts > 0) {
         try {
           const { data } = await axios.post(
@@ -133,38 +181,36 @@ const StripeCheckoutForm = ({
             {
               amount: amountInCents,
               currency: currency.toLowerCase(),
-              metadata: {
-                userId: auth.currentUser?.uid || "anonymous",
-                orderId: `order-${Date.now()}`,
-              },
+              metadata,
             },
-            { timeout: 15000 }
+            {
+              headers: {
+                Authorization: `Bearer ${await auth.currentUser.getIdToken()}`,
+                'Content-Type': 'application/json',
+              },
+              timeout: 15000,
+            }
           );
 
-          const { error: stripeError, paymentIntent } =
-            await stripe.confirmCardPayment(data.clientSecret, {
-              payment_method: {
-                card: elements.getElement(CardElement),
-                billing_details: {
-                  name: formData.name,
-                  email: formData.email,
-                  phone: formData.phone,
-                  address: {
-                    line1: formData.address,
-                    city: formData.city,
-                    postal_code: formData.postalCode,
-                    country: currency === "GBP" ? "GB" : "NG",
-                  },
+          const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
+            payment_method: {
+              card: elements.getElement(CardElement),
+              billing_details: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                address: {
+                  line1: formData.address,
+                  city: formData.city,
+                  postal_code: formData.postalCode,
+                  country: currency === "GBP" ? "GB" : "NG",
                 },
               },
-            });
+            },
+          });
 
           if (stripeError) {
-            toast.error(stripeError.message, {
-              position: "top-right",
-              autoClose: 3000,
-            });
-            return;
+            throw new Error(stripeError.message);
           }
 
           if (paymentIntent.status === "succeeded") {
@@ -197,7 +243,7 @@ const StripeCheckoutForm = ({
       toast.error(
         err.code === "ECONNABORTED"
           ? "Payment timed out. Please try again or check your connection."
-          : err.message || "Payment failed. Try again.",
+          : err.response?.data?.error || err.message || "Payment failed. Try again.",
         { position: "top-right", autoClose: 3000 }
       );
       setLoading(false);
@@ -303,19 +349,16 @@ const Checkout = () => {
       try {
         setLoadingState(true);
         const user = auth.currentUser;
-
         // Fetch minimum purchase amount
         const minRef = doc(db, "settings", "minimumPurchase");
         const minSnap = await getDoc(minRef);
         if (minSnap.exists()) {
           setMinimumPurchase(minSnap.data().amount || 25000);
         }
-
         // Fetch fee configurations
         const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         setFeeConfig(feeSnap.exists() ? feeSnap.data() : {});
-
         // Fetch daily deals
         const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
         const dealData = dealSnapshot.docs.map((doc) => ({
@@ -326,21 +369,17 @@ const Checkout = () => {
           (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
         );
         setDailyDeals(validDeals);
-
         // Fetch and process cart items
         const cartItems = await getCart(user?.uid);
         console.log("Loaded cart items:", JSON.stringify(cartItems, null, 2));
-
         const processedCart = await Promise.all(
           cartItems.map(async (item) => {
             if (!item.productId || !item.product) {
               console.warn("Invalid cart item:", item);
               return null;
             }
-
             const productData = item.product || {};
             let imageUrls = [];
-
             if (Array.isArray(productData.imageUrls)) {
               imageUrls = productData.imageUrls.filter(
                 (url) => typeof url === "string" && url.match(/^https?:\/\/.+/i)
@@ -352,14 +391,12 @@ const Checkout = () => {
             ) {
               imageUrls = [productData.imageUrl];
             }
-
             const validImageUrls = await Promise.all(
               imageUrls.map((url) => preloadImage(url))
             );
             let filteredImageUrls = imageUrls.filter(
               (_, index) => validImageUrls[index]
             );
-
             if (filteredImageUrls.length === 0) {
               filteredImageUrls = [placeholder];
               setImageErrors((prev) => ({ ...prev, [item.productId]: true }));
@@ -369,7 +406,6 @@ const Checkout = () => {
                 "Using placeholder"
               );
             }
-
             const productRef = doc(db, "products", item.productId);
             const productSnap = await getDoc(productRef);
             const category = productSnap.exists()
@@ -381,7 +417,6 @@ const Checkout = () => {
             const stock = productSnap.exists()
               ? productSnap.data().stock || 10
               : 10;
-
             const config = feeConfig[category] || {
               minPrice: 1000,
               maxPrice: Infinity,
@@ -389,7 +424,6 @@ const Checkout = () => {
               handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-
             // Apply daily deal discount if applicable
             const deal = validDeals.find((d) => d.productId === item.productId);
             const discountPercentage = deal ? Number((deal.discount * 100).toFixed(2)) : 0;
@@ -399,7 +433,6 @@ const Checkout = () => {
             const buyerProtectionFee = discountedPrice * config.buyerProtectionRate;
             const handlingFee = discountedPrice * config.handlingRate;
             const totalPrice = discountedPrice + buyerProtectionFee + handlingFee;
-
             return {
               ...item,
               product: {
@@ -411,13 +444,14 @@ const Checkout = () => {
                 stock,
                 isDailyDeal: !!deal,
                 discountPercentage,
+                handlingRate: config.handlingRate,
+                buyerProtectionRate: config.buyerProtectionRate,
               },
               currentImage: filteredImageUrls[0],
               slideDirection: "right",
             };
           })
         );
-
         const validCart = processedCart.filter((item) => item !== null);
         setCart(validCart);
         setImageLoading(
@@ -429,7 +463,6 @@ const Checkout = () => {
             {}
           )
         );
-
         if (user) {
           const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -467,7 +500,6 @@ const Checkout = () => {
         const feeRef = doc(db, "feeConfigurations", "categoryFees");
         const feeSnap = await getDoc(feeRef);
         const feeConfig = feeSnap.exists() ? feeSnap.data() : {};
-
         // Fetch daily deals for cart update
         const dealSnapshot = await getDocs(collection(db, 'dailyDeals'));
         const dealData = dealSnapshot.docs.map((doc) => ({
@@ -477,17 +509,14 @@ const Checkout = () => {
         const validDeals = dealData.filter(
           (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
         );
-
         const processedCart = await Promise.all(
           cartItems.map(async (item) => {
             if (!item.productId || !item.product) {
               console.warn("Invalid cart item:", item);
               return null;
             }
-
             const productData = item.product || {};
             let imageUrls = [];
-
             if (Array.isArray(productData.imageUrls)) {
               imageUrls = productData.imageUrls.filter(
                 (url) => typeof url === "string" && url.match(/^https?:\/\/.+/i)
@@ -499,14 +528,12 @@ const Checkout = () => {
             ) {
               imageUrls = [productData.imageUrl];
             }
-
             const validImageUrls = await Promise.all(
               imageUrls.map((url) => preloadImage(url))
             );
             let filteredImageUrls = imageUrls.filter(
               (_, index) => validImageUrls[index]
             );
-
             if (filteredImageUrls.length === 0) {
               filteredImageUrls = [placeholder];
               setImageErrors((prev) => ({ ...prev, [item.productId]: true }));
@@ -516,7 +543,6 @@ const Checkout = () => {
                 "Using placeholder"
               );
             }
-
             const productRef = doc(db, "products", item.productId);
             const productSnap = await getDoc(productRef);
             const category = productSnap.exists()
@@ -528,7 +554,6 @@ const Checkout = () => {
             const stock = productSnap.exists()
               ? productSnap.data().stock || 10
               : 10;
-
             const config = feeConfig[category] || {
               minPrice: 1000,
               maxPrice: Infinity,
@@ -536,7 +561,6 @@ const Checkout = () => {
               handlingRate: 0.20,
             };
             const basePrice = productData.price || 0;
-
             // Apply daily deal discount if applicable
             const deal = validDeals.find((d) => d.productId === item.productId);
             const discountPercentage = deal ? Number((deal.discount * 100).toFixed(2)) : 0;
@@ -546,7 +570,6 @@ const Checkout = () => {
             const buyerProtectionFee = discountedPrice * config.buyerProtectionRate;
             const handlingFee = discountedPrice * config.handlingRate;
             const totalPrice = discountedPrice + buyerProtectionFee + handlingFee;
-
             return {
               ...item,
               product: {
@@ -558,13 +581,14 @@ const Checkout = () => {
                 stock,
                 isDailyDeal: !!deal,
                 discountPercentage,
+                handlingRate: config.handlingRate,
+                buyerProtectionRate: config.buyerProtectionRate,
               },
               currentImage: filteredImageUrls[0],
               slideDirection: "right",
             };
           })
         );
-
         const validCart = processedCart.filter((item) => item !== null);
         setCart(validCart);
         setImageLoading(
@@ -601,7 +625,6 @@ const Checkout = () => {
     window.addEventListener("cartUpdated", handleCartUpdate);
     window.addEventListener("mousemove", startSessionTimeout);
     window.addEventListener("keydown", startSessionTimeout);
-
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setIsAuthenticated(!!user);
       loadCartAndUserData();
@@ -752,17 +775,14 @@ const Checkout = () => {
           phone: order.shippingDetails?.phone || formData.phone || "",
         },
       };
-
       if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
         throw new Error("Invalid or missing email address");
       }
       if (!payload.items.length) {
         throw new Error("No items provided");
       }
-
       let attempts = 2;
       let lastError = null;
-
       while (attempts > 0) {
         try {
           const response = await axios.post(
@@ -828,7 +848,6 @@ const Checkout = () => {
     try {
       setIsEmailSending(true);
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
       for (const [sellerId, items] of Object.entries(sellers)) {
         const sellerOrderId =
           sellerOrderIds.find((id) => id.includes(sellerId)) ||
@@ -842,7 +861,6 @@ const Checkout = () => {
           currency === "GBP"
             ? (sellerSubtotal + additionalShippingFee) * conversionRateNgnToGbp
             : sellerSubtotal + additionalShippingFee;
-
         const payload = {
           orderId: sellerOrderId,
           sellerId,
@@ -868,7 +886,6 @@ const Checkout = () => {
             phone: shippingDetails.phone || "",
           },
         };
-
         console.log("Sending seller notification email with payload:", {
           orderId: sellerOrderId,
           sellerId,
@@ -877,10 +894,8 @@ const Checkout = () => {
           currency,
           shippingDetails: payload.shippingDetails,
         });
-
         let attempts = 2;
         let lastError = null;
-
         while (attempts > 0) {
           try {
             const response = await axios.post(
@@ -967,7 +982,6 @@ const Checkout = () => {
           formRef.current.scrollIntoView({ behavior: "smooth" });
           return;
         }
-
         console.log("Payment data:", paymentData);
         if (!paymentData || (!paymentData.id && !paymentData.reference)) {
           console.warn("Invalid payment data:", paymentData);
@@ -976,14 +990,12 @@ const Checkout = () => {
             new Error("Invalid payment data received")
           );
         }
-
         const userId = auth.currentUser?.uid || "anonymous";
         const orderId = `order-${Date.now()}`;
         const paymentGateway =
           formData.country === "United Kingdom" ? "Stripe" : "Paystack";
         const paymentId =
           paymentData?.id || paymentData?.reference || `fallback-${orderId}`;
-
         const sellers = {};
         cart.forEach((item) => {
           const sellerId = item.product?.sellerId || "default-seller-id";
@@ -994,11 +1006,9 @@ const Checkout = () => {
           if (!sellers[sellerId]) sellers[sellerId] = [];
           sellers[sellerId].push(item);
         });
-
         let lastOrder = null;
         const walletUpdates = [];
         const sellerOrderIds = [];
-
         await runTransaction(db, async (transaction) => {
           const productRefs = cart.map((item) =>
             doc(db, "products", item.productId)
@@ -1006,7 +1016,6 @@ const Checkout = () => {
           const productSnaps = await Promise.all(
             productRefs.map((ref) => transaction.get(ref))
           );
-
           const stockUpdates = [];
           productSnaps.forEach((snap, index) => {
             if (!snap.exists()) {
@@ -1027,7 +1036,6 @@ const Checkout = () => {
             }
             stockUpdates.push({ ref: productRefs[index], newStock });
           });
-
           const sellerWalletRefs = Object.keys(sellers).map((sellerId) =>
             doc(db, "wallets", sellerId)
           );
@@ -1040,7 +1048,6 @@ const Checkout = () => {
             data: snap.exists() ? snap.data() : null,
             sellerId: Object.keys(sellers)[index],
           }));
-
           console.log(
             "Seller wallets before update:",
             sellerWallets.map((wallet) => ({
@@ -1050,7 +1057,6 @@ const Checkout = () => {
               availableBalance: wallet.data?.availableBalance || 0,
             }))
           );
-
           const orders = [];
           sellerWallets.forEach(({ ref, exists, data, sellerId }) => {
             const sellerItems = sellers[sellerId];
@@ -1063,7 +1069,6 @@ const Checkout = () => {
               currency === "GBP"
                 ? (sellerSubtotalNgn + additionalShippingFee) * conversionRateNgnToGbp
                 : sellerSubtotalNgn + additionalShippingFee;
-
             const order = {
               id: orderId,
               userId,
@@ -1090,7 +1095,6 @@ const Checkout = () => {
             const sellerOrderId = `${orderId}-${sellerId}`;
             orders.push({ order, orderId: sellerOrderId });
             sellerOrderIds.push(sellerOrderId);
-
             const pendingBalance =
               (exists ? data?.pendingBalance || 0 : 0) + sellerShare;
             walletUpdates.push({ sellerId, amount: sellerShare });
@@ -1104,13 +1108,11 @@ const Checkout = () => {
               },
               { merge: true }
             );
-
             console.log(`Updated wallet for seller ${sellerId}:`, {
               pendingBalance,
               availableBalance: exists ? data?.availableBalance || 0 : 0,
             });
           });
-
           orders.forEach(({ order, orderId }) => {
             const orderRef = doc(db, "orders", orderId);
             try {
@@ -1121,11 +1123,9 @@ const Checkout = () => {
             }
             lastOrder = order;
           });
-
           stockUpdates.forEach(({ ref, newStock }) => {
             transaction.update(ref, { stock: newStock });
           });
-
           const transactionPromises = orders.map(({ order }) =>
             addDoc(collection(db, "transactions"), {
               userId: order.sellerId,
@@ -1140,7 +1140,6 @@ const Checkout = () => {
           );
           await Promise.all(transactionPromises);
         });
-
         const updatedWallets = await Promise.all(
           walletUpdates.map(async ({ sellerId }) => {
             const walletRef = doc(db, "wallets", sellerId);
@@ -1153,12 +1152,10 @@ const Checkout = () => {
           })
         );
         console.log("Seller wallets after update:", updatedWallets);
-
         if (auth.currentUser && formData.saveInfo) {
           const userDocRef = doc(db, "users", auth.currentUser.uid);
           await setDoc(userDocRef, formData, { merge: true });
         }
-
         if (lastOrder && sellerOrderIds.length > 0) {
           await sendOrderConfirmationEmail({
             ...lastOrder,
@@ -1175,17 +1172,14 @@ const Checkout = () => {
             })),
           });
         }
-
         await sendSellerOrderNotifications(
           sellers,
           sellerOrderIds,
           currency,
           formData
         );
-
         await clearCart(auth.currentUser?.uid);
         setCart([]);
-
         toast.success(
           <div>
             <strong>Payment Successful!</strong>
@@ -1400,7 +1394,7 @@ const Checkout = () => {
                   Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <i className="bx bx-envelope absolute left-3 top支0 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <i className="bx bx-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="email"
                     id="email"
@@ -1856,6 +1850,7 @@ const Checkout = () => {
                         <StripeCheckoutForm
                           totalPrice={totalAmount}
                           formData={formData}
+                          cart={cart}
                           onSuccess={(paymentIntent) =>
                             setShowConfirmModal(true)
                           }

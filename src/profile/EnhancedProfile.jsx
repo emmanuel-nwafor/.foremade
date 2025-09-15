@@ -10,7 +10,7 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [isAuthError, setIsAuthError] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+  const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://i.pinimg.com/736x/57/00/c0/5700c04197ee9a4372a35ef16eb78f4e.jpg');
   const mockWishlistCount = 3;
   const mockLoyaltyPoints = 0;
   const [activeSection, setActiveSection] = useState(null);
@@ -62,7 +62,7 @@ export default function Profile() {
     });
 
     const handleProfileImageUpdate = () => {
-      setMainProfileImage(localStorage.getItem('profileImage') || 'https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg');
+      setMainProfileImage(localStorage.getItem('profileImage') || 'https://i.pinimg.com/originals/97/16/5e/97165e191052892894cb886b4a8c0971.gif');
     };
 
     window.addEventListener('profileImageUpdated', handleProfileImageUpdate);
@@ -143,20 +143,20 @@ export default function Profile() {
               <Link to="/orders" className="block">
                 <i className="bx bx-package text-2xl text-secondary-color mb-2"></i>
                 <p className="text-primary-color/60">Orders</p>
-                <p className="text-lg font-semibold text-primary-color">9</p>
+                {/* <p className="text-lg font-semibold text-primary-color">9</p> */}
               </Link>
             </div>
             <div className="rounded-lg p-4 text-center bg-gradient-to-br from-background-light to-white border border-border-light cursor-pointer">
               <Link to="/favorites" className="block">
                 <i className="bx bx-heart text-2xl text-secondary-color mb-2"></i>
                 <p className="text-primary-color/60">Wish List</p>
-                <p className="text-lg font-semibold text-primary-color">{mockWishlistCount}</p>
+                {/* <p className="text-lg font-semibold text-primary-color">{mockWishlistCount}</p> */}
               </Link>
             </div>
             <div className="rounded-lg p-4 text-center bg-gradient-to-br from-background-light to-white border border-border-light cursor-pointer">
               <i className="bx bx-star text-2xl text-accent-color mb-2"></i>
               <p className="text-primary-color/60">Loyalty Points</p>
-              <p className="text-lg font-semibold text-primary-color">{mockLoyaltyPoints} <i className="bx bx-star text-accent-color"></i></p>
+              {/* <p className="text-lg font-semibold text-primary-color">{mockLoyaltyPoints} <i className="bx bx-star text-accent-color"></i></p> */}
             </div>
           </div>
 

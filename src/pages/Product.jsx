@@ -1263,7 +1263,7 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                  <h1 className="text-2xl font-bold text-[#333333] flex-grow">
+                  <h1 className="text-md font-bold text-[#333333] flex-grow">
                     {product.name}
                   </h1>
                   <ShareButton productId={product.id} productName={product.name} />

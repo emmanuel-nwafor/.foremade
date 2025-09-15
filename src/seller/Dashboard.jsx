@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,8 +61,7 @@ export default function Dashboard() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user ? 'User logged in' : 'No user');
       if (!user) {
-        setError('Please log in to view your dashboard.');
-        setLoading(false);
+        navigate('/register', { replace: true });
         return;
       }
 
@@ -90,7 +90,7 @@ export default function Dashboard() {
       console.log('Seller Dashboard unmounting');
       unsubscribeAuth();
     };
-  }, []);
+  }, [navigate]);
 
   // Bar Chart Data
   const barData = {
@@ -162,16 +162,7 @@ export default function Dashboard() {
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <p className="text-red-700">{error}</p>
-          <Link to="/login" className="text-blue-600 hover:underline mt-2 inline-block">
-            Return to Login
-          </Link>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

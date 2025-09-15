@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
+  OAuthProvider,
   updateProfile,
   sendEmailVerification 
 } from 'firebase/auth';
@@ -59,6 +60,7 @@ const calculateAge = (dob) => {
 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 export default function Register() {
+  const [loadingApple, setLoadingApple] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -213,6 +215,9 @@ export default function Register() {
     } else if (provider === 'facebook') {
       authProvider = new FacebookAuthProvider();
       setLoadingFacebook(true);
+    } else if (provider === 'apple') {
+      authProvider = new OAuthProvider('apple.com');
+      setLoadingApple(true);
     }
     try {
       const result = await signInWithPopup(auth, authProvider);
@@ -264,6 +269,7 @@ export default function Register() {
     } finally {
       setLoadingGoogle(false);
       setLoadingFacebook(false);
+      setLoadingApple(false);
     }
   };
 
@@ -527,6 +533,14 @@ export default function Register() {
               >
                 <img src="https://www.facebook.com/favicon.ico" alt="Facebook" className="w-5 h-5 mr-2" />
                 {loadingFacebook ? 'Processing...' : 'Facebook'}
+              </button>
+              <button
+                onClick={() => handleSocialLogin('apple')}
+                className="bg-white border border-gray-300 p-[17px] max-md:p-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                disabled={loadingApple}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple" className="w-5 h-5 mr-2" />
+                {loadingApple ? 'Processing...' : 'Apple'}
               </button>
             </div>
           </div>

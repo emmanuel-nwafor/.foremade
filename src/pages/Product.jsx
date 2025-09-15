@@ -1263,7 +1263,7 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                  <h1 className="text-md font-bold text-[#333333] flex-grow">
+                  <h1 className="text-xl font-bold text-[#333333] flex-grow">
                     {product.name}
                   </h1>
                   <ShareButton productId={product.id} productName={product.name} />
@@ -1297,7 +1297,7 @@ const Product = () => {
                 </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-2xl font-extrabold mb-2 sm:mb-0">
+                    <p className="text-xl font-extrabold mb-2 sm:mb-0">
                       <PriceFormatter
                         price={discountedTotalPrice}
                         currency={

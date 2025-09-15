@@ -1297,7 +1297,7 @@ const Product = () => {
                 </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-xl font-extrabold mb-2 sm:mb-0">
+                    <p className="text-xl font-bold mb-2 sm:mb-0">
                       <PriceFormatter
                         price={discountedTotalPrice}
                         currency={

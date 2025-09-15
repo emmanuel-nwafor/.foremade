@@ -467,7 +467,7 @@ export default function Register() {
                 max={new Date().toISOString().split('T')[0]}
                 required
               />
-              <label className={`absolute left-3 top-3 text-gray-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
+              <label className={`absolute hidden left-3 top-3 text-white-500 transition-all duration-300 transform origin-left pointer-events-none ${dob ? '-translate-y-6 scale-75 text-blue-500 bg-white px-1' : ''}`}>
                 Date of Birth
               </label>
               {dobError && <p className="text-red-600 text-xs mt-1">{dobError}</p>}

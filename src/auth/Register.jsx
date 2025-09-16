@@ -662,13 +662,6 @@ export default function Register() {
                       <p className="text-sm text-gray-600">Merchant or Standard user</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowAccountTypeModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                    aria-label="Close account type selection"
-                  >
-                    <i className="bx bx-x text-2xl"></i>
-                  </button>
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -698,7 +691,7 @@ export default function Register() {
                     onClick={() => setShowAccountTypeModal(false)}
                     className="text-blue-600 hover:underline text-sm"
                   >
-                    Or continue with
+                    Continue with Signin
                   </button>
                 </div>
               </motion.div>

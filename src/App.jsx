@@ -100,6 +100,7 @@ import AllTrendingGadgets from './pages/AllTrendingGadgets';
 import ProtectedRoute from './auth/ProtectedRoute';
 import SellersPage from './seller/SellersPage';
 import AdminUsersPhone from './Admin/AdminUsersPhone';
+import AdminHelpSellersUpload from './Admin/AdminHelpSellersUpload';
 import AdminProSellerDetails from './Admin/AdminProSellerDetails';
 
 const Layout = ({ children }) => {
@@ -146,6 +147,7 @@ const Layout = ({ children }) => {
     '/seller-chat',
     '/admin/sellers-wallet',
     '/admin/transactions',
+    '/admin-upload-product/:sellerId',
     '/dashboard',
   ];
 
@@ -153,7 +155,8 @@ const Layout = ({ children }) => {
   const dynamicHideHeaderFooterPatterns = [
     /^\/seller\/edit-product\/[^/]+$/,
     /^\/seller-chat\/[^/]+$/,
-    /^\/admin\/pro-seller-details\/[^/]+$/
+    /^\/admin\/pro-seller-details\/[^/]+$/,
+    /^\/admin-upload-product\/[^/]+$/
   ];
 
   // Check if the current path matches any static routes or dynamic patterns
@@ -269,6 +272,7 @@ function App() {
               <Route path="/admin/bumped-products" element={<ProtectedRoute requireAdmin={true}><AdminBumpedProducts /></ProtectedRoute>} />
               <Route path="/admin/users-phone" element={<ProtectedRoute requireAdmin={true}><AdminUsersPhone /></ProtectedRoute>} />
               <Route path="/admin/pro-seller-details/:proSellerId" element={<ProtectedRoute requireAdmin={true}><AdminProSellerDetails /></ProtectedRoute>} />
+              <Route path="/admin-upload-product/:sellerId" element={<ProtectedRoute requireAdmin={true}><AdminHelpSellersUpload /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

@@ -7,7 +7,9 @@ import { auth } from '../firebase';
 export default function SellerLocationForm({ locationData, setLocationData, errors, saveLocation }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setLocationData((prev) => ({ ...prev, [name]: value }));
+    const newLocation = { ...locationData, [name]: value };
+    console.log('SellerLocationForm handleChange:', name, value, newLocation);
+    setLocationData(newLocation);
   };
 
   const handleSave = async () => {
@@ -40,7 +42,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
         <div className="relative group">
           <label
             htmlFor="country"
-            className={`block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
+            className={`text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
               locationData.country ? '-translate-y-6 scale-75 text-blue-500 bg-white dark:bg-gray-800 px-1' : ''
             } transition-all duration-300 transform origin-left pointer-events-none absolute left-3 top-3`}
           >
@@ -66,7 +68,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
         <div className="relative group">
           <label
             htmlFor="state"
-            className={`block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
+            className={`text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
               locationData.state ? '-translate-y-6 scale-75 text-blue-500 bg-white dark:bg-gray-800 px-1' : ''
             } transition-all duration-300 transform origin-left pointer-events-none absolute left-3 top-3`}
           >
@@ -92,7 +94,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
         <div className="relative group">
           <label
             htmlFor="city"
-            className={`block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
+            className={`text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
               locationData.city ? '-translate-y-6 scale-75 text-blue-500 bg-white dark:bg-gray-800 px-1' : ''
             } transition-all duration-300 transform origin-left pointer-events-none absolute left-3 top-3`}
           >
@@ -118,7 +120,7 @@ export default function SellerLocationForm({ locationData, setLocationData, erro
         <div className="relative group">
           <label
             htmlFor="address"
-            className={`block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
+            className={`text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 ${
               locationData.address ? '-translate-y-6 scale-75 text-blue-500 bg-white dark:bg-gray-800 px-1' : ''
             } transition-all duration-300 transform origin-left pointer-events-none absolute left-3 top-3`}
           >

@@ -14,7 +14,7 @@
     "@stripe/react-stripe-js": "^3.6.0",
     "@stripe/stripe-js": "^7.2.0",
     "aos": "^2.3.4",
-    "apexcharts": "^5.3.3",
+    "apexcharts": "^5.3.5",
     "axios": "^1.9.0",
     "boxicons": "^2.1.4",
     "emoji-mart": "^5.6.0",

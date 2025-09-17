@@ -236,7 +236,7 @@ const AdminBumpedProducts = () => {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                
+
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-sm sm:text-base"
               />
               <button
@@ -246,6 +246,7 @@ const AdminBumpedProducts = () => {
                 <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Refresh
               </button>
+              
             </div>
           </div>
           <div className="mb-8">

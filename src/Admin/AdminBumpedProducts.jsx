@@ -236,7 +236,6 @@ const AdminBumpedProducts = () => {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-sm sm:text-base"
               />
               <button
@@ -246,7 +245,6 @@ const AdminBumpedProducts = () => {
                 <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Refresh
               </button>
-              
             </div>
           </div>
           <div className="mb-8">
@@ -311,10 +309,12 @@ const AdminBumpedProducts = () => {
             >
               <option value="3">3 Days</option>
               <option value="7">7 Days</option>
+              <option value="14">14 Days</option>
+              <option value="30">30 Days</option>
             </select>
           </div>
           {filteredAvailableProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAvailableProducts.map((product) => (
                 <div
                   key={product.id}

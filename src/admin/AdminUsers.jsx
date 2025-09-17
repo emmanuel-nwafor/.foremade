@@ -694,7 +694,6 @@ export default function AdminUsers() {
                           </div>
                         ))}
                       </div>
-                      
                     ) : (
                       <p className="text-sm text-gray-600 dark:text-gray-400">No products.</p>
                     )}
@@ -823,7 +822,7 @@ export default function AdminUsers() {
                       onClick={() => setShowEditModal(false)}
                       className="py-2 px-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                     >
-                      Cancel
+                      Cancel 
                     </button>
                     <button
                       type="submit"
@@ -837,7 +836,6 @@ export default function AdminUsers() {
               </div>
             </div>
           )}
-
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         </div>
       </div>

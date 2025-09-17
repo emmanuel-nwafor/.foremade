@@ -694,6 +694,7 @@ export default function AdminUsers() {
                           </div>
                         ))}
                       </div>
+                      
                     ) : (
                       <p className="text-sm text-gray-600 dark:text-gray-400">No products.</p>
                     )}

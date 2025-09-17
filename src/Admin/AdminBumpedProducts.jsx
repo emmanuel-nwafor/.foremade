@@ -340,7 +340,7 @@ const AdminBumpedProducts = () => {
                         onClick={() => handleAddBump(product.id)}
                         className="absolute top-2 right-2 text-green-500 hover:text-green-700"
                       >
-                        <PlusCircle className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 rounded-lg p-1.5" />
+                        <PlusCircle className="w-10 h-10 bg-gray-300 rounded-lg p-" />
                       </button>
                     )}
                   </div>

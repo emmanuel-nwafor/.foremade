@@ -386,11 +386,6 @@ export default function AdminUsers() {
             <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
               <i className="bx bx-user text-blue-500 text-xl"></i> Manage Users
             </h2>
-            <Link to="/help-sellers-upload">
-              <button className="bg-amber-500 py-2 px-3 text-white rounded-2xl">
-                Upload Products for users
-              </button>
-            </Link>
           </div>
 
           {/* Search */}
@@ -702,19 +697,19 @@ export default function AdminUsers() {
                 <div className="mt-4 flex justify-end gap-2">
                   <button
                     onClick={() => { setShowUserModal(false); openEditModal(selectedUser); selectedUser.unsubscribe?.(); }}
-                    className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="py-1 px-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => { setShowUserModal(false); navigate(`/admin-upload-product/${selectedUser.id}`); selectedUser.unsubscribe?.(); }}
-                    className="py-2 px-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="py-1 px-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
-                    Upload Product for User
+                    Upload Product
                   </button>
                   <button
                     onClick={() => { setShowUserModal(false); selectedUser.unsubscribe?.(); }}
-                    className="py-2 px-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="py-1 px-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                   >
                     Close
                   </button>
@@ -726,7 +721,7 @@ export default function AdminUsers() {
           {/* Edit Modal */}
           {showEditModal && editUser && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-              <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md w-full max-w-md">
+              <div className="bg-white dark:bg-gray-800 p-3 sm:p-2 rounded-lg shadow-md w-full max-w-md">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Edit User</h3>
                   <button

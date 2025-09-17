@@ -10,7 +10,7 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [isAuthError, setIsAuthError] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://i.pinimg.com/736x/57/00/c0/5700c04197ee9a4372a35ef16eb78f4e.jpg');
+  const [mainProfileImage, setMainProfileImage] = useState(localStorage.getItem('profileImage') || 'https://i.pinimg.com/736x/de/b8/39/deb839cd82447631bd413229b2bfc33d.jpg');
   const mockWishlistCount = 3;
   const mockLoyaltyPoints = 0;
   const [activeSection, setActiveSection] = useState(null);
@@ -40,7 +40,7 @@ export default function Profile() {
                 ? `${userAddresses[0].street}, ${userAddresses[0].city}, ${userAddresses[0].state}, ${userAddresses[0].postalCode}, ${userAddresses[0].country}`
                 : 'Not provided',
               country: firestoreData.country || 'Nigeria',
-              phone: firestoreData.phone || '+234-8052975966',
+              phone: firestoreData.phoneNumber || 'Not Provided',
               uid: user.uid,
             });
           } else {
@@ -62,7 +62,7 @@ export default function Profile() {
     });
 
     const handleProfileImageUpdate = () => {
-      setMainProfileImage(localStorage.getItem('profileImage') || 'https://i.pinimg.com/originals/97/16/5e/97165e191052892894cb886b4a8c0971.gif');
+      setMainProfileImage(localStorage.getItem('profileImage') || 'https://i.pinimg.com/736x/de/b8/39/deb839cd82447631bd413229b2bfc33d.jpg');
     };
 
     window.addEventListener('profileImageUpdated', handleProfileImageUpdate);

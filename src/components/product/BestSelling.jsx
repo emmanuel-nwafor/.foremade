@@ -92,7 +92,7 @@ function BestSelling() {
       ) : loading ? (
         <>
           {[...Array(5)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
+                <div key={index} className="bg-gray-200 p-4 rounded-lg h-64"></div>
           ))}
         </>
       ) : products.length === 0 ? (

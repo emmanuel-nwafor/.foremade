@@ -705,7 +705,7 @@ export default function Register() {
                     onClick={() => setShowAccountTypeModal(false)}
                     className="text-blue-600 hover:underline text-sm"
                   >
-                    Continue with Signin
+                    Continue with Sign In
                   </button>
                 </div>
               </motion.div>

@@ -5,7 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import SellerSidebar from './SellerSidebar';
 import { Link } from 'react-router-dom';
 import debounce from 'lodash.debounce';
-import { PlusCircle, RefreshCw, CheckCircle } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PaystackCheckout from '/src/components/checkout/PaystackCheckout';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,9 +15,7 @@ const ProductBump = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bumping, setBumping] = useState({});
-  const [bumpQuota, setBumpQuota] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { userProfile } = useAuth();
   const [timeRemaining, setTimeRemaining] = useState({});
@@ -36,124 +34,89 @@ const ProductBump = () => {
 
   const fetchProducts = async () => {
     try {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          try {
-            const q = query(collection(db, 'products'), where('sellerId', '==', user.uid));
-            const querySnapshot = await getDocs(q);
-            const productsList = querySnapshot.docs.map((doc) => {
-              const data = doc.data();
-              const imageUrls = Array.isArray(data.imageUrls)
-                ? data.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
-                : data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
-                ? [data.imageUrl]
-                : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
-              return {
-                id: doc.id,
-                ...data,
-                imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
-                uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date(),
-                bumpExpiry: data.bumpExpiry ? data.bumpExpiry.toDate() : null,
-                isBumped: data.isBumped || false,
-              };
-            });
-            setProducts(productsList);
-          } catch (err) {
-            setError('Failed to fetch products: ' + err.message);
-          }
-        } else {
-          setError('Please log in to view your products.');
-        }
+      const user = auth.currentUser;
+      if (!user) {
+        setError('Please log in to view your products.');
         setLoading(false);
-      });
-    } catch (err) {
-      setError('Authentication error: ' + err.message);
-      setLoading(false);
-    }
-  };
-
-  const fetchBumpQuota = async () => {
-    try {
-      const response = await fetch('https://foremade-backend.onrender.com/api/pro-seller/bump-quota', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const text = await response.text();
-      if (!response.ok) {
-        const errorData = text ? JSON.parse(text) : { error: 'Unknown error' };
-        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.error || 'No details'}`);
+        return;
       }
-      const data = text ? JSON.parse(text) : {};
-      setBumpQuota(data.quota || 0);
-    } catch (error) {
-      console.error('Fetch bump quota error:', error.message);
-      setBumpQuota(0);
-      toast.error('Failed to load bump quota. Please try again.');
+      const q = query(collection(db, 'products'), where('sellerId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const productsList = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        const imageUrls = Array.isArray(data.imageUrls)
+          ? data.imageUrls.filter((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/'))
+          : data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('https://res.cloudinary.com/')
+          ? [data.imageUrl]
+          : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'];
+        return {
+          id: doc.id,
+          ...data,
+          imageUrls: imageUrls.length > 0 ? imageUrls : ['https://res.cloudinary.com/your_cloud_name/image/upload/v1/default.jpg'],
+          uploadDate: data.uploadDate ? data.uploadDate.toDate() : new Date(),
+          bumpExpiry: data.bumpExpiry ? data.bumpExpiry.toDate() : null,
+          bumpDuration: data.bumpDuration || null,
+          isBumped: data.isBumped || false,
+        };
+      });
+      setProducts(productsList);
+    } catch (err) {
+      setError('Failed to fetch products: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handlePaymentSuccess = async (paymentData, productId, durationHours) => {
     try {
-      setIsProcessing(true);
+      setBumping((prev) => ({ ...prev, [productId]: true }));
       const user = auth.currentUser;
       if (!user) {
         throw new Error('User not authenticated');
       }
-      const firebaseToken = await user.getIdToken(true); // Force refresh token
-      const durationMap = { '72h': '72h', '168h': '168h' };
-      const mappedDuration = durationMap[durationHours] || '24h';
-      const backendUrl = 'https://foremade-backend.onrender.com';
-
+      const mappedDuration = durationHours;
       const duration = bumpDurations.find((d) => d.hours === durationHours);
-      const totalAmount = duration.price * 100;
-      const adminFee = Math.floor(totalAmount * 0.1);
-      const sellerAmount = totalAmount - adminFee;
 
-      const response = await fetch(`${backendUrl}/api/bump-product`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${firebaseToken}`,
-        },
-        body: JSON.stringify({
-          productId,
-          bumpDuration: mappedDuration,
-          paymentIntentId: paymentData.reference || `fallback-${Date.now()}`,
-          adminFee,
-          sellerAmount,
-        }),
+      // Show Paystack-like success modal
+      toast.success(`Payment successful for ${duration.label} bump! Your product is now boosted.`, {
+        position: 'top-center',
+        autoClose: 3500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
       });
 
-      const text = await response.text();
-      if (!response.ok) {
-        const errorData = text ? JSON.parse(text) : { error: 'Unknown error' };
-        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.error || 'No details'}`);
-      }
+      // Wait for modal to show
+      await new Promise(resolve => setTimeout(resolve, 3500));
 
-      const data = text ? JSON.parse(text) : {};
-      toast.success(data.message || 'Product bumped successfully!');
-
-      const bumpExpiry = new Date();
+      const startDate = new Date();
       const durationInMs = {
         '72h': 72 * 60 * 60 * 1000,
         '168h': 168 * 60 * 60 * 1000,
       }[mappedDuration];
-      bumpExpiry.setTime(bumpExpiry.getTime() + durationInMs);
+      const bumpExpiry = new Date(startDate.getTime() + durationInMs);
 
-      await addDoc(collection(db, 'bumpTransactions'), {
+      // Save to 'productBumps' collection
+      await addDoc(collection(db, 'productBumps'), {
         productId,
         sellerId: user.uid,
         bumpDuration: mappedDuration,
         paymentIntentId: paymentData.reference || `fallback-${Date.now()}`,
-        bumpExpiry,
-        timestamp: new Date(),
+        startDate,
+        expiry: bumpExpiry,
+        timestamp: startDate,
       });
 
+      // Update product doc
       const productRef = doc(db, 'products', productId);
-      await updateDoc(productRef, { bumpExpiry, isBumped: true });
+      await updateDoc(productRef, { bumpExpiry, isBumped: true, bumpDuration: mappedDuration });
 
+      // Send email notification
+      const firebaseToken = await user.getIdToken(true);
+      const backendUrl = 'https://foremade-backend.onrender.com';
       const emailResponse = await fetch(`${backendUrl}/api/send-bump-email`, {
         method: 'POST',
         headers: {
@@ -171,17 +134,18 @@ const ProductBump = () => {
         console.warn('Email notification failed:', await emailResponse.text());
       }
 
+      // Update local state
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
-          product.id === productId ? { ...product, bumpExpiry, isBumped: true } : product
+          product.id === productId ? { ...product, bumpExpiry, bumpDuration: mappedDuration, isBumped: true } : product
         )
       );
-      setBumpQuota((prev) => prev - 1);
+
+      toast.success('Product bumped successfully!');
     } catch (error) {
       console.error('Bump product error:', error.message);
-      toast.error(error.message || 'Failed to bump product');
+      toast.error(error.message || 'Failed to bump product. Check console for details.');
     } finally {
-      setIsProcessing(false);
       setBumping((prev) => ({ ...prev, [productId]: false }));
     }
   };
@@ -198,20 +162,15 @@ const ProductBump = () => {
   };
 
   useEffect(() => {
-    let unsubscribe;
-    const setupAuthListener = () => {
-      unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          fetchProducts();
-          fetchBumpQuota();
-        } else {
-          setError('Please log in to view your products.');
-          setLoading(false);
-        }
-      });
-    };
-    setupAuthListener();
-    return () => unsubscribe && unsubscribe();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchProducts();
+      } else {
+        setError('Please log in to view your products.');
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -253,7 +212,9 @@ const ProductBump = () => {
 
   const isBumpActive = (product) => product.isBumped && product.bumpExpiry && new Date(product.bumpExpiry) > new Date();
 
-  const handleRefresh = () => window.location.reload();
+  const handleRefresh = () => {
+    fetchProducts();
+  };
 
   const filteredProducts = products.filter((product) =>
     product.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -308,7 +269,7 @@ const ProductBump = () => {
       <div className={`flex-1 p-2 sm:p-4 ${sidebarOpen ? 'ml-64' : 'ml-0'} mt-6 transition-all duration-300 md:ml-64`}>
         <div className="mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Product Bump</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Boost your products' visibility with the bump feature. Quota: {bumpQuota}</p>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Boost your products' visibility with the bump feature.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
@@ -382,6 +343,7 @@ const ProductBump = () => {
                 {isBumpActive(product) && timeRemaining[product.id] > 0 && (
                   <div className="mt-1 sm:mt-2 p-1 sm:p-1.5 bg-green-50 border border-green-200 rounded-md">
                     <p className="text-xs sm:text-sm text-gray-900">Time Remaining: {formatTime(timeRemaining[product.id])}</p>
+                    <p className="text-xs mt-0.5">Duration: {bumpDurations.find(d => d.hours === product.bumpDuration)?.label || 'Unknown'}</p>
                     {product.bumpExpiry && (
                       <p className="text-xs mt-0.5">Expires: {formatDate(product.bumpExpiry)}</p>
                     )}
@@ -396,21 +358,21 @@ const ProductBump = () => {
                         amount={duration.price * 100}
                         onSuccess={(paymentData) => handlePaymentSuccess(paymentData, product.id, duration.hours)}
                         onClose={handleCancel}
-                        disabled={bumping[product.id] || bumpQuota <= 0 || isProcessing}
+                        disabled={bumping[product.id]}
                         buttonText={`${duration.label} (₦${duration.price.toLocaleString('en-NG')})`}
                         className={`w-full flex items-center justify-center px-1.5 sm:px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition duration-200 ${
-                          bumping[product.id] || bumpQuota <= 0 || isProcessing
+                          bumping[product.id]
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'text-white'
                         }`}
-                        style={!(bumping[product.id] || bumpQuota <= 0 || isProcessing) ? { backgroundColor: '#112d4e' } : {}}
+                        style={!bumping[product.id] ? { backgroundColor: '#112d4e' } : {}}
                         onMouseOver={(e) => {
-                          if (!(bumping[product.id] || bumpQuota <= 0 || isProcessing)) {
+                          if (!bumping[product.id]) {
                             e.target.style.backgroundColor = '#0d2440';
                           }
                         }}
                         onMouseOut={(e) => {
-                          if (!(bumping[product.id] || bumpQuota <= 0 || isProcessing)) {
+                          if (!bumping[product.id]) {
                             e.target.style.backgroundColor = '#112d4e';
                           }
                         }}
@@ -447,8 +409,8 @@ const ProductBump = () => {
           <h3 className="text-sm sm:text-base font-semibold text-blue-800 mb-1 sm:mb-2">How Product Bump Works</h3>
           <div className="text-xs sm:text-sm text-blue-700/80 space-y-0.5 sm:space-y-1">
             <p>• Select a product from the list below.</p>
-            <p>• Choose a bump duration (3 or 7 days) and click the corresponding button.</p>
-            <p>• Complete the payment via Paystack to activate the bump.</p>
+            <p>• Choose a bump duration (3 or 7 days) and complete payment via Paystack.</p>
+            <p>• A success message will appear, and you'll receive an email confirmation.</p>
             <p>• Bumped products appear at the top of search results for the selected duration.</p>
           </div>
         </div>

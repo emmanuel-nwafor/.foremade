@@ -10,7 +10,7 @@ import {
   updateProfile,
   sendEmailVerification 
 } from 'firebase/auth';
-import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 import { UserCheck2Icon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -82,11 +82,11 @@ export default function Register() {
   const [signupAttempts, setSignupAttempts] = useState(0);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
-  const [showDobModal, setShowDobModal] = useState(false); // New state for DOB modal
-  const navigate = useNavigate();
-
+  const [showDobModal, setShowDobModal] = useState(false);
   const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [pendingUserData, setPendingUserData] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const validation = validatePassword(password);
@@ -166,25 +166,22 @@ export default function Register() {
 
     try {
       const username = generateUsername(firstName, lastName);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await updateProfile(user, { displayName: username });
-
       const userData = {
-        email: user.email,
+        email,
         name: `${firstName} ${lastName}`,
         username,
         address: '',
         phoneNumber: phoneNumber || '',
         createdAt: new Date().toISOString(),
-        uid: user.uid,
         profileImage: null,
         role: 'standard',
-        dob: dob, // Store DOB for future reference
+        dob,
       };
-      await setDoc(doc(db, 'users', user.uid), userData);
 
+      // Store user data temporarily
+      setPendingUserData(userData);
+
+      // Send OTP before creating Firebase user
       const response = await fetch(`${backendUrl}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,15 +190,71 @@ export default function Register() {
       const data = await response.json();
 
       if (data.success) {
-        setSuccessMessage('Account created! Check your email for a verification code.');
+        setSuccessMessage('Check your email for a verification code.');
         setShowOtpModal(true);
-        localStorage.setItem('userData', JSON.stringify(userData));
       } else {
-        setEmailError(data.error || 'Something went wrong. Please try again.');
+        setEmailError(data.error || 'Failed to send OTP. Please try again.');
       }
     } catch (err) {
-      console.error('Registration error:', err.message, err.code);
-      setEmailError(err.message.includes('email') ? 'This email is already in use or invalid. Try another.' : 'Registration failed. Please check your connection or try again.');
+      console.error('Send OTP error:', err.message);
+      setEmailError('Unable to send OTP. Check your connection or try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setSuccessMessage('');
+    setLoading(true);
+
+    if (!otp.trim()) {
+      setOtpError('Please enter the verification code.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Verify OTP
+      const response = await fetch(`${backendUrl}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        // After successful OTP verification, create Firebase user
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+
+          await updateProfile(user, { displayName: pendingUserData.username });
+
+          // Save user data to Firestore
+          await setDoc(doc(db, 'users', user.uid), {
+            ...pendingUserData,
+            uid: user.uid,
+          });
+
+          localStorage.setItem('userData', JSON.stringify({ ...pendingUserData, uid: user.uid }));
+          await sendEmailVerification(user);
+          setSuccessMessage('Email verified and account created! You can log in now.');
+          setShowOtpModal(false);
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        } catch (err) {
+          console.error('Firebase registration error:', err.message, err.code);
+          setOtpError(err.message.includes('email') ? 'This email is already in use or invalid. Try another.' : 'Registration failed. Please try again.');
+        }
+      } else {
+        setOtpError(data.error || 'Invalid or expired code. Please try again.');
+      }
+    } catch (err) {
+      console.error('Verify OTP error:', err.message);
+      setOtpError('Verification failed. Check your connection or try again.');
     } finally {
       setLoading(false);
     }
@@ -225,14 +278,13 @@ export default function Register() {
       const [socialFirstName, ...rest] = user.displayName?.split(' ') || [user.email.split('@')[0], ''];
       const socialLastName = rest.join(' ');
 
-      // Check if birthdate is available (optional, depends on provider scope)
       let age = null;
-      if (user.birthDate) { // Note: This field may not exist unless configured
+      if (user.birthDate) {
         age = calculateAge(user.birthDate);
       }
 
       if (age === null || age < 18) {
-        setShowDobModal(true); // Prompt for DOB if age is unknown or under 18
+        setShowDobModal(true);
         return;
       }
 
@@ -250,7 +302,7 @@ export default function Register() {
         uid: user.uid,
         profileImage: user.photoURL || null,
         role: 'standard',
-        dob: user.birthDate || '', // Store if available
+        dob: user.birthDate || '',
       };
       await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
 
@@ -331,44 +383,6 @@ export default function Register() {
     } catch (err) {
       console.error('Resend OTP error:', err.message);
       setEmailError('Unable to send code. Check your network and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setOtpError('');
-    setSuccessMessage('');
-    setLoading(true);
-
-    if (!otp.trim()) {
-      setOtpError('Please enter the verification code.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${backendUrl}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccessMessage('Email verified! You can log in now.');
-        await sendEmailVerification(auth.currentUser);
-        setShowOtpModal(false);
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      } else {
-        setOtpError(data.error || 'Invalid or expired code. Please try again.');
-      }
-    } catch (err) {
-      console.error('Verify OTP error:', err.message);
-      setOtpError('Verification failed. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -512,7 +526,7 @@ export default function Register() {
               className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
               disabled={loading}
             >
-              {loading ? 'Registering...' : 'Sign Up'}
+              {loading ? 'Processing...' : 'Sign Up'}
             </button>
           </form>
           <div className="mt-6 text-center">

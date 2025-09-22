@@ -83,15 +83,20 @@ const ProSellerForm = () => {
   const [banks, setBanks] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [banksLoading, setBanksLoading] = useState(true);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
 
   useEffect(() => {
     let didCancel = false;
     setCategoriesLoading(true);
     setBanksLoading(true);
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
@@ -162,7 +167,7 @@ const ProSellerForm = () => {
       setFormData(prev => ({ ...prev, regVerifying: true }));
       setTimeout(() => {
         setFormData(prev => ({ ...prev, regVerified: true, regVerifying: false }));
-      }, 1500); // Simulate verification delay of 1.5 seconds
+      }, 1500);
     }
   };
 
@@ -208,115 +213,185 @@ const ProSellerForm = () => {
         setCurrentStep(currentStep + 1);
       }
     } else {
-      await handleSubmit();
+      if (validateStep(3)) {
+        // Start OTP process before Firebase user creation
+        setIsSubmitting(true);
+        try {
+          const response = await fetch(`${backendUrl}/send-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            setSuccessMessage('Check your email for a verification code.');
+            setShowOtpModal(true);
+          } else {
+            setErrors(prev => ({ ...prev, email: data.error || 'Failed to send OTP. Please try again.' }));
+          }
+        } catch (err) {
+          console.error('Send OTP error:', err.message);
+          setErrors(prev => ({ ...prev, email: 'Unable to send OTP. Check your connection or try again.' }));
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep(3)) {
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setSuccessMessage('');
+    setIsSubmitting(true);
+
+    if (!otp.trim()) {
+      setOtpError('Please enter the verification code.');
       setIsSubmitting(false);
       return;
     }
-    setIsSubmitting(true);
+
     try {
-      let uid = user?.uid;
-      let idToken = null;
+      // Verify OTP
+      const response = await fetch(`${backendUrl}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp }),
+      });
+      const data = await response.json();
 
-      const currentAuth = getAuth();
-      const currentUser = currentAuth.currentUser;
-
-      if (!currentUser && formData.signup && formData.email && formData.password) {
-        const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        uid = credential.user.uid;
-        idToken = await credential.user.getIdToken(true);
-        await updateProfile(credential.user, { displayName: `${formData.firstName} ${formData.lastName}` });
-        if (typeof setUser === 'function') {
-          setUser(credential.user);
-        } else {
-          console.warn('setUser is not a function. Skipping auth context update.');
-        }
-
-        const username = generateUsername(formData.firstName, formData.lastName);
-        const userDocRef = doc(db, 'users', uid);
-        let attempts = 0;
-        const maxAttempts = 3;
-        while (attempts < maxAttempts) {
-          try {
-            await setDoc(userDocRef, {
-              email: formData.email,
-              username,
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              createdAt: new Date().toISOString(),
-              phoneNumber: formData.phoneCode + formData.phone,
-              country: formData.country,
-              addresses: [{ street: formData.address, city: '', state: '', postalCode: '', country: formData.country }],
-              proStatus: 'pending',
-            }, { merge: true });
-            addAlert('Account and profile created successfully!', 'success');
-            break;
-          } catch (error) {
-            attempts++;
-            if (attempts === maxAttempts) {
-              console.error('Firestore profile creation failed after retries:', error);
-              throw new Error('Failed to create user profile in Firestore after multiple attempts.');
-            }
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      } else if (currentUser) {
-        uid = currentUser.uid;
+      if (data.success) {
+        // Proceed with Firebase user creation and form submission
         try {
-          idToken = await currentUser.getIdToken(true);
+          let uid = user?.uid;
+          let idToken = null;
+
+          const currentAuth = getAuth();
+          const currentUser = currentAuth.currentUser;
+
+          if (!currentUser && formData.signup && formData.email && formData.password) {
+            const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+            uid = credential.user.uid;
+            idToken = await credential.user.getIdToken(true);
+            await updateProfile(credential.user, { displayName: `${formData.firstName} ${formData.lastName}` });
+            if (typeof setUser === 'function') {
+              setUser(credential.user);
+            } else {
+              console.warn('setUser is not a function. Skipping auth context update.');
+            }
+
+            const username = generateUsername(formData.firstName, formData.lastName);
+            const userDocRef = doc(db, 'users', uid);
+            let attempts = 0;
+            const maxAttempts = 3;
+            while (attempts < maxAttempts) {
+              try {
+                await setDoc(userDocRef, {
+                  email: formData.email,
+                  username,
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  createdAt: new Date().toISOString(),
+                  phoneNumber: formData.phoneCode + formData.phone,
+                  country: formData.country,
+                  addresses: [{ street: formData.address, city: '', state: '', postalCode: '', country: formData.country }],
+                  proStatus: 'pending',
+                }, { merge: true });
+                addAlert('Account and profile created successfully!', 'success');
+                break;
+              } catch (error) {
+                attempts++;
+                if (attempts === maxAttempts) {
+                  console.error('Firestore profile creation failed after retries:', error);
+                  throw new Error('Failed to create user profile in Firestore after multiple attempts.');
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          } else if (currentUser) {
+            uid = currentUser.uid;
+            try {
+              idToken = await currentUser.getIdToken(true);
+            } catch (error) {
+              if (error.code === 'auth/user-token-expired') {
+                addAlert('Your session has expired. Please sign in again.', 'error');
+                navigate('/login');
+                return;
+              }
+              throw error;
+            }
+          } else {
+            throw new Error('No authenticated user found and signup not selected.');
+          }
+
+          const submissionData = {
+            ...formData,
+            submittedAt: new Date().toISOString(),
+            timestamp: Date.now(),
+            userAgent: navigator.userAgent,
+            formType: 'Pro Seller Application',
+            uid: uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          };
+
+          const response = await fetch(`${backendUrl}/api/pro-seller`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
+            },
+            body: JSON.stringify(submissionData),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || result.message || 'Submission failed');
+          }
+
+          addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
+          setFormData(initialFormData);
+          setCurrentStep(1);
+          setShowOtpModal(false);
+          navigate('/profile');
         } catch (error) {
+          console.error('Submission error:', error.message, error);
           if (error.code === 'auth/user-token-expired') {
             addAlert('Your session has expired. Please sign in again.', 'error');
             navigate('/login');
-            return;
+          } else {
+            addAlert(`There was an error submitting your application: ${error.message}. Please try again or contact support.`, 'error');
           }
-          throw error;
         }
       } else {
-        throw new Error('No authenticated user found and signup not selected.');
+        setOtpError(data.error || 'Invalid or expired code. Please try again.');
       }
+    } catch (err) {
+      console.error('Verify OTP error:', err.message);
+      setOtpError('Verification failed. Check your connection or try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-      const submissionData = {
-        ...formData,
-        submittedAt: new Date().toISOString(),
-        timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        formType: 'Pro Seller Application',
-        uid: uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-      };
-
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
-      const response = await fetch(`${backendUrl}/api/pro-seller`, {
+  const handleResendOtp = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${backendUrl}/resend-otp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
-        },
-        body: JSON.stringify(submissionData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
       });
+      const data = await response.json();
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || result.message || 'Submission failed');
-      }
-
-      addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
-      setFormData(initialFormData);
-      setCurrentStep(1);
-      navigate('/profile');
-    } catch (error) {
-      console.error('Submission error:', error.message, error);
-      if (error.code === 'auth/user-token-expired') {
-        addAlert('Your session has expired. Please sign in again.', 'error');
-        navigate('/login');
+      if (data.success) {
+        setSuccessMessage('New verification code sent to your email.');
       } else {
-        addAlert(`There was an error submitting your application: ${error.message}. Please try again or contact support.`, 'error');
+        setOtpError(data.error || 'Failed to send code. Please try again.');
       }
+    } catch (err) {
+      console.error('Resend OTP error:', err.message);
+      setOtpError('Unable to send code. Check your network and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -341,7 +416,6 @@ const ProSellerForm = () => {
     setFormData(prev => ({ ...prev, accountVerifying: true, accountError: '', accountVerified: false, accountName: '' }));
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -705,7 +779,7 @@ const ProSellerForm = () => {
               </div>
             </div>
           )}
-          {currentStep === 4 && (
+              {currentStep === 4 && (
             <div className="space-y-6">
               <div className="mb-6 text-center">
                 <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-3" />

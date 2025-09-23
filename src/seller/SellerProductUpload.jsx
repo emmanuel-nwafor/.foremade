@@ -9,6 +9,7 @@ import SellerLocationForm from './SellerLocationForm';
 
 // Set global Axios timeout
 axios.defaults.timeout = 80000; // 80 seconds
+
 // Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -57,42 +58,46 @@ export default function SellerProductUpload() {
   // State for form data (persisted in localStorage)
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('sellerProductForm');
-    return savedData ? JSON.parse(savedData) : {
-      sellerName: '',
-      name: '',
-      description: '',
-      price: '',
-      stock: '',
-      category: '',
-      subcategory: '',
-      subSubcategory: '',
-      colors: [],
-      sizes: [],
-      condition: 'New',
-      productUrl: '',
-      images: [],
-      videos: [],
-      tags: [],
-      manualSize: '',
-    };
+    return savedData
+      ? JSON.parse(savedData)
+      : {
+          sellerName: '',
+          name: '',
+          description: '',
+          price: '',
+          stock: '',
+          category: '',
+          subcategory: '',
+          subSubcategory: '',
+          colors: [],
+          sizes: [],
+          condition: 'New',
+          productUrl: '',
+          images: [],
+          videos: [],
+          tags: [],
+          manualSize: '',
+          deliveryDays: '', // Added deliveryDays
+        };
   });
 
   // State for location data
   const [locationData, setLocationData] = useState(() => {
     const savedLocation = localStorage.getItem('sellerLocationForm');
-    return savedLocation ? JSON.parse(savedLocation) : {
-      country: '',
-      state: '',
-      city: '',
-      address: '',
-    };
+    return savedLocation
+      ? JSON.parse(savedLocation)
+      : {
+          country: '',
+          state: '',
+          city: '',
+          address: '',
+        };
   });
 
   // State for location errors
   const [locationErrors, setLocationErrors] = useState({});
 
   // State for popups
-  const [isVariantPopupOpen, setIsVariantPopupOpen] = useState(true); // Show variant popup on page load
   const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false); // Success popup after submission
 
   // State for media files and previews
@@ -154,7 +159,7 @@ export default function SellerProductUpload() {
   const isSectionComplete = (stepKey) => {
     if (stepKey === 1) return imageFiles.length > 0;
     if (stepKey === 2) return formData.name && formData.description && formData.sellerName;
-    if (stepKey === 3) return formData.price && formData.stock;
+    if (stepKey === 3) return formData.price && formData.stock && formData.deliveryDays;
     if (stepKey === 4) return locationData.country && locationData.state;
     return false;
   };
@@ -164,14 +169,12 @@ export default function SellerProductUpload() {
     if (isSectionComplete(1) && currentStep < 2) setCurrentStep(2);
     if (isSectionComplete(2) && currentStep < 3) setCurrentStep(3);
     if (isSectionComplete(3) && currentStep < 4) setCurrentStep(4);
-  }, [imageFiles, formData.name, formData.description, formData.sellerName, formData.price, formData.stock, locationData.country, locationData.state]);
+  }, [imageFiles, formData.name, formData.description, formData.sellerName, formData.price, formData.stock, formData.deliveryDays, locationData.country, locationData.state]);
 
   // Stepper click handler
   const handleStepClick = (stepKey) => {
     if (stepKey < currentStep) setCurrentStep(stepKey);
   };
-
-  console.log(showSizeWarning);
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -183,7 +186,7 @@ export default function SellerProductUpload() {
   const availableColors = [
     { name: 'Red', hex: '#ff0000' },
     { name: 'Orange', hex: '#FFA500' },
-    { name: 'blue', hex: '#0000ff' },
+    { name: 'Blue', hex: '#0000ff' },
     { name: 'Green', hex: '#008000' },
     { name: 'Brown', hex: '#8b4513' },
     { name: 'Black', hex: '#000000' },
@@ -204,7 +207,7 @@ export default function SellerProductUpload() {
   ];
   const perfumeSizes = ['30ml', '50ml', '60ml', '75ml', '100ml'];
   const manualSizes = ['1 to 5kg', '5 to 10kg ', '10 to 20kg', '20kg above'];
-  const authenticityTags = ['Verified', 'Original', 'Brand New', 'Authentic'];
+  const authenticityTags = ['Verified', 'Original', 'Hand Made', 'Authentic'];
   const MAX_IMAGES = 8;
   const MAX_VIDEOS = 1;
   const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
@@ -656,7 +659,8 @@ export default function SellerProductUpload() {
     if (imageFiles.length === 0) newErrors.images = 'At least one image is required.';
     if (imageFiles.length > MAX_IMAGES) newErrors.images = `Maximum ${MAX_IMAGES} images allowed.`;
     if (videoFiles.length > MAX_VIDEOS) newErrors.videos = `Maximum ${MAX_VIDEOS} video allowed.`;
-    if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
+    if (!formData.deliveryDays || isNaN(formData.deliveryDays) || formData.deliveryDays <= 0)
+      newErrors.deliveryDays = 'Enter a valid number of delivery days (greater than 0).';
     if (
       formData.category === 'Clothing' &&
       formData.subcategory &&
@@ -775,6 +779,7 @@ export default function SellerProductUpload() {
         totalEstimatedPrice: fees.totalEstimatedPrice,
         sellerEarnings: fees.sellerEarnings,
         manualSize: formData.manualSize || '',
+        deliveryDays: parseInt(formData.deliveryDays, 10), // Added deliveryDays
         location: {
           country: locationData.country,
           state: locationData.state,
@@ -802,6 +807,7 @@ export default function SellerProductUpload() {
         videos: [],
         tags: [],
         manualSize: '',
+        deliveryDays: '', // Reset deliveryDays
       });
       setLocationData({
         country: '',
@@ -886,20 +892,19 @@ export default function SellerProductUpload() {
   }
 
   return (
-     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <SellerSidebar />
-          
       <div className="flex-1 ml-0 md:ml-64 p-4 flex justify-center items-start">
         <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
-           <div className="flex justify-between items-center">
-              <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
-                <i className="bx bx-package text-blue-500"></i>
-                Add a New Product
-              </h2>
-              <Link to="/bulk-upload" className="inline-block  px-1 py-1 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
-                Bulk Upload
-              </Link>
-           </div>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+              <i className="bx bx-package text-blue-500"></i>
+              Add a New Product
+            </h2>
+            <Link to="/bulk-upload" className="inline-block px-1 py-1 bg-[#112d4e] text-white rounded hover:bg-blue-700 font-semibold shadow">
+              Bulk Upload
+            </Link>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
             {/* Image Upload Section */}
             <div className="relative group">
@@ -1275,11 +1280,35 @@ export default function SellerProductUpload() {
                     </p>
                   )}
                 </div>
+                <div className="relative group">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    Delivery Days <span className="text-red-500">*</span>
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Estimated delivery time in days"></i>
+                  </label>
+                  <input
+                    type="number"
+                    name="deliveryDays"
+                    value={formData.deliveryDays}
+                    onChange={handleChange}
+                    min="1"
+                    placeholder="e.g., 3"
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.deliveryDays ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    disabled={loading}
+                  />
+                  {errors.deliveryDays && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.deliveryDays}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="mt-6 relative group">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  Product Size
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
+                  Product Weight
+                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product weight"></i>
                 </label>
                 <select
                   name="manualSize"
@@ -1294,7 +1323,6 @@ export default function SellerProductUpload() {
                   {manualSizes.map((size) => (
                     <option key={size} value={size}>
                       {size}
-                      {/*  */}
                     </option>
                   ))}
                 </select>
@@ -1388,7 +1416,7 @@ export default function SellerProductUpload() {
                     </p>
                   )}
                   {formData.category && formData.category.toLowerCase().includes('food') && (
-                    <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-gray-500 text-xs mt-3 flex items-center gap-1">
                       <i className="bx bx-info-circle"></i>
                       All food-related categories must meet NAFDAC/FSA food safety standards.
                     </p>
@@ -1571,7 +1599,7 @@ export default function SellerProductUpload() {
                 Colors
               </h3>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
-                Colors <span className="text-red-500">*</span>
+                Colors
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2 mb-2">
@@ -1586,8 +1614,8 @@ export default function SellerProductUpload() {
                     >
                       <span
                         className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: predefinedColor ? predefinedColor.hex : '#ccc' }}
-                      />
+                        style={{ backgroundColor: predefinedColor ? predefinedColor.hex :                         predefinedColor ? predefinedColor.hex : '#000000' }}
+                      ></span>
                       <span>{color}</span>
                       <button
                         type="button"
@@ -1608,297 +1636,255 @@ export default function SellerProductUpload() {
                   value={customColor}
                   onChange={handleColorInputChange}
                   onKeyDown={handleCustomColorAdd}
-                  onFocus={() => customColor.trim() && setShowColorDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowColorDropdown(false), 200)}
-                  placeholder="Type a color and press Enter (e.g., Navy)"
-                  className={`w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                  placeholder="Type a color and press Enter"
+                  className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
                     errors.colors ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                   } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                   disabled={loading}
                 />
                 {showColorDropdown && colorSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md z-10 max-h-40 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-md max-h-40 overflow-y-auto">
                     {colorSuggestions.map((color) => (
                       <button
                         key={color.name}
                         type="button"
-                        onMouseDown={() => handleColorToggle(color.name)}
-                        className="flex items-center w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
-                        disabled={loading}
-                        >
-                          <span
-                            className="w-4 h-4 rounded-full mr-2"
-                            style={{ backgroundColor: color.hex }}
-                          />
-                          {color.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {errors.colors && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <i className="bx bx-error-circle"></i>
-                    {errors.colors}
-                  </p>
+                        onClick={() => handleColorToggle(color.name)}
+                        className="w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 flex items-center gap-2"
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: color.hex }}
+                        ></span>
+                        {color.name}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
+              {errors.colors && (
+                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.colors}
+                </p>
+              )}
+            </div>
 
-              {/* Tags Section */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-purchase-tag text-blue-500"></i>
-                  Tags
-                </h3>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
-                  Tags
-                  <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve searchability"></i>
-                </label>
-                <div className="flex flex-wrap gap-2 mt-2 mb-2">
-                  {formData.tags.map((tag) => (
-                    <div
-                      key={tag}
-                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
-                    >
-                      <span>{tag}</span>
+            {/* Tags Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-purchase-tag text-blue-500"></i>
+                Tags
+              </h3>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
+                Tags
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter tags to improve product visibility"></i>
+              </label>
+              <div className="flex flex-wrap gap-2 mt-2 mb-2">
+                {suggestedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {suggestedTags.map((tag) => (
                       <button
+                        key={tag}
                         type="button"
                         onClick={() => handleTagToggle(tag)}
-                        className="text-red-500 hover:text-red-700"
+                        className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm shadow-sm"
                         disabled={loading}
-                        title="Remove tag"
                       >
-                        <i className="bx bx-x"></i>
+                        {tag}
                       </button>
-                    </div>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const tag = e.target.value.trim();
-                      if (tag.length > 20) {
-                        addAlert('Tag must be 20 characters or less.', 'error');
-                        return;
-                      }
-                      handleTagToggle(tag);
-                      e.target.value = '';
-                    }
-                  }}
-                  placeholder="Type a tag and press Enter (e.g., Vintage)"
-                  className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
-                  disabled={loading}
-                />
-                {suggestedTags.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Suggested Tags:</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {suggestedTags.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => handleTagToggle(tag)}
-                          className="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm shadow-sm"
-                          disabled={loading}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
+                    ))}
                   </div>
                 )}
-                {authenticityTags.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Authenticity Tags:</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {authenticityTags.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => handleTagToggle(tag)}
-                          className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                            formData.tags.includes(tag)
-                              ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          disabled={loading}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Condition Section */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-check-circle text-blue-500"></i>
-                  Condition
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {['New', 'Used', 'Refurbished'].map((condition) => (
+                {formData.tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs shadow-sm"
+                  >
+                    <span>{tag}</span>
                     <button
-                      key={condition}
                       type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, condition }))}
-                      className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
-                        formData.condition === condition
-                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => handleTagToggle(tag)}
+                      className="text-red-500 hover:text-red-700"
                       disabled={loading}
+                      title="Remove tag"
                     >
-                      {condition}
+                      <i className="bx bx-x"></i>
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
+              <input
+                type="text"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    const tag = e.target.value.trim();
+                    if (formData.tags.length >= 10) {
+                      addAlert('Maximum 10 tags allowed.', 'error');
+                      return;
+                    }
+                    if (tag.length > 20) {
+                      addAlert('Tag must be 20 characters or less.', 'error');
+                      return;
+                    }
+                    setFormData((prev) => ({
+                      ...prev,
+                      tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
+                    }));
+                    e.target.value = '';
+                  }
+                }}
+                placeholder="Type a tag and press Enter"
+                className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                  errors.tags ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                disabled={loading}
+              />
+              {errors.tags && (
+                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.tags}
+                </p>
+              )}
+            </div>
 
-              {/* Product URL Section */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-link text-blue-500"></i>
-                  Product URL (Optional)
-                </h3>
-                <input
-                  type="url"
-                  name="productUrl"
-                  value={formData.productUrl}
-                  onChange={handleChange}
-                  placeholder="e.g., https://example.com/product"
-                  className="mt-1 w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
-                  disabled={loading}
-                />
+            {/* Condition Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-check-shield text-blue-500"></i>
+                Condition
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {['New', 'Used', 'Refurbished'].map((condition) => (
+                  <button
+                    key={condition}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, condition }))}
+                    className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                      formData.condition === condition
+                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={loading}
+                  >
+                    {condition}
+                  </button>
+                ))}
               </div>
+              {errors.condition && (
+                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <i className="bx bx-error-circle"></i>
+                  {errors.condition}
+                </p>
+              )}
+            </div>
 
-              <Link to="/products-upload-variant" className='text-sm mt-10 text-gray-600 hover:underline'>
-                  Have products with multiple variants(eg colors, sizes etc) ?
+            
+              <Link to="/products-upload-variant" className='text-white hover:underline'>
+                <button className="p-2 mt-5 rounded-lg bg-blue-500">
+                    Variants Upload?
+                </button>
               </Link>
 
-              {/* Location Section */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <i className="bx bx-map text-blue-500"></i>
-                  Location
+            {/* Location Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-map text-blue-500"></i>
+                Location
+              </h3>
+              <SellerLocationForm
+                locationData={locationData}
+                setLocationData={setLocationData}
+                errors={locationErrors}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={loading}
+                className={`px-6 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-200 ${
+                  loading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
+                } flex items-center gap-2`}
+              >
+                {loading ? (
+                  <>
+                    <i className="bx bx-loader bx-spin"></i>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <i className="bx bx-upload"></i>
+                    Add Product
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Success Popup */}
+          {isSuccessPopupOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full text-center">
+                <i className="bx bx-check-circle text-5xl text-green-500 mb-4"></i>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">
+                  Product Added Successfully!
                 </h3>
-                <SellerLocationForm
-                  locationData={locationData}
-                  setLocationData={setLocationData}
-                  errors={locationErrors}
-                  setErrors={setLocationErrors}
-                  disabled={loading}
-                />
-              </div>
-
-              {/* Stepper */}
-              <div className="mt-6">
-                <div className="flex justify-between items-center">
-                  {steps.map((step) => (
-                    <div key={step.key} className="flex-1 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleStepClick(step.key)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto ${
-                          currentStep >= step.key
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                        } ${isSectionComplete(step.key) ? 'border-2 border-green-500' : ''} transition-all duration-200`}
-                        disabled={loading || currentStep < step.key}
-                      >
-                        {isSectionComplete(step.key) ? (
-                          <i className="bx bx-check text-lg"></i>
-                        ) : (
-                          step.key
-                        )}
-                      </button>
-                      <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">{step.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <div className="mt-8 flex justify-end">
-                <button
-                  type="submit"
-                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2 ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <i className="bx bx-loader bx-spin"></i>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bx bx-upload"></i>
-                      Add Product
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Alerts */}
-            <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-            {/* Success Popup */}
-            {isSuccessPopupOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-5">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                    <i className="bx bx-check-circle text-green-500"></i>
-                    Product Uploaded Successfully!
-                  </h3>
-                   <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Your product has been uploaded and is pending quick admin review. Once approved, you'll receive an email, 
-                    and it will go live promptly.
-                  </p>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <button
-                      onClick={() => navigate('/sellers/products')}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
-                    >
-                      View Products
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Zoomed Media Modal */}
-            {zoomedMedia && (
-              <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                <div className="relative max-w-4xl w-full">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  Your product has been uploaded and is now awaiting admin approval.
+                </p>
+                <div className="flex justify-center gap-4">
                   <button
-                    onClick={() => setZoomedMedia(null)}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                    onClick={() => navigate('/seller/products')}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
                   >
-                    <i className="bx bx-x text-lg"></i>
+                    View Products
                   </button>
-                  {zoomedMedia.type === 'image' ? (
-                    <img
-                      src={zoomedMedia.src}
-                      alt="Zoomed media"
-                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                    />
-                  ) : (
-                    <video
-                      src={zoomedMedia.src}
-                      controls
-                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                    />
-                  )}
+                  <button
+                    onClick={() => setIsSuccessPopupOpen(false)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Add Another
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Zoomed Media Modal */}
+          {zoomedMedia && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="relative max-w-4xl w-full">
+                <button
+                  onClick={() => setZoomedMedia(null)}
+                  className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300"
+                >
+                  <i className="bx bx-x"></i>
+                </button>
+                {zoomedMedia.type === 'image' ? (
+                  <img
+                    src={zoomedMedia.src}
+                    alt="Zoomed"
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={zoomedMedia.src}
+                    controls
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Alerts */}
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
         </div>
       </div>
+    </div>
   );
 }

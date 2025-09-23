@@ -1,4 +1,5 @@
 import SellerAgreement from './seller/SellerAgreement';
+import Guidelines from './pages/Guidelines';
 import ShippingPolicy from './pages/ShippingPolicy';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -213,6 +214,7 @@ function App() {
               <Route path="/support" element={<Support />} />
               <Route path="/buyer-protection-policy" element={<BuyerProtectionPolicy />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/guidelines" element={<Guidelines />} />
               <Route path="/empowerment-hub" element={<EmpowermentHub />} />
               <Route path="/youth-empowerment-form" element={<YouthEmpowermentForm />} />
               <Route path="/youth-empowerment-terms" element={<YouthEmpowermentTerms />} />

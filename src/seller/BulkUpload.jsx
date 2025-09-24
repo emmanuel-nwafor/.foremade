@@ -380,7 +380,7 @@ const BulkUpload = () => {
             <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
           </div>
           <div className="mb-6">
-            <a href="/guidelines" className="inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-semibold shadow">View Product Upload Guidelines</a>
+              <a href="/guidelines" className="inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-semibold shadow">View Product Upload Guidelines</a>
           </div>
           <div className="mb-6">
             <label className="flex items-center gap-2 text-blue-900 font-semibold">
@@ -390,7 +390,7 @@ const BulkUpload = () => {
                 onChange={e => setHasReadGuidelines(e.target.checked)}
                 className="accent-blue-600 w-4 h-4"
               />
-              I have read and understood the <a href="/guidelines" className="underline text-blue-700" target="_blank" rel="noopener noreferrer">Product Upload Guidelines</a>
+              I have read and understood the <a href="/guidelines" className="underline text-blue-700">Product Upload Guidelines</a>
             </label>
           </div>
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />

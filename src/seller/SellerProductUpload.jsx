@@ -52,6 +52,8 @@ function useAlerts() {
 }
 
 export default function SellerProductUpload() {
+  // Checkbox state for guidelines
+  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -1799,31 +1801,45 @@ export default function SellerProductUpload() {
               />
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className={`px-6 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-200 ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500'
-                } flex items-center gap-2`}
-              >
-                {loading ? (
-                  <>
-                    <i className="bx bx-loader bx-spin"></i>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <i className="bx bx-upload"></i>
-                    Add Product
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+              {/* Submit Button */}
+              {/* Guidelines Checkbox Section */}
+              <div className="mt-8 flex items-center justify-start">
+                <label className="flex items-center gap-2 text-blue-900 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={hasReadGuidelines}
+                    onChange={e => setHasReadGuidelines(e.target.checked)}
+                    className="accent-blue-600 w-4 h-4"
+                  />
+                  I have read and understood the <a href="/guidelines" className="underline text-blue-700" target="_blank" rel="noopener noreferrer">Product Upload Guidelines</a>
+                </label>
+              </div>
+              <div className="mt-8 flex justify-end">
+                <button
+                  type="submit"
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2 ${
+                    loading || !hasReadGuidelines ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={loading || !hasReadGuidelines}
+                  title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
+                >
+                  {loading ? (
+                    <>
+                      <i className="bx bx-loader bx-spin"></i>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bx bx-upload"></i>
+                      Add Product
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Alerts */}
+            <CustomAlert alerts={alerts} removeAlert={removeAlert} />
 
           {/* Success Popup */}
           {isSuccessPopupOpen && (

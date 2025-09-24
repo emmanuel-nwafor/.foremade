@@ -72,6 +72,8 @@ const BulkUpload = () => {
           }
           if (sampleCount >= 5) break;
         }
+  // Checkbox state for guidelines
+  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
         const csvLines = [
           '# INSTRUCTIONS:',
           ...catSection,
@@ -92,7 +94,7 @@ const BulkUpload = () => {
     fetchCategories();
   }, []);
 
-  if (!userProfile && !userProfile.isProSeller) {
+  if (!userProfile || !userProfile.isProSeller) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
@@ -377,6 +379,20 @@ const BulkUpload = () => {
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-2">
             <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
           </div>
+          <div className="mb-6">
+            <a href="/guidelines" className="inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-semibold shadow">View Product Upload Guidelines</a>
+          </div>
+          <div className="mb-6">
+            <label className="flex items-center gap-2 text-blue-900 font-semibold">
+              <input
+                type="checkbox"
+                checked={hasReadGuidelines}
+                onChange={e => setHasReadGuidelines(e.target.checked)}
+                className="accent-blue-600 w-4 h-4"
+              />
+              I have read and understood the <a href="/guidelines" className="underline text-blue-700" target="_blank" rel="noopener noreferrer">Product Upload Guidelines</a>
+            </label>
+          </div>
           <CustomAlert alerts={alerts} removeAlert={removeAlert} />
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Bulk Product Upload</h1>
@@ -399,6 +415,8 @@ const BulkUpload = () => {
               <button
                 onClick={downloadTemplate}
                 className="mt-4 w-full px-4 py-2 bg-[#112d4e] text-white rounded-md hover:bg-blue-700 transition-colors"
+                disabled={!hasReadGuidelines}
+                title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
               >
                 Download Template
               </button>

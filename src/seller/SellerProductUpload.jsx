@@ -1741,6 +1741,30 @@ export default function SellerProductUpload() {
                 } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                 disabled={loading}
               />
+              <div className="mt-4">
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 items-center gap-1">
+                  Authenticity tags
+                 </label>
+                  {/* const authenticityTags = ['Verified', 'Original', 'Hand Made', 'Authentic']; */}
+                    <div className="flex flex-wrap gap-2">
+                  {['Verified', 'Original', 'Hand Made', 'Authentic'].map((condition) => (
+                    <button
+                      key={condition}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, condition }))}
+                      className={`px-3 py-1 rounded-lg border text-sm transition-colors shadow-sm ${
+                        formData.condition === condition
+                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={loading}
+                    >
+                      {condition}
+                    </button>
+                  ))}
+              </div>
+
+              </div>
               {errors.tags && (
                 <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                   <i className="bx bx-error-circle"></i>

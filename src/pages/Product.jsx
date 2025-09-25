@@ -19,7 +19,6 @@ import { Palette, Ruler, MessageCircle } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
 import ShareButton from "../components/common/ShareButton";
-
 // Utility to debounce a function
 const debounce = (func, wait) => {
   let timeout;
@@ -28,7 +27,6 @@ const debounce = (func, wait) => {
     timeout = setTimeout(() => func(...args), wait);
   };
 };
-
 const colorMap = {
   red: "#DC2626",
   blue: "#2563EB",
@@ -55,6 +53,22 @@ const colorMap = {
   coral: "#FB7185",
   indigo: "#6366F1",
   violet: "#8B5CF6",
+};
+
+const hashCode = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+};
+
+const generateUniqueName = (originalName, sellerId) => {
+  if (!originalName || originalName === "Unknown Seller" || !sellerId) return originalName;
+  const prefix = originalName.split(' ')[0];
+  const num = Math.abs(hashCode(sellerId)) % 900 + 100;
+  return `${prefix}${num}`;
 };
 
 const Product = () => {
@@ -95,21 +109,18 @@ const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
   const tagStyles = {
     new: "bg-amber-100 text-amber-800 border-amber-300",
     sale: "bg-emerald-100 text-emerald-800 border-emerald-300",
     trending: "bg-blue-100 text-blue-800 border-blue-300",
     default: "bg-gray-100 text-gray-800 border-gray-300",
   };
-
   const SIZE_RELEVANT_CATEGORIES = [
     "foremade fashion",
     "clothing",
     "shoes",
     "accessories",
   ];
-
   // Fetch minimum purchase amount
   useEffect(() => {
     const fetchMinimumPurchase = async () => {
@@ -126,7 +137,6 @@ const Product = () => {
     };
     fetchMinimumPurchase();
   }, [addAlert]);
-
   // Fetch additional shipping percentage
   useEffect(() => {
     const fetchAdditionalShippingPercentage = async () => {
@@ -143,7 +153,6 @@ const Product = () => {
     };
     fetchAdditionalShippingPercentage();
   }, [addAlert]);
-
   // Fetch daily deals
   useEffect(() => {
     const fetchDailyDeals = async () => {
@@ -156,7 +165,6 @@ const Product = () => {
     };
     fetchDailyDeals();
   }, []);
-
   // Fetch fee configurations
   useEffect(() => {
     const fetchFeeConfig = async () => {
@@ -172,7 +180,6 @@ const Product = () => {
     };
     fetchFeeConfig();
   }, []);
-
   // Calculate fees
   useEffect(() => {
     if (feeConfig && product?.category && (selectedVariant?.price || product?.price) > 0) {
@@ -195,7 +202,6 @@ const Product = () => {
       });
     }
   }, [feeConfig, product?.category, selectedVariant?.price, product?.price]);
-
   // Format description
   const formatDescription = (text) => {
     if (!text || typeof text !== "string") return "";
@@ -227,7 +233,6 @@ const Product = () => {
     if (isList) output += "</ul>";
     return output;
   };
-
   // Fetch favorites with debouncing
   const fetchFavorites = useCallback(
     debounce(async (user) => {
@@ -252,7 +257,6 @@ const Product = () => {
     }, 500),
     [addAlert]
   );
-
   // Handle auth state changes
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -260,7 +264,6 @@ const Product = () => {
     });
     return () => unsubscribe();
   }, [fetchFavorites]);
-
   // Fetch product and related data
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -350,6 +353,7 @@ const Product = () => {
           status: data.status || "pending",
           variants: data.variants || [],
         };
+        productData.seller.name = generateUniqueName(productData.seller.name, productData.sellerId);
         const activeDeal = dealsSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           .find(
@@ -455,7 +459,14 @@ const Product = () => {
             };
           })
           .filter((product) => product && product.imageUrl);
-        setSimilarProducts(similar.slice(0, 4));
+        const anonymizedSimilar = similar.map(p => ({
+          ...p,
+          seller: {
+            ...p.seller,
+            name: generateUniqueName(p.seller.name, p.seller.id)
+          }
+        }));
+        setSimilarProducts(anonymizedSimilar.slice(0, 4));
       } catch (err) {
         console.error("Error loading product:", err);
         setProduct(null);
@@ -476,7 +487,6 @@ const Product = () => {
     };
     fetchProduct();
   }, [id, navigate]);
-
   // Load recent searches
   useEffect(() => {
     try {
@@ -501,7 +511,6 @@ const Product = () => {
       setRecentSearches([]);
     }
   }, []);
-
   // Update media when product or variant changes
   useEffect(() => {
     if (!product) return;
@@ -523,7 +532,6 @@ const Product = () => {
     setMainMedia(allMedia[0].url);
     setCurrentMediaIndex(0);
   }, [product, selectedVariant]);
-
   // Update media index
   useEffect(() => {
     if (!product) return;
@@ -545,7 +553,6 @@ const Product = () => {
       setMainMedia("https://via.placeholder.com/600");
     }
   }, [currentMediaIndex, product, selectedVariant]);
-
   const handleAddToCart = async () => {
     if (!product) return;
     try {
@@ -578,13 +585,11 @@ const Product = () => {
       addAlert("Failed to add to cart", "error", 3000);
     }
   };
-
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
     return Math.round(total * additionalShippingPercentage);
   };
-
   const handlePayNow = async () => {
     if (!product) return;
     if (quantity > (selectedVariant?.stock || product.stock)) {
@@ -632,7 +637,6 @@ const Product = () => {
       addAlert("Failed to add to cart", "error", 3000);
     }
   };
-
   const handleConfirmPayNow = async () => {
     try {
       await addToCart(
@@ -659,16 +663,13 @@ const Product = () => {
       setShowShippingFeeModal(false);
     }
   };
-
   const handleCancelPayNow = () => {
     setShowShippingFeeModal(false);
     addAlert("Purchase cancelled.", "info", 3000);
   };
-
   const handleProductClick = (productId) => {
     navigate(`/product/${productId}`, { state: { from: location.pathname } });
   };
-
   const toggleFavorite = async () => {
     if (!product) {
       addAlert("No product selected", "error", 3000);
@@ -707,7 +708,6 @@ const Product = () => {
       addAlert("Failed to update favorites.", "error", 3000);
     }
   };
-
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!auth.currentUser) {
@@ -764,7 +764,6 @@ const Product = () => {
       addAlert("Failed to submit review", "error", 3000);
     }
   };
-
   // Debounced media click handler
   const handleMediaClick = useCallback(
     debounce((media, index) => {
@@ -781,7 +780,6 @@ const Product = () => {
     }, 300),
     [currentMediaIndex]
   );
-
   // Debounced variant change handler
   const handleVariantChange = useCallback(
     debounce((color, size) => {
@@ -823,7 +821,6 @@ const Product = () => {
     }, 300),
     [product, selectedVariant, addAlert]
   );
-
   const revertToPreviousVariant = () => {
     if (previousVariant) {
       setSelectedVariant(previousVariant);
@@ -847,14 +844,12 @@ const Product = () => {
       setQuantity(1);
     }
   };
-
   const isVariantAvailable = (color, size) => {
     const variant = product?.variants?.find(
       (v) => v.color === color && v.size === size
     );
     return variant && variant.stock > 0;
   };
-
   const getSafeImageUrl = (url) => {
     if (
       !url ||
@@ -865,7 +860,6 @@ const Product = () => {
     }
     return url;
   };
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -874,7 +868,6 @@ const Product = () => {
       </div>
     );
   }
-
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -886,7 +879,6 @@ const Product = () => {
       </div>
     );
   }
-
   const DESCRIPTION_LIMIT = 150;
   const REVIEW_LIMIT = 5;
   const truncatedDescription =
@@ -921,7 +913,6 @@ const Product = () => {
           product.reviews.length
         ).toFixed(1)
       : product.rating.toFixed(1);
-
   return (
     <div className="mb-[140px] container mx-auto px-4 py-6 md:py-8 relative">
       <style>
@@ -1293,7 +1284,6 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-
                 </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
@@ -1325,8 +1315,6 @@ const Product = () => {
                       </div>
                     )}
                   </div>
-
-                  {/* <ShareButton productId={product.id} productName={product.name} /> */}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="info-badge">
@@ -1344,7 +1332,7 @@ const Product = () => {
                         d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.329 1.14l1.519 4.674c.3.921-.755 1.688-1.539 1.14l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.543-1.838-.219-1.539-1.14l1.519-4.674a1 1 0 00-.329-1.14l-3.976-2.888c-.784-.57-.381-1.81.588-1.81h4.915a1 1 0 00.95-.69l1.519-4.674z"
                       />
                     </svg>
-                    {avgRating} 
+                    {avgRating}
                   </span>
                   <span className="info-badge">
                     <svg
@@ -1369,6 +1357,7 @@ const Product = () => {
                   >
                     <i className="ri-store-line"></i>
                     Seller: {product.seller.name}
+                   
                   </Link>
                   <button
                     onClick={() =>
@@ -1382,7 +1371,6 @@ const Product = () => {
                     <MessageCircle className="message-icon" size={20} />
                     Message Seller
                   </button>
-
                 </div>
                 {product.variants.length > 0 && (
                   <div className="mb-4">
@@ -1825,5 +1813,4 @@ const Product = () => {
     </div>
   );
 };
-
 export default Product;

@@ -40,10 +40,6 @@ const initialFormData = {
   accountError: '',
   agree: false,
   signup: false,
-  otp: '',
-  showOtpModal: false,
-  otpVerified: false,
-  sendingOtp: false,
 };
 
 const generateUsername = (firstName, lastName) => {
@@ -78,8 +74,6 @@ const countries = [
   'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
 ];
 
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
 const ProSellerForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,12 +86,12 @@ const ProSellerForm = () => {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
 
   useEffect(() => {
     let didCancel = false;
     setCategoriesLoading(true);
     setBanksLoading(true);
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
@@ -148,23 +142,13 @@ const ProSellerForm = () => {
   }, []);
 
   const handleInputChange = (field, value) => {
-    if (field === 'otp' && typeof value !== 'string') {
-      value = String(value || '');
-    }
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      if (field === 'email') {
-        newData.otpVerified = false;
-        newData.otp = '';
-      }
-      return newData;
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     if (field === 'regNumber') {
       const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8);
-      setFormData(prev => ({ ...prev, regNumber: filteredValue }));
+      handleInputChange('regNumber', filteredValue);
       validateRegNumber(filteredValue);
     }
   };
@@ -178,7 +162,7 @@ const ProSellerForm = () => {
       setFormData(prev => ({ ...prev, regVerifying: true }));
       setTimeout(() => {
         setFormData(prev => ({ ...prev, regVerified: true, regVerifying: false }));
-      }, 1500);
+      }, 1500); // Simulate verification delay of 1.5 seconds
     }
   };
 
@@ -196,7 +180,6 @@ const ProSellerForm = () => {
       if (!formData.lastName) newErrors.lastName = 'Last name is required';
       if (!formData.phone) newErrors.phone = 'Phone number is required';
       if (!formData.email) newErrors.email = 'Email is required';
-      if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email address.';
       if (formData.signup && !formData.password) newErrors.password = 'Password is required for signup';
       if (!formData.manager) newErrors.manager = 'Manager name is required';
       if (!formData.managerEmail) newErrors.managerEmail = 'Manager email is required';
@@ -207,7 +190,6 @@ const ProSellerForm = () => {
       ) {
         newErrors.managerEmail = 'Manager/Company email must be different from your personal email';
       }
-      if (formData.signup && !formData.otpVerified) newErrors.email = 'Please verify your email with OTP';
     }
     if (step === 3) {
       if (!formData.productLines.length) newErrors.productLines = 'At least one product line is required';
@@ -218,95 +200,6 @@ const ProSellerForm = () => {
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSendOtp = async () => {
-    if (!validateEmail(formData.email)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address.' }));
-      return false;
-    }
-    setFormData(prev => ({ ...prev, sendingOtp: true }));
-    try {
-      const response = await fetch(`${backendUrl}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        addAlert('Check your email for a verification code.', 'success');
-        setFormData(prev => ({ ...prev, showOtpModal: true, otp: '', sendingOtp: false }));
-        return true;
-      } else {
-        setErrors(prev => ({ ...prev, email: data.error || 'Failed to send OTP. Please try again.' }));
-        setFormData(prev => ({ ...prev, sendingOtp: false }));
-        return false;
-      }
-    } catch (err) {
-      console.error('Send OTP error:', err.message);
-      setErrors(prev => ({ ...prev, email: 'Unable to send OTP. Check your connection or try again.' }));
-      setFormData(prev => ({ ...prev, sendingOtp: false }));
-      return false;
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setErrors(prev => ({ ...prev, otp: '' }));
-    setIsSubmitting(true);
-    if (!formData.otp.trim()) {
-      setErrors(prev => ({ ...prev, otp: 'Please enter the verification code.' }));
-      setIsSubmitting(false);
-      return;
-    }
-    try {
-      const response = await fetch(`${backendUrl}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, otp: formData.otp }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setFormData(prev => ({ ...prev, showOtpModal: false, otpVerified: true, otp: '' }));
-        setIsSubmitting(false);
-        if (validateStep(currentStep)) {
-          setCurrentStep(currentStep + 1);
-        }
-      } else {
-        setErrors(prev => ({ ...prev, otp: data.error || 'Invalid or expired code. Please try again.' }));
-        setIsSubmitting(false);
-      }
-    } catch (err) {
-      console.error('Verify OTP error:', err.message);
-      setErrors(prev => ({ ...prev, otp: 'Verification failed. Check your connection or try again.' }));
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    setIsSubmitting(true);
-    setFormData(prev => ({ ...prev, sendingOtp: true }));
-    try {
-      const response = await fetch(`${backendUrl}/resend-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        addAlert('New verification code sent to your email.', 'success');
-        setFormData(prev => ({ ...prev, otp: '', sendingOtp: false }));
-      } else {
-        setErrors(prev => ({ ...prev, email: data.error || 'Failed to send code. Please try again.' }));
-        setFormData(prev => ({ ...prev, sendingOtp: false }));
-      }
-    } catch (err) {
-      console.error('Resend OTP error:', err.message);
-      setErrors(prev => ({ ...prev, email: 'Unable to send code. Check your network and try again.' }));
-      setFormData(prev => ({ ...prev, sendingOtp: false }));
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleContinue = async () => {
@@ -328,8 +221,10 @@ const ProSellerForm = () => {
     try {
       let uid = user?.uid;
       let idToken = null;
+
       const currentAuth = getAuth();
       const currentUser = currentAuth.currentUser;
+
       if (!currentUser && formData.signup && formData.email && formData.password) {
         const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         uid = credential.user.uid;
@@ -340,6 +235,7 @@ const ProSellerForm = () => {
         } else {
           console.warn('setUser is not a function. Skipping auth context update.');
         }
+
         const username = generateUsername(formData.firstName, formData.lastName);
         const userDocRef = doc(db, 'users', uid);
         let attempts = 0;
@@ -383,6 +279,7 @@ const ProSellerForm = () => {
       } else {
         throw new Error('No authenticated user found and signup not selected.');
       }
+
       const submissionData = {
         ...formData,
         submittedAt: new Date().toISOString(),
@@ -391,6 +288,8 @@ const ProSellerForm = () => {
         formType: 'Pro Seller Application',
         uid: uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       };
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const response = await fetch(`${backendUrl}/api/pro-seller`, {
         method: 'POST',
         headers: {
@@ -400,10 +299,12 @@ const ProSellerForm = () => {
         },
         body: JSON.stringify(submissionData),
       });
+
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || result.message || 'Submission failed');
       }
+
       addAlert('Pro Seller application submitted successfully! We will review your application and get back to you soon.', 'success');
       setFormData(initialFormData);
       setCurrentStep(1);
@@ -440,6 +341,7 @@ const ProSellerForm = () => {
     setFormData(prev => ({ ...prev, accountVerifying: true, accountError: '', accountVerified: false, accountName: '' }));
     try {
       const payload = { accountNumber: formData.accountNumber, bankCode: formData.bankCode };
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
       const res = await fetch(`${backendUrl}/verify-bank-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -616,30 +518,15 @@ const ProSellerForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="Email Address"
-                    value={formData.email}
-                    onChange={e => handleInputChange('email', e.target.value)}
-                    className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
-                      errors.email ? 'border-red-500' : 'border-gray-300'
-                    } ${formData.signup ? (formData.otpVerified ? 'pr-10' : 'pr-20') : ''}`}
-                  />
-                  {formData.signup && !formData.otpVerified && (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={formData.sendingOtp || !validateEmail(formData.email)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-orange-500 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
-                    >
-                      {formData.sendingOtp ? 'Sending...' : 'Verify'}
-                    </button>
-                  )}
-                  {formData.signup && formData.otpVerified && (
-                    <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 animate-pulse" />
-                  )}
-                </div>
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={formData.email}
+                  onChange={e => handleInputChange('email', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-xl text-gray-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
               <div className="flex items-center space-x-2">
@@ -857,67 +744,6 @@ const ProSellerForm = () => {
               <div className="text-xs text-gray-500 text-center">By submitting, you confirm all information is correct and consent to verification.</div>
             </div>
           )}
-          {formData.showOtpModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="m-4 bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-lg font-semibold">Verify Your Email</h3>
-                  <button
-                    onClick={() => setFormData(prev => ({ ...prev, showOtpModal: false, otp: '' }))}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <i className="bx bx-x text-[24px]"></i>
-                  </button>
-                </div>
-                <p className="text-gray-600 mb-4 text-sm text-center">Enter the 6-digit code sent to your email {formData.email}.</p>
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="flex justify-between gap-2">
-                    {Array(6).fill().map((_, index) => (
-                      <input
-                        key={index}
-                        type="text"
-                        maxLength="1"
-                        value={formData.otp[index] || ''}
-                        onChange={(e) => {
-                          const newOtp = formData.otp.split('');
-                          newOtp[index] = e.target.value.replace(/[^0-9]/g, '').slice(0, 1);
-                          handleInputChange('otp', newOtp.join(''));
-                          if (e.target.value && index < 5) {
-                            document.getElementsByTagName('input')[index + 1].focus();
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Backspace' && !formData.otp[index] && index > 0) {
-                            document.getElementsByTagName('input')[index - 1].focus();
-                          }
-                        }}
-                        className="w-12 h-12 text-center border rounded-lg focus:border-blue-500 focus:outline-none text-2xl font-medium"
-                        required
-                      />
-                    ))}
-                  </div>
-                  {errors.otp && <p className="text-red-600 text-xs mt-1">{errors.otp}</p>}
-                  <button
-                    type="submit"
-                    className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Verifying...' : 'Verify Code'}
-                  </button>
-                  <p className="text-center text-gray-600 mt-2 text-sm">
-                    Didn’t receive a code?{' '}
-                    <button
-                      onClick={handleResendOtp}
-                      className="text-blue-600 hover:underline"
-                      disabled={isSubmitting || formData.sendingOtp}
-                    >
-                      {formData.sendingOtp ? 'Sending...' : 'Resend'}
-                    </button>
-                  </p>
-                </form>
-              </div>
-            </div>
-          )}
         </motion.div>
       </AnimatePresence>
     );
@@ -1032,7 +858,7 @@ const ProSellerForm = () => {
                   )}
                   <button
                     type="submit"
-                    disabled={isSubmitting || formData.sendingOtp}
+                    disabled={isSubmitting}
                     className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-base sm:text-lg shadow-lg hover:from-orange-600 hover:to-orange-700 focus:ring-4 focus:ring-orange-200 transition border-2 border-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Submitting...' : currentStep < 4 ? 'Continue' : 'Submit'}

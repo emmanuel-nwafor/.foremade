@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Building, User, CreditCard, Package, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +8,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile, getAuth } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+
+// --- END OF IMPORTS ---
 
 const initialFormData = {
   businessName: '',
@@ -38,6 +41,7 @@ const initialFormData = {
   accountVerified: false,
   accountVerifying: false,
   accountError: '',
+
   agree: false,
   signup: false,
 };
@@ -75,6 +79,31 @@ const countries = [
 ];
 
 const ProSellerForm = () => {
+  // Send OTP handler (missing implementation)
+  const handleSendOtp = async (email) => {
+    setOtpError('');
+    setOtpSuccessMessage('');
+    setOtpLoading(true);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend-fqm9.onrender.com';
+      const response = await fetch(`${backendUrl}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setOtpSuccessMessage('OTP sent! Please check your email.');
+        setShowOtpModal(true);
+      } else {
+        setOtpError(data.error || 'Failed to send OTP. Please try again.');
+      }
+    } catch (err) {
+      setOtpError('Failed to send OTP. Please check your connection and try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -86,6 +115,108 @@ const ProSellerForm = () => {
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  // OTP state for merchant email verification
+  const [otp, setOtp] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSuccessMessage, setOtpSuccessMessage] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  // OTP verification handler
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpSuccessMessage('');
+    setOtpLoading(true);
+    const emailToVerify = formData.managerEmail || formData.email;
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://foremade-backend.onrender.com';
+      const response = await fetch(`${backendUrl}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify, otp }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setOtpSuccessMessage('Email verified! You can now submit your application.');
+        setOtpVerified(true);
+        setShowOtpModal(false);
+        addAlert('Email verified! You can now submit your application.', 'success');
+      } else {
+        setOtpError(data.error || 'Invalid or expired code. Please try again.');
+      }
+    } catch (err) {
+      setOtpError('Verification failed. Check your connection or try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // OTP Modal UI (mirroring Register.jsx)
+  const OtpModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="m-4 bg-white p-6 rounded-lg w-full max-w-md animate-slide-up">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-semibold">Verify Your Email</h3>
+          <button
+            onClick={() => setShowOtpModal(false)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <i className="bx bx-x text-[24px]"></i>
+          </button>
+        </div>
+        <p className="text-gray-600 mb-4 text-sm text-center">
+          Enter the 6-digit code sent to your email {formData.managerEmail || formData.email}.<br />
+          <span className="block mt-2 text-orange-500 font-medium">Please wait at least 2 minutes for the email to arrive.</span>
+        </p>
+        <div className="space-y-4">
+          <div className="flex justify-between gap-2">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <input
+                key={index}
+                type="text"
+                maxLength="1"
+                value={otp[index] || ''}
+                onChange={e => {
+                  const newOtp = otp.split('');
+                  newOtp[index] = e.target.value;
+                  setOtp(newOtp.join(''));
+                  if (e.target.value && index < 5) document.getElementsByTagName('input')[index + 1].focus();
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Backspace' && !otp[index] && index > 0) document.getElementsByTagName('input')[index - 1].focus();
+                  if (e.key === 'Enter') handleVerifyOtp(e);
+                }}
+                className="w-12 h-12 text-center border rounded-lg focus:border-blue-500 focus:outline-none text-2xl font-medium"
+                required
+              />
+            ))}
+          </div>
+          {otpError && <p className="text-red-600 text-xs mt-1">{otpError}</p>}
+          <button
+            type="button"
+            onClick={handleVerifyOtp}
+            className="w-full bg-slate-600 text-white p-3 rounded-lg hover:bg-blue-800 transition duration-200"
+            disabled={otpLoading}
+          >
+            {otpLoading ? 'Verifying...' : 'Verify Code'}
+          </button>
+          <p className="text-center text-gray-600 mt-2 text-sm">
+            Didn’t receive a code?{' '}
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); handleSendOtp(formData.managerEmail || formData.email); }}
+              className="text-blue-600 hover:underline"
+              disabled={otpLoading}
+            >
+              Resend
+            </button>
+          </p>
+          {otpSuccessMessage && <p className="text-center text-green-600 text-xs mt-2">{otpSuccessMessage}</p>}
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     let didCancel = false;
@@ -142,14 +273,14 @@ const ProSellerForm = () => {
   }, []);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let newValue = value;
+    if (field === 'regNumber') {
+      newValue = value.replace(/[^0-9]/g, '').slice(0, 8);
+      validateRegNumber(newValue);
+    }
+    setFormData(prev => ({ ...prev, [field]: newValue }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-    if (field === 'regNumber') {
-      const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 8);
-      handleInputChange('regNumber', filteredValue);
-      validateRegNumber(filteredValue);
     }
   };
 
@@ -208,6 +339,13 @@ const ProSellerForm = () => {
         setCurrentStep(currentStep + 1);
       }
     } else {
+      // On final step, trigger OTP send if not verified
+      if (!otpVerified) {
+        // Use managerEmail if present, else formData.email
+        const emailToSend = formData.managerEmail || formData.email;
+        await handleSendOtp(emailToSend);
+        return;
+      }
       await handleSubmit();
     }
   };
@@ -215,6 +353,13 @@ const ProSellerForm = () => {
   const handleSubmit = async () => {
     if (!validateStep(3)) {
       setIsSubmitting(false);
+      return;
+    }
+    // Block submission if OTP not verified
+    if (!otpVerified) {
+      setShowOtpModal(true);
+      setIsSubmitting(false);
+      addAlert('Please verify your email with the OTP code before submitting.', 'error');
       return;
     }
     setIsSubmitting(true);
@@ -366,17 +511,19 @@ const ProSellerForm = () => {
       exit: { x: -50, opacity: 0 },
     };
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStep}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.3 }}
-        >
-          {currentStep === 1 && (
-            <div className="space-y-4 sm:space-y-6">
+      <>
+        {showOtpModal && <OtpModal />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+          >
+            {currentStep === 1 && (
+              <div className="space-y-4 sm:space-y-6">
               <div className="mb-6 text-center">
                 <Building className="w-6 h-6 text-orange-500 mx-auto mb-3" />
                 <h2 className="text-xl font-bold text-orange-800 mb-2">Business Information</h2>
@@ -396,7 +543,7 @@ const ProSellerForm = () => {
                 {errors.businessName && <p className="text-red-500 text-xs mt-1">{errors.businessName}</p>}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                   Registration Number <span className="text-red-500">*</span>
                   {formData.regVerifying && <span className="ml-2 text-xs text-orange-500 animate-pulse">Verifying... <span className="ml-1 w-4 h-4 border-2 border-t-orange-500 border-orange-200 rounded-full animate-spin"></span></span>}
                   {formData.regVerified && !formData.regError && <CheckCircle className="ml-2 w-5 h-5 text-green-500" />}
@@ -609,7 +756,7 @@ const ProSellerForm = () => {
                   ) : categories.length > 0 ? (
                     categories.map((cat, idx) => (
                       <label
-                        key={cat.value || cat.code || cat.name || idx}
+                        key={`${cat.value || cat.code || cat.name}-${idx}`}
                         className="flex items-center space-x-2 bg-orange-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-orange-100 transition"
                       >
                         <input
@@ -650,7 +797,7 @@ const ProSellerForm = () => {
                     <option value="">Loading banks...</option>
                   ) : banks.length > 0 ? (
                     banks.map((bank, idx) => (
-                      <option key={bank.code || idx} value={bank.code}>{bank.name}</option>
+                      <option key={`${bank.code || 'bank'}-${idx}`} value={bank.code}>{bank.name}</option>
                     ))
                   ) : (
                     <option value="">No banks available.</option>
@@ -659,7 +806,7 @@ const ProSellerForm = () => {
                 {errors.bankName && <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                   Account Number <span className="text-red-500">*</span>
                   {formData.accountVerifying && <span className="ml-2 text-xs text-orange-500 animate-pulse">Verifying...</span>}
                   {formData.accountVerified && !formData.accountError && <CheckCircle className="ml-2 w-5 h-5 text-green-500" />}
@@ -746,14 +893,14 @@ const ProSellerForm = () => {
           )}
         </motion.div>
       </AnimatePresence>
-    );
-  };
+    </>
+    );}
 
   const steps = [
     { label: 'Business Info' },
     { label: 'Contact Info' },
     { label: 'Products & Banking' },
-    { label: 'Review & Submit' },
+    { label: 'Review & Submit' }
   ];
 
   return (
@@ -870,7 +1017,9 @@ const ProSellerForm = () => {
         </div>
       </div>
     </div>
-  );
-};
 
+  );
+ 
+
+}
 export default ProSellerForm;

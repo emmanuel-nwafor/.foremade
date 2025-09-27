@@ -165,7 +165,7 @@ export default function AdminProSellerRequests() {
                               transition={{ duration: 0.3, delay: index * 0.1 }}
                               className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                             >
-                              <td className="px-4 py-3 break-all max-w-xs cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/admin/pro-seller-details/${req.proSellerId}`)}>{req.proSellerId}</td>
+                              <td className="px-4 py-3 break-all max-w-xs cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/admin/pro-seller-details/${req.proSellerId}`)}>{req.businessName}</td>
                               <td className="px-4 py-3 break-all max-w-xs">{req.userId}</td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}>

@@ -231,7 +231,7 @@ const Header = () => {
               <Link to="/products" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Shop
               </Link>
-              <Link to="/products-upload" className="hover:text-gray-100 hover:underline transition-all px-2">
+              <Link to="/products-upload-variant" className="hover:text-gray-100 hover:underline transition-all px-2">
                 Sell
               </Link>
               <Link to="/smile" className="hover:text-gray-100 hover:underline transition-all px-2">
@@ -521,7 +521,7 @@ const Header = () => {
           <span className="text-xs">Search</span>
         </Link>
         <Link
-          to="/products-upload"
+          to="/products-upload-variant"
           className={`flex flex-col items-center ${location.pathname === '/products-upload' ? 'text-blue-600' : 'text-orange-500'} hover:text-amber-500`}
         >
           <i className="bx bxs-plus-circle text-2xl"></i>
@@ -569,7 +569,7 @@ const Header = () => {
                   Shop
                 </Link>
                 <Link
-                  to="/products-upload"
+                  to="/products-upload-variant"
                   className="bg-white/80 text-[#112040] hover:text-amber-500 text-base py-3 px-4 rounded-lg border border-[#112040]/20 font-semibold shadow-sm hover:bg-white transition-all"
                   onClick={() => setSidebarOpen(false)}
                 >

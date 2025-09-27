@@ -1616,7 +1616,7 @@ export default function SellerProductUpload() {
                     >
                       <span
                         className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: predefinedColor ? predefinedColor.hex :                         predefinedColor ? predefinedColor.hex : '#000000' }}
+                        style={{ backgroundColor: predefinedColor ? predefinedColor.hex : predefinedColor ? predefinedColor.hex : '#000000' }}
                       ></span>
                       <span>{color}</span>
                       <button

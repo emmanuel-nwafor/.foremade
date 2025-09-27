@@ -1,24 +1,22 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { collection, addDoc, getDoc, doc, onSnapshot } from 'firebase/firestore';
 import axios from 'axios';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import SellerSidebar from './SellerSidebar';
 import SellerLocationForm from './SellerLocationForm';
 import SellerProductUploadPopup from './SellerProductUploadPopup';
 
-// Set global Axios timeout
-axios.defaults.timeout = 60000; // 60 seconds
+const AUTHENTICITY_TAGS = ['Verified', 'Original', 'Hand Made', 'Authentic'];
 
-// Custom Alert Component
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
     if (alerts.length === 0) return;
     const timer = setTimeout(() => alerts.forEach((alert) => removeAlert(alert.id)), 5000);
     return () => clearTimeout(timer);
   }, [alerts, removeAlert]);
-
   return (
     <div className="fixed bottom-4 right-4 z-50 space-y-2">
       {alerts.map((alert) => (
@@ -39,7 +37,6 @@ function CustomAlert({ alerts, removeAlert }) {
   );
 }
 
-// Local hook for managing alerts
 function useAlerts() {
   const [alerts, setAlerts] = useState([]);
   const addAlert = useCallback((message, type = 'info') => {
@@ -55,8 +52,8 @@ function useAlerts() {
 export default function SellerProductVariants() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
-
-  // State for form data
+  const [uploadMode, setUploadMode] = useState('variants'); // 'single' or 'variants'
+  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
   const [formData, setFormData] = useState({
     sellerName: '',
     name: '',
@@ -69,26 +66,23 @@ export default function SellerProductVariants() {
     productUrl: '',
     tags: [],
     manualSize: '',
+    price: '',
+    stock: '',
+    deliveryDays: '',
   });
-
-  // State for location data
   const [locationData, setLocationData] = useState({
     country: '',
     state: '',
     city: '',
     address: '',
   });
-
-  // State for variants
   const [variants, setVariants] = useState([
     { color: '', size: '', price: '', stock: '', images: [] },
   ]);
-
-  // State for media
   const [variantImageFiles, setVariantImageFiles] = useState([[]]);
   const [variantImagePreviews, setVariantImagePreviews] = useState([[]]);
-
-  // Other states
+  const [singleImageFiles, setSingleImageFiles] = useState([]);
+  const [singleImagePreviews, setSingleImagePreviews] = useState([]);
   const [locationErrors, setLocationErrors] = useState({});
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -101,6 +95,7 @@ export default function SellerProductVariants() {
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [showSubSubcategoryDropdown, setShowSubSubcategoryDropdown] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isVariantPopupOpen, setIsVariantPopupOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [customSubcategories, setCustomSubcategories] = useState({});
   const [customSubSubcategories, setCustomSubSubcategories] = useState({});
@@ -108,18 +103,17 @@ export default function SellerProductVariants() {
   const [zoomedMedia, setZoomedMedia] = useState(null);
   const [feeConfig, setFeeConfig] = useState(null);
   const [descriptionPreview, setDescriptionPreview] = useState('');
-
-  // Refs
   const dropZoneRefs = useRef([]);
   const fileInputRefs = useRef([]);
+  const singleFileInputRef = useRef(null);
   const descriptionRef = useRef(null);
+  const MAX_IMAGES = 4;
 
-  const MAX_VARIANT_IMAGES = 4;
   const availableColors = useMemo(
     () => [
       { name: 'Red', hex: '#ff0000' },
       { name: 'Orange', hex: '#FFA500' },
-      { name: 'blue', hex: '#0000ff' },
+      { name: 'Blue', hex: '#0000ff' },
       { name: 'Green', hex: '#008000' },
       { name: 'Brown', hex: '#8b4513' },
       { name: 'Black', hex: '#000000' },
@@ -134,7 +128,7 @@ export default function SellerProductVariants() {
     []
   );
   const menClothingSizes = useMemo(() => ['S', 'M', 'L', 'XL', 'XXL'], []);
-  const womenClothingSizes = useMemo(() => ['3', '4', '6', '8', '10', '12', '14', '16', '18', '20'], []);
+  const womenClothingSizes = useMemo(() => ['', '4', '6', '8', '10', '12', '14', '16', '18', '20'], []);
   const footwearSizes = useMemo(
     () => [
       '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',
@@ -143,9 +137,8 @@ export default function SellerProductVariants() {
     []
   );
   const perfumeSizes = useMemo(() => ['30ml', '50ml', '60ml', '75ml', '100ml'], []);
-  const manualSizes = useMemo(() => ['Small', 'Medium', 'Large', 'X-Large'], []);
+  const manualSizes = useMemo(() => ['1 to 5kg', '5 to 10kg ', '10 to 20kg', '20kg above'], []);
 
-  // Initialize refs for variants
   useEffect(() => {
     dropZoneRefs.current = Array(variants.length)
       .fill()
@@ -155,16 +148,15 @@ export default function SellerProductVariants() {
       .map(() => ({ current: null }));
   }, [variants.length]);
 
-  // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
       variantImagePreviews.forEach((previews) =>
         previews.forEach((url) => URL.revokeObjectURL(url))
       );
+      singleImagePreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [variantImagePreviews]);
+  }, [variantImagePreviews, singleImagePreviews]);
 
-  // Fetch categories and fees
   useEffect(() => {
     const unsubscribeCategories = onSnapshot(
       collection(db, 'categories'),
@@ -177,7 +169,6 @@ export default function SellerProductVariants() {
         addAlert('Failed to load categories.', 'error');
       }
     );
-
     const unsubscribeSubcategories = onSnapshot(
       collection(db, 'customSubcategories'),
       (snapshot) => {
@@ -192,7 +183,6 @@ export default function SellerProductVariants() {
         addAlert('Failed to load subcategories.', 'error');
       }
     );
-
     const unsubscribeSubSubcategories = onSnapshot(
       collection(db, 'customSubSubcategories'),
       (snapshot) => {
@@ -212,7 +202,6 @@ export default function SellerProductVariants() {
         addAlert('Failed to load sub-subcategories.', 'error');
       }
     );
-
     const fetchFeeConfig = async () => {
       try {
         const docRef = doc(db, 'feeConfigurations', 'categoryFees');
@@ -228,7 +217,6 @@ export default function SellerProductVariants() {
       }
     };
     fetchFeeConfig();
-
     return () => {
       unsubscribeCategories();
       unsubscribeSubcategories();
@@ -236,7 +224,6 @@ export default function SellerProductVariants() {
     };
   }, [addAlert]);
 
-  // Validate category and subcategory selections
   useEffect(() => {
     if (formData.category && !categories.includes(formData.category)) {
       setFormData((prev) => ({ ...prev, category: '', subcategory: '', subSubcategory: '' }));
@@ -255,7 +242,6 @@ export default function SellerProductVariants() {
     }
   }, [categories, customSubcategories, customSubSubcategories, formData, addAlert]);
 
-  // Handle user authentication
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
@@ -279,16 +265,15 @@ export default function SellerProductVariants() {
     return () => unsubscribe();
   }, [navigate, addAlert]);
 
-  // Update description preview
   useEffect(() => {
-    setDescriptionPreview(marked(formData.description || '', { gfm: true, breaks: true }));
+    const html = marked(formData.description || '', { gfm: true, breaks: true });
+    setDescriptionPreview(DOMPurify.sanitize(html));
   }, [formData.description]);
 
-  // Auto-suggest tags
   useEffect(() => {
     const suggestTags = () => {
       const text = `${formData.name} ${formData.description} ${formData.subSubcategory}`.toLowerCase();
-      const possibleTags = [];
+      const possibleTags = [...AUTHENTICITY_TAGS];
       if (text.includes('leather')) possibleTags.push('Leather');
       if (text.includes('shoe') || text.includes('footwear')) possibleTags.push('Footwear');
       if (text.includes('phone') || text.includes('mobile')) possibleTags.push('Smartphone');
@@ -332,68 +317,99 @@ export default function SellerProductVariants() {
     );
   }, []);
 
-  const handleImageChange = useCallback((index, files) => {
+  const handleImageChange = useCallback((index, files, isSingle = false) => {
     const newFiles = Array.from(files).filter(
       (file) => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
-    if ((variantImageFiles[index]?.length || 0) + newFiles.length > MAX_VARIANT_IMAGES) {
-      addAlert(`Maximum ${MAX_VARIANT_IMAGES} images allowed per variant.`, 'error');
-      return;
-    }
-    setVariantImageFiles((prev) => {
-      const newFilesArray = [...prev];
-      newFilesArray[index] = [...(newFilesArray[index] || []), ...newFiles];
-      return newFilesArray;
-    });
-    setVariantImagePreviews((prev) => {
-      const newPreviews = [...prev];
-      newPreviews[index] = [
-        ...(newPreviews[index] || []),
+    if (isSingle) {
+      if (singleImageFiles.length + newFiles.length > MAX_IMAGES) {
+        addAlert(`Maximum ${MAX_IMAGES} images allowed.`, 'error');
+        return;
+      }
+      setSingleImageFiles((prev) => [...prev, ...newFiles]);
+      setSingleImagePreviews((prev) => [
+        ...prev,
         ...newFiles.map((file) => URL.createObjectURL(file)),
-      ];
-      return newPreviews;
-    });
-    if (fileInputRefs.current[index]?.current) {
-      fileInputRefs.current[index].current.value = '';
+      ]);
+      if (singleFileInputRef.current) {
+        singleFileInputRef.current.value = '';
+      }
+    } else {
+      if ((variantImageFiles[index]?.length || 0) + newFiles.length > MAX_IMAGES) {
+        addAlert(`Maximum ${MAX_IMAGES} images allowed per variant.`, 'error');
+        return;
+      }
+      setVariantImageFiles((prev) => {
+        const newFilesArray = [...prev];
+        newFilesArray[index] = [...(newFilesArray[index] || []), ...newFiles];
+        return newFilesArray;
+      });
+      setVariantImagePreviews((prev) => {
+        const newPreviews = [...prev];
+        newPreviews[index] = [
+          ...(newPreviews[index] || []),
+          ...newFiles.map((file) => URL.createObjectURL(file)),
+        ];
+        return newPreviews;
+      });
+      if (fileInputRefs.current[index]?.current) {
+        fileInputRefs.current[index].current.value = '';
+      }
     }
-  }, [variantImageFiles, addAlert]);
+  }, [variantImageFiles, singleImageFiles, addAlert]);
 
-  const handleRemoveImage = useCallback((variantIndex, imageIndex) => {
-    setVariantImageFiles((prev) => {
-      const newFiles = [...prev];
-      newFiles[variantIndex] = newFiles[variantIndex].filter((_, i) => i !== imageIndex);
-      return newFiles;
-    });
-    setVariantImagePreviews((prev) => {
-      const newPreviews = [...prev];
-      const oldUrl = newPreviews[variantIndex][imageIndex];
-      newPreviews[variantIndex] = newPreviews[variantIndex].filter((_, i) => i !== imageIndex);
-      URL.revokeObjectURL(oldUrl);
-      return newPreviews;
-    });
+  const handleRemoveImage = useCallback((index, imageIndex, isSingle = false) => {
+    if (isSingle) {
+      setSingleImageFiles((prev) => prev.filter((_, i) => i !== imageIndex));
+      setSingleImagePreviews((prev) => {
+        const oldUrl = prev[imageIndex];
+        const newPreviews = prev.filter((_, i) => i !== imageIndex);
+        URL.revokeObjectURL(oldUrl);
+        return newPreviews;
+      });
+    } else {
+      setVariantImageFiles((prev) => {
+        const newFiles = [...prev];
+        newFiles[index] = newFiles[index].filter((_, i) => i !== imageIndex);
+        return newFiles;
+      });
+      setVariantImagePreviews((prev) => {
+        const newPreviews = [...prev];
+        const oldUrl = newPreviews[index][imageIndex];
+        newPreviews[index] = newPreviews[index].filter((_, i) => i !== imageIndex);
+        URL.revokeObjectURL(oldUrl);
+        return newPreviews;
+      });
+    }
   }, []);
 
-  const handleDrop = useCallback((e, index) => {
+  const handleDrop = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dropZoneRefs.current[index]?.current) {
+    if (isSingle && singleFileInputRef.current) {
+      singleFileInputRef.current.classList.remove('border-blue-500');
+    } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
-    handleImageChange(index, e.dataTransfer.files);
+    handleImageChange(index, e.dataTransfer.files, isSingle);
   }, [handleImageChange]);
 
-  const handleDragOver = useCallback((e, index) => {
+  const handleDragOver = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dropZoneRefs.current[index]?.current) {
+    if (isSingle && singleFileInputRef.current) {
+      singleFileInputRef.current.classList.add('border-blue-500');
+    } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.add('border-blue-500');
     }
   }, []);
 
-  const handleDragLeave = useCallback((e, index) => {
+  const handleDragLeave = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (dropZoneRefs.current[index]?.current) {
+    if (isSingle && singleFileInputRef.current) {
+      singleFileInputRef.current.classList.remove('border-blue-500');
+    } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
   }, []);
@@ -479,7 +495,6 @@ export default function SellerProductVariants() {
     let newText = formData.description;
     let newSelectionStart = start;
     let newSelectionEnd = end;
-
     if (style === 'bold') {
       if (selectedText) {
         newText = newText.substring(0, start) + `**${selectedText}**` + newText.substring(end);
@@ -511,7 +526,6 @@ export default function SellerProductVariants() {
         newSelectionEnd = start + 1;
       }
     }
-
     setFormData((prev) => ({ ...prev, description: newText }));
     setTimeout(() => {
       textarea.selectionStart = newSelectionStart;
@@ -535,54 +549,54 @@ export default function SellerProductVariants() {
     };
   }, [formData.category, formData.subcategory, formData.subSubcategory]);
 
-
-  // ============== Form validation ============== //
   const validateForm = useCallback(() => {
     const newErrors = {};
     if (!formData.sellerName.trim()) newErrors.sellerName = 'Please enter your full name.';
     if (!formData.name.trim()) newErrors.name = 'Product name is required.';
     if (!formData.category || !categories.includes(formData.category))
       newErrors.category = 'Select a valid category.';
-    if (!formData.subcategory || !customSubcategories[formData.category]?.includes(formData.subcategory))
-      newErrors.subcategory = 'You are free man.';
-    if (
-      customSubSubcategories[formData.category]?.[formData.subcategory]?.length > 0 &&
-      !formData.subSubcategory
-    )
-      newErrors.subSubcategory = 'Select a sub-subcategory.';
-    if (formData.colors.length === 0) newErrors.colors = 'Select at least one color.';
-    if (!formData.manualSize) newErrors.manualSize = 'Please select a product size.';
-    if (variants.length === 0) newErrors.variants = 'At least one variant is required.';
 
-    variants.forEach((variant, index) => {
-      if (!variant.color.trim()) {
-        newErrors[`variant${index}_color`] = 'Color is required.';
-      }
-      if (!variant.size && getSizeOptions().length > 0) {
-        newErrors[`variant${index}_size`] = 'Size is required.';
-      }
-      if (!variant.price || isNaN(variant.price) || parseFloat(variant.price) <= 0) {
-        newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
-      }
-      if (!variant.stock || isNaN(variant.stock) || parseInt(variant.stock, 10) < 0) {
-        newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity (0 or more).';
-      }
-      if ((variantImageFiles[index]?.length || 0) === 0) {
-        newErrors[`variant${index}_images`] = 'At least one image is required per variant.';
-      }
-    });
+    if (!formData.manualSize) newErrors.manualSize = 'Please select a product weight.';
 
+    if (uploadMode === 'single') {
+      if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0)
+        newErrors.price = 'Enter a valid price greater than 0.';
+      if (!formData.stock || isNaN(formData.stock) || parseInt(formData.stock, 10) < 0)
+        newErrors.stock = 'Enter a valid stock quantity (0 or more).';
+      if (singleImageFiles.length === 0)
+        newErrors.images = 'At least one image is required.';
+      if (!formData.deliveryDays || isNaN(formData.deliveryDays) || parseInt(formData.deliveryDays, 10) <= 0)
+        newErrors.deliveryDays = 'Enter valid delivery days (1 or more).';
+    } else {
+      if (variants.length === 0) newErrors.variants = 'At least one variant is required.';
+      variants.forEach((variant, index) => {
+        if (!variant.color.trim()) {
+          newErrors[`variant${index}_color`] = 'Color is required.';
+        }
+        // if (!variant.size && getSizeOptions().length > 0) {
+        //   newErrors[`variant${index}_size`] = 'Size is required.';
+        // }
+        if (!variant.price || isNaN(variant.price) || parseFloat(variant.price) <= 0) {
+          newErrors[`variant${index}_price`] = 'Enter a valid price greater than 0.';
+        }
+        if (!variant.stock || isNaN(variant.stock) || parseInt(variant.stock, 10) < 0) {
+          newErrors[`variant${index}_stock`] = 'Enter a valid stock quantity (0 or more).';
+        }
+        if ((variantImageFiles[index]?.length || 0) === 0) {
+          newErrors[`variant${index}_images`] = 'At least one image is required per variant.';
+        }
+      });
+    }
     return newErrors;
-  }, [formData, variants, categories, customSubcategories, customSubSubcategories, variantImageFiles, getSizeOptions]);
+  }, [formData, variants, categories, customSubcategories, customSubSubcategories, variantImageFiles, singleImageFiles, uploadMode, getSizeOptions]);
 
   const validateLocationForm = useCallback(() => {
     const newLocationErrors = {};
     if (!locationData.country.trim()) newLocationErrors.country = 'Country is required.';
     if (!locationData.state.trim()) newLocationErrors.state = 'State is required.';
+    if (!locationData.city.trim()) newLocationErrors.city = 'City is required.';
     return newLocationErrors;
   }, [locationData]);
-
-  // ================ Closed form validation ================ //
 
   const uploadFile = useCallback(async (file) => {
     const uploadData = new FormData();
@@ -592,6 +606,7 @@ export default function SellerProductVariants() {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       const response = await axios.post(`${backendUrl}/upload`, uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
@@ -619,14 +634,12 @@ export default function SellerProductVariants() {
     setErrors({});
     setLocationErrors({});
     setLoading(true);
-
     if (!user) {
       addAlert('You must be logged in to add products.', 'error');
       setLoading(false);
       navigate('/login');
       return;
     }
-
     const newErrors = validateForm();
     const newLocationErrors = validateLocationForm();
     if (Object.keys(newErrors).length > 0 || Object.keys(newLocationErrors).length > 0) {
@@ -637,19 +650,23 @@ export default function SellerProductVariants() {
       Object.entries(newLocationErrors).forEach(([_, value]) => addAlert(value, 'error'));
       return;
     }
-
     try {
-      const variantImageUrls = await Promise.all(
-        variantImageFiles.map(async (files) =>
-          Promise.all(files.map((file) => uploadFile(file)))
-        )
-      );
-
-      const basePrice = variants.reduce((min, variant) => {
-        const price = parseFloat(variant.price);
-        return isNaN(price) ? min : Math.min(min, price);
-      }, Infinity);
-
+      let variantImageUrls = [];
+      if (uploadMode === 'single') {
+        variantImageUrls = [await Promise.all(singleImageFiles.map((file) => uploadFile(file)))];
+      } else {
+        variantImageUrls = await Promise.all(
+          variantImageFiles.map(async (files) =>
+            Promise.all(files.map((file) => uploadFile(file)))
+          )
+        );
+      }
+      const basePrice = uploadMode === 'single'
+        ? parseFloat(formData.price)
+        : variants.reduce((min, variant) => {
+            const price = parseFloat(variant.price);
+            return isNaN(price) ? min : Math.min(min, price);
+          }, Infinity);
       const productData = {
         sellerName: formData.sellerName,
         name: formData.name,
@@ -665,12 +682,20 @@ export default function SellerProductVariants() {
         seller: { name: formData.sellerName, id: user.uid },
         createdAt: new Date().toISOString(),
         reviews: [],
-        variants: variants.map((variant, index) => ({
-          ...variant,
-          price: parseFloat(variant.price),
-          stock: parseInt(variant.stock, 10),
-          imageUrls: variantImageUrls[index] || [],
-        })),
+        variants: uploadMode === 'single'
+          ? [{
+              color: formData.colors[0] || '',
+              size: formData.manualSize || '',
+              price: parseFloat(formData.price),
+              stock: parseInt(formData.stock, 10),
+              imageUrls: variantImageUrls[0] || [],
+            }]
+          : variants.map((variant, index) => ({
+              ...variant,
+              price: parseFloat(variant.price),
+              stock: parseInt(variant.stock, 10),
+              imageUrls: variantImageUrls[index] || [],
+            })),
         location: {
           country: locationData.country,
           state: locationData.state,
@@ -685,10 +710,10 @@ export default function SellerProductVariants() {
           (feeConfig?.[formData.category]?.handlingRate * basePrice || 0),
         sellerEarnings: basePrice,
         manualSize: formData.manualSize,
+        deliveryDays: parseInt(formData.deliveryDays, 10) || 1,
       };
-
       const docRef = await addDoc(collection(db, 'products'), productData);
-      console.log('Product with variants uploaded with ID:', docRef.id);
+      console.log('Product uploaded with ID:', docRef.id);
       setIsPopupOpen(true);
       setFormData({
         sellerName: '',
@@ -702,6 +727,9 @@ export default function SellerProductVariants() {
         productUrl: '',
         tags: [],
         manualSize: '',
+        price: '',
+        stock: '',
+        deliveryDays: '',
       });
       setLocationData({
         country: '',
@@ -712,6 +740,8 @@ export default function SellerProductVariants() {
       setVariants([{ color: '', size: '', price: '', stock: '', images: [] }]);
       setVariantImageFiles([[]]);
       setVariantImagePreviews([[]]);
+      setSingleImageFiles([]);
+      setSingleImagePreviews([]);
       dropZoneRefs.current = [{ current: null }];
       fileInputRefs.current = [{ current: null }];
       setColorSuggestions([]);
@@ -719,9 +749,10 @@ export default function SellerProductVariants() {
       setShowCategoryDropdown(false);
       setShowSubcategoryDropdown(false);
       setShowSubSubcategoryDropdown(false);
+      setUploadMode('variants');
     } catch (error) {
       console.error('Error uploading product:', error);
-      addAlert(error.message || 'Failed to upload product variants.', 'error');
+      addAlert(error.message || 'Failed to upload product.', 'error');
     } finally {
       setLoading(false);
     }
@@ -731,12 +762,14 @@ export default function SellerProductVariants() {
     locationData,
     variants,
     variantImageFiles,
+    singleImageFiles,
     feeConfig,
     validateForm,
     validateLocationForm,
     uploadFile,
     addAlert,
     navigate,
+    uploadMode,
   ]);
 
   const memoizedCategories = useMemo(() => categories, [categories]);
@@ -770,10 +803,41 @@ export default function SellerProductVariants() {
         <div className="w-full max-w-7xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-package text-blue-500"></i>
-            Add Product with Variants
+            Add Product
           </h2>
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Product Details Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-toggle-left text-blue-500"></i>
+                Upload Mode
+              </h3>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    value="single"
+                    checked={uploadMode === 'single'}
+                    onChange={() => setUploadMode('single')}
+                    disabled={loading}
+                    className="form-radio text-blue-500"
+                  />
+                  <span>Single Product</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    value="variants"
+                    checked={uploadMode === 'variants'}
+                    onChange={() => setUploadMode('variants')}
+                    disabled={loading}
+                    className="form-radio text-blue-500"
+                  />
+                  <span>Multiple Variants</span>
+                </label>
+              </div>
+            </div>
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-info-circle text-blue-500"></i>
@@ -781,7 +845,7 @@ export default function SellerProductVariants() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Seller Name <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Your registered name"></i>
                   </label>
@@ -801,7 +865,7 @@ export default function SellerProductVariants() {
                   )}
                 </div>
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Product Name <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Name of the product"></i>
                   </label>
@@ -825,7 +889,7 @@ export default function SellerProductVariants() {
                 </div>
               </div>
               <div className="mt-6 relative group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                   Description
                   <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Describe your product with optional bold, italic, or code formatting"></i>
                 </label>
@@ -889,8 +953,6 @@ export default function SellerProductVariants() {
                 )}
               </div>
             </div>
-
-            {/* Category, Subcategory & Sub-Subcategory Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-category text-blue-500"></i>
@@ -898,7 +960,7 @@ export default function SellerProductVariants() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="relative group">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Category <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product category"></i>
                   </label>
@@ -1048,8 +1110,6 @@ export default function SellerProductVariants() {
                 )}
               </div>
             </div>
-
-            {/* Colors Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-color-fill text-blue-500"></i>
@@ -1128,8 +1188,6 @@ export default function SellerProductVariants() {
                 </p>
               )}
             </div>
-
-            {/* Tags Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-purchase-tag text-blue-500"></i>
@@ -1175,8 +1233,6 @@ export default function SellerProductVariants() {
                 )}
               </div>
             </div>
-
-            {/* Condition Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-star text-blue-500"></i>
@@ -1187,7 +1243,7 @@ export default function SellerProductVariants() {
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
               </label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {['New', 'Used - Like New', 'Used - Good', 'Used - Fair'].map((condition) => (
+                {['New', 'Used', 'Refurbished'].map((condition) => (
                   <button
                     key={condition}
                     type="button"
@@ -1210,19 +1266,18 @@ export default function SellerProductVariants() {
                 </p>
               )}
             </div>
-
-            {/* Product Size Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <i className="bx bx-ruler text-blue-500"></i>
-                Product Size
+                Weight
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                Product Size <span className="text-red-500">*</span>
-                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product size"></i>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                Product Weight <span className="text-red-500">*</span>
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product weight"></i>
               </label>
               <select
                 name="manualSize"
+                
                 value={formData.manualSize}
                 onChange={handleChange}
                 className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
@@ -1244,313 +1299,515 @@ export default function SellerProductVariants() {
                 </p>
               )}
             </div>
-
-            {/* Location Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-map text-blue-500"></i>
-                Location
-              </h3>
-              <SellerLocationForm
-                locationData={locationData}
-                setLocationData={setLocationData}
-                errors={locationErrors}
-                disabled={loading}
-              />
-            </div>
-
-            {/* Variants Section */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                <i className="bx bx-list-plus text-blue-500"></i>
-                Variants
-              </h3>
-              {errors.variants && (
-                <p className="text-red-600 text-xs mb-2 flex items-center gap-1">
-                  <i className="bx bx-error-circle"></i>
-                  {errors.variants}
-                </p>
-              )}
-              {variants.map((variant, index) => (
-                <div
-                  key={index}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 mb-4"
-                >
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Variant {index + 1}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(index)}
-                      className="text-red-500 hover:text-red-700"
-                      disabled={loading}
-                      aria-label={`Remove variant ${index + 1}`}
-                    >
-                      <i className="bx bx-trash text-lg"></i>
-                    </button>
-                  </div>
-
-                  {/* Variant Image Upload */}
-                  <div className="relative group mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                      Variant Images (up to {MAX_VARIANT_IMAGES}) <span className="text-red-500">*</span>
-                      <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_VARIANT_IMAGES} images (max 5MB each)`}></i>
-                    </label>
-                    <div
-                      ref={(el) => (dropZoneRefs.current[index] = { current: el })}
-                      onDrop={(e) => handleDrop(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragLeave={(e) => handleDragLeave(e, index)}
-                      className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[150px] transition-colors ${
-                        errors[`variant${index}_images`]
-                          ? 'border-red-500'
-                          : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
-                      } ${loading ? 'opacity-50' : ''}`}
-                    >
-                      {(variantImagePreviews[index]?.length || 0) === 0 ? (
-                        <div className="text-center">
-                          <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Drag and drop images or{' '}
+            {uploadMode === 'single' && (
+              <>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                    <i className="bx bx-image text-blue-500"></i>
+                    Product Images
+                  </h3>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
+                    <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_IMAGES} images (max 5MB each)`}></i>
+                  </label>
+                  <div
+                    ref={singleFileInputRef}
+                    onDrop={(e) => handleDrop(e, 0, true)}
+                    onDragOver={(e) => handleDragOver(e, 0, true)}
+                    onDragLeave={(e) => handleDragLeave(e, 0, true)}
+                    className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[150px] transition-colors ${
+                      errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
+                    } ${loading ? 'opacity-50' : ''}`}
+                  >
+                    {singleImagePreviews.length === 0 ? (
+                      <div className="text-center">
+                        <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Drag and drop images or{' '}
+                          <button
+                            type="button"
+                            onClick={() => singleFileInputRef.current?.click()}
+                            className="text-blue-600 hover:underline"
+                            disabled={loading}
+                          >
+                            select images
+                          </button>
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                          (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 w-full">
+                        {singleImagePreviews.map((preview, imgIndex) => (
+                          <div key={imgIndex} className="relative">
+                            <img
+                              src={preview}
+                              alt={`Preview ${imgIndex + 1}`}
+                              className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
+                              onClick={() => setZoomedMedia({ type: 'image', src: preview })}
+                            />
                             <button
                               type="button"
-                              onClick={() => fileInputRefs.current[index]?.current.click()}
-                              className="text-blue-600 hover:underline"
+                              onClick={() => handleRemoveImage(0, imgIndex, true)}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
                               disabled={loading}
+                              title="Remove image"
                             >
-                              select images
+                              <i className="bx bx-x text-sm"></i>
                             </button>
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-3 w-full">
-                          {variantImagePreviews[index].map((preview, imgIndex) => (
-                            <div key={imgIndex} className="relative">
-                              <img
-                                src={preview}
-                                alt={`Variant ${index + 1} Preview ${imgIndex + 1}`}
-                                className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
-                                onClick={() => setZoomedMedia({ type: 'image', src: preview })}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(index, imgIndex)}
-                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
-                                disabled={loading}
-                                title="Remove image"
-                                aria-label={`Remove image ${imgIndex + 1} from variant ${index + 1}`}
-                              >
-                                <i className="bx bx-x text-sm"></i>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <input
-                        ref={(el) => (fileInputRefs.current[index] = { current: el })}
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                        onChange={(e) => handleImageChange(index, e.target.files)}
-                        className="hidden"
-                        disabled={loading}
-                        multiple
-                      />
-                    </div>
-                    {errors[`variant${index}_images`] && (
-                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                        <i className="bx bx-error-circle"></i>
-                        {errors[`variant${index}_images`]}
-                      </p>
-                    )}
-                    {uploadProgress > 0 && (
-                      <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full"
-                          style={{ width: `${uploadProgress}%` }}
-                        ></div>
+                          </div>
+                        ))}
                       </div>
                     )}
+                    <input
+                      ref={singleFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={(e) => handleImageChange(0, e.target.files, true)}
+                      className="hidden"
+                      disabled={loading}
+                      multiple
+                    />
                   </div>
-
-                  {/* Variant Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Color <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={variant.color}
-                        onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
-                        placeholder="Type a color (e.g., Navy blue)"
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_color`]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                  {errors.images && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.images}
+                    </p>
+                  )}
+                  {uploadProgress > 0 && (
+                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                      <div
+                        className="bg-blue-600 h-2.5 rounded-full"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Price (₦) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      step="0.01"
+                      min="0"
+                      placeholder="e.g., 5000.00"
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.price ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      disabled={loading}
+                    />
+                    {errors.price && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        {errors.price}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Stock <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      value={formData.stock}
+                      onChange={handleChange}
+                      min="0"
+                      placeholder="e.g., 10"
+                      className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                        errors.stock ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                      } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                      disabled={loading}
+                    />
+                    {errors.stock && (
+                      <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                        <i className="bx bx-error-circle"></i>
+                        {errors.stock}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Delivery Days <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="deliveryDays"
+                    value={formData.deliveryDays}
+                    onChange={handleChange}
+                    min="1"
+                    placeholder="e.g., 3"
+                    className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                      errors.deliveryDays ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                    } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                    disabled={loading}
+                  />
+                  {errors.deliveryDays && (
+                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                      <i className="bx bx-error-circle"></i>
+                      {errors.deliveryDays}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+            {uploadMode === 'variants' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                  <i className="bx bx-list-plus text-blue-500"></i>
+                  Variants
+                </h3>
+                {errors.variants && (
+                  <p className="text-red-600 text-xs mb-2 flex items-center gap-1">
+                    <i className="bx bx-error-circle"></i>
+                    {errors.variants}
+                  </p>
+                )}
+                {variants.map((variant, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 mb-4"
+                  >
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Variant {index + 1}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(index)}
+                        className="text-red-500 hover:text-red-700"
                         disabled={loading}
-                      />
-                      {errors[`variant${index}_color`] && (
+                        aria-label={`Remove variant ${index + 1}`}
+                      >
+                        <i className="bx bx-trash text-lg"></i>
+                      </button>
+                    </div>
+                    <div className="relative group mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        Variant Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
+                        <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_IMAGES} images (max 5MB each)`}></i>
+                      </label>
+                      <div
+                        ref={(el) => (dropZoneRefs.current[index] = { current: el })}
+                        onDrop={(e) => handleDrop(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragLeave={(e) => handleDragLeave(e, index)}
+                        className={`mt-1 w-full p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center min-h-[150px] transition-colors ${
+                          errors[`variant${index}_images`]
+                            ? 'border-red-500'
+                            : 'border-gray-300 hover:border-blue-500 dark:border-gray-600'
+                        } ${loading ? 'opacity-50' : ''}`}
+                      >
+                        {(variantImagePreviews[index]?.length || 0) === 0 ? (
+                          <div className="text-center">
+                            <i className="bx bx-cloud-upload text-4xl text-gray-600 dark:text-gray-400"></i>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              Drag and drop images or{' '}
+                              <button
+                                type="button"
+                                onClick={() => fileInputRefs.current[index]?.current.click()}
+                                className="text-blue-600 hover:underline"
+                                disabled={loading}
+                              >
+                                select images
+                              </button>
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              (JPEG, JPG, PNG, WEBP, GIF, max 5MB each)
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 w-full">
+                            {variantImagePreviews[index].map((preview, imgIndex) => (
+                              <div key={imgIndex} className="relative">
+                                <img
+                                  src={preview}
+                                  alt={`Variant ${index + 1} Preview ${imgIndex + 1}`}
+                                  className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-600 cursor-pointer shadow-sm"
+                                  onClick={() => setZoomedMedia({ type: 'image', src: preview })}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImage(index, imgIndex)}
+                                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-sm"
+                                  disabled={loading}
+                                  title="Remove image"
+                                  aria-label={`Remove image ${imgIndex + 1} from variant ${index + 1}`}
+                                >
+                                  <i className="bx bx-x text-sm"></i>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <input
+                          ref={(el) => (fileInputRefs.current[index] = { current: el })}
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                          onChange={(e) => handleImageChange(index, e.target.files)}
+                          className="hidden"
+                          disabled={loading}
+                          multiple
+                        />
+                      </div>
+                      {errors[`variant${index}_images`] && (
                         <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
-                          {errors[`variant${index}_color`]}
+                          {errors[`variant${index}_images`]}
                         </p>
                       )}
+                      {uploadProgress > 0 && (
+                        <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                          <div
+                            className="bg-blue-600 h-2.5 rounded-full"
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Size {getSizeOptions().length > 0 && <span className="text-red-500">*</span>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Color <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={variant.color}
+                          onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
+                          placeholder="Type a color (e.g., Navy blue)"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                            errors[`variant${index}_color`] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors[`variant${index}_color`] && (
+                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                            <i className="bx bx-error-circle"></i>
+                            {errors[`variant${index}_color`]}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        Product Weight <span className="text-red-500">*</span>
+                        <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select product weight"></i>
                       </label>
                       <select
-                        value={variant.size}
-                        onChange={(e) => handleVariantChange(index, 'size', e.target.value)}
+                        name="manualSize"
+                        
+                        value={formData.manualSize}
+                        onChange={handleChange}
                         className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_size`]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          errors.manualSize ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                         } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
                         disabled={loading}
                       >
-                        <option value="">Select a size</option>
-                        {getSizeOptions().map((size) => (
+                        <option value="">Select a weight</option>
+                        {manualSizes.map((size) => (
                           <option key={size} value={size}>
                             {size}
                           </option>
                         ))}
                       </select>
-                      {errors[`variant${index}_size`] && (
+                      {errors.manualSize && (
                         <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
                           <i className="bx bx-error-circle"></i>
-                          {errors[`variant${index}_size`]}
+                          {errors.manualSize}
                         </p>
                       )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Price (₦) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={variant.price}
-                        onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
-                        step="0.01"
-                        min="0"
-                        placeholder="e.g., 5000.00"
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_price`]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading}
-                      />
-                      {errors[`variant${index}_price`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="bx bx-error-circle"></i>
-                          {errors[`variant${index}_price`]}
-                        </p>
-                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Stock <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={variant.stock}
-                        onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
-                        min="0"
-                        placeholder="e.g., 10"
-                        className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
-                          errors[`variant${index}_stock`]
-                            ? 'border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                        } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
-                        disabled={loading}
-                      />
-                      {errors[`variant${index}_stock`] && (
-                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                          <i className="bx bx-error-circle"></i>
-                          {errors[`variant${index}_stock`]}
-                        </p>
-                      )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Price (₦) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={variant.price}
+                          onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g., 5000.00"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                            errors[`variant${index}_price`]
+                              ? 'border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors[`variant${index}_price`] && (
+                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                            <i className="bx bx-error-circle"></i>
+                            {errors[`variant${index}_price`]}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Stock <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={variant.stock}
+                          onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+                          min="0"
+                          placeholder="e.g., 10"
+                          className={`mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 ${
+                            errors[`variant${index}_stock`]
+                              ? 'border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                          } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200`}
+                          disabled={loading}
+                        />
+                        {errors[`variant${index}_stock`] && (
+                          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                            <i className="bx bx-error-circle"></i>
+                            {errors[`variant${index}_stock`]}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addVariant}
-                className={`mt-4 py-2 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 flex items-center gap-2 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={loading}
-                aria-label="Add new variant"
-              >
-                <i className="bx bx-plus"></i>
-                Add Variant
-              </button>
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end mt-8">
-              <button
-                type="submit"
-                className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm font-medium ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <i className="bx bx-loader bx-spin"></i>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <i className="bx bx-upload"></i>
-                    Add Product with Variants
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Custom Alerts */}
-          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-          {/* Success Popup */}
-          <SellerProductUploadPopup
-            isOpen={isPopupOpen}
-            onClose={() => {
-              setIsPopupOpen(false);
-            }}
-            message="Product variants uploaded successfully!"
-            icon="bx-check-circle"
-            type="success"
-            showYesNoButtons={false}
-          />
-
-          {/* Zoomed Media Modal */}
-          {zoomedMedia && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-              <div className="relative max-w-4xl w-full">
-                <img
-                  src={zoomedMedia.src}
-                  alt="Zoomed media"
-                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                />
+                ))}
                 <button
-                  onClick={() => setZoomedMedia(null)}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md"
-                  title="Close"
+                  type="button"
+                  onClick={addVariant}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2"
+                  disabled={loading}
                 >
-                  <i className="bx bx-x text-xl"></i>
+                  <i className="bx bx-plus"></i>
+                  Add Variant
                 </button>
               </div>
+            )}
+            <div>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                <i className="bx bx-link text-blue-500"></i>
+                Product URL (Optional)
+              </h3>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                External Product URL
+                <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Optional link to external product page"></i>
+              </label>
+              <input
+                type="url"
+                name="productUrl"
+                value={formData.productUrl}
+                onChange={handleChange}
+                placeholder="e.g., https://example.com/product"
+                className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                disabled={loading}
+              />
+            </div>
+            <SellerLocationForm
+              locationData={locationData}
+              setLocationData={setLocationData}
+              errors={locationErrors}
+              disabled={loading}
+            />
+
+               {/* Guidelines Checkbox Section */}
+              <div className="mt-8 flex items-center justify-start">
+                <label className="flex items-center gap-2 text-blue-900 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={hasReadGuidelines}
+                    onChange={e => setHasReadGuidelines(e.target.checked)}
+                    className="accent-blue-600 w-4 h-4"
+                  />
+                  I have read and understood the <Link to="/guidelines" className="underline text-blue-700">Product Upload Guidelines</Link>
+                </label>
+              </div>
+              <div className="mt-8 flex justify-end">
+                <button
+                  type="submit"
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2 ${
+                    loading || !hasReadGuidelines ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={loading || !hasReadGuidelines}
+                  title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
+                >
+                  {loading ? (
+                    <>
+                      <i className="bx bx-loader bx-spin"></i>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bx bx-upload"></i>
+                      Add Product
+                    </>
+                  )}
+                </button>
+              </div>
+
+          </form>
+          <CustomAlert alerts={alerts} removeAlert={removeAlert} />
+          {isPopupOpen && (
+            <SellerProductUploadPopup
+              isOpen={isPopupOpen}
+              onClose={() => {
+                setIsPopupOpen(false);
+                navigate('/products-gallery');
+              }}
+              onAddAnother={() => setIsPopupOpen(false)}
+            />
+          )}
+          {isVariantPopupOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-4">
+                  Add Variant Images?
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Would you like to add images for this variant?
+                </p>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      setIsVariantPopupOpen(false);
+                      // Handle variant image addition logic if needed
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setIsVariantPopupOpen(false)}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {zoomedMedia && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
+              onClick={() => setZoomedMedia(null)}
+            >
+              <img
+                src={zoomedMedia.src}
+                alt="Zoomed media"
+                className="max-w-[90%] max-h-[90%] object-contain"
+              />
+              <button
+                className="absolute top-4 right-4 text-white text-2xl"
+                onClick={() => setZoomedMedia(null)}
+                aria-label="Close zoomed media"
+              >
+                <i className="bx bx-x"></i>
+              </button>
             </div>
           )}
         </div>

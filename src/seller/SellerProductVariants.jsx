@@ -1013,7 +1013,7 @@ export default function SellerProductVariants() {
                 </div>
                 {formData.category && (
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Subcategory <span className="text-red-500">*</span>
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a subcategory"></i>
                     </label>
@@ -1063,7 +1063,7 @@ export default function SellerProductVariants() {
                 )}
                 {formData.subcategory && memoizedSubSubcategories.length > 0 && (
                   <div className="relative group">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                       Sub-Subcategory <span className="text-red-500">*</span>
                       <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or type a sub-subcategory"></i>
                     </label>
@@ -1115,7 +1115,7 @@ export default function SellerProductVariants() {
                 <i className="bx bx-color-fill text-blue-500"></i>
                 Colors
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Colors <span className="text-red-500">*</span>
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select or enter colors"></i>
               </label>
@@ -1193,7 +1193,7 @@ export default function SellerProductVariants() {
                 <i className="bx bx-purchase-tag text-blue-500"></i>
                 Tags
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Tags (Optional)
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Add tags to improve product discoverability"></i>
               </label>
@@ -1238,7 +1238,7 @@ export default function SellerProductVariants() {
                 <i className="bx bx-star text-blue-500"></i>
                 Condition
               </h3>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 Product Condition <span className="text-red-500">*</span>
                 <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Select the condition of the product"></i>
               </label>
@@ -1306,7 +1306,7 @@ export default function SellerProductVariants() {
                     <i className="bx bx-image text-blue-500"></i>
                     Product Images
                   </h3>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_IMAGES} images (max 5MB each)`}></i>
                   </label>
@@ -1491,7 +1491,7 @@ export default function SellerProductVariants() {
                       </button>
                     </div>
                     <div className="relative group mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                         Variant Images (up to {MAX_IMAGES}) <span className="text-red-500">*</span>
                         <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_IMAGES} images (max 5MB each)`}></i>
                       </label>

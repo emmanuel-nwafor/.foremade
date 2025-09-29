@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '/src/firebase';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, collection, where, increment } from 'firebase/firestore';
 import axios from 'axios';
@@ -269,7 +269,7 @@ export default function Wallet() {
                       : 'text-red-600 bg-red-100'
                   }`}
                 >
-                  {isOnboarded ? `Status: Onboarded (${isProSeller ? 'Pro' : 'Standard'} Seller)` : 'Please Onboard'}
+                  {isOnboarded ? `Status: Onboarded (${isProSeller ? 'Pro' : 'Standard'} Seller)` : <Link to="/seller-onboarding" className="underline">Status: Not Onboarded</Link>}
                 </span>
               )}
             </div>

@@ -65,6 +65,13 @@ const ProductCard = ({
   // Determine base price
   const basePrice = Number(selectedVariant?.price || product.price) || 0;
 
+  // Calculate min and max variant prices
+  const variantPrices = hasVariants
+    ? mergedProduct.variants.map((v) => Number(v.price) || 0).filter((p) => p > 0)
+    : [basePrice];
+  const minVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : basePrice;
+  const maxVariantPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : basePrice;
+
   useEffect(() => {
     const fetchFeeConfig = async () => {
       try {
@@ -158,17 +165,17 @@ const ProductCard = ({
   }, [product.id, isFavorite]);
 
   useEffect(() => {
-    if (feeConfig && mergedProduct.category && basePrice > 0) {
+    if (feeConfig && mergedProduct.category && minVariantPrice > 0) {
       const config = feeConfig[mergedProduct.category] || {
         minPrice: 1000,
         maxPrice: Infinity,
         buyerProtectionRate: 0.08,
         handlingRate: 0.20,
       };
-      const buyerProtectionFee = basePrice * config.buyerProtectionRate;
-      const handlingFee = basePrice * config.handlingRate;
-      const totalEstimatedPrice = basePrice + buyerProtectionFee + handlingFee;
-      const sellerEarnings = basePrice;
+      const buyerProtectionFee = minVariantPrice * config.buyerProtectionRate;
+      const handlingFee = minVariantPrice * config.handlingRate;
+      const totalEstimatedPrice = minVariantPrice + buyerProtectionFee + handlingFee;
+      const sellerEarnings = minVariantPrice;
       setFees({
         buyerProtectionFee,
         handlingFee,
@@ -176,13 +183,23 @@ const ProductCard = ({
         sellerEarnings,
       });
     }
-  }, [feeConfig, mergedProduct.category, basePrice]);
+  }, [feeConfig, mergedProduct.category, minVariantPrice]);
 
   // Calculate prices for display
   const originalPrice = basePrice;
   const totalPrice = fees.totalEstimatedPrice;
   const discountedTotalPrice = mergedProduct.isDailyDeal
     ? Math.round(totalPrice * (1 - mergedProduct.discountPercentage / 100))
+    : totalPrice;
+
+  const minTotalPrice = hasVariants ? fees.totalEstimatedPrice : totalPrice;
+  const maxTotalPrice = hasVariants
+    ? Math.round(
+        (maxVariantPrice +
+          maxVariantPrice * (feeConfig?.[mergedProduct.category]?.buyerProtectionRate || 0.08) +
+          maxVariantPrice * (feeConfig?.[mergedProduct.category]?.handlingRate || 0.20)) *
+          (mergedProduct.isDailyDeal ? 1 - mergedProduct.discountPercentage / 100 : 1)
+      )
     : totalPrice;
 
   const handleFavorite = async (e) => {
@@ -192,10 +209,6 @@ const ProductCard = ({
       toggleFavorite();
     } else {
       const userId = auth.currentUser?.uid;
-      if (!userId || !product?.id) {
-        toast.error("Please sign in to favorite a product.");
-        return;
-      }
       try {
         const productRef = doc(db, "products", product.id);
         const docSnap = await getDoc(productRef);
@@ -247,7 +260,7 @@ const ProductCard = ({
     : [];
 
   return (
-      <Link
+    <Link
       to={`/product/${mergedProduct.id}`}
       onClick={onClick}
       className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
@@ -354,10 +367,28 @@ const ProductCard = ({
             <span
               className={`text-[16px] font-medium text-[#222] flex items-center gap-0.5rem ${priceClassName}`}
             >
-              <PriceFormatter
-                price={mergedProduct.isDailyDeal ? discountedTotalPrice : totalPrice}
-                currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
-              />
+              {hasVariants ? (
+                <>
+                  <PriceFormatter
+                    price={mergedProduct.isDailyDeal ? Math.round(minTotalPrice * (1 - mergedProduct.discountPercentage / 100)) : minTotalPrice}
+                    currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+                  />
+                  {/* {minTotalPrice !== maxTotalPrice && (
+                    <>
+                      {" - "}
+                      <PriceFormatter
+                        price={mergedProduct.isDailyDeal ? Math.round(maxTotalPrice * (1 - mergedProduct.discountPercentage / 100)) : maxTotalPrice}
+                        currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+                      />
+                    </>
+                  )} */}
+                </>
+              ) : (
+                <PriceFormatter
+                  price={mergedProduct.isDailyDeal ? discountedTotalPrice : totalPrice}
+                  currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+                />
+              )}
             </span>
           </div>
           {mergedProduct.isDailyDeal && (
@@ -366,9 +397,18 @@ const ProductCard = ({
               style={{ fontSize: "10px" }}
             >
               <PriceFormatter
-                price={originalPrice}
+                price={hasVariants ? minVariantPrice : originalPrice}
                 currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
               />
+              {hasVariants && minVariantPrice !== maxVariantPrice && (
+                <>
+                  {" - "}
+                  <PriceFormatter
+                    price={maxVariantPrice}
+                    currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
+                  />
+                </>
+              )}
             </span>
           )}
         </div>

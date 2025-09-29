@@ -10,13 +10,11 @@ import TopNavigation from './components/layout/TopNavigation';
 import Footer from './components/layout/EnhancedFooter';
 import Home from './pages/Home';
 import Products from './pages/Products';
-import ChatSystem from '/src/components/chat/ChatInterface';
 import Login from './auth/Login';
 import Register from './auth/Register';
 import NotFound from './pages/NotFound';
 import BestSelling from './components/product/BestSelling';
 import Product from './pages/Product';
-import AddPhone from './auth/AddPhone';
 import Cart from './pages/Cart';
 import Favorites from './pages/Favorites';
 import Profile from './profile/EnhancedProfile';
@@ -27,7 +25,6 @@ import Setting from './profile/Setting';
 import ChatOverview from './profile/ChatOverview';
 import OrderConfirmation from './components/checkout/OrderConfirmation';
 import UsersOrdersPage from './seller/UsersOrdersPage';
-import SettingsPage from './seller/SettingsPage';
 import Dashboard from './seller/Dashboard';
 import SellersProducts from './seller/SellersProducts';
 import SellerOnboarding from './seller/SellerOnboarding';
@@ -54,7 +51,6 @@ import AdminProSellerRequests from './Admin/AdminProSellerRequests';
 import AdminBumpedProducts from './Admin/AdminBumpedProducts';
 import AdminTransactions from './Admin/AdminTransactions';
 
-import HowItWorks from './seller/HowItWorks';
 import Wallet from './seller/Wallet';
 
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -190,9 +186,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/recover-password" element={<ForgetPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/add-phone" element={<AddPhone />} />
               <Route path="/pro-seller-form" element={<ProSellerForm />} />
-              <Route path="/sellers-guide" element={<HowItWorks />} />
               <Route path="/" element={<Home />} />
               <Route path="/smile" element={<Wallet />} />
               <Route path="/sell" element={<Dashboard />} />
@@ -203,7 +197,6 @@ function App() {
               <Route path="/seller/edit-product/:productId" element={<SellerEditProduct />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/sellers/orders" element={<UsersOrdersPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/seller-onboarding" element={<SellerOnboarding />} />
               <Route path="/bulk-upload" element={<BulkUpload />} />
               <Route path="/product-bump" element={<ProductBump />} />

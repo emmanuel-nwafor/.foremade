@@ -23,20 +23,19 @@ const Chat = () => {
   // Restrict sensitive messages
   const restrictMessage = (text) => {
     const patterns = [
-      /\d{5,}/, // long numbers (e.g., IDs, card numbers)
-      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/, // emails
-      /\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{16}\b/, // credit/debit cards
-      /(contact me via|whatsapp|telegram|linkedin|call me|sms)/i, // contact requests
-      /(http|https|www\.)/i, // URLs
-      /\b\d{10,}\b/, // phone numbers
-      /(bank account|routing number|ssn|social security)/i, // sensitive info
-      /(<script>|<\/script>|javascript:)/i, // XSS injection
-      /(password|pin|otp)/i, // login info
-      /(\bfree\s+money\b|\bclick here\b|\bsubscribe\b|\boffer\b)/i, // spammy phrases
+      /\d{5,}/,
+      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
+      /\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{16}\b/,
+      /(contact me via|whatsapp|telegram|linkedin|call me|sms)/i,
+      /(http|https|www\.)/i,
+      /\b\d{10,}\b/,
+      /(bank account|routing number|ssn|social security)/i,
+      /(<script>|<\/script>|javascript:)/i,
+      /(password|pin|otp)/i,
+      /(\bfree\s+money\b|\bclick here\b|\bsubscribe\b|\boffer\b)/i,
     ];
     return patterns.some((p) => p.test(text));
   };
-
 
   const getInitials = (name) => {
     if (!name) return "?";
@@ -64,10 +63,7 @@ const Chat = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter(
-          (msg) =>
-            msg.conversationId === conversationId
-        );
+        .filter((msg) => msg.conversationId === conversationId);
       setMessages(fetched);
       scrollToBottom();
     });
@@ -96,10 +92,10 @@ const Chat = () => {
   };
 
   if (!seller || !product)
-    return <div className="flex items-center justify-center h-screen text-gray-700">Loading...</div>;
+    return <div className="flex items-center justify-center h-full text-gray-700">Loading...</div>;
 
   return (
-    <div className="flex flex-col mb-14 h-screen bg-gray-100 rounded-lg shadow-xl border">
+    <div className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-2rem)] bg-gray-100 rounded-lg shadow-xl border my-4">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center gap-4 p-4 bg-teal-600 text-white">
         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-semibold">

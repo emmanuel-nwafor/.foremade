@@ -23,19 +23,31 @@ export default function SellerSidebar() {
     debouncedSearch(e.target.value);
   };
 
+  // Get user role from localStorage
+  let userRole = 'buyer';
+  let isProSeller = false;
+  try {
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData && userData.role) {
+      userRole = userData.role;
+      if (userData.role === 'proseller' || userData.isProSeller === true) {
+        isProSeller = true;
+      }
+    }
+  } catch (e) {}
+
   const menuItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: Home, category: 'Dashboard' },
-    { to: '/sellers/orders', label: 'Orders', icon: ShoppingCart, category: 'Order Management' },
-    { to: '/sellers/products', label: 'Products List', icon: List, category: 'Product Management' },
-    { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
-    { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
-    { to: '/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
-    { to: '/pro-seller-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Product Management' },
-    { to: '/pro-seller-guide', label: 'Pro Seller', icon: Award, category: 'Registering with us' },
-    { to: '/seller-onboarding', label: 'Standard Seller', icon: CheckSquare, category: 'Registering with us' },
-    { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
-    { to: '/seller-transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
-    { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
+  { to: '/dashboard', label: 'Dashboard', icon: Home, category: 'Dashboard' },
+  { to: '/sellers/orders', label: 'Orders', icon: ShoppingCart, category: 'Order Management' },
+  { to: '/sellers/products', label: 'Products List', icon: List, category: 'Product Management' },
+  { to: '/products-gallery', label: 'Products Gallery', icon: Image, category: 'Product Management' },
+  { to: '/products-upload', label: 'Upload Products', icon: Upload, category: 'Product Management' },
+  { to: '/product-bump', label: 'Product Bump', icon: Package, category: 'Product Management' },
+  { to: '/pro-seller-analytics', label: 'Pro Analytics', icon: TrendingUp, category: 'Product Management' },
+  // Registering with us section will be handled below
+  { to: '/smile', label: 'Wallet', icon: Wallet, category: 'Your wallet' },
+  { to: '/seller-transactions', label: 'Transactions', icon: TrendingUp, category: 'Your wallet' },
+  { to: '/seller-chat', label: 'Chats', icon: MessageSquare, category: 'Chat' },
   ];
 
   const filteredMenuItems = menuItems.filter((item) =>
@@ -137,26 +149,49 @@ export default function SellerSidebar() {
                 </div>
               )}
 
-              {filteredMenuItems.some((item) => item.category === 'Registering with us') && (
-                <div>
-                  <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
-                  {filteredMenuItems
-                    .filter((item) => item.category === 'Registering with us')
-                    .map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
-                        aria-label={item.label}
-                      >
-                        <item.icon className="w-5 h-5 mr-2" />
-                        {item.label}
-                      </Link>
-                    ))}
-                </div>
-              )}
+              {/* Registering with us section - custom logic based on userRole */}
+              <div>
+                <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Registering with us</h3>
+                {isProSeller ? (
+                  <div className="flex items-center p-2 rounded-lg text-gray-200 bg-gray-700 cursor-default">
+                    <CheckSquare className="w-5 h-5 mr-2" />
+                    Pro Seller
+                  </div>
+                ) : userRole === 'seller' ? (
+                  <Link
+                    to="/pro-seller-guide"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                    aria-label="Upgrade to Pro Seller"
+                  >
+                    <Award className="w-5 h-5 mr-2" />
+                    Upgrade to Pro Seller
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/pro-seller-guide"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                      aria-label="Pro Seller"
+                    >
+                      <Award className="w-5 h-5 mr-2" />
+                      Pro Seller
+                    </Link>
+                    <Link
+                      to="/seller-onboarding"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center p-2 rounded-lg text-gray-200 hover:bg-gray-700 transition"
+                      aria-label="Standard Seller"
+                    >
+                      <CheckSquare className="w-5 h-5 mr-2" />
+                      Standard Seller
+                    </Link>
+                  </>
+                )}
+              </div>
 
+              {/* Wallet section */}
               {filteredMenuItems.some((item) => item.category === 'Your wallet') && (
                 <div>
                   <h3 className="text-xs uppercase text-gray-400 px-2 mb-2">Your wallet</h3>

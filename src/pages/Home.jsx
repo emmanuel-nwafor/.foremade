@@ -178,7 +178,7 @@ const Home = () => {
       {/* Newsletter signup - eBay inspired */}
       <NewsletterSignup />
       {/* Privacy Policies and Terms & Conditions Links */}
-      <div className="footer-bar py-6 sm:py-8 bg-background-light border-t border-red-200 mb-12">
+      <div className="footer-bar py-6 sm:py-8 bg-background-light border-t mb-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 text-xs sm:text-sm md:text-base text-secondary">
             <Link 

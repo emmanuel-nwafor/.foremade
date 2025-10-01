@@ -201,6 +201,7 @@ export default function AdminEditBannerAndOthers() {
   };
 
   const handleEditSlide = (slide) => {
+    
     setNewSlide(slide);
     setIsEditing(true);
     setExpandedForm(true);

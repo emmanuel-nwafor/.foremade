@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import { toast } from 'react-toastify';
 
 function FeaturedProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dailyDeals, setDailyDeals] = useState([]);
+  const scrollRef = useRef(null);
 
   const categories = [
     'foremade fashion',
@@ -28,9 +31,15 @@ function FeaturedProducts() {
   };
 
   useEffect(() => {
-    getDocs(collection(db, 'dailyDeals')).then(snapshot => {
-      setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    const fetchDailyDeals = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'dailyDeals'));
+        setDailyDeals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('Error loading daily deals:', err);
+      }
+    };
+    fetchDailyDeals();
   }, []);
 
   useEffect(() => {
@@ -38,6 +47,64 @@ function FeaturedProducts() {
       try {
         setLoading(true);
         setError(null);
+
+        // Fetch admin-selected products
+        console.log('Fetching admin-selected products...');
+        const featuredSnapshot = await getDocs(collection(db, 'featuredProducts'));
+        const adminSelectedProducts = await Promise.all(
+          featuredSnapshot.docs.map(async (featuredDoc) => {
+            try {
+              const productRef = doc(db, 'products', featuredDoc.data().productId);
+              console.log('Fetching product:', featuredDoc.data().productId);
+              const productDoc = await getDoc(productRef);
+              if (productDoc.exists() && productDoc.data().status === 'approved') {
+                return { id: productDoc.id, ...productDoc.data(), isAdminSelected: true };
+              }
+              console.warn('Product not found or not approved:', featuredDoc.data().productId);
+              return null;
+            } catch (err) {
+              console.warn('Error fetching product for featured:', err);
+              return null;
+            }
+          })
+        );
+        const validAdminSelected = adminSelectedProducts.filter(p => p !== null);
+        console.log('Valid admin-selected products:', validAdminSelected);
+
+        // Fetch active bumped products
+        console.log('Fetching bumped products...');
+        const now = new Date();
+        const bumpsSnapshot = await getDocs(
+          query(collection(db, 'productBumps'), where('expiry', '>', now))
+        );
+        const bumpedProducts = await Promise.all(
+          bumpsSnapshot.docs.map(async (bumpDoc) => {
+            try {
+              const productRef = doc(db, 'products', bumpDoc.data().productId);
+              console.log('Fetching bumped product:', bumpDoc.data().productId);
+              const productDoc = await getDoc(productRef);
+              if (productDoc.exists() && productDoc.data().status === 'approved') {
+                return {
+                  id: productDoc.id,
+                  ...productDoc.data(),
+                  isBumped: true,
+                  bumpExpiry: bumpDoc.data().expiry?.toDate(),
+                  bumpDuration: bumpDoc.data().bumpDuration,
+                };
+              }
+              console.warn('Bumped product not found or not approved:', bumpDoc.data().productId);
+              return null;
+            } catch (err) {
+              console.warn('Error fetching product for bump:', err);
+              return null;
+            }
+          })
+        );
+        const validBumpedProducts = bumpedProducts.filter(p => p !== null);
+        console.log('Valid bumped products:', validBumpedProducts);
+
+        // Fetch other approved products
+        console.log('Fetching other approved products...');
         const q = query(
           collection(db, 'products'),
           where('status', '==', 'approved'),
@@ -48,7 +115,6 @@ function FeaturedProducts() {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log('All fetched products (Featured):', allProducts);
 
         // Filter products with valid stock
         const filteredProducts = allProducts.filter((product) => {
@@ -62,25 +128,31 @@ function FeaturedProducts() {
           }
           return true;
         });
+        console.log('Filtered products (stock > 10):', filteredProducts);
 
-        console.log('Fetched products (Featured - After Filter):', filteredProducts);
+        // Combine and prioritize: admin-selected, bumped, then others
+        const finalProducts = [
+          ...validAdminSelected,
+          ...validBumpedProducts.filter(
+            p => !validAdminSelected.some(ap => ap.id === p.id)
+          ),
+          ...shuffleArray(
+            filteredProducts.filter(
+              p => !validAdminSelected.some(ap => ap.id === p.id) &&
+                   !validBumpedProducts.some(bp => bp.id === p.id)
+            )
+          ),
+        ].slice(0, 10);
 
-        if (filteredProducts.length === 0) {
-          console.warn('No products passed the filters (Featured). Relaxing stock filter...');
-          const relaxedProducts = shuffleArray(allProducts).slice(0, 8);
-          console.log('Products with relaxed stock filter (Featured):', relaxedProducts);
-          setProducts(relaxedProducts);
-        } else {
-          // Shuffle filtered products and take up to 8
-          const shuffledProducts = shuffleArray(filteredProducts).slice(0, 8);
-          setProducts(shuffledProducts);
-        }
+        console.log('Final featured products:', finalProducts);
+        setProducts(finalProducts);
       } catch (err) {
         console.error('Error loading featured products:', {
           message: err.message,
           code: err.code,
         });
         setError('Failed to load featured products.');
+        toast.error('Failed to load featured products.');
       } finally {
         setLoading(false);
       }
@@ -89,24 +161,66 @@ function FeaturedProducts() {
     fetchFeaturedProducts();
   }, []);
 
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-1">
-      {error ? (
-        <p className="text-red-600 col-span-full text-center">{error}</p>
-      ) : loading ? (
-        <>
-          {[...Array(5)].map((_, index) => (
-            <div key={index} className="min-w-[200px] h-[300px] bg-gray-200 animate-pulse rounded-lg"></div>
-          ))}
-        </>
-      ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No Product Found</p>
-      ) : (
-        products.map((product) => (
-          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
-        ))
-      )}
-    </div>
+    <section className="py-8 bg-white">
+      <div className="container mx-auto px-4">
+        <div
+          ref={scrollRef}
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        >
+          {error ? (
+            <p className="text-red-600 p-4">Failed to load featured products.</p>
+          ) : loading ? (
+            <>
+              {[...Array(7)].map((_, index) => (
+                <div key={index} className="flex-shrink-0 w-60 mr-4">
+                  <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
+                </div>
+              ))}
+            </>
+          ) : products.length === 0 ? (
+            <p className="text-gray-600 p-4">No featured products found.</p>
+          ) : (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-60 mr-4 snap-start"
+              >
+                <ProductCard product={product} dailyDeals={dailyDeals} />
+              </div>
+            ))
+          )}
+        </div>
+         <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={scrollLeft}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-left text-xl text-gray-600"></i>
+            </button>
+            <button
+              onClick={scrollRight}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-right text-xl text-gray-600"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

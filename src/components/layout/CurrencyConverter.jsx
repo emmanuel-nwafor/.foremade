@@ -20,7 +20,7 @@ export default function CurrencyConverter() {
 
   return (
     <div className="flex items-center">
-      <Globe className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+      {/* <Globe className="w-4 h-4 text-gray-600 dark:text-gray-300" /> */}
       {loading ? (
         <span className="text-xs text-gray-600 dark:text-gray-300">Loading...</span>
       ) : (

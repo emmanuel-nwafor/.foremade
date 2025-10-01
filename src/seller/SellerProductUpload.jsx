@@ -6,7 +6,6 @@ import axios from 'axios';
 import { marked } from 'marked';
 import SellerSidebar from './SellerSidebar';
 import SellerLocationForm from './SellerLocationForm';
-import SellerProductUploadPopup from './SellerProductUploadPopup';
 
 // Set global Axios timeout
 axios.defaults.timeout = 80000; // 80 seconds
@@ -52,6 +51,8 @@ function useAlerts() {
 }
 
 export default function SellerProductUpload() {
+  // Checkbox state for guidelines
+  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
 
@@ -1822,13 +1823,26 @@ export default function SellerProductUpload() {
               </div>
 
               {/* Submit Button */}
+              {/* Guidelines Checkbox Section */}
+              <div className="mt-8 flex items-center justify-start">
+                <label className="flex items-center gap-2 text-blue-900 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={hasReadGuidelines}
+                    onChange={e => setHasReadGuidelines(e.target.checked)}
+                    className="accent-blue-600 w-4 h-4"
+                  />
+                  I have read and understood the <a href="/guidelines" className="underline text-blue-700">Product Upload Guidelines</a>
+                </label>
+              </div>
               <div className="mt-8 flex justify-end">
                 <button
                   type="submit"
                   className={`px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2 ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                    loading || !hasReadGuidelines ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
-                  disabled={loading}
+                  disabled={loading || !hasReadGuidelines}
+                  title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
                 >
                   {loading ? (
                     <>
@@ -1847,15 +1861,6 @@ export default function SellerProductUpload() {
 
             {/* Alerts */}
             <CustomAlert alerts={alerts} removeAlert={removeAlert} />
-
-            {/* Variant Popup */}
-            {/* {isVariantPopupOpen && (
-              <SellerProductUploadPopup
-                onYes={handleVariantYes}
-                onNo={handleVariantNo}
-                message="Would you like to add variants for this product (e.g., different sizes or colors)?"
-              />
-            )} */}
 
             {/* Success Popup */}
             {isSuccessPopupOpen && (

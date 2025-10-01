@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWindowSize } from '../../hooks/useWindowSize';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '/src/firebase';
 
 const Carousel = () => {
@@ -12,8 +12,12 @@ const Carousel = () => {
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'carouselSlides'));
-        const slideData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const slidesCollection = collection(db, 'settings/carousel/slides');
+        const querySnapshot = await getDocs(slidesCollection);
+        const slideData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        }));
         setSlides(slideData);
       } catch (err) {
         console.error('Error fetching slides:', err);
@@ -66,36 +70,55 @@ const Carousel = () => {
               : 'opacity-0 transform translate-x-10'
           }`}
         >
-          {isVideo(slide) ? (
-            <video
-              src={getResponsiveMedia(slide)}
-              alt={slide.alt || `Slide ${slide.id}`}
-              className="w-full h-full object-cover object-center sm:object-[50%_50%]"
-              style={{ objectPosition: 'center 35%' }}
-              autoPlay
-              loop
-              muted
-              playsInline
-              onError={(e) => {
-                console.warn('Video load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
-                console.log(e)
-
-              }}
-            />
-          ) : (
-            <img
-              src={getResponsiveMedia(slide)}
-              alt={slide.alt || `Slide ${slide.id}`}
-              className="w-full h-full object-cover object-center sm:object-[50%_50%]"
-              style={{ objectPosition: 'center 35%' }}
-              loading="lazy"
-              onError={(e) => {
-                console.warn('Image load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
-                console.log(e)
-
-              }}
-            />
-          )}
+          <div className="relative w-full h-full">
+            {isVideo(slide) ? (
+              <video
+                src={getResponsiveMedia(slide)}
+                alt={slide.alt || `Slide ${slide.id}`}
+                className="w-full h-full object-cover object-center sm:object-[50%_50%]"
+                style={{ objectPosition: 'center 35%' }}
+                autoPlay
+                loop
+                muted
+                playsInline
+                onError={(e) => {
+                  console.warn('Video load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                }}
+              />
+            ) : (
+              <img
+                src={getResponsiveMedia(slide)}
+                alt={slide.alt || `Slide ${slide.id}`}
+                className="w-full h-full object-cover object-center sm:object-[50%_50%]"
+                style={{ objectPosition: 'center 35%' }}
+                loading="lazy"
+                onError={(e) => {
+                  console.warn('Image load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                }}
+              />
+            )}
+            {slide.buttonText && slide.buttonUrl && (
+              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2">
+                <a
+                  href={slide.buttonUrl}
+                  className={`
+                    inline-flex items-center justify-center
+                    px-6 py-3 min-w-[140px]
+                    rounded-lg font-medium text-base
+                    transition-colors duration-200 ease-in-out
+                    ${slide.buttonStyle === 'primary' 
+                      ? 'bg-[#112d4e] hover:bg-[#0f2a44] text-white shadow-md' 
+                      : slide.buttonStyle === 'secondary'
+                      ? 'bg-[#FF5722] hover:bg-[#FF8A65] text-white shadow-md'
+                      : 'bg-white hover:bg-gray-100 text-gray-900 shadow-md'
+                    }
+                  `}
+                >
+                  {slide.buttonText}
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       ))}
       {/* <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">

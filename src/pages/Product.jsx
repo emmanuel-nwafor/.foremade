@@ -15,9 +15,10 @@ import {
 import { addToCart } from "/src/utils/cartUtils";
 import CustomAlert, { useAlerts } from "/src/components/common/CustomAlert";
 import ProductCard from "/src/components/home/ProductCard";
-import { Palette, Ruler } from "lucide-react";
+import { Palette, Ruler, MessageCircle } from "lucide-react";
 import SkeletonLoader from "/src/components/common/SkeletonLoader";
 import PriceFormatter from "/src/components/layout/PriceFormatter";
+import ShareButton from "../components/common/ShareButton";
 
 // Utility to debounce a function
 const debounce = (func, wait) => {
@@ -88,8 +89,8 @@ const Product = () => {
     sellerEarnings: 0,
   });
   const [minimumPurchase, setMinimumPurchase] = useState(25000);
+  const [additionalShippingPercentage, setAdditionalShippingPercentage] = useState(0.38);
   const [showShippingFeeModal, setShowShippingFeeModal] = useState(false);
-
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -124,6 +125,23 @@ const Product = () => {
       }
     };
     fetchMinimumPurchase();
+  }, [addAlert]);
+
+  // Fetch additional shipping percentage
+  useEffect(() => {
+    const fetchAdditionalShippingPercentage = async () => {
+      try {
+        const shipRef = doc(db, "settings", "shippingFees");
+        const shipSnap = await getDoc(shipRef);
+        if (shipSnap.exists()) {
+          setAdditionalShippingPercentage(shipSnap.data().additionalPercentage || 0.30);
+        }
+      } catch (error) {
+        console.error("Error fetching additional shipping percentage:", error);
+        addAlert("Failed to fetch shipping fee configuration.", "error", 3000);
+      }
+    };
+    fetchAdditionalShippingPercentage();
   }, [addAlert]);
 
   // Fetch daily deals
@@ -247,20 +265,17 @@ const Product = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     setLoading(true);
-
     const fetchProduct = async () => {
       try {
         if (!id || typeof id !== "string" || id.trim() === "" || id.includes("/")) {
           throw new Error("Invalid product ID");
         }
-
         // Batch Firebase requests
         const productRef = doc(db, "products", id);
         const [productSnap, dealsSnapshot] = await Promise.all([
           getDoc(productRef),
           getDocs(collection(db, "dailyDeals")),
         ]);
-
         if (!productSnap.exists()) {
           throw new Error("Product not found");
         }
@@ -268,7 +283,6 @@ const Product = () => {
         if (data.status !== "approved") {
           throw new Error("Product not approved");
         }
-
         // Fetch seller and reviews
         let location = "";
         let reviews = [];
@@ -301,9 +315,7 @@ const Product = () => {
             };
           });
         }
-
         setSellerLocation(location);
-
         let imageUrls = Array.isArray(data.imageUrls)
           ? data.imageUrls
           : data.imageUrl && typeof data.imageUrl === "string"
@@ -315,7 +327,6 @@ const Product = () => {
         }
         const category = data.category?.trim().toLowerCase() || "uncategorized";
         const requiresSizes = SIZE_RELEVANT_CATEGORIES.includes(category);
-
         const productData = {
           id: productSnap.id,
           name: data.name || "Unnamed Product",
@@ -339,7 +350,6 @@ const Product = () => {
           status: data.status || "pending",
           variants: data.variants || [],
         };
-
         const activeDeal = dealsSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           .find(
@@ -355,11 +365,9 @@ const Product = () => {
           setIsDailyDeal(false);
           setDiscountPercentage(0);
         }
-
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
-
         if (productData.colors.length > 0) {
           setSelectedColor(productData.colors[0]);
         }
@@ -373,7 +381,6 @@ const Product = () => {
           setSelectedColor(firstValidVariant.color);
           setSelectedSize(firstValidVariant.size);
         }
-
         // Update recent searches
         const updateRecentSearches = () => {
           const recent = JSON.parse(localStorage.getItem("recentSearches") || "[]");
@@ -387,7 +394,6 @@ const Product = () => {
                     selectedVariant.imageUrls?.[0] || productData.imageUrls[0],
                 }
               : null;
-
           const newSearch = {
             id: productData.id,
             name: productData.name,
@@ -404,7 +410,6 @@ const Product = () => {
           localStorage.setItem("recentSearches", JSON.stringify(updatedRecent));
         };
         updateRecentSearches();
-
         // Fetch similar products
         const similarQuery = query(
           collection(db, "products"),
@@ -577,13 +582,11 @@ const Product = () => {
   const calculateAdditionalShippingFee = () => {
     const basePrice = selectedVariant?.price || product.price;
     const total = basePrice * quantity;
-    const percentage = total > 10000 ? 0.10 : 0.02;
-    return Math.round(total * percentage);
+    return Math.round(total * additionalShippingPercentage);
   };
 
   const handlePayNow = async () => {
     if (!product) return;
-
     if (quantity > (selectedVariant?.stock || product.stock)) {
       addAlert(
         `Cannot purchase more than ${
@@ -599,17 +602,14 @@ const Product = () => {
       );
       return;
     }
-
     const totalPrice = fees.totalEstimatedPrice * quantity;
     const discountedTotalPrice = isDailyDeal
       ? Math.round(totalPrice * (1 - discountPercentage / 100))
       : totalPrice;
-
     if (discountedTotalPrice < minimumPurchase) {
       setShowShippingFeeModal(true);
       return;
     }
-
     try {
       await addToCart(
         product.id,
@@ -618,7 +618,6 @@ const Product = () => {
         selectedColor,
         selectedSize
       );
-
       setTimeout(() => {
         navigate(
           `/checkout?productId=${
@@ -643,9 +642,7 @@ const Product = () => {
         selectedColor,
         selectedSize
       );
-
       const additionalFee = calculateAdditionalShippingFee();
-
       setTimeout(() => {
         navigate(
           `/checkout?productId=${
@@ -1000,17 +997,12 @@ const Product = () => {
             margin-bottom: 1rem;
             transition: all 0.3s ease;
           }
-        //   .product-info-card:hover {
-        //     transform: translateY(-2px);
-        //     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        //   }
           .price-section {
-            background: #f0f0f0;
+            // background: #112d4e;
             border: 1px solid #cccccc;
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin: 1rem 0;
-            color: #F0F0F0;
           }
           .selection-option {
             transition: all 0.2s ease;
@@ -1048,6 +1040,14 @@ const Product = () => {
           .info-badge:hover {
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+          .message-icon {
+            transition: all 0.3s ease;
+            color: #25D366;
+          }
+          .message-icon:hover {
+            transform: scale(1.2);
+            color: #128C7E;
           }
           .quantity-controls {
             display: flex;
@@ -1091,7 +1091,7 @@ const Product = () => {
           }
           .favorite-button.active {
             transform: scale(1.1);
-            color: gray;
+            color: #DC2626;
           }
           .back-icon {
             transition: all 0.3s ease;
@@ -1100,34 +1100,18 @@ const Product = () => {
           .back-icon:hover {
             transform: scale(1.2);
           }
-          /* Modal Animation Styles */
           @keyframes modalFadeIn {
-            from {
-              opacity: 0;
-              transform: scale(0.8);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
           }
-          .modal-enter {
-            animation: modalFadeIn 0.3s ease-out forwards;
-          }
+          .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
           @keyframes modalBackdropFadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 0.5;
-            }
+            from { opacity: 0; }
+            to { opacity: 0.5; }
           }
-          .backdrop-enter {
-            animation: modalBackdropFadeIn 0.3s ease-out forwards;
-          }
+          .backdrop-enter { animation: modalBackdropFadeIn 0.3s ease-out forwards; }
         `}
       </style>
-
       {/* Shipping Fee Modal */}
       {showShippingFeeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 animate-fade">
@@ -1146,7 +1130,7 @@ const Product = () => {
               <PriceFormatter
                 price={minimumPurchase}
                 currency={product.currency || localStorage.getItem("currency") || "NGN"}
-              />. 
+              />.
               You will incur an additional shipping fee of{" "}
               <PriceFormatter
                 price={calculateAdditionalShippingFee()}
@@ -1171,7 +1155,6 @@ const Product = () => {
           </div>
         </div>
       )}
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="sticky top-0 bg-white z-10">
@@ -1223,7 +1206,6 @@ const Product = () => {
                     />
                   )}
                 </div>
-
                 {allMedia.length > 1 && (
                   <div className="flex justify-center space-x-2 mt-4 overflow-x-auto pb-2">
                     {allMedia.map((media, index) => (
@@ -1259,7 +1241,6 @@ const Product = () => {
                   </div>
                 )}
               </div>
-
               <div className="order-2 md:order-2 product-info-card">
                 <div className="flex items-center mb-4">
                   <button
@@ -1282,9 +1263,10 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                  <h1 className="text-3xl font-bold text-[#333333] flex-grow">
+                  <h1 className="text-xl font-bold text-[#333333] flex-grow">
                     {product.name}
                   </h1>
+                  <ShareButton productId={product.id} productName={product.name} />
                   <button
                     onClick={toggleFavorite}
                     className={`favorite-button p-2 rounded-full ${
@@ -1311,11 +1293,11 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                </div>
 
+                </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-2xl font-extrabold mb-2 sm:mb-0">
+                    <p className="text-xl font-bold mb-2 sm:mb-0">
                       <PriceFormatter
                         price={discountedTotalPrice}
                         currency={
@@ -1343,11 +1325,9 @@ const Product = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm mt-1 text-[#F0F0F0] opacity-90">
-                    Total price (inclusive of fees)
-                  </p>
-                </div>
 
+                  {/* <ShareButton productId={product.id} productName={product.name} /> */}
+                </div>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="info-badge">
                     <svg
@@ -1364,7 +1344,7 @@ const Product = () => {
                         d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.329 1.14l1.519 4.674c.3.921-.755 1.688-1.539 1.14l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.543-1.838-.219-1.539-1.14l1.519-4.674a1 1 0 00-.329-1.14l-3.976-2.888c-.784-.57-.381-1.81.588-1.81h4.915a1 1 0 00.95-.69l1.519-4.674z"
                       />
                     </svg>
-                    {avgRating} ({product.reviews.length} reviews)
+                    {avgRating} 
                   </span>
                   <span className="info-badge">
                     <svg
@@ -1390,8 +1370,20 @@ const Product = () => {
                     <i className="ri-store-line"></i>
                     Seller: {product.seller.name}
                   </Link>
-                </div>
+                  <button
+                    onClick={() =>
+                      navigate(`/chat/${product.id}`, {
+                        state: { sellerId: product.sellerId, productId: product.id }
+                      })
+                    }
+                    className="info-badge hover:bg-gray-200"
+                    aria-label="Message seller"
+                  >
+                    <MessageCircle className="message-icon" size={20} />
+                    Message Seller
+                  </button>
 
+                </div>
                 {product.variants.length > 0 && (
                   <div className="mb-4">
                     <h3 className="font-semibold text-lg text-[#333333] mb-2">
@@ -1458,7 +1450,6 @@ const Product = () => {
                         </div>
                       </div>
                     )}
-
                     {product.sizes.length > 0 && (
                       <div>
                         <p className="text-sm text-[#333333] mb-1">
@@ -1494,7 +1485,6 @@ const Product = () => {
                         </div>
                       </div>
                     )}
-
                     {product.variants.length > 0 && !selectedVariant && (
                       <p className="text-red-500 text-sm mt-2">
                         Please select a valid variant combination.
@@ -1502,7 +1492,6 @@ const Product = () => {
                     )}
                   </div>
                 )}
-
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <p className="text-sm font-semibold text-[#333333]">
@@ -1556,7 +1545,6 @@ const Product = () => {
                     Stock: {selectedVariant?.stock || product.stock} units
                   </p>
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <button
                     onClick={handleAddToCart}
@@ -1575,7 +1563,6 @@ const Product = () => {
                 </div>
               </div>
             </div>
-
             <div className="product-info-card mt-6">
               <h2 className="text-2xl font-bold text-[#333333] mb-4">
                 Description
@@ -1613,7 +1600,6 @@ const Product = () => {
                 })}
               </div>
             </div>
-
             <div className="product-info-card mt-6">
               <h2 className="text-2xl font-bold text-[#333333] mb-4">
                 Customer Reviews ({product.reviews.length})
@@ -1730,7 +1716,6 @@ const Product = () => {
             </div>
           </div>
         </div>
-
         <div className="lg:col-span-1">
           {similarProducts.length > 0 && (
             <div className="product-info-card mb-6">
@@ -1783,7 +1768,6 @@ const Product = () => {
               </div>
             </div>
           )}
-
           {recentSearches.length > 0 && (
             <div className="product-info-card">
               <h2 className="text-xl font-bold text-[#333333] mb-4">
@@ -1837,7 +1821,6 @@ const Product = () => {
           )}
         </div>
       </div>
-
       <CustomAlert alerts={alerts} removeAlert={removeAlert} />
     </div>
   );

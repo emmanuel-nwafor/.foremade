@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '/src/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import AdminSidebar from './AdminSidebar';
+import AdminSidebar from './AdminSidebar.jsx';
 import MediaPreview from './MediaPreview.jsx';
-import AdminActionButtons from './AdminActionbuttons';
+import AdminActionButtons from './AdminActionbuttons.jsx';
 import axios from 'axios';
 import { Camera, User, ShoppingBag, Edit2, CheckCircle2, XCircle } from 'lucide-react';
 

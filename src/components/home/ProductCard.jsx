@@ -252,12 +252,20 @@ const ProductCard = ({
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   };
 
-  const uniqueColors = hasVariants
-    ? [...new Set(mergedProduct.variants.map((v) => v.color).filter(Boolean))]
-    : [];
-  const uniqueSizes = hasVariants
-    ? [...new Set(mergedProduct.variants.map((v) => v.size).filter(Boolean))]
-    : [];
+  // Extract colors and sizes from product and variants
+  const uniqueColors = [
+    ...(mergedProduct.colors ? (Array.isArray(mergedProduct.colors) ? mergedProduct.colors : [mergedProduct.colors]) : []),
+    ...(hasVariants
+      ? [...new Set(mergedProduct.variants.map((v) => v.color).filter(Boolean))]
+      : []),
+  ].filter((value, index, self) => self.indexOf(value) === index);
+
+  const uniqueSizes = [
+    ...(mergedProduct.sizes ? (Array.isArray(mergedProduct.sizes) ? mergedProduct.sizes : [mergedProduct.sizes]) : []),
+    ...(hasVariants
+      ? [...new Set(mergedProduct.variants.map((v) => v.size).filter(Boolean))]
+      : []),
+  ].filter((value, index, self) => self.indexOf(value) === index);
 
   return (
     <Link
@@ -345,18 +353,18 @@ const ProductCard = ({
               </div>
             )}
           </div>
-          {hasVariants && (uniqueColors.length > 0 || uniqueSizes.length > 0) && (
+          {(uniqueColors.length > 0 || uniqueSizes.length > 0) && (
             <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-gray-600">
               {uniqueColors.length > 0 && (
                 <span className="flex items-center">
                   <Palette size={14} className="mr-1 text-gray-500" />
-                  {uniqueColors.length} Color{uniqueColors.length > 1 ? "s" : ""}
+                  {uniqueColors.join(", ")}
                 </span>
               )}
               {uniqueSizes.length > 0 && (
                 <span className="flex items-center">
                   <Ruler size={14} className="mr-1 text-gray-500" />
-                  {uniqueSizes.length} Size{uniqueSizes.length > 1 ? "s" : ""}
+                  {uniqueSizes.join(", ")}
                 </span>
               )}
             </div>
@@ -373,15 +381,6 @@ const ProductCard = ({
                     price={mergedProduct.isDailyDeal ? Math.round(minTotalPrice * (1 - mergedProduct.discountPercentage / 100)) : minTotalPrice}
                     currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
                   />
-                  {/* {minTotalPrice !== maxTotalPrice && (
-                    <>
-                      {" - "}
-                      <PriceFormatter
-                        price={mergedProduct.isDailyDeal ? Math.round(maxTotalPrice * (1 - mergedProduct.discountPercentage / 100)) : maxTotalPrice}
-                        currency={mergedProduct.currency || localStorage.getItem("currency") || "USD"}
-                      />
-                    </>
-                  )} */}
                 </>
               ) : (
                 <PriceFormatter

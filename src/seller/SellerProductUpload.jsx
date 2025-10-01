@@ -1835,7 +1835,7 @@ export default function SellerProductUpload() {
                     onChange={e => setHasReadGuidelines(e.target.checked)}
                     className="accent-blue-600 w-4 h-4"
                   />
-                  I have read and understood the <a href="/guidelines" className="underline text-blue-700" target="_blank" rel="noopener noreferrer">Product Upload Guidelines</a>
+                  I have read and understood the <a href="/guidelines" className="underline text-blue-700">Product Upload Guidelines</a>
                 </label>
               </div>
               <div className="mt-8 flex justify-end">

@@ -262,15 +262,25 @@ export default function Wallet() {
             <div className="flex items-center gap-4">
               <CurrencyConverter />
               {isOnboarded !== null && (
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    isOnboarded
-                      ? 'text-green-600 bg-green-100'
-                      : 'text-red-600 bg-red-100'
-                  }`}
-                >
-                  {isOnboarded ? `Status: Onboarded (${isProSeller ? 'Pro' : 'Standard'} Seller)` : <Link to="/seller-onboarding" className="underline">Status: Not Onboarded</Link>}
-                </span>
+                (() => {
+                  if (isOnboarded) {
+                    return (
+                      <span className="text-xs font-medium px-2 py-1 rounded-full text-green-600 bg-green-100">
+                        {`Status: Onboarded (${isProSeller ? 'Pro' : 'Standard'} Seller)`}
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <span
+                        className="text-xs font-medium px-2 py-1 rounded-full text-red-600 bg-red-100 cursor-pointer hover:bg-red-200 transition"
+                        onClick={() => window.location.href = '/seller-onboarding'}
+                        aria-label="Onboard as seller"
+                      >
+                        Please Onboard
+                      </span>
+                    );
+                  }
+                })()
               )}
             </div>
           </div>

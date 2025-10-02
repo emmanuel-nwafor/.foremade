@@ -1,23 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useWindowSize } from '../../hooks/useWindowSize';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '/src/firebase';
 
 const Carousel = () => {
   const [slides, setSlides] = useState([]);
   const [current, setCurrent] = useState(0);
   const [prevSlide, setPrevSlide] = useState(null);
-  const { width } = useWindowSize();
+  const { width, isDesktop, isMobile, isTablet } = useWindowSize();
 
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        const slidesCollection = collection(db, 'settings/carousel/slides');
+        // Get slides from new path with proper collection reference
+        const slidesCollection = collection(db, 'settings', 'carousel', 'slides');
         const querySnapshot = await getDocs(slidesCollection);
-        const slideData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        
+        // Process slides and keep only unique ones using a Map for deduplication
+        const slideMap = new Map();
+        
+        // Clear any cached slides
+        sessionStorage.removeItem('carousel_slides');
+        
+        querySnapshot.docs.forEach((doc) => {
+          const rawData = doc.data();
+          console.log('Raw slide data:', rawData);
+          
+          const data = {
+            id: doc.id,
+            mediaType: rawData.mediaType || (rawData.desktop?.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image'),
+            desktopMedia: rawData.desktop,
+            tabletMedia: rawData.tablet,
+            mobileMedia: rawData.mobile,
+            buttonText: rawData.buttonText || '',
+            buttonUrl: rawData.buttonUrl || '',
+            buttonStyle: rawData.buttonStyle || 'primary',
+            alt: rawData.alt || `Slide ${doc.id}`,
+            createdAt: rawData.createdAt
+          };
+          
+          slideMap.set(doc.id, data);
+          
+          console.log('Slide data:', {
+            id: data.id,
+            hasDesktop: !!data.desktopMedia,
+            hasTablet: !!data.tabletMedia,
+            hasMobile: !!data.mobileMedia,
+            mediaType: data.mediaType,
+            mediaUrls: {
+              desktop: data.desktopMedia,
+              tablet: data.tabletMedia,
+              mobile: data.mobileMedia
+            }
+          });
+        });
+        
+        const slideData = Array.from(slideMap.values())
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          
+        console.log('Total slides fetched:', slideData.length);
         setSlides(slideData);
       } catch (err) {
         console.error('Error fetching slides:', err);
@@ -35,16 +76,46 @@ const Carousel = () => {
     return () => clearInterval(timer);
   }, [current, slides.length]);
 
-  const getResponsiveMedia = (slide) => {
-    if (width < 640) return slide.mobile;
-    if (width < 1024) return slide.tablet;
-    return slide.desktop;
+    const getResponsiveMedia = (slide) => {
+    if (!slide) {
+      console.warn('Attempt to get media for undefined slide');
+      return null;
+    }
+
+    // For videos, prioritize desktop version as fallback
+    if (slide.mediaType === 'video') {
+      const media = slide.desktopMedia || slide.tabletMedia || slide.mobileMedia;
+      if (!media) {
+        console.warn('No media found for video slide:', slide.id);
+      }
+      return media;
+    }
+
+    // For images, use responsive selection
+    let media = null;
+    if (isDesktop) media = slide.desktopMedia;
+    else if (isTablet) media = slide.tabletMedia;
+    else if (isMobile) media = slide.mobileMedia;
+
+    // Fallback chain
+    if (!media) {
+      media = slide.desktopMedia || slide.tabletMedia || slide.mobileMedia;
+      if (!media) {
+        console.warn('No media found for slide:', slide.id);
+      }
+    }
+
+    return media;
   };
 
   const isVideo = (slide) => {
+    // First check the explicit mediaType
     if (slide.mediaType === 'video') return true;
+    
+    // Then check the URL extension
     const url = getResponsiveMedia(slide);
-    return url && (url.endsWith('.mp4') || url.endsWith('.webm'));
+    const videoExtensions = ['.mp4', '.webm', '.mov'];
+    return url && videoExtensions.some(ext => url.toLowerCase().endsWith(ext));
   };
 
   if (slides.length === 0) {
@@ -73,27 +144,46 @@ const Carousel = () => {
           <div className="relative w-full h-full">
             {isVideo(slide) ? (
               <video
+                key={slide.id} 
                 src={getResponsiveMedia(slide)}
-                alt={slide.alt || `Slide ${slide.id}`}
                 className="w-full h-full object-cover object-center sm:object-[50%_50%]"
                 style={{ objectPosition: 'center 35%' }}
                 autoPlay
                 loop
                 muted
                 playsInline
+                controls={false}
+                preload="auto"
+                onLoadStart={() => {
+                  console.log('Video load started:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                }}
                 onError={(e) => {
-                  console.warn('Video load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                  console.error('Video load error:', { 
+                    slideId: slide.id, 
+                    url: getResponsiveMedia(slide),
+                    error: e.target.error
+                  });
                 }}
               />
             ) : (
               <img
+                key={slide.id}
                 src={getResponsiveMedia(slide)}
                 alt={slide.alt || `Slide ${slide.id}`}
                 className="w-full h-full object-cover object-center sm:object-[50%_50%]"
                 style={{ objectPosition: 'center 35%' }}
-                loading="lazy"
+                loading="eager"
                 onError={(e) => {
-                  console.warn('Image load error:', { slideId: slide.id, url: getResponsiveMedia(slide) });
+                  console.error('Image load error:', { 
+                    slideId: slide.id, 
+                    url: getResponsiveMedia(slide),
+                    desktop: slide.desktopMedia,
+                    tablet: slide.tabletMedia,
+                    mobile: slide.mobileMedia
+                  });
+                  // Try to show a default placeholder if image fails
+                  e.target.src = '/src/assets/placeholder.png';
+                  e.target.onerror = null; // Prevent infinite loop if placeholder also fails
                 }}
               />
             )}

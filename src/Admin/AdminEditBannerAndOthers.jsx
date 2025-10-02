@@ -67,8 +67,21 @@ export default function AdminEditBannerAndOthers() {
     const fetchSlides = async () => {
       try {
         setLoading(true);
-        const querySnapshot = await getDocs(collection(db, 'carouselSlides'));
-        const slideData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const slidesRef = collection(db, 'settings', 'carousel', 'slides');
+        const querySnapshot = await getDocs(slidesRef);
+        
+        // Create a Map to ensure unique slides
+        const uniqueSlides = new Map();
+        
+        querySnapshot.docs.forEach(doc => {
+          const slideData = { id: doc.id, ...doc.data() };
+          uniqueSlides.set(doc.id, slideData);
+        });
+        
+        // Convert Map to array and sort by createdAt
+        const slideData = Array.from(uniqueSlides.values())
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        
         setSlides(slideData);
         addAlert('Slides loaded successfully!', 'success');
       } catch (err) {
@@ -176,15 +189,18 @@ export default function AdminEditBannerAndOthers() {
     try {
       setLoading(true);
       const slideId = isEditing ? newSlide.id : `slide-${Date.now()}`;
-      await setDoc(doc(db, 'settings/carousel/slides', slideId), {
+      const slideData = {
         desktop: newSlide.desktop,
         tablet: newSlide.tablet,
         mobile: newSlide.mobile,
         buttonText: newSlide.buttonText || '',
         buttonUrl: newSlide.buttonUrl || '',
         buttonStyle: newSlide.buttonStyle || 'primary',
+        mediaType: newSlide.desktop.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image',
         createdAt: new Date().toISOString(),
-      });
+      };
+      
+      await setDoc(doc(db, 'settings/carousel/slides', slideId), slideData);
       addAlert(isEditing ? 'Slide updated successfully! 🎉' : 'Slide added successfully! 🎉', 'success');
       setSlides((prev) =>
         isEditing
@@ -209,11 +225,33 @@ export default function AdminEditBannerAndOthers() {
 
   const handleDeleteSlide = async (slideId) => {
     if (!confirm('Delete this slide?')) return;
+    
     try {
       setLoading(true);
-      await deleteDoc(doc(db, 'settings/carousel/slides', slideId));
+      
+      const deletePromises = [
+        // Delete from new path
+        deleteDoc(doc(db, 'settings', 'carousel', 'slides', slideId))
+          .catch(err => console.error('Error deleting from new path:', err)),
+        
+        // Delete from old path
+        deleteDoc(doc(db, 'carouselSlides', slideId))
+          .catch(err => console.error('Error deleting from old path:', err))
+      ];
+
+      // Wait for both delete operations to complete
+      await Promise.all(deletePromises);
+
+      // Update UI
       setSlides((prev) => prev.filter((slide) => slide.id !== slideId));
       addAlert('Slide deleted successfully!', 'success');
+
+      // Fetch slides again to ensure state is in sync
+      const slidesRef = collection(db, 'settings', 'carousel', 'slides');
+      const querySnapshot = await getDocs(slidesRef);
+      const slideData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setSlides(slideData);
+
     } catch (err) {
       console.error('Error deleting slide:', err);
       addAlert('Failed to delete slide.', 'error');

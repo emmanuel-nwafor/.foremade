@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
+import { toast } from 'react-toastify';
 
 function FeaturedProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dailyDeals, setDailyDeals] = useState([]);
+  const scrollRef = useRef(null);
 
   const categories = [
     'foremade fashion',
@@ -149,6 +152,7 @@ function FeaturedProducts() {
           code: err.code,
         });
         setError('Failed to load featured products.');
+        toast.error('Failed to load featured products.');
       } finally {
         setLoading(false);
       }
@@ -157,24 +161,66 @@ function FeaturedProducts() {
     fetchFeaturedProducts();
   }, []);
 
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-1">
-      {error ? (
-        <p className="text-red-600 col-span-full text-center">{error}</p>
-      ) : loading ? (
-        <>
-          {[...Array(5)].map((_, index) => (
-                <div key={index} className="bg-gray-200 p-4 rounded-lg h-64"></div>
-          ))}
-        </>
-      ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No Product Found</p>
-      ) : (
-        products.map((product) => (
-          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
-        ))
-      )}
-    </div>
+    <section className="py-8 bg-white">
+      <div className="container mx-auto px-4">
+        <div
+          ref={scrollRef}
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        >
+          {error ? (
+            <p className="text-red-600 p-4">Failed to load featured products.</p>
+          ) : loading ? (
+            <>
+              {[...Array(7)].map((_, index) => (
+                <div key={index} className="flex-shrink-0 w-60 mr-4">
+                  <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
+                </div>
+              ))}
+            </>
+          ) : products.length === 0 ? (
+            <p className="text-gray-600 p-4">No featured products found.</p>
+          ) : (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-60 mr-4 snap-start"
+              >
+                <ProductCard product={product} dailyDeals={dailyDeals} />
+              </div>
+            ))
+          )}
+        </div>
+         <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={scrollLeft}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-left text-xl text-gray-600"></i>
+            </button>
+            <button
+              onClick={scrollRight}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-right text-xl text-gray-600"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

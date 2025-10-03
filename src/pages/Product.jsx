@@ -1254,7 +1254,7 @@ const Product = () => {
                       />
                     </svg>
                   </button>
-                  <h1 className="text-xl font-bold text-[#333333] flex-grow">
+                  <h1 className="text-lg text-[#333333] flex-grow">
                     {product.name}
                   </h1>
                   <ShareButton productId={product.id} productName={product.name} />
@@ -1287,7 +1287,7 @@ const Product = () => {
                 </div>
                 <div className="price-section text-white text-center">
                   <div className="flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-xl font-bold mb-2 sm:mb-0">
+                    <p className="text-lg mb-2 sm:mb-0">
                       <PriceFormatter
                         price={discountedTotalPrice}
                         currency={
@@ -1552,7 +1552,7 @@ const Product = () => {
               </div>
             </div>
             <div className="product-info-card mt-6">
-              <h2 className="text-2xl font-bold text-[#333333] mb-4">
+              <h2 className="font-medium text-[#333333] mb-4">
                 Description
               </h2>
               <div
@@ -1589,8 +1589,8 @@ const Product = () => {
               </div>
             </div>
             <div className="product-info-card mt-6">
-              <h2 className="text-2xl font-bold text-[#333333] mb-4">
-                Customer Reviews ({product.reviews.length})
+              <h2 className="font-medium text-[#333333] mb-4">
+                Customer Reviews
               </h2>
               {product.reviews.length === 0 ? (
                 <p className="text-[#555555]">No reviews yet. Be the first!</p>
@@ -1707,7 +1707,7 @@ const Product = () => {
         <div className="lg:col-span-1">
           {similarProducts.length > 0 && (
             <div className="product-info-card mb-6">
-              <h2 className="text-xl font-bold text-[#333333] mb-4">
+              <h2 className="font-medium text-[#333333] mb-4">
                 Similar Products
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
@@ -1758,7 +1758,7 @@ const Product = () => {
           )}
           {recentSearches.length > 0 && (
             <div className="product-info-card">
-              <h2 className="text-xl font-bold text-[#333333] mb-4">
+              <h2 className="font-medium text-[#333333] mb-4">
                 Recently Viewed
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">

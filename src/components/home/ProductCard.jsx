@@ -271,7 +271,7 @@ const ProductCard = ({
     <Link
       to={`/product/${mergedProduct.id}`}
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-sm hover:shadow-md transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
+      className={`bg-white rounded-lg transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
       tabIndex={0}
       aria-label={mergedProduct.name}
     >
@@ -317,8 +317,8 @@ const ProductCard = ({
             className={`mb-1 break-words line-clamp-2 min-h-[48px] ${nameClassName}`}
             title={mergedProduct.name}
             style={{
-              fontSize: "15px",
-              fontWeight: 600,
+              fontSize: "13px",
+              // fontWeight: 600,
               color: "#222",
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -334,14 +334,14 @@ const ProductCard = ({
             )}
           </h3>
           {(mergedProduct.stock <= 2 && mergedProduct.stock > 0) && (
-            <span className="inline-block border border-red-500 text-red-500 text-xs font-semibold px-[5px] py-[2px] rounded-full">
+            <span className="inline-block border border-red-500 text-red-500 text-[10px] font-semibold px-[3px] py-[2px] rounded-full">
               Almost Gone
             </span>
           )}
           <div className="flex items-center justify-between mt-2">
             {mergedProduct.condition && (
               <p
-                style={{ fontSize: "13px", color: "#222", fontWeight: 500 }}
+                style={{ fontSize: "13px", color: "#222" }}
                 className="mb-2"
               >
                 <span>{mergedProduct.condition}</span>
@@ -373,7 +373,7 @@ const ProductCard = ({
         <div className="mt-auto">
           <div className="flex items-center justify-between">
             <span
-              className={`text-[16px] font-medium text-[#222] flex items-center gap-0.5rem ${priceClassName}`}
+              className={`text-[16px] text-[#222] flex items-center gap-0.5rem ${priceClassName}`}
             >
               {hasVariants ? (
                 <>

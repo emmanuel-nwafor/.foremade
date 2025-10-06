@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '/src/firebase';
 import ProductCard from '/src/components/home/ProductCard';
@@ -8,6 +8,7 @@ function BestSelling() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dailyDeals, setDailyDeals] = useState([]);
+  const scrollRef = useRef(null);
 
   const shuffleArray = (array) => {
     let shuffled = [...array];
@@ -64,11 +65,11 @@ function BestSelling() {
 
         if (filteredProducts.length === 0) {
           console.warn('No approved products passed the filters (Best Selling). Relaxing stock filter...');
-          const relaxedProducts = shuffleArray(allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))).slice(0, 8);
+          const relaxedProducts = shuffleArray(allProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))).slice(0, 15);
           console.log('Products with relaxed stock filter (Best Selling):', relaxedProducts);
           setProducts(relaxedProducts);
         } else {
-          const shuffledProducts = shuffleArray(filteredProducts).slice(0, 8);
+          const shuffledProducts = shuffleArray(filteredProducts).slice(0, 15);
           setProducts(shuffledProducts);
         }
       } catch (err) {
@@ -85,24 +86,66 @@ function BestSelling() {
     fetchBestSellingProducts();
   }, []);
 
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -240, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 240, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-1">
-      {error ? (
-        <p className="text-red-600 col-span-full text-center">{error}</p>
-      ) : loading ? (
-        <>
-          {[...Array(5)].map((_, index) => (
-                <div key={index} className="bg-gray-200 p-4 rounded-lg h-64"></div>
-          ))}
-        </>
-      ) : products.length === 0 ? (
-        <p className="text-gray-600 col-span-full text-center">No best-selling products found.</p>
-      ) : (
-        products.map((product) => (
-          <ProductCard key={product.id} product={product} dailyDeals={dailyDeals} />
-        ))
-      )}
-    </div>
+    <section className="bg-white">
+      <div className="container mx-auto px-4">
+        <div
+          ref={scrollRef}
+          className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        >
+          {error ? (
+            <p className="text-red-600 p-4">Failed to load best-selling products.</p>
+          ) : loading ? (
+            <>
+              {[...Array(7)].map((_, index) => (
+                <div key={index} className="flex-shrink-0 w-60 mr-4">
+                  <div className="bg-gray-200 rounded-lg h-72 w-full animate-pulse"></div>
+                </div>
+              ))}
+            </>
+          ) : products.length === 0 ? (
+            <p className="text-gray-600 p-4">No best-selling products found.</p>
+          ) : (
+            products.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-60 mr-4 snap-start"
+              >
+                <ProductCard product={product} dailyDeals={dailyDeals} />
+              </div>
+            ))
+          )}
+        </div>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={scrollLeft}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-left text-xl text-gray-600"></i>
+            </button>
+            <button
+              onClick={scrollRight}
+              className="bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+            >
+              <i className="bx bx-chevron-right text-xl text-gray-600"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

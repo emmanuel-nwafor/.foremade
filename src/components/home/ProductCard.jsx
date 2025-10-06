@@ -364,7 +364,7 @@ const ProductCard = ({
               {uniqueSizes.length > 0 && (
                 <span className="flex items-center">
                   <Ruler size={14} className="mr-1 text-gray-500" />
-                  {uniqueSizes.join(", ")}
+                  {uniqueSizes.slice(0, 4).join(", ")}
                 </span>
               )}
             </div>

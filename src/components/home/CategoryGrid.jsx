@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { db } from '/src/firebase';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 
 // Helper to slugify category names
 const slugify = (name) =>
@@ -9,43 +12,19 @@ const slugify = (name) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-// Add category path mapping for Shop by Category
-const categoryPathMap = {
-  'Shoes': 'footwear',
-  'Fashion': 'clothing',
-  'Phones': 'Computers',
-  'Laptops': 'Computers',
-  'Gaming': 'game-console',
-  'Kitchen': 'home-living',
-  // Add more as needed
-};
+// Helper to get category path
+const getCategoryPath = (category) => `/category/${slugify(category)}`;
 
-// Helper to get mapped category path
-const getCategoryPath = (category) => {
-  return `/category/${categoryPathMap[category] || slugify(category)}`;
-};
-
-const categories = [
-  "Shoes",
-  "Fashion",
-  "Phones",
-  "Television",
-  "Watches",
-  "Gaming",
-  "Kitchen",
-  "Electronics"
+const categoryImagesList = [
+  "https://banner2.cleanpng.com/20180406/wow/kisspng-shoe-jumpman-sneakers-air-jordan-teal-jordan-5ac6ff9c2fcfe2.7959868915229910041959.jpg",
+  "https://pngimg.com/uploads/dress_shirt/dress_shirt_PNG8088.png",
+  "https://banner2.cleanpng.com/20240415/cv/transparent-apple-logo-person-holding-iphone-11-pro-max661df755177ea1.73458741.webp",
+  "https://banner2.cleanpng.com/lnd/20240424/uxz/transparent-rainbow-open-laptop-with-rainbow-gradient-background-image662945f170dc49.58708681.webp",
+  "https://banner2.cleanpng.com/20180202/lie/av2ldq3r4.webp",
+  "https://banner2.cleanpng.com/lnd/20240424/jfa/aav33rgh3.webp",
+  "https://banner2.cleanpng.com/20180809/atv/kisspng-ferm-living-asymmetric-cutting-board-ferm-living-b-5b6c3d78edff15.1714747115338202809749.jpg",
+  "https://banner2.cleanpng.com/20180131/jgw/av1z4nree.webp"
 ];
-
-const categoryImages = {
-  "Shoes": "https://banner2.cleanpng.com/20180406/wow/kisspng-shoe-jumpman-sneakers-air-jordan-teal-jordan-5ac6ff9c2fcfe2.7959868915229910041959.jpg",
-  "Fashion": "https://pngimg.com/uploads/dress_shirt/dress_shirt_PNG8088.png",
-  "Phones": "https://banner2.cleanpng.com/20240415/cv/transparent-apple-logo-person-holding-iphone-11-pro-max661df755177ea1.73458741.webp",
-  "Television": "https://banner2.cleanpng.com/lnd/20240424/uxz/transparent-rainbow-open-laptop-with-rainbow-gradient-background-image662945f170dc49.58708681.webp",
-  "Watches": "https://banner2.cleanpng.com/20180202/lie/av2ldq3r4.webp",
-  "Gaming": "https://banner2.cleanpng.com/lnd/20240424/jfa/aav33rgh3.webp",
-  "Kitchen": "https://banner2.cleanpng.com/20180809/atv/kisspng-ferm-living-asymmetric-cutting-board-ferm-living-b-5b6c3d78edff15.1714747115338202809749.jpg",
-  "Electronics": "https://banner2.cleanpng.com/20180131/jgw/av1z4nree.webp"
-};
 
 const categoryColors = [
   'from-red-500/10 to-red-500/5',
@@ -70,13 +49,25 @@ const categoryHoverColors = [
 ];
 
 const CategoryGrid = () => {
+  const [categories, setCategories] = useState([]);
   const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      const catList = snapshot.docs.map((doc) => doc.id).sort();
+      setCategories(catList);
+    }, (err) => {
+      console.error('Error fetching categories:', err);
+      toast.error('Failed to load categories');
+    });
+    return () => unsub();
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-6">
       <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Shop by Category</h2>
       <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-        {categories.map((name, index) => (
+        {categories.slice(0, 8).map((name, index) => (
           <Link
             key={name}
             to={getCategoryPath(name)}
@@ -94,7 +85,7 @@ const CategoryGrid = () => {
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
             >
               <motion.img
-                src={categoryImages[name] || "https://via.placeholder.com/48"}
+                src={categoryImagesList[index] || "https://via.placeholder.com/48"}
                 alt={name}
                 className="w-12 h-12 object-contain"
                 animate={{

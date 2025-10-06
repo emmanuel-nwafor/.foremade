@@ -49,7 +49,6 @@ function FeaturedProducts() {
         setError(null);
 
         // Fetch admin-selected products
-        console.log('Fetching admin-selected products...');
         const featuredSnapshot = await getDocs(collection(db, 'featuredProducts'));
         const adminSelectedProducts = await Promise.all(
           featuredSnapshot.docs.map(async (featuredDoc) => {
@@ -69,10 +68,8 @@ function FeaturedProducts() {
           })
         );
         const validAdminSelected = adminSelectedProducts.filter(p => p !== null);
-        console.log('Valid admin-selected products:', validAdminSelected);
 
         // Fetch active bumped products
-        console.log('Fetching bumped products...');
         const now = new Date();
         const bumpsSnapshot = await getDocs(
           query(collection(db, 'productBumps'), where('expiry', '>', now))
@@ -81,7 +78,6 @@ function FeaturedProducts() {
           bumpsSnapshot.docs.map(async (bumpDoc) => {
             try {
               const productRef = doc(db, 'products', bumpDoc.data().productId);
-              console.log('Fetching bumped product:', bumpDoc.data().productId);
               const productDoc = await getDoc(productRef);
               if (productDoc.exists() && productDoc.data().status === 'approved') {
                 return {
@@ -104,7 +100,6 @@ function FeaturedProducts() {
         console.log('Valid bumped products:', validBumpedProducts);
 
         // Fetch other approved products
-        console.log('Fetching other approved products...');
         const q = query(
           collection(db, 'products'),
           where('status', '==', 'approved'),
@@ -142,9 +137,8 @@ function FeaturedProducts() {
                    !validBumpedProducts.some(bp => bp.id === p.id)
             )
           ),
-        ].slice(0, 10);
+        ].slice(0, 15);
 
-        console.log('Final featured products:', finalProducts);
         setProducts(finalProducts);
       } catch (err) {
         console.error('Error loading featured products:', {
@@ -174,7 +168,7 @@ function FeaturedProducts() {
   };
 
   return (
-    <section className="py-8 bg-white">
+    <section className="bg-white">
       <div className="container mx-auto px-4">
         <div
           ref={scrollRef}

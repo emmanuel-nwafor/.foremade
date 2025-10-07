@@ -7,6 +7,15 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        primary: '#121928',
+        // secondary used for muted text; keep brand orange in `accent`
+        secondary: '#6B7280',
+        accent: '#FF5722',
+        'background-light': '#FFFFFF',
+        'background-dark': '#121928',
+        'border-light': '#CCCCCC'
+      },
       animation: {
         'slide-down': 'slideDown 0.3s ease-out',
         'slide-in': 'slideIn 0.3s ease-out',

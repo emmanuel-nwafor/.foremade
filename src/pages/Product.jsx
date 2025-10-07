@@ -54,7 +54,6 @@ const colorMap = {
   indigo: "#6366F1",
   violet: "#8B5CF6",
 };
-
 const hashCode = (str) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -63,14 +62,12 @@ const hashCode = (str) => {
   }
   return hash;
 };
-
 const generateUniqueName = (originalName, sellerId) => {
   if (!originalName || originalName === "Unknown Seller" || !sellerId) return originalName;
   const prefix = originalName.split(' ')[0];
   const num = Math.abs(hashCode(sellerId)) % 900 + 100;
   return `${prefix}${num}`;
 };
-
 const Product = () => {
   const [dailyDeals, setDailyDeals] = useState([]);
   const [product, setProduct] = useState(null);
@@ -354,6 +351,14 @@ const Product = () => {
           variants: data.variants || [],
         };
         productData.seller.name = generateUniqueName(productData.seller.name, productData.sellerId);
+        if (productData.variants && productData.variants.length > 0) {
+          const uniqueColors = [...new Set(productData.variants.map(v => v.color).filter(Boolean))].sort();
+          productData.colors = uniqueColors.length > 0 ? uniqueColors : productData.colors;
+          if (requiresSizes) {
+            const uniqueSizes = [...new Set(productData.variants.map(v => v.size).filter(Boolean))].sort();
+            productData.sizes = uniqueSizes.length > 0 ? uniqueSizes : productData.sizes;
+          }
+        }
         const activeDeal = dealsSnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           .find(
@@ -439,14 +444,22 @@ const Product = () => {
               data.category?.trim().toLowerCase() || "uncategorized";
             const requiresSizesForSimilar =
               SIZE_RELEVANT_CATEGORIES.includes(similarCategory);
+            let derivedColors = data.colors || [];
+            let derivedSizes = requiresSizesForSimilar ? data.sizes || [] : [];
+            if (data.variants && data.variants.length > 0) {
+              derivedColors = [...new Set(data.variants.map(v => v.color).filter(Boolean))].sort();
+              if (requiresSizesForSimilar) {
+                derivedSizes = [...new Set(data.variants.map(v => v.size).filter(Boolean))].sort();
+              }
+            }
             return {
               id: doc.id,
               name: data.name || "Unnamed Product",
               price: data.price || 0,
               stock: data.stock || 0,
               category: similarCategory,
-              colors: data.colors || [],
-              sizes: requiresSizesForSimilar ? data.sizes || [] : [],
+              colors: derivedColors,
+              sizes: derivedSizes,
               condition: data.condition || "New",
               imageUrl,
               tags: data.tags || [],
@@ -888,8 +901,8 @@ const Product = () => {
   const shouldShowDescriptionToggle =
     product.description.length > DESCRIPTION_LIMIT;
   const displayedReviews = showAllReviews
-    ? product.reviews
-    : product.reviews?.slice(0, REVIEW_LIMIT);
+    ? (product.reviews || [])
+    : (product.reviews || []).slice(0, REVIEW_LIMIT);
   const currentVariant = product.variants.length
     ? selectedVariant || { imageUrls: [] }
     : null;
@@ -1357,7 +1370,7 @@ const Product = () => {
                   >
                     <i className="ri-store-line"></i>
                     Seller: {product.seller.name}
-                   
+                
                   </Link>
                   <button
                     onClick={() =>
@@ -1373,11 +1386,12 @@ const Product = () => {
                   </button>
                 </div>
                 {product.variants.length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-4 flex-col">
                     <h3 className="font-semibold text-lg text-[#333333] mb-2">
                       Variants:
                     </h3>
-                    {product.colors.length > 0 && (
+                    <div className="flex justify-between">
+                      {product.colors.length > 0 && (
                       <div className="mb-3">
                         <p className="text-sm text-[#333333] mb-1">
                           Color:{" "}
@@ -1390,12 +1404,23 @@ const Product = () => {
                             const isAvailable = product.sizes.length > 0
                               ? product.sizes.some((size) => isVariantAvailable(colorName, size))
                               : isVariantAvailable(colorName, selectedSize);
+                            const handleColorClick = () => {
+                              if (!isAvailable) return;
+                              let newSize = selectedSize;
+                              if (product.sizes.length > 0) {
+                                const availableSizes = product.sizes.filter(size => isVariantAvailable(colorName, size));
+                                if (availableSizes.length > 0) {
+                                  newSize = availableSizes.includes(selectedSize) ? selectedSize : availableSizes[0];
+                                } else {
+                                  return;
+                                }
+                              }
+                              handleVariantChange(colorName, newSize);
+                            };
                             return (
                               <button
                                 key={colorName}
-                                onClick={() =>
-                                  isAvailable && handleVariantChange(colorName, selectedSize)
-                                }
+                                onClick={handleColorClick}
                                 className={`selection-option p-2 rounded-lg border-2 flex items-center justify-center min-w-[32px] min-h-[32px] ${
                                   selectedColor === colorName
                                     ? "selected"
@@ -1455,11 +1480,11 @@ const Product = () => {
                                 onClick={() =>
                                   isAvailable && handleVariantChange(selectedColor, sizeName)
                                 }
-                                className={`selection-option px-4 py-2 rounded-lg border-2 ${
+                                className={`selection-option px-2 py-1 rounded-full border-2 ${
                                   selectedSize === sizeName
                                     ? "selected"
                                     : isAvailable
-                                    ? "border-[#CCCCCC] bg-[#F0F0F0] text-[#333333] hover:bg-[#E0B912] hover:text-[#333333]"
+                                    ? "border-[#CCCCCC] bg-[#F0F0F0] text-[#fff] hover:bg-[#E0B912] hover:text-[#333333]"
                                     : "disabled"
                                 }`}
                                 disabled={!isAvailable}
@@ -1473,6 +1498,7 @@ const Product = () => {
                         </div>
                       </div>
                     )}
+                    </div>
                     {product.variants.length > 0 && !selectedVariant && (
                       <p className="text-red-500 text-sm mt-2">
                         Please select a valid variant combination.
@@ -1592,7 +1618,7 @@ const Product = () => {
               <h2 className="font-medium text-[#333333] mb-4">
                 Customer Reviews
               </h2>
-              {product.reviews.length === 0 ? (
+              {(product.reviews || []).length === 0 ? (
                 <p className="text-[#555555]">No reviews yet. Be the first!</p>
               ) : (
                 <div className="space-y-4">
@@ -1632,7 +1658,7 @@ const Product = () => {
                       <p className="text-[#555555]">{review.comment}</p>
                     </div>
                   ))}
-                  {product.reviews.length > REVIEW_LIMIT && (
+                  {(product.reviews || []).length > REVIEW_LIMIT && (
                     <button
                       onClick={() => setShowAllReviews(!showAllReviews)}
                       className="text-[#112d4e] hover:underline mt-4 text-sm"

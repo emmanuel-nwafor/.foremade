@@ -132,7 +132,7 @@ export default function SellerProductVariants() {
   );
 
   const menClothingSizes = useMemo(() => ['S', 'M', 'L', 'XL', 'XXL'], []);
-  const womenClothingSizes = useMemo(() => ['4', '6', '8', '10', '12', '14', '16', '18', '20'], []);
+  const womenClothingSizes = useMemo(() => ['S', 'M', 'L', 'XL', 'XXL'], []);
   const footwearSizes = useMemo(
     () => [
       '3"', '5"', '5.5"', '6"', '6.5"', '7"', '7.5"',

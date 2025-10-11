@@ -18,6 +18,7 @@ import NewsletterSignup from '../components/home/NewsletterSignup';
 import CategoryGrid from '../components/home/CategoryGrid';
 import ForemadeInvestorDeck from '../components/home/ForemadeInvestorDeck';
 import ManufacturerPick from '../components/product/FeaturedProducts';
+import ProductList from '../components/product/ProductList';
 
 const Home = () => {
   // Track if user is new visitor
@@ -157,6 +158,8 @@ const Home = () => {
       <RecommendedForYou />
       {/* Daily Deals - eBay inspired */}
       <DailyDeals />
+      {/* Bringing all products to store front */}
+      <ProductList />
       {/* Trending gadgets */}
       <TrendingGadgets />
       {/* Trending fashion */}

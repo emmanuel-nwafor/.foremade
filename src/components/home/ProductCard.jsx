@@ -282,12 +282,12 @@ const ProductCard = ({
           className="w-full h-full object-cover max-w-full max-h-full"
           onError={(e) => {
             if (!imageFailed) {
-              console.error(
-                "Image load error for product:",
-                mergedProduct.id,
-                mergedProduct.name,
-                { imageUrl, attemptedUrl: e.target.src }
-              );
+              // console.error(
+              //   "Image load error for product:",
+              //   mergedProduct.id,
+              //   mergedProduct.name,
+              //   { imageUrl, attemptedUrl: e.target.src }
+              // );
               setImageFailed(true);
               setImageUrl(placeholder);
             }

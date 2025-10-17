@@ -735,7 +735,6 @@ const Checkout = () => {
     if (!phone) errors.phone = "Phone number is required.";
     if (!address) errors.address = "Address is required.";
     if (!city) errors.city = "City is required.";
-    if (!postalCode) errors.postalCode = "Postal code is required.";
     if (!["Nigeria", "United Kingdom"].includes(country))
       errors.country = "Select Nigeria or United Kingdom.";
     return { isValid: Object.keys(errors).length === 0, errors };
@@ -786,8 +785,8 @@ const Checkout = () => {
       while (attempts > 0) {
         try {
           const response = await axios.post(
-            `${backendUrl}/send-order-confirmation`,
-            
+            `${backendUrl}/send-seller-order-notification`,
+
             payload,
             {
               timeout: 10000,

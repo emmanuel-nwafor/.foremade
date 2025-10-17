@@ -294,7 +294,7 @@ export default function SellerEditProduct() {
       });
 
       setSuccess('Product updated successfully!');
-      setTimeout(() => navigate('/seller/products'), 2000);
+      setTimeout(() => navigate('/sellers/products'), 2000);
     } catch (err) {
       console.error('Error saving product:', { message: err.message, code: err.code });
       setErrors({ general: 'Failed to save product: ' + err.message });

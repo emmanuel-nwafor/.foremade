@@ -787,6 +787,7 @@ const Checkout = () => {
         try {
           const response = await axios.post(
             `${backendUrl}/send-order-confirmation`,
+            
             payload,
             {
               timeout: 10000,

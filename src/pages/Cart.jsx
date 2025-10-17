@@ -379,46 +379,6 @@ const Cart = () => {
               ))}
             </div>
           )}
-          {recommendedProducts.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Customers Also Viewed</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {recommendedProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition"
-                  >
-                    <Link to={`/product/${product.id}`}>
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-40 object-cover rounded mb-2"
-                        onError={(e) => {
-                          console.warn('Failed to load recommended product image:', product.imageUrl);
-                          e.target.src = placeholder;
-                        }}
-                      />
-                      <h3 className="text-sm font-semibold text-gray-800 truncate">{product.name}</h3>
-                    </Link>
-                    <p className="text-xs text-gray-600">
-                      <PriceFormatter price={product.price} />
-                    </p>
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className={`mt-2 w-full px-4 py-2 text-sm text-white rounded-lg transition ${
-                        product.stock === 0
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#112d4e] hover:bg-[#0f2a44]'
-                      }`}
-                      disabled={product.stock === 0}
-                    >
-                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div className="lg:w-1/3">
           <CartSummary

@@ -735,7 +735,6 @@ const Checkout = () => {
     if (!phone) errors.phone = "Phone number is required.";
     if (!address) errors.address = "Address is required.";
     if (!city) errors.city = "City is required.";
-    if (!postalCode) errors.postalCode = "Postal code is required.";
     if (!["Nigeria", "United Kingdom"].includes(country))
       errors.country = "Select Nigeria or United Kingdom.";
     return { isValid: Object.keys(errors).length === 0, errors };
@@ -743,225 +742,240 @@ const Checkout = () => {
 
   const formValidity = useMemo(() => validateForm(), [formData]);
 
-  const sendOrderConfirmationEmail = async (order) => {
-    try {
-      setIsEmailSending(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  // const sendOrderConfirmationEmail = async (order) => {
+  //   try {
+  //     setIsEmailSending(true);
+  //     const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  //     const payload = {
+  //       orderId: order.paymentId || `fallback-${Date.now()}`,
+  //       email: order.shippingDetails?.email || formData.email,
+  //       items: (order.items || []).map((item) => ({
+  //         productId: item.productId || "unknown",
+  //         quantity: item.quantity || 1,
+  //         price: item.price || 0,
+  //         name: item.name || "Unknown Product",
+  //         sellerId: item.sellerId || "unknown",
+  //         imageUrls: Array.isArray(item.imageUrls)
+  //           ? item.imageUrls
+  //           : [placeholder],
+  //         isDailyDeal: item.isDailyDeal || false,
+  //         discountPercentage: item.discountPercentage || 0,
+  //       })),
+  //       total: order.totalAmount || 0,
+  //       currency: order.currency || currency,
+  //       shippingDetails: {
+  //         name: order.shippingDetails?.name || formData.name || "Unknown",
+  //         address:
+  //           order.shippingDetails?.address || formData.address || "Unknown",
+  //         city: order.shippingDetails?.city || formData.city || "",
+  //         postalCode:
+  //           order.shippingDetails?.postalCode || formData.postalCode || "",
+  //         country: order.shippingDetails?.country || formData.country || "",
+  //         phone: order.shippingDetails?.phone || formData.phone || "",
+  //       },
+  //     };
+  //     if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
+  //       throw new Error("Invalid or missing email address");
+  //     }
+  //     if (!payload.items.length) {
+  //       throw new Error("No items provided");
+  //     }
+  //     let attempts = 2;
+  //     let lastError = null;
+  //     while (attempts > 0) {
+  //       try {
+  //         const response = await axios.post(
+  //           `${backendUrl}/send-seller-order-notification`,
+
+  //           payload,
+  //           {
+  //             timeout: 10000,
+  //           }
+  //         );
+  //         console.log(
+  //           "Order confirmation email sent successfully:",
+  //           response.data
+  //         );
+  //         return;
+  //       } catch (err) {
+  //         lastError = err;
+  //         attempts--;
+  //         if (attempts === 0 || err.response?.status !== 400) {
+  //           throw err;
+  //         }
+  //         console.warn(`Retrying email send (${attempts} attempts left)...`);
+  //         await new Promise((resolve) => setTimeout(resolve, 2000));
+  //       }
+  //     }
+  //     throw lastError || new Error("Failed to send email after retries");
+  //   } catch (err) {
+  //     console.error("Error sending order confirmation email:", {
+  //       message: err.message,
+  //       status: err.response?.status,
+  //       responseData: err.response?.data,
+  //       stack: err.stack,
+  //     });
+  //     console.log("Logging to Sentry:", err);
+  //     toast.warn(
+  //       "Order placed successfully, but failed to send confirmation email. Please check your email later.",
+  //       {
+  //         position: "top-right",
+  //         autoClose: 5000,
+  //       }
+  //     );
+  //     if (debugMode) {
+  //       toast.error(
+  //         `Debug: Email send failed - ${err.message} (${JSON.stringify(
+  //           err.response?.data
+  //         )})`,
+  //         {
+  //           position: "bottom-right",
+  //           autoClose: 5000,
+  //         }
+  //       );
+  //     }
+  //   } finally {
+  //     setIsEmailSending(false);
+  //   }
+  // };
+
+const sendSellerOrderNotifications = async (
+  sellers,
+  sellerOrderIds,
+  currency,
+  shippingDetails
+) => {
+  try {
+    setIsEmailSending(true);
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    for (const [sellerId, items] of Object.entries(sellers)) {
+      // Fetch seller email
+      const sellerRef = doc(db, "users", sellerId);
+      const sellerSnap = await getDoc(sellerRef);
+      if (!sellerSnap.exists()) {
+        console.warn(`Seller ${sellerId} not found`);
+        continue;
+      }
+      const sellerEmail = sellerSnap.data()?.email;
+      if (!sellerEmail || !/\S+@\S+\.\S+/.test(sellerEmail)) {
+        console.warn(`Invalid email for seller ${sellerId}`);
+        continue;
+      }
+
+      const sellerOrderId =
+        sellerOrderIds.find((id) => id.includes(sellerId)) ||
+        `order-${Date.now()}-${sellerId}`;
+      const sellerSubtotal = items.reduce(
+        (total, item) =>
+          total + (item.product?.totalPrice || 0) * (item.quantity || 0),
+        0
+      );
+      const totalAmount =
+        currency === "GBP"
+          ? (sellerSubtotal + additionalShippingFee) * conversionRateNgnToGbp
+          : sellerSubtotal + additionalShippingFee;
       const payload = {
-        orderId: order.paymentId || `fallback-${Date.now()}`,
-        email: order.shippingDetails?.email || formData.email,
-        items: (order.items || []).map((item) => ({
+        orderId: sellerOrderId,
+        sellerId,
+        email: sellerEmail,
+        items: items.map((item) => ({
           productId: item.productId || "unknown",
           quantity: item.quantity || 1,
-          price: item.price || 0,
-          name: item.name || "Unknown Product",
-          sellerId: item.sellerId || "unknown",
-          imageUrls: Array.isArray(item.imageUrls)
-            ? item.imageUrls
+          price: item.product?.totalPrice || 0,
+          name: item.product?.name || "Unknown Product",
+          imageUrls: Array.isArray(item.product?.imageUrls)
+            ? item.product.imageUrls
             : [placeholder],
-          isDailyDeal: item.isDailyDeal || false,
-          discountPercentage: item.discountPercentage || 0,
+          isDailyDeal: item.product?.isDailyDeal || false,
+          discountPercentage: item.product?.discountPercentage || 0,
         })),
-        total: order.totalAmount || 0,
-        currency: order.currency || currency,
+        total: totalAmount,
+        currency,
         shippingDetails: {
-          name: order.shippingDetails?.name || formData.name || "Unknown",
-          address:
-            order.shippingDetails?.address || formData.address || "Unknown",
-          city: order.shippingDetails?.city || formData.city || "",
-          postalCode:
-            order.shippingDetails?.postalCode || formData.postalCode || "",
-          country: order.shippingDetails?.country || formData.country || "",
-          phone: order.shippingDetails?.phone || formData.phone || "",
+          name: shippingDetails.name || "Unknown",
+          address: shippingDetails.address || "Unknown",
+          city: shippingDetails.city || "",
+          postalCode: shippingDetails.postalCode || "",
+          country: shippingDetails.country || "",
+          phone: shippingDetails.phone || "",
         },
       };
-      if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
-        throw new Error("Invalid or missing email address");
-      }
-      if (!payload.items.length) {
-        throw new Error("No items provided");
-      }
+      console.log("Sending seller notification email with payload:", {
+        orderId: sellerOrderId,
+        sellerId,
+        email: sellerEmail,
+        items: payload.items,
+        total: totalAmount,
+        currency,
+        shippingDetails: payload.shippingDetails,
+      });
       let attempts = 2;
       let lastError = null;
       while (attempts > 0) {
         try {
           const response = await axios.post(
-            `${backendUrl}/send-order-confirmation`,
-            
+            `${backendUrl}/send-seller-order-notification`,
             payload,
             {
               timeout: 10000,
             }
           );
           console.log(
-            "Order confirmation email sent successfully:",
+            `Seller notification email sent successfully for seller ${sellerId}:`,
             response.data
           );
-          return;
+          break;
         } catch (err) {
           lastError = err;
           attempts--;
           if (attempts === 0 || err.response?.status !== 400) {
             throw err;
           }
-          console.warn(`Retrying email send (${attempts} attempts left)...`);
+          console.warn(
+            `Retrying seller email send for ${sellerId} (${attempts} attempts left)...`
+          );
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
-      throw lastError || new Error("Failed to send email after retries");
-    } catch (err) {
-      console.error("Error sending order confirmation email:", {
-        message: err.message,
-        status: err.response?.status,
-        responseData: err.response?.data,
-        stack: err.stack,
-      });
-      console.log("Logging to Sentry:", err);
-      toast.warn(
-        "Order placed successfully, but failed to send confirmation email. Please check your email later.",
+      if (attempts === 0) {
+        throw (
+          lastError ||
+          new Error(
+            `Failed to send seller email for ${sellerId} after retries`
+          )
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Error sending seller notification emails:", {
+      message: err.message,
+      status: err.response?.status,
+      responseData: err.response?.data,
+      stack: err.stack,
+    });
+    console.log("Logging to Sentry:", err);
+    toast.warn(
+      "Order placed successfully, but failed to notify some sellers. They may receive notifications later.",
+      {
+        position: "top-right",
+        autoClose: 5000,
+      }
+    );
+    if (debugMode) {
+      toast.error(
+        `Debug: Seller email send failed - ${err.message} (${JSON.stringify(
+          err.response?.data
+        )})`,
         {
-          position: "top-right",
+          position: "bottom-right",
           autoClose: 5000,
         }
       );
-      if (debugMode) {
-        toast.error(
-          `Debug: Email send failed - ${err.message} (${JSON.stringify(
-            err.response?.data
-          )})`,
-          {
-            position: "bottom-right",
-            autoClose: 5000,
-          }
-        );
-      }
-    } finally {
-      setIsEmailSending(false);
     }
-  };
-
-  const sendSellerOrderNotifications = async (
-    sellers,
-    sellerOrderIds,
-    currency,
-    shippingDetails
-  ) => {
-    try {
-      setIsEmailSending(true);
-      const backendUrl = import.meta.env.VITE_BACKEND_URL;
-      for (const [sellerId, items] of Object.entries(sellers)) {
-        const sellerOrderId =
-          sellerOrderIds.find((id) => id.includes(sellerId)) ||
-          `order-${Date.now()}-${sellerId}`;
-        const sellerSubtotal = items.reduce(
-          (total, item) =>
-            total + (item.product?.totalPrice || 0) * (item.quantity || 0),
-          0
-        );
-        const totalAmount =
-          currency === "GBP"
-            ? (sellerSubtotal + additionalShippingFee) * conversionRateNgnToGbp
-            : sellerSubtotal + additionalShippingFee;
-        const payload = {
-          orderId: sellerOrderId,
-          sellerId,
-          items: items.map((item) => ({
-            productId: item.productId || "unknown",
-            quantity: item.quantity || 1,
-            price: item.product?.totalPrice || 0,
-            name: item.product?.name || "Unknown Product",
-            imageUrls: Array.isArray(item.product?.imageUrls)
-              ? item.product.imageUrls
-              : [placeholder],
-            isDailyDeal: item.product?.isDailyDeal || false,
-            discountPercentage: item.product?.discountPercentage || 0,
-          })),
-          total: totalAmount,
-          currency,
-          shippingDetails: {
-            name: shippingDetails.name || "Unknown",
-            address: shippingDetails.address || "Unknown",
-            city: shippingDetails.city || "",
-            postalCode: shippingDetails.postalCode || "",
-            country: shippingDetails.country || "",
-            phone: shippingDetails.phone || "",
-          },
-        };
-        console.log("Sending seller notification email with payload:", {
-          orderId: sellerOrderId,
-          sellerId,
-          items: payload.items,
-          total: totalAmount,
-          currency,
-          shippingDetails: payload.shippingDetails,
-        });
-        let attempts = 2;
-        let lastError = null;
-        while (attempts > 0) {
-          try {
-            const response = await axios.post(
-              `${backendUrl}/send-seller-order-notification`,
-              payload,
-              {
-                timeout: 10000,
-              }
-            );
-            console.log(
-              `Seller notification email sent successfully for seller ${sellerId}:`,
-              response.data
-            );
-            break;
-          } catch (err) {
-            lastError = err;
-            attempts--;
-            if (attempts === 0 || err.response?.status !== 400) {
-              throw err;
-            }
-            console.warn(
-              `Retrying seller email send for ${sellerId} (${attempts} attempts left)...`
-            );
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
-        }
-        if (attempts === 0) {
-          throw (
-            lastError ||
-            new Error(
-              `Failed to send seller email for ${sellerId} after retries`
-            )
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Error sending seller notification emails:", {
-        message: err.message,
-        status: err.response?.status,
-        responseData: err.response?.data,
-        stack: err.stack,
-      });
-      console.log("Logging to Sentry:", err);
-      toast.warn(
-        "Order placed successfully, but failed to notify some sellers. They may receive notifications later.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-        }
-      );
-      if (debugMode) {
-        toast.error(
-          `Debug: Seller email send failed - ${err.message} (${JSON.stringify(
-            err.response?.data
-          )})`,
-          {
-            position: "bottom-right",
-            autoClose: 5000,
-          }
-        );
-      }
-    } finally {
-      setIsEmailSending(false);
-    }
-  };
+  } finally {
+    setIsEmailSending(false);
+  }
+};
 
   const handlePaymentSuccess = useCallback(
     async (paymentData) => {

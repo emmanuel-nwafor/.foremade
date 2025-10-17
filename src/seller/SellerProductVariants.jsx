@@ -53,7 +53,7 @@ function useAlerts() {
 export default function SellerProductVariants() {
   const navigate = useNavigate();
   const { alerts, addAlert, removeAlert } = useAlerts();
-  const [uploadMode, setUploadMode] = useState('variants'); // 'single' or 'variants'
+  const [uploadMode, setUploadMode] = useState('single'); 
   const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
   const [formData, setFormData] = useState({
     sellerName: '',
@@ -108,6 +108,7 @@ export default function SellerProductVariants() {
 
   const dropZoneRefs = useRef([]);
   const fileInputRefs = useRef([]);
+  const singleDropZoneRef = useRef(null);
   const singleFileInputRef = useRef(null);
   const descriptionRef = useRef(null);
   const MAX_IMAGES = 4;
@@ -405,8 +406,8 @@ export default function SellerProductVariants() {
   const handleDrop = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isSingle && singleFileInputRef.current) {
-      singleFileInputRef.current.classList.remove('border-blue-500');
+    if (isSingle && singleDropZoneRef.current) {
+      singleDropZoneRef.current.classList.remove('border-blue-500');
     } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
@@ -416,8 +417,8 @@ export default function SellerProductVariants() {
   const handleDragOver = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isSingle && singleFileInputRef.current) {
-      singleFileInputRef.current.classList.add('border-blue-500');
+    if (isSingle && singleDropZoneRef.current) {
+      singleDropZoneRef.current.classList.add('border-blue-500');
     } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.add('border-blue-500');
     }
@@ -426,8 +427,8 @@ export default function SellerProductVariants() {
   const handleDragLeave = useCallback((e, index, isSingle = false) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isSingle && singleFileInputRef.current) {
-      singleFileInputRef.current.classList.remove('border-blue-500');
+    if (isSingle && singleDropZoneRef.current) {
+      singleDropZoneRef.current.classList.remove('border-blue-500');
     } else if (dropZoneRefs.current[index]?.current) {
       dropZoneRefs.current[index].current.classList.remove('border-blue-500');
     }
@@ -1351,7 +1352,7 @@ export default function SellerProductVariants() {
                     <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title={`Upload up to ${MAX_IMAGES} images (max 5MB each)`}></i>
                   </label>
                   <div
-                    ref={singleFileInputRef}
+                    ref={singleDropZoneRef}
                     onDrop={(e) => handleDrop(e, 0, true)}
                     onDragOver={(e) => handleDragOver(e, 0, true)}
                     onDragLeave={(e) => handleDragLeave(e, 0, true)}

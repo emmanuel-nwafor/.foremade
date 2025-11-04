@@ -20,6 +20,7 @@ const BulkUpload = () => {
   const fileInputRef = useRef(null);
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { userProfile } = useAuth();
+  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
 
   // Fetch categories and subcategories from Firestore
   useEffect(() => {
@@ -72,8 +73,6 @@ const BulkUpload = () => {
           }
           if (sampleCount >= 5) break;
         }
-  // Checkbox state for guidelines
-  const [hasReadGuidelines, setHasReadGuidelines] = useState(false);
         const csvLines = [
           '# INSTRUCTIONS:',
           ...catSection,

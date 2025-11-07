@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
+import * as XLSX from 'xlsx';
 
 const CSV_FIELDS = [
   'name', 'description', 'price', 'stock', 'category', 'subcategory', 'colors', 'sizes', 'condition', 'tags', 'manualSize', 'imageUrls', 'videoUrl', 'country', 'state', 'city', 'address', 'specifications'
@@ -113,45 +114,104 @@ const BulkUpload = () => {
       toast.error('Categories are still loading. Please try again in a moment.');
       return;
     }
-    const blob = new Blob([sampleCSV], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bulk_upload_template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    toast.success('Template downloaded successfully!');
+    try {
+      // Build an Excel workbook with three sheets: INSTRUCTIONS, VALID_CATEGORIES, TEMPLATE
+      const lines = sampleCSV.split('\n');
+      // Find header line (CSV_FIELDS join)
+      const headerLine = CSV_FIELDS.join(',');
+      const headerIndex = lines.findIndex(l => l.trim().startsWith(headerLine));
+      const templateRows = [];
+      if (headerIndex >= 0) {
+        for (let i = headerIndex + 1; i < lines.length; i++) {
+          const ln = lines[i];
+          if (!ln || ln.trim().startsWith('#')) continue;
+          // naive split by comma (template rows are generated without embedded commas)
+          templateRows.push(ln.split(',').map(v => v.trim()));
+        }
+      }
+
+      // Instructions sheet
+      const instructionLines = lines.filter(l => l.trim().startsWith('# INSTRUCTIONS:') || l.trim().startsWith('# -') || l.trim().startsWith('# '));
+      const instructionsAoA = instructionLines.map(l => [l.replace(/^#\s?/, '')]);
+
+      // Valid categories sheet (lines starting with '# ' and containing ':')
+      const validCatLines = lines.filter(l => l.trim().startsWith('#') && l.includes(':'));
+      const validCatsAoA = [['Category', 'Subcategories (comma separated)']];
+      validCatLines.forEach(l => {
+        const cleaned = l.replace(/^#\s?/, '');
+        const parts = cleaned.split(':');
+        if (parts.length >= 2) {
+          validCatsAoA.push([parts[0].trim(), parts.slice(1).join(':').trim()]);
+        }
+      });
+
+      // Template sheet: header + sample rows
+      const templateAoA = [CSV_FIELDS];
+      templateRows.forEach(r => templateAoA.push(r));
+
+      // Use SheetJS to create workbook and download
+      const wb = XLSX.utils.book_new();
+      const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsAoA.length ? instructionsAoA : [['Follow the guidelines in the product upload page before uploading this template.']]);
+      const wsValidCats = XLSX.utils.aoa_to_sheet(validCatsAoA.length ? validCatsAoA : [['No categories available yet','']]);
+      const wsTemplate = XLSX.utils.aoa_to_sheet(templateAoA);
+      XLSX.utils.book_append_sheet(wb, wsInstructions, 'INSTRUCTIONS');
+      XLSX.utils.book_append_sheet(wb, wsValidCats, 'VALID_CATEGORIES');
+      XLSX.utils.book_append_sheet(wb, wsTemplate, 'TEMPLATE');
+
+      // Trigger download in browser
+      XLSX.writeFile(wb, 'bulk_upload_template.xlsx');
+      toast.success('Excel template downloaded successfully!');
+    } catch (err) {
+      console.error('Failed to generate XLSX template', err);
+      toast.error('Failed to generate Excel template. Please try again.');
+    }
   };
 
-  const parseCSV = (csv) => {
-    const lines = csv.split(/\r?\n/).filter(Boolean);
-    const headers = lines[0].split(',');
+  // Generic table parser: headers is an array of header strings, rows is array of arrays (values)
+  const parseTable = (headers, rows) => {
     const products = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = [];
-      let current = '';
-      let inQuotes = false;
-      for (let char of lines[i]) {
-        if (char === '"') inQuotes = !inQuotes;
-        else if (char === ',' && !inQuotes) { values.push(current); current = ''; }
-        else current += char;
-      }
-      values.push(current);
+    for (let i = 0; i < rows.length; i++) {
+      const values = rows[i] || [];
       const product = {};
       headers.forEach((header, idx) => {
-        let value = values[idx] || '';
+        let value = values[idx] ?? '';
+        if (typeof value === 'string') value = value.trim();
+        // Handle types
         if (header === 'price' || header === 'stock') value = parseFloat(value) || 0;
-        else if ([ 'colors', 'sizes', 'tags', 'imageUrls' ].includes(header)) value = value ? value.split('|').map(v => v.trim()).filter(Boolean) : [];
+        else if ([ 'colors', 'sizes', 'tags', 'imageUrls' ].includes(header)) value = value ? String(value).split('|').map(v => v.trim()).filter(Boolean) : [];
         else if (header === 'specifications') {
-          try { value = value ? JSON.parse(value) : {}; } catch { value = {}; }
-        } else value = value.trim();
+          try { value = value ? (typeof value === 'object' ? value : JSON.parse(String(value))) : {}; } catch { value = {}; }
+        }
         product[header] = value;
       });
       products.push(product);
     }
     return products;
+  };
+
+  const parseCSV = (csv) => {
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      for (let idx = 0; idx < line.length; idx++) {
+        const char = line[idx];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (char === ',' && !inQuotes) { values.push(current); current = ''; }
+        else current += char;
+      }
+      values.push(current);
+      rows.push(values);
+    }
+    return parseTable(headers, rows);
   };
 
   // Helper to normalize for matching
@@ -176,14 +236,36 @@ const BulkUpload = () => {
     }
     const file = event.target.files[0];
     if (!file) return;
-    if (file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
-      toast.error('Please upload a CSV file');
+    const allowedExt = ['.csv', '.xlsx', '.xls'];
+    const fileName = (file.name || '').toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    if (!isCsv && !isExcel) {
+      toast.error('Please upload a CSV or Excel (.xlsx/.xls) file');
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const parsed = parseCSV(e.target.result);
+        let parsed = [];
+        if (isCsv) {
+          parsed = parseCSV(e.target.result);
+        } else if (isExcel) {
+          // e.target.result is an ArrayBuffer
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          // sheet_to_json with header:1 returns array of arrays
+          const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+          if (!sheetData || sheetData.length === 0) {
+            toast.error('Excel file appears to be empty');
+            return;
+          }
+          const headers = sheetData[0].map(h => String(h).trim());
+          const rows = sheetData.slice(1);
+          parsed = parseTable(headers, rows);
+        }
         // Autofix category/subcategory case for each product
         const fixed = parsed.map(product => {
           const fixedCategory = findCaseInsensitiveMatch(product.category, categories);
@@ -204,7 +286,8 @@ const BulkUpload = () => {
         toast.error('Error parsing CSV file. Please check the format.');
       }
     };
-    reader.readAsText(file);
+    if (isCsv) reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
   };
 
   const validateProduct = (product) => {
@@ -417,7 +500,7 @@ const BulkUpload = () => {
                 disabled={!hasReadGuidelines}
                 title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
               >
-                Download Template
+                Download Excel Template (.xlsx)
               </button>
             </div>
             {/* Upload CSV Card */}
@@ -436,7 +519,7 @@ const BulkUpload = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 onChange={handleFileUpload}
                 className="mt-4 w-full px-4 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -598,12 +681,19 @@ const BulkUpload = () => {
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">Instructions</h3>
             <div className="text-sm text-blue-900 space-y-2">
-              <p>• Download the CSV template and fill in your product data. Use <b>|</b> to separate multiple values (e.g. Red|blue for colors).</p>
-              <p>• Ensure all required fields are filled (name, description, price, stock, category, colors, imageUrls, country, state).</p>
-              <p>• Maximum 100 products per upload.</p>
-              <p>• All products will be reviewed by admin before approval.</p>
-              <p>• Image URLs should be publicly accessible, or you can upload images after CSV upload.</p>
-              <p>• Specifications should be in valid JSON format.</p>
+              <p>• Download the Excel template (.xlsx) and fill in your product data. The file contains three sheets:</p>
+              <ul className="list-disc ml-6">
+                <li><b>INSTRUCTIONS</b> — human-friendly guidance and important notes.</li>
+                <li><b>VALID_CATEGORIES</b> — current valid categories and subcategories you must use.</li>
+                <li><b>TEMPLATE</b> — header row and example rows. Use this sheet to add your products.</li>
+              </ul>
+              <p>• In the <b>TEMPLATE</b> sheet: do not change the header row or the column order.</p>
+              <p>• For fields that accept multiple values (colors, sizes, tags, imageUrls), separate values with <b>|</b> (pipe). Example: <code>Red|Blue|Green</code>.</p>
+              <p>• The <b>specifications</b> column must contain valid JSON (e.g. <code>{'{"brand":"Acme","material":"cotton"}'}</code>).</p>
+              <p>• Ensure required fields are provided: <b>name, description, price, stock, category, colors, imageUrls, country, state</b>.</p>
+              <p>• Maximum 100 products per upload. For large inventories, split files into smaller batches.</p>
+              <p>• All uploads will be reviewed by admin before going live.</p>
+              <p>• If you prefer CSV, the uploader still accepts <code>.csv</code>, but Excel (.xlsx) is recommended for ease of editing.</p>
             </div>
           </div>
         </div>

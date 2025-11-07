@@ -959,11 +959,14 @@ const Product = () => {
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
+            /* Use contain so the full image is visible without cropping */
+            object-fit: contain;
+            object-position: center;
+            transition: transform 0.2s ease;
           }
+          /* Remove aggressive hover zoom which crops images; keep subtle fade only */
           .main-media-container:hover img, .main-media-container:hover video {
-            transform: scale(1.05);
+            transform: none;
           }
           .thumbnail {
             transition: all 0.2s ease;

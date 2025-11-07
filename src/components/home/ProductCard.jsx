@@ -271,15 +271,15 @@ const ProductCard = ({
     <Link
       to={`/product/${mergedProduct.id}`}
       onClick={onClick}
-      className={`bg-white rounded-lg transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
+      className={`bg-[#F0F0F0] rounded-lg transition duration-300 flex flex-col min-w-0 overflow-hidden ${cardClassName}`}
       tabIndex={0}
       aria-label={mergedProduct.name}
     >
-      <div className={`relative h-[200px] overflow-hidden rounded-t-lg min-w-0 ${imageClassName}`}>
-        <img
-          src={imageFailed ? placeholder : imageUrl}
-          alt={mergedProduct.name || "Product Image"}
-          className="w-full h-full object-cover max-w-full max-h-full"
+    <div className={`relative h-[200px] overflow-hidden rounded-t-lg min-w-0 bg-[#F0F0F0] flex items-center justify-center ${imageClassName}`}>
+          <img
+            src={imageFailed ? placeholder : imageUrl}
+            alt={mergedProduct.name || "Product Image"}
+            className="w-full h-full object-contain object-center max-w-full max-h-full"
           onError={(e) => {
             if (!imageFailed) {
               // console.error(

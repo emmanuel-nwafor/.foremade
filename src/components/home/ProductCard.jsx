@@ -279,7 +279,7 @@ const ProductCard = ({
           <img
             src={imageFailed ? placeholder : imageUrl}
             alt={mergedProduct.name || "Product Image"}
-            className="w-full h-full object-contain object-center max-w-full max-h-full"
+            className="w-full h-full object-cover object-center max-w-full max-h-full"
           onError={(e) => {
             if (!imageFailed) {
               // console.error(

@@ -53,9 +53,7 @@ export default function AdminEditBannerAndOthers() {
     desktop: '', 
     tablet: '', 
     mobile: '', 
-    buttonText: '', 
-    buttonUrl: '',
-    buttonStyle: 'primary'
+    buttonUrl: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState({ desktop: false, tablet: false, mobile: false });
@@ -189,18 +187,17 @@ export default function AdminEditBannerAndOthers() {
     try {
       setLoading(true);
       const slideId = isEditing ? newSlide.id : `slide-${Date.now()}`;
-      const slideData = {
-        desktop: newSlide.desktop,
-        tablet: newSlide.tablet,
-        mobile: newSlide.mobile,
-        buttonText: newSlide.buttonText || '',
-        buttonUrl: newSlide.buttonUrl || '',
-        buttonStyle: newSlide.buttonStyle || 'primary',
-        mediaType: newSlide.desktop.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image',
-        createdAt: new Date().toISOString(),
-      };
+        const slideData = {
+          desktop: newSlide.desktop,
+          tablet: newSlide.tablet,
+          mobile: newSlide.mobile,
+          buttonUrl: newSlide.buttonUrl || '',
+          mediaType: newSlide.desktop.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image',
+          createdAt: new Date().toISOString(),
+        };
       
-      await setDoc(doc(db, 'settings/carousel/slides', slideId), slideData);
+  // Save slide under nested collection: settings -> carousel -> slides -> slideId
+  await setDoc(doc(db, 'settings', 'carousel', 'slides', slideId), slideData);
       addAlert(isEditing ? 'Slide updated successfully! 🎉' : 'Slide added successfully! 🎉', 'success');
       setSlides((prev) =>
         isEditing
@@ -266,9 +263,7 @@ export default function AdminEditBannerAndOthers() {
       desktop: '', 
       tablet: '', 
       mobile: '', 
-      buttonText: '', 
       buttonUrl: '',
-      buttonStyle: 'primary'
     });
     setIsEditing(false);
   };
@@ -326,51 +321,18 @@ export default function AdminEditBannerAndOthers() {
             {expandedForm && (
               <form onSubmit={handleSaveSlide} className="mt-4 ml-4 space-y-4 animate-slide-down">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Banner link — keep a single URL field so slides can navigate when clicked. */}
                   <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Call-to-Action Button (Optional)</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button Text
-                        </label>
-                        <input
-                          type="text"
-                          name="buttonText"
-                          value={newSlide.buttonText}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Shop Now"
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button URL
-                        </label>
-                        <input
-                          type="text"
-                          name="buttonUrl"
-                          value={newSlide.buttonUrl}
-                          onChange={handleInputChange}
-                          placeholder="e.g., /products/category"
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button Style
-                        </label>
-                        <select
-                          name="buttonStyle"
-                          value={newSlide.buttonStyle}
-                          onChange={handleInputChange}
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        >
-                          <option value="primary">Primary</option>
-                          <option value="secondary">Secondary</option>
-                          <option value="outline">Outline</option>
-                        </select>
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Banner Link (optional)</label>
+                    <input
+                      type="text"
+                      name="buttonUrl"
+                      value={newSlide.buttonUrl}
+                      onChange={handleInputChange}
+                      placeholder="e.g., /products/category or https://example.com"
+                      className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">If you enter an external URL, users will be prompted before leaving the site.</p>
                   </div>
                   {['desktop', 'tablet', 'mobile'].map((type) => (
                     <div key={type} className="relative group">

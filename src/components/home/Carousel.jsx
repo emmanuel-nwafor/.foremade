@@ -128,42 +128,35 @@ const Carousel = () => {
     return () => clearInterval(timer);
   }, [current, slides.length]);
 
-    const getResponsiveMedia = (slide) => {
+  // Force re-render when window width changes to switch media
+  useEffect(() => {
+    // This effect runs whenever width changes, triggering a re-render
+    // which causes getResponsiveMedia to be called with the new width
+  }, [width]);
+
+  const getResponsiveMedia = (slide) => {
     if (!slide) {
       return null;
     }
 
-    // For videos, prioritize desktop version as fallback
-    if (slide.mediaType === 'video') {
-      const media = slide.desktopMedia || slide.tabletMedia || slide.mobileMedia;
-      if (!media) {
-        // no media for video slide
+    // Use actual window width breakpoints for both images and videos
+    // Desktop >= 1024, Tablet >= 768, Mobile < 768
+    let media = null;
+    try {
+      const w = typeof width === 'number' ? width : window.innerWidth;
+      if (w >= 1024) {
+        media = slide.desktopMedia;
+      } else if (w >= 768) {
+        media = slide.tabletMedia || slide.desktopMedia;
+      } else {
+        media = slide.mobileMedia || slide.tabletMedia || slide.desktopMedia;
       }
-      return media;
+    } catch (err) {
+      // Fallback to existing chain if width not available
+      media = slide.desktopMedia || slide.tabletMedia || slide.mobileMedia;
     }
 
-      // For images, decide by actual window width breakpoints to avoid relying on possibly-buggy booleans
-      // Use common Tailwind-like breakpoints: desktop >= 1024, tablet >= 768, mobile < 768
-      let media = null;
-      try {
-        const w = typeof width === 'number' ? width : window.innerWidth;
-        if (w >= 1024) {
-          media = slide.desktopMedia;
-        } else if (w >= 768) {
-          media = slide.tabletMedia || slide.desktopMedia;
-        } else {
-          media = slide.mobileMedia || slide.tabletMedia || slide.desktopMedia;
-        }
-      } catch (err) {
-        // Fallback to existing chain if width not available
-        media = slide.desktopMedia || slide.tabletMedia || slide.mobileMedia;
-      }
-
-      if (!media) {
-        // no media found
-      }
-
-      return media;
+    return media;
   };
 
   const isVideo = (slide) => {
@@ -177,17 +170,54 @@ const Carousel = () => {
   };
 
   if (slides.length === 0) {
+    const aspect = getCarouselAspectRatio();
+    const vw = typeof width === 'number' && width > 0 ? width : (typeof window !== 'undefined' ? window.innerWidth : 1024);
+    const h = Math.max(200, Math.round(vw / aspect));
     return (
-      <div className="relative h-[310px] sm:h-[310px] md:h-[310px] lg:h-[400px] w-full overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="w-full h-full bg-gray-200 animate-pulse"></div>
-        </div>
+      <div
+        className="relative overflow-hidden"
+        style={{
+          width: '100vw',
+          maxWidth: '100vw',
+          marginLeft: 'calc(50% - 50vw)',
+          height: `${h}px`,
+          overflow: 'hidden',
+        }}
+      >
+        <div className="w-full h-full bg-gray-200 animate-pulse" />
       </div>
     );
   }
 
+  // Device-specific carousel dimensions (used to compute aspect ratio)
+  // Mobile (iOS/Android): 1125px × 600px
+  // Tablet (iPad): 1920px × 840px
+  // Desktop: 2048px × 512px
+  function getCarouselAspectRatio() {
+    if (isMobile) return 1125 / 600; // ~1.875
+    if (isTablet) return 1920 / 840; // ~2.285
+    return 2048 / 512; // 4
+  }
+
+  // Compute width (use viewport width to ensure full-bleed behavior) and derive height
+  const viewportWidth = typeof width === 'number' && width > 0 ? width : (typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const aspect = getCarouselAspectRatio();
+  const computedHeight = Math.max(200, Math.round(viewportWidth / aspect));
+
+  // Render carousel as full-bleed (span the full viewport width) but keep it centered
+  // marginLeft: calc(50% - 50vw) makes the element span the viewport width while allowing
+  // it to sit inside a centered container without breaking layout.
   return (
-    <div className="relative h-[300px] sm:h-[400px] md:h-[300px] lg:h-[500px] w-full overflow-hidden">
+    <div
+      className="relative overflow-hidden"
+      style={{
+        width: '100vw',
+        maxWidth: '100vw',
+        marginLeft: 'calc(50% - 50vw)',
+        height: `${computedHeight}px`,
+        overflow: 'hidden',
+      }}
+    >
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -203,14 +233,13 @@ const Carousel = () => {
           role={slide.buttonUrl ? 'link' : undefined}
           tabIndex={slide.buttonUrl ? 0 : -1}
         >
-          <div className="relative w-full h-full">
-            <div className="w-full h-full">
+          <div className="w-full h-full overflow-hidden">
             {isVideo(slide) ? (
               <video
                 key={slide.id}
                 src={getResponsiveMedia(slide)}
-                className="w-full h-full object-cover object-center sm:object-[50%_50%]"
-                style={{ objectPosition: 'center 35%' }}
+                className="w-full h-full object-cover"
+                style={{ display: 'block', maxWidth: '100vw' }}
                 autoPlay
                 loop
                 muted
@@ -234,8 +263,8 @@ const Carousel = () => {
                 key={slide.id}
                 src={getResponsiveMedia(slide)}
                 alt={slide.alt || `Slide ${slide.id}`}
-                className="w-full h-full object-cover object-center sm:object-[50%_50%]"
-                style={{ objectPosition: 'center 35%' }}
+                className="w-full h-full object-cover"
+                style={{ display: 'block', maxWidth: '100vw' }}
                 crossOrigin="anonymous"
                 loading="eager"
                 onError={(e) => {
@@ -258,7 +287,6 @@ const Carousel = () => {
               </div>
             )}
             {/* Banner click navigates to slide.buttonUrl; CTA button removed per design */}
-            </div>
           </div>
         </div>
       ))}

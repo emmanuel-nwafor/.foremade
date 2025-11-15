@@ -92,8 +92,8 @@ export default function FreeShipping() {
 
       // Choose start multiplier based on viewport width: desktop 200%, tablet 130%, mobile 100%
       const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-      let START_MULTIPLIER = 1.3; // default (tablet)
-      if (vw >= 1024) START_MULTIPLIER = 1.65; // desktop
+      let START_MULTIPLIER = 1.2; // default (tablet)
+      if (vw >= 1024) START_MULTIPLIER = 2.2; // desktop
       else if (vw < 768) START_MULTIPLIER = 0.5; // mobile
 
       // Update injected keyframes so translateX start matches START_MULTIPLIER and entrance timing is proportional
@@ -122,7 +122,9 @@ export default function FreeShipping() {
       const distance = startOffset + endOffset;
 
       // Choose a pixels-per-second speed that feels reasonable across devices
-      const PX_PER_SECOND = 50; // px/s; tweakable
+        let PX_PER_SECOND = 90; // mobile default px/s
+        if (vw >= 1024) PX_PER_SECOND = 320; // desktop - faster
+        else if (vw >= 768) PX_PER_SECOND = 160; // tablet - moderately faster
       const durationSec = Math.max(6, distance / PX_PER_SECOND); // enforce a minimum duration
       setComputedDuration(durationSec);
     };

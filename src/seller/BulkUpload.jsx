@@ -7,6 +7,7 @@ import { collection, addDoc, getDocs } from 'firebase/firestore';
 import axios from 'axios';
 import SellerSidebar from './SellerSidebar';
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 const CSV_FIELDS = [
   'name', 'description', 'price', 'stock', 'category', 'subcategory', 'colors', 'sizes', 'condition', 'tags', 'manualSize', 'imageUrls', 'videoUrl', 'country', 'state', 'city', 'address', 'specifications'
@@ -16,8 +17,10 @@ const BulkUpload = () => {
   const [products, setProducts] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [subcategories, setSubcategories] = useState({});
   const [sampleCSV, setSampleCSV] = useState('');
+  const [productErrors, setProductErrors] = useState([]);
   const fileInputRef = useRef(null);
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { userProfile } = useAuth();
@@ -36,6 +39,7 @@ const BulkUpload = () => {
           subcatData[doc.id] = doc.data().subcategories || [];
         });
         setSubcategories(subcatData);
+        setCategoriesLoading(false);
         // Generate CSV header with valid categories/subcategories
         let catSection = ['# VALID CATEGORIES & SUBCATEGORIES:'];
         cats.forEach(cat => {
@@ -89,35 +93,52 @@ const BulkUpload = () => {
         setSampleCSV(csvLines.join('\n'));
       } catch (err) {
         setSampleCSV('');
+        setCategoriesLoading(false);
       }
     };
     fetchCategories();
   }, []);
 
-  if (!userProfile || !userProfile.isProSeller) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
-          <h2 className="text-2xl font-bold mb-4 text-orange-600">Pro Seller Feature</h2>
-          <p className="mb-4 text-gray-700">Bulk product upload is only available to Pro Sellers. Upgrade now to manage your inventory more efficiently!</p>
-          <a href="/pro-seller-guide-full" className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-semibold">Upgrade to Pro Seller</a>
-          <div className="mt-6">
-            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Map common header variants to canonical CSV_FIELDS keys
+  const HEADER_ALIASES = {
+    'name': 'name',
+    'product name': 'name',
+    'description': 'description',
+    'price': 'price',
+    'stock': 'stock',
+    'category': 'category',
+    'subcategory': 'subcategory',
+    'colors': 'colors',
+    'sizes': 'sizes',
+    'condition': 'condition',
+    'tags': 'tags',
+    'manualsize': 'manualSize',
+    'manual size': 'manualSize',
+    'imageurls': 'imageUrls',
+    'image urls': 'imageUrls',
+    'image url': 'imageUrls',
+    'videourl': 'videoUrl',
+    'video url': 'videoUrl',
+    'country': 'country',
+    'state': 'state',
+    'city': 'city',
+    'address': 'address',
+    'specifications': 'specifications',
+  };
+
+  const mapHeader = (h) => {
+    if (!h) return h;
+    const cleaned = String(h).trim();
+    const lower = cleaned.toLowerCase();
+    return HEADER_ALIASES[lower] || cleaned;
+  };
 
   const downloadTemplate = () => {
     if (!sampleCSV) {
-      toast.error('Categories are still loading. Please try again in a moment.');
-      return;
+      toast.warning('Categories not loaded — downloading a minimal template. Please re-download when categories are available.');
     }
     try {
-      // Build an Excel workbook with three sheets: INSTRUCTIONS, VALID_CATEGORIES, TEMPLATE
-      const lines = sampleCSV.split('\n');
-      // Find header line (CSV_FIELDS join)
+      const lines = sampleCSV ? sampleCSV.split('\n') : [];
       const headerLine = CSV_FIELDS.join(',');
       const headerIndex = lines.findIndex(l => l.trim().startsWith(headerLine));
       const templateRows = [];
@@ -125,16 +146,13 @@ const BulkUpload = () => {
         for (let i = headerIndex + 1; i < lines.length; i++) {
           const ln = lines[i];
           if (!ln || ln.trim().startsWith('#')) continue;
-          // naive split by comma (template rows are generated without embedded commas)
           templateRows.push(ln.split(',').map(v => v.trim()));
         }
       }
 
-      // Instructions sheet
       const instructionLines = lines.filter(l => l.trim().startsWith('# INSTRUCTIONS:') || l.trim().startsWith('# -') || l.trim().startsWith('# '));
       const instructionsAoA = instructionLines.map(l => [l.replace(/^#\s?/, '')]);
 
-      // Valid categories sheet (lines starting with '# ' and containing ':')
       const validCatLines = lines.filter(l => l.trim().startsWith('#') && l.includes(':'));
       const validCatsAoA = [['Category', 'Subcategories (comma separated)']];
       validCatLines.forEach(l => {
@@ -145,20 +163,17 @@ const BulkUpload = () => {
         }
       });
 
-      // Template sheet: header + sample rows
       const templateAoA = [CSV_FIELDS];
       templateRows.forEach(r => templateAoA.push(r));
 
-      // Use SheetJS to create workbook and download
       const wb = XLSX.utils.book_new();
       const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsAoA.length ? instructionsAoA : [['Follow the guidelines in the product upload page before uploading this template.']]);
-      const wsValidCats = XLSX.utils.aoa_to_sheet(validCatsAoA.length ? validCatsAoA : [['No categories available yet','']]);
+      const wsValidCats = XLSX.utils.aoa_to_sheet(validCatsAoA.length ? validCatsAoA : [['Categories not available. Please refresh the page to load valid categories.','']]);
       const wsTemplate = XLSX.utils.aoa_to_sheet(templateAoA);
       XLSX.utils.book_append_sheet(wb, wsInstructions, 'INSTRUCTIONS');
       XLSX.utils.book_append_sheet(wb, wsValidCats, 'VALID_CATEGORIES');
       XLSX.utils.book_append_sheet(wb, wsTemplate, 'TEMPLATE');
 
-      // Trigger download in browser
       XLSX.writeFile(wb, 'bulk_upload_template.xlsx');
       toast.success('Excel template downloaded successfully!');
     } catch (err) {
@@ -167,7 +182,6 @@ const BulkUpload = () => {
     }
   };
 
-  // Generic table parser: headers is an array of header strings, rows is array of arrays (values)
   const parseTable = (headers, rows) => {
     const products = [];
     for (let i = 0; i < rows.length; i++) {
@@ -176,7 +190,6 @@ const BulkUpload = () => {
       headers.forEach((header, idx) => {
         let value = values[idx] ?? '';
         if (typeof value === 'string') value = value.trim();
-        // Handle types
         if (header === 'price' || header === 'stock') value = parseFloat(value) || 0;
         else if ([ 'colors', 'sizes', 'tags', 'imageUrls' ].includes(header)) value = value ? String(value).split('|').map(v => v.trim()).filter(Boolean) : [];
         else if (header === 'specifications') {
@@ -189,41 +202,15 @@ const BulkUpload = () => {
     return products;
   };
 
-  const parseCSV = (csv) => {
-    const lines = csv.split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      const values = [];
-      let current = '';
-      let inQuotes = false;
-      for (let idx = 0; idx < line.length; idx++) {
-        const char = line[idx];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-          continue;
-        }
-        if (char === ',' && !inQuotes) { values.push(current); current = ''; }
-        else current += char;
-      }
-      values.push(current);
-      rows.push(values);
-    }
-    return parseTable(headers, rows);
-  };
-
-  // Helper to normalize for matching
   function normalize(str) {
     return (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
   }
-  // Helper to autofix case/spacing for categories and subcategories
+
   function findCaseInsensitiveMatch(value, validList) {
     const norm = normalize(value);
     return validList.find(v => normalize(v) === norm) || value;
   }
-  // Helper to validate case-insensitive match
+
   function isValidMatch(value, validList) {
     const norm = normalize(value);
     return validList.some(v => normalize(v) === norm);
@@ -236,7 +223,6 @@ const BulkUpload = () => {
     }
     const file = event.target.files[0];
     if (!file) return;
-    const allowedExt = ['.csv', '.xlsx', '.xls'];
     const fileName = (file.name || '').toLowerCase();
     const isCsv = fileName.endsWith('.csv');
     const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
@@ -244,50 +230,85 @@ const BulkUpload = () => {
       toast.error('Please upload a CSV or Excel (.xlsx/.xls) file');
       return;
     }
+
+    if (isCsv) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h) => mapHeader(h),
+        complete: (results) => {
+          try {
+            const headers = results.meta.fields || [];
+            console.log('Parsed CSV headers:', headers);
+            const rows = results.data.map((obj) => headers.map((h) => obj[h] ?? ''));
+            const parsed = parseTable(headers, rows);
+            if (!parsed || parsed.length === 0) {
+              toast.error('No products were parsed from the CSV. Please confirm your headers match the template (check console for parsed headers).');
+              return;
+            }
+            if (parsed.length > 100) {
+              toast.error(`File contains ${parsed.length} products. Maximum allowed is 100 per upload. Please split your file.`);
+              return;
+            }
+            const fixed = parsed.map(product => {
+              const fixedCategory = findCaseInsensitiveMatch(product.category, categories);
+              const validSubcats = subcategories[fixedCategory] || [];
+              const fixedSubcategory = findCaseInsensitiveMatch(product.subcategory, validSubcats);
+              return { ...product, category: fixedCategory, subcategory: fixedSubcategory };
+            });
+            setProducts(fixed);
+            toast.success(`${fixed.length} products loaded successfully!`);
+          } catch (err) {
+            console.error('PapaParse complete handler error:', err);
+            toast.error('Error parsing CSV file. Please check the file format.');
+          }
+        },
+        error: (err) => {
+          console.error('PapaParse error:', err);
+          toast.error(`Failed to parse CSV: ${err.message || err}`);
+        }
+      });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        let parsed = [];
-        if (isCsv) {
-          parsed = parseCSV(e.target.result);
-        } else if (isExcel) {
-          // e.target.result is an ArrayBuffer
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          // sheet_to_json with header:1 returns array of arrays
-          const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-          if (!sheetData || sheetData.length === 0) {
-            toast.error('Excel file appears to be empty');
-            return;
-          }
-          const headers = sheetData[0].map(h => String(h).trim());
-          const rows = sheetData.slice(1);
-          parsed = parseTable(headers, rows);
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        if (!sheetData || sheetData.length === 0) {
+          toast.error('Excel file appears to be empty');
+          return;
         }
-        // Autofix category/subcategory case for each product
+        const headers = sheetData[0].map(h => mapHeader(h));
+        console.log('Parsed Excel headers:', headers);
+        const rows = sheetData.slice(1);
+        const parsed = parseTable(headers, rows);
+        if (!parsed || parsed.length === 0) {
+          toast.error('No products were parsed from the Excel file. Please confirm your headers match the template (check console for parsed headers).');
+          return;
+        }
+        if (parsed.length > 100) {
+          toast.error(`File contains ${parsed.length} products. Maximum allowed is 100 per upload. Please split your file.`);
+          return;
+        }
         const fixed = parsed.map(product => {
           const fixedCategory = findCaseInsensitiveMatch(product.category, categories);
           const validSubcats = subcategories[fixedCategory] || [];
-          if (!subcategories[fixedCategory]) {
-            console.warn(`Category "${fixedCategory}" not found in subcategories object`, subcategories);
-          }
           const fixedSubcategory = findCaseInsensitiveMatch(product.subcategory, validSubcats);
-          // Debug logs
-          console.log('Categories:', categories);
-          console.log('Subcategories:', subcategories);
-          console.log('Product category:', product.category, '->', fixedCategory, 'subcategory:', product.subcategory, '->', fixedSubcategory);
           return { ...product, category: fixedCategory, subcategory: fixedSubcategory };
         });
         setProducts(fixed);
         toast.success(`${fixed.length} products loaded successfully!`);
       } catch (error) {
-        toast.error('Error parsing CSV file. Please check the format.');
+        console.error('Excel parse error:', error);
+        toast.error('Error parsing Excel file. Please check the file format.');
       }
     };
-    if (isCsv) reader.readAsText(file);
-    else reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const validateProduct = (product) => {
@@ -307,13 +328,10 @@ const BulkUpload = () => {
     return errors;
   };
 
-  const [productErrors, setProductErrors] = useState([]);
-
   const handleFieldChange = (idx, field, value) => {
     setProducts((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   };
 
-  // Use the same uploadFile logic as single product upload
   const uploadFile = async (file, isVideo = false, setProgress) => {
     const uploadData = new FormData();
     uploadData.append('file', file);
@@ -352,12 +370,11 @@ const BulkUpload = () => {
     }
   };
 
-  // Update handleImageChange to support files and URLs
   const handleImageChange = (idx, files) => {
     const fileArr = Array.from(files);
     setProducts((prev) => prev.map((p, i) => i === idx ? { ...p, imageFiles: fileArr, imageUrls: [] } : p));
   };
-  // Add handleVideoChange
+
   const handleVideoChange = (idx, files) => {
     const file = files[0];
     setProducts((prev) => prev.map((p, i) => i === idx ? { ...p, videoFile: file, videoUrl: '' } : p));
@@ -372,21 +389,12 @@ const BulkUpload = () => {
       toast.error('Categories are still loading. Please wait a moment and try again.');
       return;
     }
-    // Autofix category/subcategory for all products before validation/upload
     const fixedProducts = products.map(product => {
       const fixedCategory = findCaseInsensitiveMatch(product.category, categories);
       const validSubcats = subcategories[fixedCategory] || [];
-      if (!subcategories[fixedCategory]) {
-        console.warn(`Category "${fixedCategory}" not found in subcategories object`, subcategories);
-      }
       const fixedSubcategory = findCaseInsensitiveMatch(product.subcategory, validSubcats);
-      // Debug logs
-      console.log('Categories:', categories);
-      console.log('Subcategories:', subcategories);
-      console.log('Product category:', product.category, '->', fixedCategory, 'subcategory:', product.subcategory, '->', fixedSubcategory);
       return { ...product, category: fixedCategory, subcategory: fixedSubcategory };
     });
-    // Validate all products
     const errorsArr = fixedProducts.map(validateProduct);
     setProductErrors(errorsArr);
     if (errorsArr.some(e => Object.keys(e).length > 0)) {
@@ -401,7 +409,6 @@ const BulkUpload = () => {
     const sellerId = user?.uid || userProfile?.uid || '';
     const sellerName = user?.displayName || userProfile?.displayName || userProfile?.name || '';
     try {
-      // Upload images/videos for each product
       const productsWithUrls = await Promise.all(fixedProducts.map(async (product) => {
         let imageUrls = [];
         if (product.imageFiles && product.imageFiles.length > 0) {
@@ -427,7 +434,6 @@ const BulkUpload = () => {
         delete cleanProduct.videoFile;
         return cleanProduct;
       }));
-      // Add each product to Firestore
       for (const product of productsWithUrls) {
         try {
           await addDoc(collection(db, 'products'), product);
@@ -452,6 +458,21 @@ const BulkUpload = () => {
       setUploading(false);
     }
   };
+
+  if (!userProfile || !userProfile.isProSeller) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">Pro Seller Feature</h2>
+          <p className="mb-4 text-gray-700">Bulk product upload is only available to Pro Sellers. Upgrade now to manage your inventory more efficiently!</p>
+          <a href="/pro-seller-guide-full" className="inline-block px-6 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-semibold">Upgrade to Pro Seller</a>
+          <div className="mt-6">
+            <a href="/sell" className="inline-block px-5 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold">Return to Dashboard</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -481,7 +502,6 @@ const BulkUpload = () => {
             <p className="text-gray-600 mt-2">Upload multiple products at once for faster inventory management</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Download Template Card */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -491,19 +511,28 @@ const BulkUpload = () => {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-blue-900">Download Template</h3>
-                  <p className="text-sm text-[#112d4e]">Get the CSV template to format your data correctly</p>
+                  <p className="text-sm text-[#112d4e]">Get the Excel template to format your data correctly</p>
                 </div>
               </div>
               <button
                 onClick={downloadTemplate}
-                className="mt-4 w-full px-4 py-2 bg-[#112d4e] text-white rounded-md hover:bg-blue-700 transition-colors"
-                disabled={!hasReadGuidelines}
-                title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : ''}
+                className="mt-4 w-full px-4 py-2 bg-[#112d4e] text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                disabled={!hasReadGuidelines || categoriesLoading}
+                title={!hasReadGuidelines ? 'Please read the guidelines before proceeding.' : (categoriesLoading ? 'Loading categories, please wait...' : '')}
               >
-                Download Excel Template (.xlsx)
+                {categoriesLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    <span>Preparing template…</span>
+                  </>
+                ) : (
+                  'Download Excel Template (.xlsx)'
+                )}
               </button>
             </div>
-            {/* Upload CSV Card */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -524,7 +553,6 @@ const BulkUpload = () => {
                 className="mt-4 w-full px-4 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            {/* Submit for Review Card */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -546,7 +574,6 @@ const BulkUpload = () => {
               </button>
             </div>
           </div>
-          {/* Products Preview & Edit */}
           {products.length > 0 && (
             <div className="space-y-6">
               {products.map((product, idx) => (
@@ -646,7 +673,6 @@ const BulkUpload = () => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700">Images *</label>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {/* Show previews for uploaded files or URLs */}
                         {(product.imageFiles && product.imageFiles.length > 0
                           ? product.imageFiles.map((file, i) => (
                               file instanceof File
@@ -677,7 +703,6 @@ const BulkUpload = () => {
               ))}
             </div>
           )}
-          {/* Instructions */}
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">Instructions</h3>
             <div className="text-sm text-blue-900 space-y-2">

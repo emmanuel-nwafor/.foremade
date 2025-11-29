@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "xlsx": "^0.18.5",
+    "papaparse": "^5.4.1",
     "@emoji-mart/data": "^1.2.1",
     "@stripe/react-stripe-js": "^3.6.0",
     "@stripe/stripe-js": "^7.2.0",

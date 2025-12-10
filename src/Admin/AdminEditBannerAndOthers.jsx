@@ -53,9 +53,7 @@ export default function AdminEditBannerAndOthers() {
     desktop: '', 
     tablet: '', 
     mobile: '', 
-    buttonText: '', 
-    buttonUrl: '',
-    buttonStyle: 'primary'
+    buttonUrl: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState({ desktop: false, tablet: false, mobile: false });
@@ -189,18 +187,17 @@ export default function AdminEditBannerAndOthers() {
     try {
       setLoading(true);
       const slideId = isEditing ? newSlide.id : `slide-${Date.now()}`;
-      const slideData = {
-        desktop: newSlide.desktop,
-        tablet: newSlide.tablet,
-        mobile: newSlide.mobile,
-        buttonText: newSlide.buttonText || '',
-        buttonUrl: newSlide.buttonUrl || '',
-        buttonStyle: newSlide.buttonStyle || 'primary',
-        mediaType: newSlide.desktop.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image',
-        createdAt: new Date().toISOString(),
-      };
+        const slideData = {
+          desktop: newSlide.desktop,
+          tablet: newSlide.tablet,
+          mobile: newSlide.mobile,
+          buttonUrl: newSlide.buttonUrl || '',
+          mediaType: newSlide.desktop.toLowerCase().match(/\.(mp4|webm)$/i) ? 'video' : 'image',
+          createdAt: new Date().toISOString(),
+        };
       
-      await setDoc(doc(db, 'settings/carousel/slides', slideId), slideData);
+  // Save slide under nested collection: settings -> carousel -> slides -> slideId
+  await setDoc(doc(db, 'settings', 'carousel', 'slides', slideId), slideData);
       addAlert(isEditing ? 'Slide updated successfully! 🎉' : 'Slide added successfully! 🎉', 'success');
       setSlides((prev) =>
         isEditing
@@ -266,9 +263,7 @@ export default function AdminEditBannerAndOthers() {
       desktop: '', 
       tablet: '', 
       mobile: '', 
-      buttonText: '', 
       buttonUrl: '',
-      buttonStyle: 'primary'
     });
     setIsEditing(false);
   };
@@ -326,93 +321,73 @@ export default function AdminEditBannerAndOthers() {
             {expandedForm && (
               <form onSubmit={handleSaveSlide} className="mt-4 ml-4 space-y-4 animate-slide-down">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Banner link — keep a single URL field so slides can navigate when clicked. */}
                   <div className="col-span-1 md:col-span-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Call-to-Action Button (Optional)</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button Text
-                        </label>
-                        <input
-                          type="text"
-                          name="buttonText"
-                          value={newSlide.buttonText}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Shop Now"
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button URL
-                        </label>
-                        <input
-                          type="text"
-                          name="buttonUrl"
-                          value={newSlide.buttonUrl}
-                          onChange={handleInputChange}
-                          placeholder="e.g., /products/category"
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Button Style
-                        </label>
-                        <select
-                          name="buttonStyle"
-                          value={newSlide.buttonStyle}
-                          onChange={handleInputChange}
-                          className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        >
-                          <option value="primary">Primary</option>
-                          <option value="secondary">Secondary</option>
-                          <option value="outline">Outline</option>
-                        </select>
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Banner Link (optional)</label>
+                    <input
+                      type="text"
+                      name="buttonUrl"
+                      value={newSlide.buttonUrl}
+                      onChange={handleInputChange}
+                      placeholder="e.g., /products/category or https://example.com"
+                      className="mt-1 w-full py-2 px-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">If you enter an external URL, users will be prompted before leaving the site.</p>
                   </div>
-                  {['desktop', 'tablet', 'mobile'].map((type) => (
-                    <div key={type} className="relative group">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                        {`${type.charAt(0).toUpperCase() + type.slice(1)} Media`}
-                        <i
-                          className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help"
-                          title={`Upload an image, GIF, or short video optimized for ${type} devices (GIF ≤10MB, Videos ≤50MB)`}
-                        ></i>
-                      </label>
-                      <div className="relative">
+                  {['desktop', 'tablet', 'mobile'].map((type) => {
+                    // Device-specific dimensions for optimal display
+                    const dimensions = {
+                      desktop: { width: 2048, height: 512, description: 'Desktop screens' },
+                      tablet: { width: 1920, height: 840, description: 'iPad and tablets' },
+                      mobile: { width: 1125, height: 600, description: 'iOS and Android phones' }
+                    };
+                    const dim = dimensions[type];
+                    
+                    return (
+                      <div key={type} className="relative group">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          {`${type.charAt(0).toUpperCase() + type.slice(1)} Media (${dim.width}×${dim.height}px)`}
+                          <i
+                            className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help"
+                            title={`Recommended: ${dim.width}×${dim.height}px for ${dim.description}. Upload image, GIF, or video (GIF ≤10MB, Videos ≤50MB)`}
+                          ></i>
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Recommended: <strong>{dim.width}×{dim.height}px</strong> for {dim.description}
+                        </p>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name={type}
+                            value={newSlide[type]}
+                            onChange={handleInputChange}
+                            placeholder="Enter media URL or upload below"
+                            className="mt-1 w-full py-2 pl-3 pr-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                            disabled={uploading[type]}
+                          />
+                        </div>
                         <input
-                          type="text"
-                          name={type}
-                          value={newSlide[type]}
-                          onChange={handleInputChange}
-                          placeholder="Enter media URL or upload below"
-                          className="mt-1 w-full py-2 pl-3 pr-3 border rounded-lg shadow-sm text-sm focus:outline-none focus:ring-2 border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200"
+                          type="file"
+                          accept="image/*,video/mp4,video/webm"
+                          onChange={(e) => handleMediaUpload(e, type)}
+                          className="mt-2 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           disabled={uploading[type]}
                         />
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*,video/mp4,video/webm"
-                        onChange={(e) => handleMediaUpload(e, type)}
-                        className="mt-2 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        disabled={uploading[type]}
-                      />
-                      {uploading[type] && (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-500">Uploading... {uploadProgress[type]}%</p>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div
-                              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                              style={{ width: `${uploadProgress[type]}%` }}
-                            ></div>
+                        {uploading[type] && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500">Uploading... {uploadProgress[type]}%</p>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div
+                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                                style={{ width: `${uploadProgress[type]}%` }}
+                              ></div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {renderMediaPreview(newSlide[type])}
-                    </div>
-                  ))}
+                        )}
+                        {renderMediaPreview(newSlide[type])}
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="flex justify-end mt-6">
                   <button

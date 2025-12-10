@@ -18,5 +18,16 @@ export const useWindowSize = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return windowSize;
+  // Compute device type based on width breakpoints
+  // Desktop >= 1024, Tablet >= 768, Mobile < 768
+  const isDesktop = windowSize.width >= 1024;
+  const isTablet = windowSize.width >= 768 && windowSize.width < 1024;
+  const isMobile = windowSize.width < 768;
+
+  return {
+    ...windowSize,
+    isDesktop,
+    isTablet,
+    isMobile,
+  };
 };

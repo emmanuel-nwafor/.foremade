@@ -742,102 +742,102 @@ const Checkout = () => {
 
   const formValidity = useMemo(() => validateForm(), [formData]);
 
-  // const sendOrderConfirmationEmail = async (order) => {
-  //   try {
-  //     setIsEmailSending(true);
-  //     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  //     const payload = {
-  //       orderId: order.paymentId || `fallback-${Date.now()}`,
-  //       email: order.shippingDetails?.email || formData.email,
-  //       items: (order.items || []).map((item) => ({
-  //         productId: item.productId || "unknown",
-  //         quantity: item.quantity || 1,
-  //         price: item.price || 0,
-  //         name: item.name || "Unknown Product",
-  //         sellerId: item.sellerId || "unknown",
-  //         imageUrls: Array.isArray(item.imageUrls)
-  //           ? item.imageUrls
-  //           : [placeholder],
-  //         isDailyDeal: item.isDailyDeal || false,
-  //         discountPercentage: item.discountPercentage || 0,
-  //       })),
-  //       total: order.totalAmount || 0,
-  //       currency: order.currency || currency,
-  //       shippingDetails: {
-  //         name: order.shippingDetails?.name || formData.name || "Unknown",
-  //         address:
-  //           order.shippingDetails?.address || formData.address || "Unknown",
-  //         city: order.shippingDetails?.city || formData.city || "",
-  //         postalCode:
-  //           order.shippingDetails?.postalCode || formData.postalCode || "",
-  //         country: order.shippingDetails?.country || formData.country || "",
-  //         phone: order.shippingDetails?.phone || formData.phone || "",
-  //       },
-  //     };
-  //     if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
-  //       throw new Error("Invalid or missing email address");
-  //     }
-  //     if (!payload.items.length) {
-  //       throw new Error("No items provided");
-  //     }
-  //     let attempts = 2;
-  //     let lastError = null;
-  //     while (attempts > 0) {
-  //       try {
-  //         const response = await axios.post(
-  //           `${backendUrl}/send-seller-order-notification`,
+  const sendOrderConfirmationEmail = async (order) => {
+    try {
+      setIsEmailSending(true);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      const payload = {
+        orderId: order.paymentId || `fallback-${Date.now()}`,
+        email: order.shippingDetails?.email || formData.email,
+        items: (order.items || []).map((item) => ({
+          productId: item.productId || "unknown",
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          name: item.name || "Unknown Product",
+          sellerId: item.sellerId || "unknown",
+          imageUrls: Array.isArray(item.imageUrls)
+            ? item.imageUrls
+            : [placeholder],
+          isDailyDeal: item.isDailyDeal || false,
+          discountPercentage: item.discountPercentage || 0,
+        })),
+        total: order.totalAmount || 0,
+        currency: order.currency || currency,
+        shippingDetails: {
+          name: order.shippingDetails?.name || formData.name || "Unknown",
+          address:
+            order.shippingDetails?.address || formData.address || "Unknown",
+          city: order.shippingDetails?.city || formData.city || "",
+          postalCode:
+            order.shippingDetails?.postalCode || formData.postalCode || "",
+          country: order.shippingDetails?.country || formData.country || "",
+          phone: order.shippingDetails?.phone || formData.phone || "",
+        },
+      };
+      if (!payload.email || !/\S+@\S+\.\S+/.test(payload.email)) {
+        throw new Error("Invalid or missing email address");
+      }
+      if (!payload.items.length) {
+        throw new Error("No items provided");
+      }
+      let attempts = 2;
+      let lastError = null;
+      while (attempts > 0) {
+        try {
+          const response = await axios.post(
+            `${backendUrl}/send-seller-order-notification`,
 
-  //           payload,
-  //           {
-  //             timeout: 10000,
-  //           }
-  //         );
-  //         console.log(
-  //           "Order confirmation email sent successfully:",
-  //           response.data
-  //         );
-  //         return;
-  //       } catch (err) {
-  //         lastError = err;
-  //         attempts--;
-  //         if (attempts === 0 || err.response?.status !== 400) {
-  //           throw err;
-  //         }
-  //         console.warn(`Retrying email send (${attempts} attempts left)...`);
-  //         await new Promise((resolve) => setTimeout(resolve, 2000));
-  //       }
-  //     }
-  //     throw lastError || new Error("Failed to send email after retries");
-  //   } catch (err) {
-  //     console.error("Error sending order confirmation email:", {
-  //       message: err.message,
-  //       status: err.response?.status,
-  //       responseData: err.response?.data,
-  //       stack: err.stack,
-  //     });
-  //     console.log("Logging to Sentry:", err);
-  //     toast.warn(
-  //       "Order placed successfully, but failed to send confirmation email. Please check your email later.",
-  //       {
-  //         position: "top-right",
-  //         autoClose: 5000,
-  //       }
-  //     );
-  //     if (debugMode) {
-  //       toast.error(
-  //         `Debug: Email send failed - ${err.message} (${JSON.stringify(
-  //           err.response?.data
-  //         )})`,
-  //         {
-  //           position: "bottom-right",
-  //           autoClose: 5000,
-  //         }
-  //       );
-  //     }
-  //   } finally {
-  //     setIsEmailSending(false);
-  //   }
-  // };
+            payload,
+            {
+              timeout: 10000,
+            }
+          );
+          console.log(
+            "Order confirmation email sent successfully:",
+            response.data
+          );
+          return;
+        } catch (err) {
+          lastError = err;
+          attempts--;
+          if (attempts === 0 || err.response?.status !== 400) {
+            throw err;
+          }
+          console.warn(`Retrying email send (${attempts} attempts left)...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+      throw lastError || new Error("Failed to send email after retries");
+    } catch (err) {
+      console.error("Error sending order confirmation email:", {
+        message: err.message,
+        status: err.response?.status,
+        responseData: err.response?.data,
+        stack: err.stack,
+      });
+      console.log("Logging to Sentry:", err);
+      toast.warn(
+        "Order placed successfully, but failed to send confirmation email. Please check your email later.",
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
+      if (debugMode) {
+        toast.error(
+          `Debug: Email send failed - ${err.message} (${JSON.stringify(
+            err.response?.data
+          )})`,
+          {
+            position: "bottom-right",
+            autoClose: 5000,
+          }
+        );
+      }
+    } finally {
+      setIsEmailSending(false);
+    }
+  };
 
 const sendSellerOrderNotifications = async (
   sellers,

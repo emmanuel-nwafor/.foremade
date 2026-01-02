@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import AdminSetMinimumPurchase from './AdminSetMinimumPurchase';
 import 'boxicons/css/boxicons.min.css';
+import AdminSortCategory from './AdminSortCategory';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -177,12 +178,15 @@ export default function AdminEditFees() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+  <>
+    <div className="min-h-screen flex-col bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
         <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <AdminSetMinimumPurchase label="Set Minimum Purchase" currencySymbol="₦" firestorePath="settings/minimumPurchase" defaultValue={25000} />
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-8 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+            <AdminSortCategory />
+  
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-8 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-money text-blue-500"></i>
             Edit Category Fees
           </h2>
@@ -380,5 +384,6 @@ export default function AdminEditFees() {
         </div>
       </div>
     </div>
+  </>
   );
 }

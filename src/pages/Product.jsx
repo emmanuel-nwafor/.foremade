@@ -599,7 +599,7 @@ if (activeDeal) {
         selectedColor,
         selectedSize
       );
-      addAlert(`${product.name} added to cart!`, "success", 3000);
+      addAlert(`Added to cart!`, "success", 3000);
       setQuantity(1);
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -838,7 +838,6 @@ if (activeDeal) {
       );
       setCurrentMediaIndex(0);
       setQuantity(1);
-      addAlert("Variant selected successfully!", "success", 3000);
     }, 300),
     [product, selectedVariant, addAlert]
   );

@@ -39,6 +39,7 @@ const DailyDeals = () => {
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       setTimeRemaining({ hours, minutes, seconds });
     };
+
     calculateTimeRemaining();
     const timer = setInterval(calculateTimeRemaining, 1000);
     return () => clearInterval(timer);
@@ -53,40 +54,45 @@ const DailyDeals = () => {
         const dealSnapshot = await retryWithBackoff(() =>
           getDocs(collection(db, 'dailyDeals'))
         );
+
         const dealData = dealSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        console.log('Raw deals:', dealData);
 
         const validDeals = dealData.filter(
           (deal) => new Date(deal.endDate) > new Date() && new Date(deal.startDate) <= new Date()
         );
-        console.log('Valid deals:', validDeals);
 
         const dealsWithDetails = await Promise.all(
           validDeals.map(async (deal) => {
             const productDoc = await retryWithBackoff(() =>
               getDoc(doc(db, 'products', deal.productId))
             );
-            const productData = productDoc.exists() ? productDoc.data() : {};
-            console.log(`Product for deal ${deal.id}:`, productData);
 
-            const imageUrl = Array.isArray(productData.imageUrls) && productData.imageUrls.length > 0
-              ? productData.imageUrls.find((url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')) || FALLBACK_IMAGE
-              : productData.imageUrl && typeof productData.imageUrl === 'string' && productData.imageUrl.startsWith('https://res.cloudinary.com/')
-              ? productData.imageUrl
-              : FALLBACK_IMAGE;
-            console.log(`Image for deal ${deal.id}:`, imageUrl);
+            const productData = productDoc.exists() ? productDoc.data() : {};
+
+            const imageUrl =
+              Array.isArray(productData.imageUrls) && productData.imageUrls.length > 0
+                ? productData.imageUrls.find(
+                    (url) => typeof url === 'string' && url.startsWith('https://res.cloudinary.com/')
+                  ) || FALLBACK_IMAGE
+                : productData.imageUrl &&
+                  typeof productData.imageUrl === 'string' &&
+                  productData.imageUrl.startsWith('https://res.cloudinary.com/')
+                ? productData.imageUrl
+                : FALLBACK_IMAGE;
 
             const basePrice = Number(productData.price) || 0;
             const discountPercentage = Number((deal.discount * 100).toFixed(2)) || 0;
+            const discountedPrice = Math.round(basePrice * (1 - discountPercentage / 100));
 
             return {
               id: deal.id,
               productId: deal.productId,
               productName: productData.name || 'Unnamed Product',
-              price: basePrice,
+              price: discountedPrice, // already discounted
+              originalPrice: basePrice, // for strikethrough if needed
               discountPercentage,
               imageUrl,
               description: productData.description || 'No description available',
@@ -96,13 +102,9 @@ const DailyDeals = () => {
           })
         );
 
-        console.log('Final deal products:', dealsWithDetails);
         setDealProducts(dealsWithDetails);
       } catch (err) {
-        console.error('Error loading daily deals:', {
-          message: err.message,
-          stack: err.stack,
-        });
+        console.error('Error loading daily deals:', err);
         setError('Failed to load daily deals. Please try again later.');
       } finally {
         setLoading(false);
@@ -218,6 +220,7 @@ const DailyDeals = () => {
             </button>
           </div>
         </div>
+
         <div
           ref={scrollRef}
           className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory gap-3 xs:gap-4"
@@ -238,14 +241,15 @@ const DailyDeals = () => {
                     product={{
                       id: deal.productId,
                       name: deal.productName,
-                      price: deal.price,
+                      price: deal.price, // already discounted
+                      originalPrice: deal.originalPrice,
                       imageUrl: deal.imageUrl,
                       condition: deal.condition,
-                      category: deal.category || 'default', // Add category for fee calculations
+                      category: deal.category || 'default',
                       variants: deal.variants || [],
                       stock: deal.stock || 0,
                       sellerId: deal.sellerId || '',
-                      currency: localStorage.getItem("currency") || "USD", // Add currency
+                      currency: localStorage.getItem('currency') || 'USD',
                       isDailyDeal: deal.isDailyDeal,
                       discountPercentage: deal.discountPercentage,
                     }}

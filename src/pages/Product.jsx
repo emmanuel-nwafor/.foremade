@@ -102,6 +102,7 @@ const Product = () => {
   const [minimumPurchase, setMinimumPurchase] = useState(25000);
   const [additionalShippingPercentage, setAdditionalShippingPercentage] = useState(0.38);
   const [showShippingFeeModal, setShowShippingFeeModal] = useState(false);
+  const [discountedBasePrice, setDiscountedBasePrice] = useState(0);
   const { alerts, addAlert, removeAlert } = useAlerts();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -359,21 +360,27 @@ const Product = () => {
             productData.sizes = uniqueSizes.length > 0 ? uniqueSizes : productData.sizes;
           }
         }
-        const activeDeal = dealsSnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .find(
-            (deal) =>
-              deal.productId === id &&
-              new Date(deal.endDate) > new Date() &&
-              new Date(deal.startDate) <= new Date()
-          );
-        if (activeDeal) {
-          setIsDailyDeal(true);
-          setDiscountPercentage((activeDeal.discount * 100).toFixed(2));
-        } else {
-          setIsDailyDeal(false);
-          setDiscountPercentage(0);
-        }
+const activeDeal = dealsSnapshot.docs
+  .map((doc) => ({ id: doc.id, ...doc.data() }))
+  .find(
+    (deal) =>
+      deal.productId === id &&
+      new Date(deal.endDate) > new Date() &&
+      new Date(deal.startDate) <= new Date()
+  );
+
+if (activeDeal) {
+  setIsDailyDeal(true);
+  const discount = activeDeal.discount || 0;
+  setDiscountPercentage((discount * 100).toFixed(2));
+  const base = productData.price || 0;
+  const discounted = Math.round(base * (1 - discount));
+  setDiscountedBasePrice(discounted);
+} else {
+  setIsDailyDeal(false);
+  setDiscountPercentage(0);
+  setDiscountedBasePrice(productData.price || 0);
+}
         setProduct(productData);
         setMainMedia(productData.imageUrls[0]);
         setCurrentMediaIndex(0);
@@ -500,6 +507,7 @@ const Product = () => {
     };
     fetchProduct();
   }, [id, navigate]);
+  
   // Load recent searches
   useEffect(() => {
     try {
@@ -591,7 +599,7 @@ const Product = () => {
         selectedColor,
         selectedSize
       );
-      addAlert(`${product.name} added to cart!`, "success", 3000);
+      addAlert(`Added to cart!`, "success", 3000);
       setQuantity(1);
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -830,7 +838,6 @@ const Product = () => {
       );
       setCurrentMediaIndex(0);
       setQuantity(1);
-      addAlert("Variant selected successfully!", "success", 3000);
     }, 300),
     [product, selectedVariant, addAlert]
   );

@@ -3,6 +3,7 @@ import { db } from '/src/firebase';
 import { doc, getDoc, setDoc, collection, deleteDoc, getDocs, onSnapshot, query, where, writeBatch } from 'firebase/firestore'; // Added writeBatch for product updates
 import AdminSidebar from './AdminSidebar';
 import 'boxicons/css/boxicons.min.css';
+import AdminSortCategory from './AdminSortCategory';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -1108,6 +1109,8 @@ export default function AdminCategoryEdit() {
               )}
             </div>
           </div>
+
+          <AdminSortCategory />
 
           {showDeleteModal.category && (
             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">

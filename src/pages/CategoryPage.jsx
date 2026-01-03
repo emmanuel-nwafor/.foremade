@@ -49,7 +49,7 @@ function useIsMobile() {
 }
 
 // Fallback image for categories without a provided banner
-const fallbackBanner = 'https://cdn.pixabay.com/photo/2018/08/29/17/07/ecommerce-3640321_640.jpg';
+const fallbackBanner = 'https://i.pinimg.com/736x/5a/d2/ef/5ad2efd2b13b0910590a108a1988fb6b.jpg';
 
 function slugify(str) {
   return str

@@ -163,6 +163,7 @@ export default function AdminEditFees() {
     }));
   };
 
+  
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">

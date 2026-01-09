@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import AdminSidebar from './AdminSidebar';
 import AdminSetMinimumPurchase from './AdminSetMinimumPurchase';
 import 'boxicons/css/boxicons.min.css';
+import AdminSortCategory from './AdminSortCategory';
 
 function CustomAlert({ alerts, removeAlert }) {
   useEffect(() => {
@@ -169,20 +170,24 @@ export default function AdminEditFees() {
         <div className="flex-1 ml-0 md:ml-64 p-6 flex justify-center items-center">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i className="bx bx-loader bx-spin text-2xl"></i>
-            <span>Loading...</span>
+            <span>Loading.....</span>
           </div>
         </div>
       </div>
     );
   }
+  
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+  <>
+    <div className="min-h-screen flex-col bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
       <AdminSidebar />
       <div className="flex-1 ml-0 md:ml-64 p-5 flex justify-center items-start">
         <div className="w-full max-w-5xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-lg shadow-md">
           <AdminSetMinimumPurchase label="Set Minimum Purchase" currencySymbol="₦" firestorePath="settings/minimumPurchase" defaultValue={25000} />
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-8 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
+            <AdminSortCategory />
+  
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mt-8 mb-6 border-b-2 border-blue-500 pb-3 flex items-center gap-2">
             <i className="bx bx-money text-blue-500"></i>
             Edit Category Fees
           </h2>
@@ -222,7 +227,7 @@ export default function AdminEditFees() {
                     <div className="mt-4 ml-4 space-y-4 animate-slide-down">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="relative group">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             Minimum Price (₦)
                             <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Minimum product price for this category"></i>
                           </label>
@@ -249,7 +254,7 @@ export default function AdminEditFees() {
                           )}
                         </div>
                         <div className="relative group">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             Maximum Price (₦)
                             <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Maximum product price (leave blank for no limit)"></i>
                           </label>
@@ -276,7 +281,7 @@ export default function AdminEditFees() {
                           )}
                         </div>
                         <div className="relative group">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             Buyer Protection Rate (%)
                             <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Fee percentage for buyer protection"></i>
                           </label>
@@ -304,7 +309,7 @@ export default function AdminEditFees() {
                           )}
                         </div>
                         <div className="relative group">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             Handling Rate (%)
                             <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Fee percentage for handling"></i>
                           </label>
@@ -332,7 +337,7 @@ export default function AdminEditFees() {
                           )}
                         </div>
                         <div className="relative group">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             Tax Rate (%)
                             <i className="bx bx-info-circle text-gray-400 group-hover:text-blue-500 cursor-help" title="Tax percentage for this category"></i>
                           </label>
@@ -380,5 +385,6 @@ export default function AdminEditFees() {
         </div>
       </div>
     </div>
+  </>
   );
 }

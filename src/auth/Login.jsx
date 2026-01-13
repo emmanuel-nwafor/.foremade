@@ -11,6 +11,7 @@ import {
   browserSessionPersistence,
   getIdToken,
 } from 'firebase/auth';
+
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import logo from '../assets/logi.png';
 import { fetchWithAuth } from '../utils/auth';

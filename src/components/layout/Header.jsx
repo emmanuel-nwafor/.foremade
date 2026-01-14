@@ -25,7 +25,7 @@ const Header = () => {
   const [mobileCategoryMoreOpen, setMobileCategoryMoreOpen] = useState(false);
   const [categories, setCategories] = useState([]);
 
-  const mobileHeaderHeight = "5rem";
+  const mobileHeaderHeight = "3rem";
 
   const slugify = (name) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -221,9 +221,11 @@ const Header = () => {
       <div className="hidden sm:block bg-[#eb9325] h-2 w-full" />
 
       {/* Mobile Fixed Header */}
-      <div className="sm:hidden bg-[#112639] text-white flex items-center justify-between px-4 py-5 fixed top-0 left-0 right-0 z-40"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <Link to="/"><img src={logo} className="h-14 my-3" alt="Foremade" /></Link>
+      <div
+        className="sm:hidden bg-[#112639] text-white flex items-center justify-between px-4 fixed top-0 left-0 right-0 z-40"
+        style={{ height: `calc(${mobileHeaderHeight} + env(safe-area-inset-top))` }}
+      >
+        <Link to="/"><img src={logo} className="h-10" alt="Foremade" /></Link>
         <div className="flex items-center gap-4">
           <Link to="/cart" className="relative">
             <i className="bx bx-cart-alt text-xl"></i>
@@ -238,7 +240,7 @@ const Header = () => {
       </div>
 
       {/* Mobile Spacer + Orange Bar + FreeShipping */}
-      <div className="sm:hidden" style={{ height: `calc(${mobileHeaderHeight} + env(safe-area-inset-top))`, minHeight: '5rem' }} />
+      <div className="sm:hidden" style={{ height: `calc(${mobileHeaderHeight} + env(safe-area-inset-top))`, minHeight: '3rem' }} />
       <div className="sm:hidden bg-[#eb9325] h-2 w-full" />
       {/* <div className="sm:hidden"><FreeShipping /></div> */}
 

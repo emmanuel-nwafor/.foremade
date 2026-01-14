@@ -179,10 +179,10 @@ const Header = () => {
   return (
     <header className="w-full">
       {/* Desktop Top Bar */}
-      <div className="bg-[#112639] hidden sm:flex text-white w-full h-9.5 items-center">
+      <div className="bg-[#112639] hidden sm:flex text-white w-full h-16 items-center">
         <div className="flex w-full h-full items-center justify-between px-4">
           <div className="flex items-center">
-            <Link to="/"><img src={logo} className="h-10 w-auto" alt="Foremade" /></Link>
+            <Link to="/"><img src={logo} className="h-10 w-auto my-3" alt="Foremade" /></Link>
             <nav className="flex items-center ml-4">
               <Link to="/products" className="px-3 hover:text-gray-100 hover:underline">Shop</Link>
               <Link to="/products-upload" className="px-3 hover:text-gray-100 hover:underline">Sell</Link>
@@ -221,9 +221,11 @@ const Header = () => {
       <div className="hidden sm:block bg-[#eb9325] h-2 w-full" />
 
       {/* Mobile Fixed Header */}
-      <div className="sm:hidden bg-[#112639] text-white flex items-center justify-between px-4 py-3 fixed top-0 left-0 right-0 z-40"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <Link to="/"><img src={logo} className="h-9" alt="Foremade" /></Link>
+      <div
+        className="sm:hidden bg-[#112639] text-white flex items-center justify-between px-4 fixed top-0 left-0 right-0 z-40"
+        style={{ height: `calc(${mobileHeaderHeight} + env(safe-area-inset-top))` }}
+      >
+        <Link to="/"><img src={logo} className="h-10" alt="Foremade" /></Link>
         <div className="flex items-center gap-4">
           <Link to="/cart" className="relative">
             <i className="bx bx-cart-alt text-xl"></i>
